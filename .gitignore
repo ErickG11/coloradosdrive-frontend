@@ -32,3 +32,8 @@ npm-debug.log*
 # ts
 *.tsbuildinfo
 next-env.d.ts
+
+# generados automáticamente por `next dev` (desactivado en next.config.ts,
+# se excluyen igual por si se regeneran)
+AGENTS.md
+CLAUDE.md
