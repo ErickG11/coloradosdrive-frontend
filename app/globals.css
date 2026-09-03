@@ -1,26 +1,115 @@
 @import "tailwindcss";
 
+/* =============================================================================
+   ColoradosDrive — sistema de diseño (solo modo oscuro, sin toggle)
+   =============================================================================
+   Jerarquía de color:
+   - Fondos: negro-marino en capas (canvas -> surface -> surface-raised) para
+     dar profundidad sin usar un solo negro plano.
+   - Blanco: SOLO texto (primario/secundario/disabled), nunca fondo.
+   - Rojo: acento PRINCIPAL — CTAs, acciones primarias, estados destructivos.
+   - Azul marino: acento SECUNDARIO — acciones secundarias, focus rings,
+     enlaces, información.
+   - Verde (success): única excepción deliberada a la paleta de 4 colores —
+     ver nota más abajo. Pendiente de tu aprobación explícita.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* --- Fondos (capas, de más lejano a más cercano) --- */
+  --color-bg-canvas: #05070c; /* body, fondo general de la app */
+  --color-bg-sunken: #03050a; /* zonas hundidas: header de tabla, code-like */
+  --color-bg-surface: #0d121c; /* cards, navbar, paneles */
+  --color-bg-surface-raised: #161d2b; /* hover de fila, elementos elevados */
+
+  /* --- Bordes --- */
+  --color-border: #232b3d; /* borde/divisor por defecto, sutil */
+  --color-border-strong: #34405a; /* borde en hover, estado activo */
+
+  /* --- Texto (blanco = solo texto, nunca fondo) --- */
+  --color-text-primary: #f4f5f7; /* texto principal (off-white, no #fff puro) */
+  --color-text-secondary: #9ba4b5; /* texto secundario/meta */
+  --color-text-disabled: #5b6472; /* placeholder, texto deshabilitado */
+
+  /* --- Acento principal: rojo (CTAs, acciones primarias, destructivo) --- */
+  --color-accent-red: #e13b3b;
+  --color-accent-red-hover: #c62e2e;
+  --color-accent-red-subtle: #2a1113; /* fondo sutil, p.ej. banner de error */
+
+  /* --- Acento secundario: azul marino (secundario, focus, enlaces) --- */
+  --color-accent-blue: #3b5bdb;
+  --color-accent-blue-hover: #2f49b0;
+  --color-accent-blue-subtle: #111a33;
+
+  /* --- Semántico: éxito ---
+     Única excepción a la paleta de 4 colores (rojo/blanco/negro/azul
+     marino): las tareas 4 y 7 piden un estado de "éxito" en los
+     formularios, y ni el rojo (ya es error/destructivo) ni el azul
+     (ya es secundario/info) comunican "éxito" de forma convencional.
+     Es un verde deliberadamente apagado/desaturado, no un verde
+     "candy" — para no romper el tono serio. PENDIENTE DE TU
+     APROBACIÓN: si prefieres que "éxito" se comunique solo con texto
+     (sin color nuevo) o reusando el azul, lo cambio antes de aplicar
+     nada a los componentes. */
+  --color-success: #2fa36b;
+  --color-success-subtle: #0f2119;
+
+  /* --- Radios (escala deliberada, no valores sueltos) --- */
+  --radius-sm: 8px; /* inputs, botones, badges */
+  --radius-md: 14px; /* cards, selects, paneles */
+  --radius-lg: 24px; /* contenedores grandes / modales futuros */
+
+  /* --- Elevación (sombra pensada para fondo oscuro: leve resalte superior
+     + sombra difusa hacia abajo, no una sombra de "modo claro" reusada) --- */
+  --shadow-elevated: 0 1px 0 0 rgb(255 255 255 / 4%) inset, 0 8px 24px -4px rgb(0 0 0 / 55%);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-canvas: var(--color-bg-canvas);
+  --color-bg-sunken: var(--color-bg-sunken);
+  --color-bg-surface: var(--color-bg-surface);
+  --color-bg-surface-raised: var(--color-bg-surface-raised);
+
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-disabled: var(--color-text-disabled);
+
+  --color-accent-red: var(--color-accent-red);
+  --color-accent-red-hover: var(--color-accent-red-hover);
+  --color-accent-red-subtle: var(--color-accent-red-subtle);
+
+  --color-accent-blue: var(--color-accent-blue);
+  --color-accent-blue-hover: var(--color-accent-blue-hover);
+  --color-accent-blue-subtle: var(--color-accent-blue-subtle);
+
+  --color-success: var(--color-success);
+  --color-success-subtle: var(--color-success-subtle);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  --shadow-elevated: var(--shadow-elevated);
+
+  /* Tipografía: Space Grotesk para títulos/wordmark (fuerte, sin logo),
+     Inter para texto de UI (máxima legibilidad en formularios/tablas,
+     clave para completar tareas en <3 min — RNF-04). Variables pobladas
+     por next/font en app/layout.tsx. */
+  --font-display: var(--font-space-grotesk);
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Modo oscuro único: sin @media (prefers-color-scheme) ni variante light.
+   html no lleva class="dark" a propósito — todo el sistema de color vive
+   en :root sin condicionales. */
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
