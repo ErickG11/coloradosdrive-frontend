@@ -8,6 +8,7 @@ export interface Enrollment {
   studentId: string;
   cohortId: string;
   status: EnrollmentStatus;
+  montoTotal: number;
   fechaInscripcion: string;
   createdAt: string;
   updatedAt: string;
