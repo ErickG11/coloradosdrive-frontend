@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { forwardRef } from "react";
 import type { ButtonHTMLAttributes } from "react";
 
@@ -8,17 +9,34 @@ import { cn } from "@/lib/utils/cn";
 export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+// Se omiten los handlers de drag/animation nativos de HTML: sus firmas
+// chocan con las que espera motion.button (framer-motion reutiliza esos
+// mismos nombres para sus propios gestos), y no se usan en un botón.
+type NativeButtonProps = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "onDrag" | "onDragStart" | "onDragEnd" | "onAnimationStart" | "onAnimationEnd"
+>;
+
+export interface ButtonProps extends NativeButtonProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
 }
 
+// Rojo = acento principal (CTA/primario Y destructivo, por diseño: la
+// paleta cerrada solo tiene un rojo). "danger" se diferencia de
+// "primary" con un borde extra — mismo peso visual, pero más serio.
+// Azul marino = acento secundario, para acciones que no son la
+// principal de la pantalla pero tampoco son "de salida" (ghost).
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: "bg-zinc-900 text-white hover:bg-zinc-700 disabled:bg-zinc-400",
-  secondary: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:bg-zinc-50",
-  danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300",
-  ghost: "bg-transparent text-zinc-900 hover:bg-zinc-100 disabled:text-zinc-400",
+  primary:
+    "bg-accent-red text-text-primary hover:bg-accent-red-hover disabled:bg-accent-red/40 focus-visible:ring-accent-blue",
+  secondary:
+    "bg-accent-blue text-text-primary hover:bg-accent-blue-hover disabled:bg-accent-blue/40 focus-visible:ring-accent-blue",
+  danger:
+    "border border-accent-red-hover bg-accent-red text-text-primary hover:bg-accent-red-hover disabled:border-transparent disabled:bg-accent-red/40 focus-visible:ring-accent-red",
+  ghost:
+    "bg-transparent text-text-primary hover:bg-bg-surface-raised disabled:text-text-disabled focus-visible:ring-accent-blue",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -35,7 +53,7 @@ export function buttonClassName(
   className?: string,
 ): string {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed",
+    "inline-flex items-center justify-center gap-2 rounded-sm font-sans font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-canvas disabled:cursor-not-allowed",
     VARIANT_CLASSES[variant],
     SIZE_CLASSES[size],
     className,
@@ -46,14 +64,19 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   { className, variant = "primary", size = "md", isLoading = false, disabled, children, ...props },
   ref,
 ) {
+  const isDisabled = disabled || isLoading;
+
   return (
-    <button
+    <motion.button
       ref={ref}
-      disabled={disabled || isLoading}
+      disabled={isDisabled}
       className={buttonClassName(variant, size, className)}
+      whileHover={isDisabled ? undefined : { scale: 1.02 }}
+      whileTap={isDisabled ? undefined : { scale: 0.97 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       {...props}
     >
       {isLoading ? "Cargando..." : children}
-    </button>
+    </motion.button>
   );
 });
