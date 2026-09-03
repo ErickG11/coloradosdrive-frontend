@@ -119,12 +119,33 @@ export function EnrollmentForm({ cohorts }: EnrollmentFormProps) {
         ))}
       </Select>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {successMessage ? <p className="text-sm text-green-700">{successMessage}</p> : null}
+      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {successMessage ? (
+        <p className="flex items-start gap-2 text-sm text-accent-blue">
+          <CheckIcon className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{successMessage}</span>
+        </p>
+      ) : null}
 
       <Button type="submit" isLoading={isSubmitting}>
         Matricular estudiante
       </Button>
     </form>
+  );
+}
+
+// El "éxito" no tiene color propio en la paleta cerrada de 4 colores: se
+// comunica con este ícono + texto en accent-blue, no con un verde nuevo.
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={className}>
+      <path
+        d="M4 10.5 8 14.5 16 5.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
