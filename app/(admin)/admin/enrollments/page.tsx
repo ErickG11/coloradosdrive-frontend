@@ -11,8 +11,10 @@ export default function EnrollmentsPage() {
 
   return (
     <Card title="Matricular estudiante">
-      {isLoading ? <p className="text-sm text-zinc-600">Cargando cohortes…</p> : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {isLoading ? (
+        <p className="font-sans text-sm text-text-secondary">Cargando cohortes…</p>
+      ) : null}
+      {error ? <p className="font-sans text-sm text-accent-red">{error}</p> : null}
       {cohorts ? <EnrollmentForm cohorts={cohorts} /> : null}
     </Card>
   );

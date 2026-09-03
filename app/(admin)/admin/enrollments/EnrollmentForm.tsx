@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useState, type FormEvent } from "react";
 
 import { Button, Input, Select } from "@/components/ui";
@@ -119,8 +120,49 @@ export function EnrollmentForm({ cohorts }: EnrollmentFormProps) {
         ))}
       </Select>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {successMessage ? <p className="text-sm text-green-700">{successMessage}</p> : null}
+      <AnimatePresence mode="wait">
+        {error ? (
+          <motion.p
+            key="error"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="font-sans text-sm text-accent-red"
+          >
+            {error}
+          </motion.p>
+        ) : null}
+        {successMessage ? (
+          // Sin color dedicado a "éxito": la paleta queda cerrada a
+          // rojo/blanco/negro/azul marino. Se comunica con un ícono de
+          // check + el texto del mensaje, sobre el azul de acento.
+          <motion.div
+            key="success"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-start gap-2 rounded-sm border border-accent-blue/30 bg-accent-blue-subtle px-3 py-2"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="none"
+              className="mt-0.5 h-4 w-4 shrink-0 text-accent-blue"
+            >
+              <path
+                d="M4 10.5L8 14.5L16 5.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <p className="font-sans text-sm text-accent-blue">{successMessage}</p>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <Button type="submit" isLoading={isSubmitting}>
         Matricular estudiante
