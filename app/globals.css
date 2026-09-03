@@ -9,9 +9,10 @@
    - Blanco: SOLO texto (primario/secundario/disabled), nunca fondo.
    - Rojo: acento PRINCIPAL — CTAs, acciones primarias, estados destructivos.
    - Azul marino: acento SECUNDARIO — acciones secundarias, focus rings,
-     enlaces, información.
-   - Verde (success): única excepción deliberada a la paleta de 4 colores —
-     ver nota más abajo. Pendiente de tu aprobación explícita.
+     enlaces, información, Y estado de "éxito" (sin color dedicado: éxito
+     se comunica con ícono de check + texto del mensaje, no un color
+     nuevo — restricción de diseño intencional, la paleta queda cerrada
+     a los 4 colores pedidos).
    ========================================================================== */
 
 :root {
@@ -39,19 +40,6 @@
   --color-accent-blue: #3b5bdb;
   --color-accent-blue-hover: #2f49b0;
   --color-accent-blue-subtle: #111a33;
-
-  /* --- Semántico: éxito ---
-     Única excepción a la paleta de 4 colores (rojo/blanco/negro/azul
-     marino): las tareas 4 y 7 piden un estado de "éxito" en los
-     formularios, y ni el rojo (ya es error/destructivo) ni el azul
-     (ya es secundario/info) comunican "éxito" de forma convencional.
-     Es un verde deliberadamente apagado/desaturado, no un verde
-     "candy" — para no romper el tono serio. PENDIENTE DE TU
-     APROBACIÓN: si prefieres que "éxito" se comunique solo con texto
-     (sin color nuevo) o reusando el azul, lo cambio antes de aplicar
-     nada a los componentes. */
-  --color-success: #2fa36b;
-  --color-success-subtle: #0f2119;
 
   /* --- Radios (escala deliberada, no valores sueltos) --- */
   --radius-sm: 8px; /* inputs, botones, badges */
@@ -83,9 +71,6 @@
   --color-accent-blue: var(--color-accent-blue);
   --color-accent-blue-hover: var(--color-accent-blue-hover);
   --color-accent-blue-subtle: var(--color-accent-blue-subtle);
-
-  --color-success: var(--color-success);
-  --color-success-subtle: var(--color-success-subtle);
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
