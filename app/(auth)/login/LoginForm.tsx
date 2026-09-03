@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -45,37 +44,31 @@ export function LoginForm() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Card>
-        <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
-          <Input
-            label="Correo electrónico"
-            type="email"
-            name="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <Input
-            label="Contraseña"
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          <Button type="submit" isLoading={isLoading}>
-            Iniciar sesión
-          </Button>
-        </form>
-      </Card>
-    </motion.div>
+    <Card>
+      <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
+        <Input
+          label="Correo electrónico"
+          type="email"
+          name="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+        <Input
+          label="Contraseña"
+          type="password"
+          name="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+        {error ? <p className="font-sans text-sm text-accent-red">{error}</p> : null}
+        <Button type="submit" isLoading={isLoading}>
+          Iniciar sesión
+        </Button>
+      </form>
+    </Card>
   );
 }
