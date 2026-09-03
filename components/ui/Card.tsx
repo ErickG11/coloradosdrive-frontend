@@ -14,13 +14,15 @@ export function Card({ className, title, children, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-md border border-border bg-bg-surface p-6 shadow-elevated backdrop-blur-md",
+        "rounded-md border border-border bg-bg-surface p-6 shadow-elevated backdrop-blur-md md:p-8",
         className,
       )}
       {...props}
     >
       {title ? (
-        <h2 className="mb-4 font-display text-lg font-semibold text-text-primary">{title}</h2>
+        <h2 className="mb-6 font-display text-2xl font-bold tracking-tight text-text-primary">
+          {title}
+        </h2>
       ) : null}
       {children}
     </div>

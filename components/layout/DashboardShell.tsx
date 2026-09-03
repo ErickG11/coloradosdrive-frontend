@@ -24,7 +24,7 @@ export async function DashboardShell({ children }: DashboardShellProps) {
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
       <Sidebar email={user?.email ?? null} role={getUserRole(user)} />
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 p-6 md:p-10">{children}</main>
     </div>
   );
 }
