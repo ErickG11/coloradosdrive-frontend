@@ -141,7 +141,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
         />
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
 
       <Button type="submit" isLoading={isSubmitting}>
         {isEditMode ? "Guardar cambios" : "Crear cohorte"}

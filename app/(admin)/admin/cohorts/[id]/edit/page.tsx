@@ -27,10 +27,10 @@ export default function EditCohortPage() {
 
   return (
     <Card title="Editar cohorte">
-      {isLoading ? <p className="text-sm text-zinc-600">Cargando…</p> : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
+      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
       {!isLoading && !error && !cohort ? (
-        <p className="text-sm text-red-600">No se encontró la cohorte.</p>
+        <p className="text-sm text-accent-red">No se encontró la cohorte.</p>
       ) : null}
       {courses && cohort ? (
         <CohortForm

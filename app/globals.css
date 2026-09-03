@@ -1,26 +1,155 @@
 @import "tailwindcss";
 
+/* =============================================================================
+   ColoradosDrive — sistema de diseño (claro + oscuro, glassmorphism)
+   =============================================================================
+   Arquitectura de temas: los tokens semánticos (--color-bg-canvas, etc.) se
+   definen en :root con sus valores de MODO CLARO (el default), y se
+   sobrescriben dentro de .dark con los valores de MODO OSCURO. Los
+   componentes solo usan las clases de Tailwind generadas (bg-bg-canvas,
+   text-text-primary, ...) — nunca necesitan saber en qué tema están; el
+   valor resuelto cambia solo por la presencia de la clase `dark` en <html>.
+
+   Jerarquía de color (igual en ambos temas):
+   - Fondos: capas (canvas -> surface -> surface-raised), no todo al mismo
+     nivel z. Las superficies "glass" (Card, Navbar) son semi-transparentes
+     + backdrop-blur; los campos de formulario (Input/Select) casi sólidos
+     por legibilidad (bg-field).
+   - Blanco/negro: solo texto y como base de los fondos, nunca un color de
+     acento.
+   - Rojo: acento principal (CTA/primario, destructivo).
+   - Azul marino: acento secundario. Los acentos (rojo/azul, incluidos sus
+     estados hover) se mantienen CONSTANTES entre temas — solo cambian
+     fondos/texto/bordes/sombras. Los "subtle" (washes de fondo) sí varían
+     por tema porque son mezclas de opacidad sobre el fondo de cada tema.
+   - Bordes: finos, de baja opacidad (no bordes sólidos duros).
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* --- Fondos: modo claro --- */
+  --color-bg-canvas: #f6f7fa; /* body — casi blanco, no blanco puro plano */
+  --color-bg-sunken: #eceef2; /* zonas hundidas: header de tabla */
+  --color-bg-surface: rgb(255 255 255 / 60%); /* GLASS: Card, Navbar (+ backdrop-blur) */
+  --color-bg-surface-raised: rgb(255 255 255 / 80%); /* GLASS hover/elevado: más opaco */
+  --color-bg-field: rgb(255 255 255 / 92%); /* Input/Select: casi sólido, legible */
+
+  /* --- Bordes: modo claro (finos, baja opacidad) --- */
+  --color-border: rgb(15 23 42 / 8%);
+  --color-border-strong: rgb(15 23 42 / 16%);
+
+  /* --- Texto: modo claro --- */
+  --color-text-primary: #10131f; /* negro-navi, no #000 puro */
+  --color-text-secondary: #4b5566; /* gris medio-oscuro, AA sobre blanco */
+  --color-text-disabled: #9aa3b2;
+
+  /* --- Washes de acento sobre fondo claro (opacidad baja: el blanco de
+     fondo ya aporta luminosidad, no hace falta mucha saturación) --- */
+  --color-accent-red-subtle: rgb(225 59 59 / 8%);
+  --color-accent-blue-subtle: rgb(59 91 219 / 8%);
+
+  /* --- Sombra de elevación: modo claro (sombra difusa convencional) --- */
+  --shadow-elevated: 0 1px 2px rgb(15 23 42 / 5%), 0 12px 32px -8px rgb(15 23 42 / 14%);
+
+  /* --- Gradiente decorativo de fondo: modo claro ---
+     Propuesta: el canvas se queda claro (no oscurecerlo detrás del vidrio
+     blanco — apagaría la sensación "clara" y podría bajar el contraste del
+     texto en algunas zonas). En vez de eso, dos glows muy tenues del azul
+     y el rojo de acento (7% / 5%) le dan al glassmorphism algo de color
+     que "atrapar" sin comprometer que el modo claro se sienta luminoso y
+     profesional. */
+  --gradient-decorative:
+    radial-gradient(circle at 10% -5%, rgb(59 91 219 / 7%), transparent 45%),
+    radial-gradient(circle at 95% 105%, rgb(225 59 59 / 5%), transparent 40%);
+
+  /* --- Acentos: CONSTANTES entre temas --- */
+  --color-accent-red: #e13b3b;
+  --color-accent-red-hover: #c62e2e;
+  --color-accent-blue: #3b5bdb;
+  --color-accent-blue-hover: #2f49b0;
+
+  /* --- Radios: deliberados, no dependen del tema --- */
+  --radius-sm: 8px; /* inputs, botones, badges */
+  --radius-md: 14px; /* cards, selects, paneles */
+  --radius-lg: 24px; /* contenedores grandes / modales futuros */
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* --- Fondos: modo oscuro --- */
+  --color-bg-canvas: #05070c;
+  --color-bg-sunken: #03050a;
+  --color-bg-surface: rgb(20 26 40 / 55%); /* GLASS */
+  --color-bg-surface-raised: rgb(22 29 45 / 72%); /* GLASS hover/elevado */
+  --color-bg-field: rgb(13 18 28 / 90%); /* Input/Select: casi sólido */
+
+  /* --- Bordes: modo oscuro (hairline claro sobre vidrio oscuro) --- */
+  --color-border: rgb(255 255 255 / 8%);
+  --color-border-strong: rgb(255 255 255 / 16%);
+
+  /* --- Texto: modo oscuro --- */
+  --color-text-primary: #f4f5f7;
+  --color-text-secondary: #9ba4b5;
+  --color-text-disabled: #5b6472;
+
+  /* --- Washes de acento sobre fondo oscuro (opacidad algo más alta: el
+     fondo oscuro necesita más saturación para que el tinte se note) --- */
+  --color-accent-red-subtle: rgb(225 59 59 / 14%);
+  --color-accent-blue-subtle: rgb(59 91 219 / 16%);
+
+  /* --- Sombra de elevación: modo oscuro (resalte superior + sombra
+     difusa hacia abajo — no una sombra de "modo claro" reusada) --- */
+  --shadow-elevated: 0 1px 0 0 rgb(255 255 255 / 6%) inset, 0 8px 32px -8px rgb(0 0 0 / 60%);
+
+  /* --- Gradiente decorativo de fondo: modo oscuro --- */
+  --gradient-decorative:
+    radial-gradient(circle at 15% -10%, rgb(59 91 219 / 20%), transparent 45%),
+    radial-gradient(circle at 90% 110%, rgb(225 59 59 / 12%), transparent 40%);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-bg-canvas: var(--color-bg-canvas);
+  --color-bg-sunken: var(--color-bg-sunken);
+  --color-bg-surface: var(--color-bg-surface);
+  --color-bg-surface-raised: var(--color-bg-surface-raised);
+  --color-bg-field: var(--color-bg-field);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-disabled: var(--color-text-disabled);
+
+  --color-accent-red: var(--color-accent-red);
+  --color-accent-red-hover: var(--color-accent-red-hover);
+  --color-accent-red-subtle: var(--color-accent-red-subtle);
+
+  --color-accent-blue: var(--color-accent-blue);
+  --color-accent-blue-hover: var(--color-accent-blue-hover);
+  --color-accent-blue-subtle: var(--color-accent-blue-subtle);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  --shadow-elevated: var(--shadow-elevated);
+
+  /* Tipografía: Space Grotesk para títulos/wordmark, Inter para texto de
+     UI. Variables pobladas por next/font en app/layout.tsx. */
+  --font-display: var(--font-space-grotesk);
+  --font-sans: var(--font-inter);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-canvas);
+  background-image: var(--gradient-decorative);
+  background-attachment: fixed;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }

@@ -11,8 +11,8 @@ export default function NewCohortPage() {
 
   return (
     <Card title="Nueva cohorte">
-      {isLoading ? <p className="text-sm text-zinc-600">Cargando cursos…</p> : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {isLoading ? <p className="text-sm text-text-secondary">Cargando cursos…</p> : null}
+      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
       {courses ? <CohortForm courses={courses} /> : null}
     </Card>
   );
