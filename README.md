@@ -20,7 +20,7 @@ Frontend desacoplado, desplegado en Vercel. No accede directo a la base de datos
 
 ```
 app/
-  (auth)/         login/registro, layout propio sin navbar de la app
+  (auth)/         login/registro, layout propio sin sidebar de la app
   (admin)/        panel de administrador
   (student)/      panel de estudiante
   (instructor)/   panel de instructor
@@ -28,7 +28,8 @@ app/
   page.tsx        redirige a /login o al panel según el rol de la sesión
 components/
   ui/             componentes atómicos reutilizables (Button, Input, Card)
-  layout/         navbar, shells por rol
+  layout/         sidebar, shells por rol
+  theme/          ThemeProvider/ThemeToggle (tema claro/oscuro persistido)
 lib/
   supabase/       cliente de Supabase (browser y server)
   api/            cliente para el backend REST (fetch wrapper con manejo de errores y token)
@@ -101,6 +102,17 @@ Rutas bajo `/admin`, protegidas por `proxy.ts` (sesión + rol admin):
 | `/admin/cohorts/new`      | Crea una cohorte                                                      |
 | `/admin/cohorts/:id/edit` | Edita una cohorte                                                     |
 | `/admin/enrollments`      | Matricula un estudiante (crea su cuenta y lo inscribe en una cohorte) |
+
+## Imagen del login
+
+La columna izquierda del login (visible desde 768px) muestra
+`public/images/login-hero.jpg` con `next/image` (`fill`, `object-cover`). Si
+el archivo no existe todavía, se ve un degradado con los colores de la
+paleta en su lugar — no hace falta el archivo para que el layout funcione.
+
+Dimensiones recomendadas: **1200×1600px** (proporción 3:4, orientación
+vertical — la columna ocupa la mitad de la pantalla en toda su altura).
+Formato JPG, peso objetivo <300KB.
 
 ## Backend
 
