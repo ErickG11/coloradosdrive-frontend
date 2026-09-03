@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { forwardRef } from "react";
 import type { InputHTMLAttributes } from "react";
 
@@ -20,7 +21,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <div className="flex flex-col gap-1">
       {label ? (
-        <label htmlFor={inputId} className="text-sm font-medium text-zinc-700">
+        <label htmlFor={inputId} className="font-sans text-sm font-medium text-text-secondary">
           {label}
         </label>
       ) : null}
@@ -31,17 +32,27 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         aria-invalid={Boolean(error)}
         aria-describedby={errorId}
         className={cn(
-          "h-10 rounded-md border border-zinc-300 px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900",
-          error && "border-red-500 focus:border-red-500 focus:ring-red-500",
+          "h-10 rounded-sm border border-border bg-bg-surface px-3 font-sans text-sm text-text-primary placeholder:text-text-disabled transition-colors focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue",
+          error && "border-accent-red focus:border-accent-red focus:ring-accent-red",
           className,
         )}
         {...props}
       />
-      {error ? (
-        <p id={errorId} className="text-sm text-red-600">
-          {error}
-        </p>
-      ) : null}
+      <AnimatePresence>
+        {error ? (
+          <motion.p
+            key="error"
+            id={errorId}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="font-sans text-sm text-accent-red"
+          >
+            {error}
+          </motion.p>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 });
