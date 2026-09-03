@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
-import type { Role } from "@/types/user";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { cn } from "@/lib/utils/cn";
+import type { Role } from "@/types/user";
 
 import { LogoutButton } from "./LogoutButton";
 
@@ -84,15 +85,16 @@ export function Sidebar({ email, role }: SidebarProps) {
         <span className="font-display text-base font-semibold text-text-primary">
           ColoradosDrive
         </span>
-        <span className="w-9" aria-hidden="true" />
+        <ThemeToggle />
       </header>
 
       {/* Sidebar fijo de escritorio (>=768px) */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border bg-bg-surface-raised backdrop-blur-md md:flex">
-        <div className="px-5 py-6">
+        <div className="flex items-center justify-between px-5 py-6">
           <span className="font-display text-lg font-semibold text-text-primary">
             ColoradosDrive
           </span>
+          <ThemeToggle />
         </div>
         <nav className="flex flex-1 flex-col overflow-y-auto">{navLinks}</nav>
       </aside>
