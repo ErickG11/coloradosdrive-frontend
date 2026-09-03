@@ -33,7 +33,7 @@ lib/
   supabase/       cliente de Supabase (browser y server)
   api/            cliente para el backend REST (fetch wrapper con manejo de errores y token)
   utils/
-hooks/
+hooks/            useFetch: GET client-side reutilizable (data/isLoading/error)
 types/            tipos compartidos que reflejan las entidades del backend (User, Course, Cohort, Enrollment)
 tests/
 proxy.ts          protección de rutas por sesión y rol (Next.js 16 renombró `middleware` a `proxy`)
@@ -90,6 +90,17 @@ npm run test:watch # modo watch
 ```
 
 Los tests no requieren un backend ni un proyecto de Supabase real: usan mocks (`vi.mock`) sobre `lib/supabase/client.ts` y `global.fetch`.
+
+## Panel de administrador
+
+Rutas bajo `/admin`, protegidas por `proxy.ts` (sesión + rol admin):
+
+| Ruta                      | Descripción                                                           |
+| ------------------------- | --------------------------------------------------------------------- |
+| `/admin/cohorts`          | Lista las cohortes (curso, precio, fecha de creación)                 |
+| `/admin/cohorts/new`      | Crea una cohorte                                                      |
+| `/admin/cohorts/:id/edit` | Edita una cohorte                                                     |
+| `/admin/enrollments`      | Matricula un estudiante (crea su cuenta y lo inscribe en una cohorte) |
 
 ## Backend
 
