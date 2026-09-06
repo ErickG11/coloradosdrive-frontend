@@ -308,6 +308,15 @@ describe("TakeExamPage", () => {
             passed: false,
             startedAt: longAgo,
             completedAt: new Date().toISOString(),
+            answers: [
+              {
+                questionId: "question-1",
+                prompt: "¿Qué significa una señal triangular roja?",
+                selectedOptionId: null,
+                textAnswer: null,
+                isCorrect: false,
+              },
+            ],
           } satisfies ExamAttempt,
         ]);
       }
@@ -319,8 +328,11 @@ describe("TakeExamPage", () => {
     await user.click(await screen.findByRole("button", { name: "Comenzar examen" }));
 
     // El estudiante nunca queda varado: ve el resumen con puntaje/
-    // aprobado y un enlace de salida, no un mensaje de error aislado.
+    // aprobado, el detalle por pregunta, y un enlace de salida - no un
+    // mensaje de error aislado.
     expect(await screen.findByText("0.00% — Reprobado")).toBeInTheDocument();
+    expect(screen.getByText("¿Qué significa una señal triangular roja?")).toBeInTheDocument();
+    expect(screen.getByText("Incorrecta")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Volver al listado de exámenes" })).toBeInTheDocument();
   });
 
