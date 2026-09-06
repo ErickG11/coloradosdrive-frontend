@@ -3,9 +3,17 @@ import type { ExamForStudent } from "./exam";
 export type AttemptStatus = "en_progreso" | "completado";
 
 // Refleja coloradosdrive-backend/src/models/examAttempt.model.ts.
-// GET /exams/:id/attempts/me devuelve esta forma resumida (sin detalle
-// por pregunta) — el desglose de respuestas solo viaja en la respuesta
-// inmediata de POST /attempts/:id/submit (ver AttemptResult).
+// Igual que AttemptAnswerDetail (la respuesta inmediata de submit) pero
+// sin puntos: GET /exams/:id/attempts/me no los expone. Nunca incluye la
+// respuesta correcta (ver docs/adr/006 en el backend).
+export interface AttemptOwnAnswer {
+  questionId: string;
+  prompt: string;
+  selectedOptionId: string | null;
+  textAnswer: string | null;
+  isCorrect: boolean;
+}
+
 export interface ExamAttempt {
   id: string;
   examId: string;
@@ -15,6 +23,8 @@ export interface ExamAttempt {
   passed: boolean | null;
   startedAt: string;
   completedAt: string | null;
+  // Presente solo cuando status = "completado".
+  answers?: AttemptOwnAnswer[];
 }
 
 export interface SubmitAnswerInput {

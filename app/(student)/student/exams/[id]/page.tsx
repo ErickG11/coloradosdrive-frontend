@@ -23,8 +23,8 @@ type View =
   | { phase: "loading" }
   | { phase: "error"; message: string }
   // Intento completado, leído del historial (GET /exams/:id/attempts/me):
-  // solo trae puntaje/aprobado, nunca el detalle por pregunta (eso solo
-  // existe en la respuesta inmediata de submit, ver phase "submitted").
+  // puntaje/aprobado y el detalle por pregunta (sin la respuesta
+  // correcta, ver docs/adr/006 en el backend).
   | { phase: "summary"; exam: Exam; attempt: ExamAttempt }
   // Sin intento todavía: pantalla previa con los metadatos del examen
   // antes de arrancar el cronómetro.
@@ -248,6 +248,9 @@ function SummaryScreen({
           ? "Este examen es definitivo: ya usaste tu único intento permitido."
           : "Este resultado corresponde a tu último intento. Puedes volver a tomar este examen de práctica cuando quieras."}
       </p>
+      {attempt.answers && attempt.answers.length > 0 ? (
+        <AnswerDetailList answers={attempt.answers} />
+      ) : null}
       <div className="flex items-center gap-4">
         <BackToListLink />
         {onRetry ? (
@@ -257,6 +260,41 @@ function SummaryScreen({
         ) : null}
       </div>
     </Card>
+  );
+}
+
+interface AnswerDetailItem {
+  questionId: string;
+  prompt: string;
+  isCorrect: boolean;
+  pointsEarned?: number;
+  pointsPossible?: number;
+}
+
+// Compartido por SummaryScreen (recuperado del historial, sin puntos) y
+// ResultDetailScreen (respuesta inmediata de submit, con puntos) - un
+// mismo intento se ve igual sin importar por dónde se recupere el
+// resultado.
+function AnswerDetailList({ answers }: { answers: AnswerDetailItem[] }) {
+  return (
+    <div className="flex flex-col divide-y divide-border">
+      {answers.map((answer, index) => (
+        <div key={answer.questionId} className="flex flex-col gap-1 py-3">
+          <p className="text-sm font-medium text-text-secondary">Pregunta {index + 1}</p>
+          <p className="text-text-primary">{answer.prompt}</p>
+          <p
+            className={
+              answer.isCorrect ? "text-sm font-medium text-accent-blue" : "text-sm text-accent-red"
+            }
+          >
+            {answer.isCorrect ? "Correcta" : "Incorrecta"}
+            {answer.pointsEarned !== undefined && answer.pointsPossible !== undefined
+              ? ` — ${answer.pointsEarned}/${answer.pointsPossible} pts`
+              : ""}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -401,24 +439,7 @@ function ResultDetailScreen({ result }: { result: AttemptResult }) {
       <p className="font-display text-2xl font-bold text-text-primary">
         {result.scorePercent.toFixed(2)}% — {resultado}
       </p>
-      <div className="flex flex-col divide-y divide-border">
-        {result.answers.map((answer, index) => (
-          <div key={answer.questionId} className="flex flex-col gap-1 py-3">
-            <p className="text-sm font-medium text-text-secondary">Pregunta {index + 1}</p>
-            <p className="text-text-primary">{answer.prompt}</p>
-            <p
-              className={
-                answer.isCorrect
-                  ? "text-sm font-medium text-accent-blue"
-                  : "text-sm text-accent-red"
-              }
-            >
-              {answer.isCorrect ? "Correcta" : "Incorrecta"} — {answer.pointsEarned}/
-              {answer.pointsPossible} pts
-            </p>
-          </div>
-        ))}
-      </div>
+      <AnswerDetailList answers={result.answers} />
       <BackToListLink />
     </Card>
   );
