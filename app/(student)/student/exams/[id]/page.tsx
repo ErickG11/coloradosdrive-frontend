@@ -23,8 +23,8 @@ type View =
   | { phase: "loading" }
   | { phase: "error"; message: string }
   // Intento completado, leído del historial (GET /exams/:id/attempts/me):
-  // solo trae puntaje/aprobado, nunca el detalle por pregunta (eso solo
-  // existe en la respuesta inmediata de submit, ver phase "submitted").
+  // puntaje/aprobado y el detalle por pregunta (sin la respuesta
+  // correcta, ver docs/adr/006 en el backend).
   | { phase: "summary"; exam: Exam; attempt: ExamAttempt }
   // Sin intento todavía: pantalla previa con los metadatos del examen
   // antes de arrancar el cronómetro.
@@ -117,6 +117,36 @@ export default function TakeExamPage() {
     }
   }
 
+  // Se llama cuando un submit (manual o autoenvío por tiempo agotado)
+  // responde 409 porque el intento ya estaba finalizado del lado del
+  // backend (expiró justo antes de que llegara la petición, o ya se
+  // había calificado antes). En ese caso el backend nunca devuelve el
+  // detalle por pregunta para ESTA petición - se resuelve pidiendo el
+  // resumen ya persistido (GET /exams/:id/attempts/me) y reutilizando
+  // la misma pantalla de resultado que se usa para ver un intento
+  // pasado, en vez de dejar al estudiante varado con solo un mensaje de
+  // error y el formulario de preguntas todavía en pantalla.
+  async function handleAlreadyFinalized(exam: Exam) {
+    setView({ phase: "loading" });
+    try {
+      const attempts = await api.get<ExamAttempt[]>(`/exams/${examId}/attempts/me`);
+      const latest = attempts[0];
+      if (!latest) {
+        setView({
+          phase: "error",
+          message: "No se pudo recuperar el resultado del examen.",
+        });
+        return;
+      }
+      setView({ phase: "summary", exam, attempt: latest });
+    } catch (err) {
+      setView({
+        phase: "error",
+        message: err instanceof ApiError ? err.message : "No se pudo conectar con el servidor.",
+      });
+    }
+  }
+
   if (view.phase === "loading") {
     return <p className="text-sm text-text-secondary">Cargando…</p>;
   }
@@ -151,6 +181,7 @@ export default function TakeExamPage() {
         startedAt={view.startedAt}
         exam={view.exam}
         onSubmitted={(result) => setView({ phase: "submitted", result })}
+        onAlreadyFinalized={() => void handleAlreadyFinalized(view.exam)}
       />
     );
   }
@@ -217,6 +248,9 @@ function SummaryScreen({
           ? "Este examen es definitivo: ya usaste tu único intento permitido."
           : "Este resultado corresponde a tu último intento. Puedes volver a tomar este examen de práctica cuando quieras."}
       </p>
+      {attempt.answers && attempt.answers.length > 0 ? (
+        <AnswerDetailList answers={attempt.answers} />
+      ) : null}
       <div className="flex items-center gap-4">
         <BackToListLink />
         {onRetry ? (
@@ -229,16 +263,53 @@ function SummaryScreen({
   );
 }
 
+interface AnswerDetailItem {
+  questionId: string;
+  prompt: string;
+  isCorrect: boolean;
+  pointsEarned?: number;
+  pointsPossible?: number;
+}
+
+// Compartido por SummaryScreen (recuperado del historial, sin puntos) y
+// ResultDetailScreen (respuesta inmediata de submit, con puntos) - un
+// mismo intento se ve igual sin importar por dónde se recupere el
+// resultado.
+function AnswerDetailList({ answers }: { answers: AnswerDetailItem[] }) {
+  return (
+    <div className="flex flex-col divide-y divide-border">
+      {answers.map((answer, index) => (
+        <div key={answer.questionId} className="flex flex-col gap-1 py-3">
+          <p className="text-sm font-medium text-text-secondary">Pregunta {index + 1}</p>
+          <p className="text-text-primary">{answer.prompt}</p>
+          <p
+            className={
+              answer.isCorrect ? "text-sm font-medium text-accent-blue" : "text-sm text-accent-red"
+            }
+          >
+            {answer.isCorrect ? "Correcta" : "Incorrecta"}
+            {answer.pointsEarned !== undefined && answer.pointsPossible !== undefined
+              ? ` — ${answer.pointsEarned}/${answer.pointsPossible} pts`
+              : ""}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AnsweringScreen({
   attemptId,
   startedAt,
   exam,
   onSubmitted,
+  onAlreadyFinalized,
 }: {
   attemptId: string;
   startedAt: string;
   exam: ExamForStudent;
   onSubmitted: (result: AttemptResult) => void;
+  onAlreadyFinalized: () => void;
 }) {
   const [answers, setAnswers] = useState<Record<string, AnswerDraft>>({});
   const [error, setError] = useState<string | null>(null);
@@ -262,6 +333,15 @@ function AnsweringScreen({
       });
       onSubmitted(result);
     } catch (err) {
+      // El backend solo responde 409 en este endpoint cuando el intento
+      // ya estaba finalizado (expiró justo antes de que llegara la
+      // petición, o ya se había calificado antes) - nunca por otra
+      // razón. No hay nada que reintentar: se resuelve mostrando el
+      // resultado ya persistido en vez de un error aislado sin salida.
+      if (err instanceof ApiError && err.status === 409) {
+        onAlreadyFinalized();
+        return;
+      }
       hasSubmittedRef.current = false;
       setIsSubmitting(false);
       setError(err instanceof ApiError ? err.message : "No se pudo calificar el examen.");
@@ -338,7 +418,12 @@ function AnsweringScreen({
         ))}
       </div>
 
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-accent-red">{error}</p>
+          <BackToListLink />
+        </div>
+      ) : null}
 
       <Button type="button" onClick={() => void submit()} isLoading={isSubmitting}>
         Enviar respuestas
@@ -354,24 +439,7 @@ function ResultDetailScreen({ result }: { result: AttemptResult }) {
       <p className="font-display text-2xl font-bold text-text-primary">
         {result.scorePercent.toFixed(2)}% — {resultado}
       </p>
-      <div className="flex flex-col divide-y divide-border">
-        {result.answers.map((answer, index) => (
-          <div key={answer.questionId} className="flex flex-col gap-1 py-3">
-            <p className="text-sm font-medium text-text-secondary">Pregunta {index + 1}</p>
-            <p className="text-text-primary">{answer.prompt}</p>
-            <p
-              className={
-                answer.isCorrect
-                  ? "text-sm font-medium text-accent-blue"
-                  : "text-sm text-accent-red"
-              }
-            >
-              {answer.isCorrect ? "Correcta" : "Incorrecta"} — {answer.pointsEarned}/
-              {answer.pointsPossible} pts
-            </p>
-          </div>
-        ))}
-      </div>
+      <AnswerDetailList answers={result.answers} />
       <BackToListLink />
     </Card>
   );
