@@ -117,6 +117,36 @@ export default function TakeExamPage() {
     }
   }
 
+  // Se llama cuando un submit (manual o autoenvío por tiempo agotado)
+  // responde 409 porque el intento ya estaba finalizado del lado del
+  // backend (expiró justo antes de que llegara la petición, o ya se
+  // había calificado antes). En ese caso el backend nunca devuelve el
+  // detalle por pregunta para ESTA petición - se resuelve pidiendo el
+  // resumen ya persistido (GET /exams/:id/attempts/me) y reutilizando
+  // la misma pantalla de resultado que se usa para ver un intento
+  // pasado, en vez de dejar al estudiante varado con solo un mensaje de
+  // error y el formulario de preguntas todavía en pantalla.
+  async function handleAlreadyFinalized(exam: Exam) {
+    setView({ phase: "loading" });
+    try {
+      const attempts = await api.get<ExamAttempt[]>(`/exams/${examId}/attempts/me`);
+      const latest = attempts[0];
+      if (!latest) {
+        setView({
+          phase: "error",
+          message: "No se pudo recuperar el resultado del examen.",
+        });
+        return;
+      }
+      setView({ phase: "summary", exam, attempt: latest });
+    } catch (err) {
+      setView({
+        phase: "error",
+        message: err instanceof ApiError ? err.message : "No se pudo conectar con el servidor.",
+      });
+    }
+  }
+
   if (view.phase === "loading") {
     return <p className="text-sm text-text-secondary">Cargando…</p>;
   }
@@ -151,6 +181,7 @@ export default function TakeExamPage() {
         startedAt={view.startedAt}
         exam={view.exam}
         onSubmitted={(result) => setView({ phase: "submitted", result })}
+        onAlreadyFinalized={() => void handleAlreadyFinalized(view.exam)}
       />
     );
   }
@@ -234,11 +265,13 @@ function AnsweringScreen({
   startedAt,
   exam,
   onSubmitted,
+  onAlreadyFinalized,
 }: {
   attemptId: string;
   startedAt: string;
   exam: ExamForStudent;
   onSubmitted: (result: AttemptResult) => void;
+  onAlreadyFinalized: () => void;
 }) {
   const [answers, setAnswers] = useState<Record<string, AnswerDraft>>({});
   const [error, setError] = useState<string | null>(null);
@@ -262,6 +295,15 @@ function AnsweringScreen({
       });
       onSubmitted(result);
     } catch (err) {
+      // El backend solo responde 409 en este endpoint cuando el intento
+      // ya estaba finalizado (expiró justo antes de que llegara la
+      // petición, o ya se había calificado antes) - nunca por otra
+      // razón. No hay nada que reintentar: se resuelve mostrando el
+      // resultado ya persistido en vez de un error aislado sin salida.
+      if (err instanceof ApiError && err.status === 409) {
+        onAlreadyFinalized();
+        return;
+      }
       hasSubmittedRef.current = false;
       setIsSubmitting(false);
       setError(err instanceof ApiError ? err.message : "No se pudo calificar el examen.");
@@ -338,7 +380,12 @@ function AnsweringScreen({
         ))}
       </div>
 
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-accent-red">{error}</p>
+          <BackToListLink />
+        </div>
+      ) : null}
 
       <Button type="button" onClick={() => void submit()} isLoading={isSubmitting}>
         Enviar respuestas
