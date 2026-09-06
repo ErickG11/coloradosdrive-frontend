@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import TakeExamPage from "@/app/(student)/student/exams/[id]/page";
 import { api } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import type { AttemptResult, Exam, ExamAttempt, ExamForStudent, StartAttemptResult } from "@/types";
 
 vi.mock("next/navigation", () => ({
@@ -266,5 +267,93 @@ describe("TakeExamPage", () => {
     await waitFor(() => {
       expect(mockedPost).toHaveBeenCalledWith("/attempts/attempt-1/submit", { answers: [] });
     });
+  });
+
+  it("si el backend ya finalizó el intento (409) al autoenviar, muestra el resumen en vez de dejar al estudiante sin salida", async () => {
+    mockGetByPath({ "/exams": [buildExam()], "/exams/exam-1/attempts/me": [] });
+    const longAgo = new Date(Date.now() - 60 * 60_000).toISOString();
+    mockedPost.mockResolvedValueOnce({
+      attemptId: "attempt-1",
+      status: "en_progreso",
+      startedAt: longAgo,
+      exam: buildExamForStudent(),
+    } satisfies StartAttemptResult);
+    // El backend gana la carrera: para cuando llega la petición, ya
+    // autofinalizó el intento por tiempo agotado y responde 409 en vez
+    // de calificar esta petición.
+    mockedPost.mockRejectedValueOnce(
+      new ApiError(
+        "El tiempo límite de este examen ya expiró; el intento se calificó con las respuestas que alcanzaste a registrar",
+        409,
+      ),
+    );
+    // Antes de iniciar: sin intentos. Después de que el submit responda
+    // 409 (handleAlreadyFinalized vuelve a pedir el historial): el
+    // backend ya dejó el intento completado.
+    let attemptsMeCallCount = 0;
+    mockedGet.mockImplementation((path: unknown) => {
+      if (path === "/exams") return Promise.resolve([buildExam()]);
+      if (path === "/exams/exam-1/attempts/me") {
+        attemptsMeCallCount += 1;
+        if (attemptsMeCallCount === 1) {
+          return Promise.resolve([]);
+        }
+        return Promise.resolve([
+          {
+            id: "attempt-1",
+            examId: "exam-1",
+            studentId: "student-1",
+            status: "completado",
+            scorePercent: 0,
+            passed: false,
+            startedAt: longAgo,
+            completedAt: new Date().toISOString(),
+            answers: [
+              {
+                questionId: "question-1",
+                prompt: "¿Qué significa una señal triangular roja?",
+                selectedOptionId: null,
+                textAnswer: null,
+                isCorrect: false,
+              },
+            ],
+          } satisfies ExamAttempt,
+        ]);
+      }
+      return Promise.reject(new Error(`api.get mockeado con un path inesperado: ${String(path)}`));
+    });
+
+    render(<TakeExamPage />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Comenzar examen" }));
+
+    // El estudiante nunca queda varado: ve el resumen con puntaje/
+    // aprobado, el detalle por pregunta, y un enlace de salida - no un
+    // mensaje de error aislado.
+    expect(await screen.findByText("0.00% — Reprobado")).toBeInTheDocument();
+    expect(screen.getByText("¿Qué significa una señal triangular roja?")).toBeInTheDocument();
+    expect(screen.getByText("Incorrecta")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Volver al listado de exámenes" })).toBeInTheDocument();
+  });
+
+  it("si el envío manual falla por un error que no sea 409, muestra el error con un enlace de salida", async () => {
+    const user = userEvent.setup();
+    mockGetByPath({ "/exams": [buildExam()], "/exams/exam-1/attempts/me": [] });
+    mockedPost.mockResolvedValueOnce({
+      attemptId: "attempt-1",
+      status: "en_progreso",
+      startedAt: new Date().toISOString(),
+      exam: buildExamForStudent(),
+    } satisfies StartAttemptResult);
+    mockedPost.mockRejectedValueOnce(new ApiError("Error interno del servidor.", 500));
+
+    render(<TakeExamPage />);
+    await user.click(await screen.findByRole("button", { name: "Comenzar examen" }));
+    await user.click(screen.getByRole("button", { name: "Enviar respuestas" }));
+
+    expect(await screen.findByText("Error interno del servidor.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Volver al listado de exámenes" })).toBeInTheDocument();
+    // El formulario sigue disponible para reintentar, no es un callejón sin salida.
+    expect(screen.getByRole("button", { name: "Enviar respuestas" })).toBeInTheDocument();
   });
 });
