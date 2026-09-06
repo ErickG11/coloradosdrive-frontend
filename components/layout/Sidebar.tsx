@@ -34,6 +34,8 @@ export function Sidebar({ email, role }: SidebarProps) {
 
   const isCohortsActive = pathname.startsWith("/admin/cohorts");
   const isEnrollmentsActive = pathname.startsWith("/admin/enrollments");
+  const isAdminExamsActive = pathname.startsWith("/admin/exams");
+  const isStudentExamsActive = pathname.startsWith("/student/exams");
 
   function closeDrawer() {
     setIsOpen(false);
@@ -48,17 +50,37 @@ export function Sidebar({ email, role }: SidebarProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen]);
 
+  // El Sidebar es compartido por los 3 roles (vía DashboardShell): cada
+  // uno ve solo los enlaces de su propia sección.
   const navLinks = (
     <>
       <div className="flex flex-col gap-1 px-3 pt-2">
-        <SidebarLink href="/admin/cohorts" active={isCohortsActive} onClick={closeDrawer}>
-          <CalendarIcon className="h-5 w-5" />
-          Cohortes
-        </SidebarLink>
-        <SidebarLink href="/admin/enrollments" active={isEnrollmentsActive} onClick={closeDrawer}>
-          <UserPlusIcon className="h-5 w-5" />
-          Matricular estudiante
-        </SidebarLink>
+        {role === "admin" ? (
+          <>
+            <SidebarLink href="/admin/cohorts" active={isCohortsActive} onClick={closeDrawer}>
+              <CalendarIcon className="h-5 w-5" />
+              Cohortes
+            </SidebarLink>
+            <SidebarLink
+              href="/admin/enrollments"
+              active={isEnrollmentsActive}
+              onClick={closeDrawer}
+            >
+              <UserPlusIcon className="h-5 w-5" />
+              Matricular estudiante
+            </SidebarLink>
+            <SidebarLink href="/admin/exams" active={isAdminExamsActive} onClick={closeDrawer}>
+              <ExamIcon className="h-5 w-5" />
+              Exámenes
+            </SidebarLink>
+          </>
+        ) : null}
+        {role === "estudiante" ? (
+          <SidebarLink href="/student/exams" active={isStudentExamsActive} onClick={closeDrawer}>
+            <ExamIcon className="h-5 w-5" />
+            Exámenes
+          </SidebarLink>
+        ) : null}
       </div>
       <div className="mt-auto flex flex-col gap-2 border-t border-border px-3 pt-4 pb-4">
         <div className="flex flex-col text-sm">
@@ -218,6 +240,20 @@ function UserPlusIcon({ className }: { className?: string }) {
         strokeLinecap="round"
       />
       <path d="M15.5 6v5M13 8.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ExamIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={className}>
+      <rect x="4" y="2.5" width="12" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M7 7h6M7 10h6M7 13h3.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
