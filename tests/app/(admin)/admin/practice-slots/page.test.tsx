@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -146,5 +146,34 @@ describe("PracticeSlotsPage", () => {
 
     expect(screen.getByRole("dialog", { name: "Nueva franja" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Crear franja" })).toBeInTheDocument();
+  });
+
+  it("en el detalle, 'Editar' aparece deshabilitado si la franja no está disponible", async () => {
+    const user = userEvent.setup();
+    mockFetch(); // la franja de prueba está 'asignada'
+    render(<PracticeSlotsPage />);
+
+    const [chip] = screen.getAllByRole("button", { name: /Bruno Salas/ });
+    await user.click(chip);
+
+    expect(screen.getByRole("button", { name: "Editar" })).toBeDisabled();
+  });
+
+  it("desde el detalle de una franja disponible, 'Editar' abre el formulario prefilled", async () => {
+    const user = userEvent.setup();
+    mockFetch({
+      data: [{ ...slot, status: "disponible", studentId: null }],
+      isLoading: false,
+      error: null,
+    });
+    render(<PracticeSlotsPage />);
+
+    const [chip] = screen.getAllByRole("button", { name: /Bruno Salas/ });
+    await user.click(chip);
+    await user.click(screen.getByRole("button", { name: "Editar" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Editar franja" });
+    expect(within(dialog).getByLabelText("Cohorte")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Instructor")).toHaveValue("instructor-1");
   });
 });
