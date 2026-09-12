@@ -16,3 +16,10 @@ export interface User {
   createdAt: string;
   updatedAt: string;
 }
+
+// Forma que devuelve GET /users?rol=<rol> (admin-only): solo lo mínimo
+// para poblar un selector, ej. instructores al crear una franja.
+export interface UserSummary {
+  id: string;
+  nombreCompleto: string;
+}
