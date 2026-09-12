@@ -3,3 +3,5 @@ export * from "./Input";
 export * from "./Select";
 export * from "./Textarea";
 export * from "./Card";
+export * from "./Modal";
+export * from "./StatusBadge";
