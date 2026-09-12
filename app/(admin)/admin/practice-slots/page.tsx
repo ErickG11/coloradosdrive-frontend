@@ -2,28 +2,20 @@
 
 import { useMemo, useState } from "react";
 
-import { Button, Modal, Select, StatusBadge } from "@/components/ui";
+import { Button, Modal, Select } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { addMonths, addWeeks, type CalendarViewMode } from "@/lib/utils/calendar";
 import type { Cohort, PracticeSlot, UserSummary } from "@/types";
 
 import { PracticeSlotCalendar } from "./PracticeSlotCalendar";
+import { PracticeSlotDetail } from "./PracticeSlotDetail";
 import { PracticeSlotForm } from "./PracticeSlotForm";
 
 type ModalState =
   | { type: "closed" }
   | { type: "create"; initialScheduledAt?: string }
-  | { type: "detail"; slot: PracticeSlot };
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("es-EC", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+  | { type: "detail"; slot: PracticeSlot }
+  | { type: "edit"; slot: PracticeSlot };
 
 function buildSlotsPath(cohortId: string, instructorId: string): string {
   const params = new URLSearchParams();
@@ -89,9 +81,11 @@ export default function PracticeSlotsPage() {
   const modalTitle =
     modalState.type === "create"
       ? "Nueva franja"
-      : modalState.type === "detail"
-        ? "Detalle de la franja"
-        : undefined;
+      : modalState.type === "edit"
+        ? "Editar franja"
+        : modalState.type === "detail"
+          ? "Detalle de la franja"
+          : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -184,34 +178,28 @@ export default function PracticeSlotsPage() {
           />
         ) : null}
 
+        {modalState.type === "edit" && cohorts && instructors ? (
+          <PracticeSlotForm
+            cohorts={cohorts}
+            instructors={instructors}
+            slot={modalState.slot}
+            onSaved={handleSaved}
+            onCancel={closeModal}
+          />
+        ) : null}
+
         {modalState.type === "detail" ? (
-          <div className="flex flex-col gap-4">
-            <StatusBadge status={modalState.slot.status} />
-            <dl className="flex flex-col gap-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">Fecha y hora</dt>
-                <dd className="text-text-primary">{formatDateTime(modalState.slot.scheduledAt)}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">Duración</dt>
-                <dd className="text-text-primary">{modalState.slot.durationMinutes} min</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">Instructor</dt>
-                <dd className="text-text-primary">
-                  {instructorsById.get(modalState.slot.instructorId) ?? "—"}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">Estudiante</dt>
-                <dd className="text-text-primary">
-                  {modalState.slot.studentId
-                    ? (studentsById.get(modalState.slot.studentId) ?? "—")
-                    : "—"}
-                </dd>
-              </div>
-            </dl>
-          </div>
+          <PracticeSlotDetail
+            slot={modalState.slot}
+            instructorName={instructorsById.get(modalState.slot.instructorId) ?? "—"}
+            studentName={
+              modalState.slot.studentId
+                ? (studentsById.get(modalState.slot.studentId) ?? "—")
+                : null
+            }
+            onEdit={() => setModalState({ type: "edit", slot: modalState.slot })}
+            onDeleted={handleSaved}
+          />
         ) : null}
       </Modal>
     </div>
