@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -6,6 +6,7 @@ import StudentSchedulePage from "@/app/(student)/student/schedule/page";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { useFetch } from "@/hooks/useFetch";
+import { createClient } from "@/lib/supabase/client";
 import type { PracticeSlot, UserSummary } from "@/types";
 
 vi.mock("@/hooks/useFetch", () => ({
@@ -18,8 +19,55 @@ vi.mock("@/lib/api/client", () => ({
   },
 }));
 
+// Sin este mock, useRealtimeChannel/useCurrentUserId llamarían al cliente
+// REAL de Supabase (auth.getUser + channel().subscribe(), que intenta
+// abrir un WebSocket) contra la URL de prueba - conexiones de red reales
+// que no existen en este entorno de test.
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: vi.fn(),
+}));
+
 const mockedUseFetch = vi.mocked(useFetch);
 const mockedPost = vi.mocked(api.post);
+const mockedCreateClient = vi.mocked(createClient);
+
+interface MockChannel {
+  on: ReturnType<typeof vi.fn>;
+  subscribe: ReturnType<typeof vi.fn>;
+  emit: (event: string, payload: unknown) => void;
+}
+
+function createMockChannel(): MockChannel {
+  const listeners = new Map<string, (arg: { payload: unknown }) => void>();
+  const channel = {
+    on: vi.fn((_type: string, filter: { event: string }, cb: (arg: { payload: unknown }) => void) => {
+      listeners.set(filter.event, cb);
+      return channel;
+    }),
+    subscribe: vi.fn().mockReturnThis(),
+    emit: (event: string, payload: unknown) => listeners.get(event)?.({ payload }),
+  };
+  return channel as unknown as MockChannel;
+}
+
+// Mapa vivo de canal-por-nombre: cada llamada a supabase.channel(name)
+// crea y registra un mock nuevo, así los tests pueden emitir eventos por
+// canal (cohorte vs. personal) sin conocer el orden de suscripción.
+function mockSupabaseClient(userId: string | null): Map<string, MockChannel> {
+  const channels = new Map<string, MockChannel>();
+  mockedCreateClient.mockReturnValue({
+    channel: vi.fn((name: string) => {
+      const channel = createMockChannel();
+      channels.set(name, channel);
+      return channel;
+    }),
+    removeChannel: vi.fn(),
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: userId ? { id: userId } : null } }),
+    },
+  } as unknown as ReturnType<typeof createClient>);
+  return channels;
+}
 
 const instructors: UserSummary[] = [{ id: "instructor-1", nombreCompleto: "Bruno Salas" }];
 
@@ -59,6 +107,10 @@ function mockFetch(slots: PracticeSlot[]) {
 describe("StudentSchedulePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Valor por defecto inerte para los tests que no le importa Realtime;
+    // los tests de Realtime llaman a mockSupabaseClient() de nuevo con el
+    // id que necesiten, capturando el mapa de canales devuelto.
+    mockSupabaseClient("student-1");
   });
 
   it("muestra un mensaje cuando no tiene franja propia ni hay disponibles", () => {
@@ -161,5 +213,85 @@ describe("StudentSchedulePage", () => {
     render(<StudentSchedulePage />);
 
     expect(screen.getByText("No tienes ninguna franja reclamada todavía.")).toBeInTheDocument();
+  });
+
+  describe("Realtime", () => {
+    it("al liberarse un cupo en el canal de cohorte, refresca la lista", async () => {
+      const channels = mockSupabaseClient("student-1");
+      mockFetch([buildSlot({ status: "disponible", cohortId: "cohort-1" })]);
+
+      render(<StudentSchedulePage />);
+      await waitFor(() => expect(channels.has("cohort-cohort-1-practice-slots")).toBe(true));
+      refetchSlots.mockClear(); // limpiar la llamada del render inicial, si la hubo
+
+      act(() => {
+        channels.get("cohort-cohort-1-practice-slots")!.emit("slot-released", {
+          slotId: "slot-2",
+          scheduledAt: "2026-03-11T10:00:00.000Z",
+        });
+      });
+
+      expect(refetchSlots).toHaveBeenCalled();
+    });
+
+    it("al recibir 'confirmation-requested', resalta la franja con Confirmar/Cancelar directamente ahí", async () => {
+      const channels = mockSupabaseClient("student-1");
+      mockFetch([buildSlot({ status: "asignado", studentId: "student-1", cohortId: "cohort-1" })]);
+
+      render(<StudentSchedulePage />);
+      await waitFor(() =>
+        expect(channels.has("user-student-1-practice-slots")).toBe(true),
+      );
+
+      expect(screen.queryByText(/Tu práctica está por empezar/)).not.toBeInTheDocument();
+
+      act(() => {
+        channels
+          .get("user-student-1-practice-slots")!
+          .emit("confirmation-requested", { scheduledAt: "2026-03-10T15:00:00.000Z" });
+      });
+
+      expect(screen.getByText(/Tu práctica está por empezar/)).toBeInTheDocument();
+      // Los botones ya estaban ahí (no dependen del evento para existir),
+      // pero siguen presentes junto al aviso.
+      expect(screen.getByRole("button", { name: "Confirmar" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    });
+
+    it("al recibir 'no-practice', muestra un aviso descartable", async () => {
+      const channels = mockSupabaseClient("student-1");
+      mockFetch([]);
+
+      render(<StudentSchedulePage />);
+      await waitFor(() =>
+        expect(channels.has("user-student-1-practice-slots")).toBe(true),
+      );
+
+      act(() => {
+        channels
+          .get("user-student-1-practice-slots")!
+          .emit("no-practice", { scheduledAt: "2026-03-10T15:00:00.000Z" });
+      });
+
+      expect(
+        screen.getByText('Tu franja pasó a "sin práctica" porque no se confirmó a tiempo.'),
+      ).toBeInTheDocument();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Entendido" }));
+
+      expect(
+        screen.queryByText('Tu franja pasó a "sin práctica" porque no se confirmó a tiempo.'),
+      ).not.toBeInTheDocument();
+    });
+
+    it("sin franjas todavía, no se suscribe al canal de cohorte (no hay cohortId que derivar)", () => {
+      const channels = mockSupabaseClient("student-1");
+      mockFetch([]);
+
+      render(<StudentSchedulePage />);
+
+      expect([...channels.keys()].some((name) => name.startsWith("cohort-"))).toBe(false);
+    });
   });
 });

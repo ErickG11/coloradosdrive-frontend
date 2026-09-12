@@ -3,9 +3,12 @@
 import { useMemo, useState } from "react";
 
 import { Button, Card, StatusBadge } from "@/components/ui";
+import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { useFetch } from "@/hooks/useFetch";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import { cn } from "@/lib/utils/cn";
 import type { PracticeSlot, PracticeSlotStatus, UserSummary } from "@/types";
 
 const ACTIVE_OWN_STATUSES: PracticeSlotStatus[] = ["asignado", "confirmado"];
@@ -36,6 +39,28 @@ export default function StudentSchedulePage() {
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
+  const [confirmationDue, setConfirmationDue] = useState(false);
+  const [noPracticeNotice, setNoPracticeNotice] = useState(false);
+
+  const userId = useCurrentUserId();
+  // Todas las franjas de esta lista comparten la cohorte del propio
+  // estudiante (ver listSlotsForStudent) - se toma de cualquiera de
+  // ellas, no hay un endpoint aparte para "mi cohorte".
+  const cohortId = slots?.[0]?.cohortId ?? null;
+
+  useRealtimeChannel(cohortId ? `cohort-${cohortId}-practice-slots` : null, {
+    "slot-released": () => refetchSlots(),
+  });
+  useRealtimeChannel(userId ? `user-${userId}-practice-slots` : null, {
+    "confirmation-requested": () => {
+      setConfirmationDue(true);
+      refetchSlots();
+    },
+    "no-practice": () => {
+      setNoPracticeNotice(true);
+      refetchSlots();
+    },
+  });
 
   const instructorsById = useMemo(
     () => new Map((instructors ?? []).map((user) => [user.id, user.nombreCompleto])),
@@ -112,6 +137,19 @@ export default function StudentSchedulePage() {
       {error ? <p className="text-sm text-accent-red">{error}</p> : null}
       {actionError ? <p className="text-sm text-accent-red">{actionError}</p> : null}
 
+      {noPracticeNotice ? (
+        <div className="flex items-center justify-between gap-4 rounded-md border border-accent-red bg-accent-red-subtle px-4 py-3 text-sm text-accent-red">
+          <span>Tu franja pasó a &quot;sin práctica&quot; porque no se confirmó a tiempo.</span>
+          <button
+            type="button"
+            onClick={() => setNoPracticeNotice(false)}
+            className="shrink-0 font-medium hover:underline"
+          >
+            Entendido
+          </button>
+        </div>
+      ) : null}
+
       {!isLoading && !error ? (
         <>
           <section className="flex flex-col gap-3">
@@ -123,40 +161,55 @@ export default function StudentSchedulePage() {
                 </p>
               </Card>
             ) : (
-              ownSlots.map((slot) => (
-                <Card key={slot.id} className="flex flex-col gap-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium text-text-primary">
-                        {formatDateTime(slot.scheduledAt)}
-                      </span>
-                      <span className="text-sm text-text-secondary">
-                        {slot.durationMinutes} min ·{" "}
-                        {instructorsById.get(slot.instructorId) ?? "Instructor"}
-                      </span>
-                    </div>
-                    <StatusBadge status={slot.status} />
-                  </div>
-                  <div className="flex justify-end gap-3">
-                    {slot.status === "asignado" ? (
-                      <Button
-                        variant="secondary"
-                        isLoading={pendingSlotId === slot.id}
-                        onClick={() => handleConfirm(slot.id)}
-                      >
-                        Confirmar
-                      </Button>
+              ownSlots.map((slot) => {
+                const isConfirmationDue = confirmationDue && slot.status === "asignado";
+                return (
+                  <Card
+                    key={slot.id}
+                    className={cn(
+                      "flex flex-col gap-3",
+                      isConfirmationDue && "border-accent-red",
+                    )}
+                  >
+                    {isConfirmationDue ? (
+                      <p className="text-sm font-medium text-accent-red">
+                        Tu práctica está por empezar. Confirma tu asistencia o cancela para
+                        liberar el cupo.
+                      </p>
                     ) : null}
-                    <Button
-                      variant="danger"
-                      isLoading={pendingSlotId === slot.id}
-                      onClick={() => handleCancel(slot.id)}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </Card>
-              ))
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-text-primary">
+                          {formatDateTime(slot.scheduledAt)}
+                        </span>
+                        <span className="text-sm text-text-secondary">
+                          {slot.durationMinutes} min ·{" "}
+                          {instructorsById.get(slot.instructorId) ?? "Instructor"}
+                        </span>
+                      </div>
+                      <StatusBadge status={slot.status} />
+                    </div>
+                    <div className="flex justify-end gap-3">
+                      {slot.status === "asignado" ? (
+                        <Button
+                          variant="secondary"
+                          isLoading={pendingSlotId === slot.id}
+                          onClick={() => handleConfirm(slot.id)}
+                        >
+                          Confirmar
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="danger"
+                        isLoading={pendingSlotId === slot.id}
+                        onClick={() => handleCancel(slot.id)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })
             )}
           </section>
 
