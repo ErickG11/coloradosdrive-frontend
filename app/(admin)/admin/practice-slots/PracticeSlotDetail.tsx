@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button, StatusBadge } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import type { PracticeSlot } from "@/types";
+import type { PracticeSlotWithNames } from "@/types";
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("es-EC", {
@@ -18,9 +18,7 @@ function formatDateTime(iso: string): string {
 }
 
 export interface PracticeSlotDetailProps {
-  slot: PracticeSlot;
-  instructorName: string;
-  studentName: string | null;
+  slot: PracticeSlotWithNames;
   onEdit: () => void;
   onDeleted: () => void;
 }
@@ -29,13 +27,7 @@ export interface PracticeSlotDetailProps {
 // (sin estudiante asignado): los botones se deshabilitan explícitamente
 // en el resto de los estados, con el texto que explica por qué, en vez de
 // dejar que el usuario descubra la restricción con un 409.
-export function PracticeSlotDetail({
-  slot,
-  instructorName,
-  studentName,
-  onEdit,
-  onDeleted,
-}: PracticeSlotDetailProps) {
+export function PracticeSlotDetail({ slot, onEdit, onDeleted }: PracticeSlotDetailProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const canModify = slot.status === "disponible";
@@ -67,11 +59,11 @@ export function PracticeSlotDetail({
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-text-secondary">Instructor</dt>
-          <dd className="text-text-primary">{instructorName}</dd>
+          <dd className="text-text-primary">{slot.instructorName}</dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-text-secondary">Estudiante</dt>
-          <dd className="text-text-primary">{studentName ?? "—"}</dd>
+          <dd className="text-text-primary">{slot.studentName ?? "—"}</dd>
         </div>
       </dl>
 

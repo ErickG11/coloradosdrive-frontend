@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { PracticeSlotCalendar } from "@/app/(admin)/admin/practice-slots/PracticeSlotCalendar";
 import { getMonthGrid, isInMonth } from "@/lib/utils/calendar";
-import type { PracticeSlot } from "@/types";
+import type { PracticeSlotWithNames } from "@/types";
 
-function buildSlot(overrides: Partial<PracticeSlot> = {}): PracticeSlot {
+function buildSlot(overrides: Partial<PracticeSlotWithNames> = {}): PracticeSlotWithNames {
   return {
     id: "slot-1",
     cohortId: "cohort-1",
@@ -21,20 +21,17 @@ function buildSlot(overrides: Partial<PracticeSlot> = {}): PracticeSlot {
     attended: null,
     createdAt: "",
     updatedAt: "",
+    instructorName: "Bruno Salas",
+    studentName: null,
     ...overrides,
   };
 }
-
-const instructorsById = new Map([["instructor-1", "Bruno Salas"]]);
-const studentsById = new Map([["student-1", "Ana Torres"]]);
 
 describe("PracticeSlotCalendar", () => {
   it("muestra el instructor y el estado de cada franja", () => {
     render(
       <PracticeSlotCalendar
         slots={[buildSlot()]}
-        instructorsById={instructorsById}
-        studentsById={studentsById}
         viewMode="semana"
         currentDate={new Date(2026, 0, 12)}
         onSelectSlot={vi.fn()}
@@ -49,9 +46,7 @@ describe("PracticeSlotCalendar", () => {
   it("muestra el nombre del estudiante cuando la franja está asignada", () => {
     render(
       <PracticeSlotCalendar
-        slots={[buildSlot({ studentId: "student-1", status: "asignado" })]}
-        instructorsById={instructorsById}
-        studentsById={studentsById}
+        slots={[buildSlot({ studentId: "student-1", status: "asignado", studentName: "Ana Torres" })]}
         viewMode="semana"
         currentDate={new Date(2026, 0, 12)}
         onSelectSlot={vi.fn()}
@@ -69,8 +64,6 @@ describe("PracticeSlotCalendar", () => {
     render(
       <PracticeSlotCalendar
         slots={[slot]}
-        instructorsById={instructorsById}
-        studentsById={studentsById}
         viewMode="semana"
         currentDate={new Date(2026, 0, 12)}
         onSelectSlot={onSelectSlot}
@@ -90,8 +83,6 @@ describe("PracticeSlotCalendar", () => {
     render(
       <PracticeSlotCalendar
         slots={[]}
-        instructorsById={instructorsById}
-        studentsById={studentsById}
         viewMode="semana"
         currentDate={new Date(2026, 0, 12)}
         onSelectSlot={vi.fn()}
@@ -113,8 +104,6 @@ describe("PracticeSlotCalendar", () => {
     const { container } = render(
       <PracticeSlotCalendar
         slots={[]}
-        instructorsById={instructorsById}
-        studentsById={studentsById}
         viewMode="mes"
         currentDate={month}
         onSelectSlot={vi.fn()}
@@ -136,8 +125,6 @@ describe("PracticeSlotCalendar", () => {
     render(
       <PracticeSlotCalendar
         slots={slots}
-        instructorsById={instructorsById}
-        studentsById={studentsById}
         viewMode="mes"
         currentDate={new Date(2026, 0, 12)}
         onSelectSlot={vi.fn()}

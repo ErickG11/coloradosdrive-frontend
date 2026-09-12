@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Button, Modal, Select } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { addMonths, addWeeks, type CalendarViewMode } from "@/lib/utils/calendar";
-import type { Cohort, PracticeSlot, UserSummary } from "@/types";
+import type { Cohort, PracticeSlotWithNames, UserSummary } from "@/types";
 
 import { PracticeSlotCalendar } from "./PracticeSlotCalendar";
 import { PracticeSlotDetail } from "./PracticeSlotDetail";
@@ -14,8 +14,8 @@ import { PracticeSlotForm } from "./PracticeSlotForm";
 type ModalState =
   | { type: "closed" }
   | { type: "create"; initialScheduledAt?: string }
-  | { type: "detail"; slot: PracticeSlot }
-  | { type: "edit"; slot: PracticeSlot };
+  | { type: "detail"; slot: PracticeSlotWithNames }
+  | { type: "edit"; slot: PracticeSlotWithNames };
 
 function buildSlotsPath(cohortId: string, instructorId: string): string {
   const params = new URLSearchParams();
@@ -33,10 +33,12 @@ export default function PracticeSlotsPage() {
   const [modalState, setModalState] = useState<ModalState>({ type: "closed" });
 
   const { data: cohorts, error: cohortsError } = useFetch<Cohort[]>("/cohorts");
+  // Solo hace falta para el selector del formulario de creación/edición;
+  // la lista de franjas ya trae instructorName/studentName embebidos (ver
+  // docs/adr/008 en el backend), no se resuelven nombres aparte acá.
   const { data: instructors, error: instructorsError } = useFetch<UserSummary[]>(
     "/users?rol=instructor",
   );
-  const { data: students, error: studentsError } = useFetch<UserSummary[]>("/users?rol=estudiante");
 
   const slotsPath = useMemo(
     () => buildSlotsPath(cohortId, instructorId),
@@ -47,18 +49,9 @@ export default function PracticeSlotsPage() {
     isLoading: isLoadingSlots,
     error: slotsError,
     refetch: refetchSlots,
-  } = useFetch<PracticeSlot[]>(slotsPath);
+  } = useFetch<PracticeSlotWithNames[]>(slotsPath);
 
-  const instructorsById = useMemo(
-    () => new Map((instructors ?? []).map((user) => [user.id, user.nombreCompleto])),
-    [instructors],
-  );
-  const studentsById = useMemo(
-    () => new Map((students ?? []).map((user) => [user.id, user.nombreCompleto])),
-    [students],
-  );
-
-  const error = cohortsError ?? instructorsError ?? studentsError ?? slotsError;
+  const error = cohortsError ?? instructorsError ?? slotsError;
   const canCreate = Boolean(cohorts && instructors);
 
   function closeModal() {
@@ -156,8 +149,6 @@ export default function PracticeSlotsPage() {
       {!isLoadingSlots && !error ? (
         <PracticeSlotCalendar
           slots={slots ?? []}
-          instructorsById={instructorsById}
-          studentsById={studentsById}
           viewMode={viewMode}
           currentDate={currentDate}
           onSelectSlot={(slot) => setModalState({ type: "detail", slot })}
@@ -191,12 +182,6 @@ export default function PracticeSlotsPage() {
         {modalState.type === "detail" ? (
           <PracticeSlotDetail
             slot={modalState.slot}
-            instructorName={instructorsById.get(modalState.slot.instructorId) ?? "—"}
-            studentName={
-              modalState.slot.studentId
-                ? (studentsById.get(modalState.slot.studentId) ?? "—")
-                : null
-            }
             onEdit={() => setModalState({ type: "edit", slot: modalState.slot })}
             onDeleted={handleSaved}
           />
