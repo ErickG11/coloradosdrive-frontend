@@ -35,7 +35,10 @@ export function Sidebar({ email, role }: SidebarProps) {
   const isCohortsActive = pathname.startsWith("/admin/cohorts");
   const isEnrollmentsActive = pathname.startsWith("/admin/enrollments");
   const isAdminExamsActive = pathname.startsWith("/admin/exams");
+  const isAdminPracticeSlotsActive = pathname.startsWith("/admin/practice-slots");
   const isStudentExamsActive = pathname.startsWith("/student/exams");
+  const isStudentScheduleActive = pathname.startsWith("/student/schedule");
+  const isInstructorScheduleActive = pathname.startsWith("/instructor/schedule");
 
   function closeDrawer() {
     setIsOpen(false);
@@ -73,12 +76,40 @@ export function Sidebar({ email, role }: SidebarProps) {
               <ExamIcon className="h-5 w-5" />
               Exámenes
             </SidebarLink>
+            <SidebarLink
+              href="/admin/practice-slots"
+              active={isAdminPracticeSlotsActive}
+              onClick={closeDrawer}
+            >
+              <ScheduleIcon className="h-5 w-5" />
+              Horarios de práctica
+            </SidebarLink>
           </>
         ) : null}
         {role === "estudiante" ? (
-          <SidebarLink href="/student/exams" active={isStudentExamsActive} onClick={closeDrawer}>
-            <ExamIcon className="h-5 w-5" />
-            Exámenes
+          <>
+            <SidebarLink href="/student/exams" active={isStudentExamsActive} onClick={closeDrawer}>
+              <ExamIcon className="h-5 w-5" />
+              Exámenes
+            </SidebarLink>
+            <SidebarLink
+              href="/student/schedule"
+              active={isStudentScheduleActive}
+              onClick={closeDrawer}
+            >
+              <ScheduleIcon className="h-5 w-5" />
+              Horarios de práctica
+            </SidebarLink>
+          </>
+        ) : null}
+        {role === "instructor" ? (
+          <SidebarLink
+            href="/instructor/schedule"
+            active={isInstructorScheduleActive}
+            onClick={closeDrawer}
+          >
+            <ScheduleIcon className="h-5 w-5" />
+            Horarios de práctica
           </SidebarLink>
         ) : null}
       </div>
@@ -240,6 +271,16 @@ function UserPlusIcon({ className }: { className?: string }) {
         strokeLinecap="round"
       />
       <path d="M15.5 6v5M13 8.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ScheduleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={className}>
+      <circle cx="10" cy="11" r="7" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10 7.5V11l2.5 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M7 2.5h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }

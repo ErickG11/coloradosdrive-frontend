@@ -18,7 +18,7 @@ function renderSidebar(role: "admin" | "estudiante" | "instructor" | null) {
 }
 
 describe("Sidebar", () => {
-  it("admin: ve Cohortes, Matricular estudiante y Exámenes, pero no la sección de estudiante", () => {
+  it("admin: ve Cohortes, Matricular estudiante, Exámenes y Horarios de práctica, pero no la sección de estudiante", () => {
     renderSidebar("admin");
 
     expect(screen.getAllByRole("link", { name: /Cohortes/ })).not.toHaveLength(0);
@@ -29,9 +29,12 @@ describe("Sidebar", () => {
     for (const link of examLinks) {
       expect(link).toHaveAttribute("href", "/admin/exams");
     }
+    for (const link of screen.getAllByRole("link", { name: /Horarios de práctica/ })) {
+      expect(link).toHaveAttribute("href", "/admin/practice-slots");
+    }
   });
 
-  it("estudiante: ve solo Exámenes (su propia sección), nunca los enlaces de admin", () => {
+  it("estudiante: ve Exámenes y Horarios de práctica (su propia sección), nunca los enlaces de admin", () => {
     renderSidebar("estudiante");
 
     expect(screen.queryAllByRole("link", { name: /Cohortes/ })).toHaveLength(0);
@@ -41,12 +44,20 @@ describe("Sidebar", () => {
     for (const link of examLinks) {
       expect(link).toHaveAttribute("href", "/student/exams");
     }
+    for (const link of screen.getAllByRole("link", { name: /Horarios de práctica/ })) {
+      expect(link).toHaveAttribute("href", "/student/schedule");
+    }
   });
 
-  it("instructor: no ve ninguna sección de navegación todavía (sin páginas propias en este sprint)", () => {
+  it("instructor: ve Horarios de práctica (su primera pantalla real), nada de lo de admin/estudiante", () => {
     renderSidebar("instructor");
 
     expect(screen.queryAllByRole("link", { name: /Cohortes/ })).toHaveLength(0);
     expect(screen.queryAllByRole("link", { name: /Exámenes/ })).toHaveLength(0);
+    const scheduleLinks = screen.getAllByRole("link", { name: /Horarios de práctica/ });
+    expect(scheduleLinks.length).toBeGreaterThan(0);
+    for (const link of scheduleLinks) {
+      expect(link).toHaveAttribute("href", "/instructor/schedule");
+    }
   });
 });
