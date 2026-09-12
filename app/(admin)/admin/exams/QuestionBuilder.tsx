@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Input, Select, Textarea } from "@/components/ui";
+import { Button, IconButton, Input, Select, Textarea } from "@/components/ui";
+import { TrashIcon } from "@/components/ui/icons";
 import type { QuestionType } from "@/types";
 
 export interface QuestionOptionFormValue {
@@ -129,16 +130,14 @@ export function QuestionBuilder({
     <div className="flex flex-col gap-4 rounded-md border border-border bg-bg-sunken p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-display text-base font-semibold text-text-primary">{questionLabel}</h3>
-        <Button
-          type="button"
+        <IconButton
+          icon={<TrashIcon className="h-5 w-5" />}
           variant="danger"
-          size="sm"
           onClick={onRemove}
           disabled={!canRemove}
+          aria-label={`Quitar ${questionLabel}`}
           title={canRemove ? undefined : "El examen necesita al menos una pregunta"}
-        >
-          Quitar pregunta
-        </Button>
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
@@ -199,20 +198,18 @@ export function QuestionBuilder({
                 }
                 className="flex-1"
               />
-              <Button
-                type="button"
+              <IconButton
+                icon={<TrashIcon className="h-5 w-5" />}
                 variant="ghost"
-                size="sm"
                 onClick={() => removeOption(optionIndex)}
                 disabled={question.options.length <= 2}
+                aria-label={`Quitar ${questionLabel} - Opción ${optionIndex + 1}`}
                 title={
                   question.options.length <= 2
                     ? "Una pregunta de opción múltiple necesita al menos 2 opciones"
                     : undefined
                 }
-              >
-                Quitar
-              </Button>
+              />
             </div>
           ))}
           <Button type="button" variant="secondary" size="sm" onClick={addOption}>
@@ -242,14 +239,12 @@ export function QuestionBuilder({
                   onChange={(event) => updateSynonym(synonymIndex, event.target.value)}
                   className="flex-1"
                 />
-                <Button
-                  type="button"
+                <IconButton
+                  icon={<TrashIcon className="h-5 w-5" />}
                   variant="ghost"
-                  size="sm"
                   onClick={() => removeSynonym(synonymIndex)}
-                >
-                  Quitar
-                </Button>
+                  aria-label={`Quitar ${questionLabel} - Sinónimo ${synonymIndex + 1}`}
+                />
               </div>
             ))}
             <Button type="button" variant="secondary" size="sm" onClick={addSynonym}>

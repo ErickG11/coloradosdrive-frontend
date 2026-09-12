@@ -82,7 +82,7 @@ describe("ExamForm", () => {
     expect(screen.getByLabelText("Pregunta 1 - Opción 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Pregunta 1 - Opción 2")).toBeInTheDocument();
     // Con una sola pregunta, no se puede quitar (el examen necesita al menos una).
-    expect(screen.getByRole("button", { name: "Quitar pregunta" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Quitar Pregunta 1" })).toBeDisabled();
   });
 
   it("agrega y quita preguntas dinámicamente", async () => {
@@ -92,7 +92,7 @@ describe("ExamForm", () => {
     await user.click(screen.getByRole("button", { name: "Agregar pregunta" }));
 
     expect(screen.getByLabelText("Pregunta 2 - Enunciado")).toBeInTheDocument();
-    const removeButtons = screen.getAllByRole("button", { name: "Quitar pregunta" });
+    const removeButtons = screen.getAllByRole("button", { name: /^Quitar Pregunta \d+$/ });
     expect(removeButtons[0]).not.toBeDisabled();
 
     await user.click(removeButtons[1]);
@@ -103,7 +103,9 @@ describe("ExamForm", () => {
   it("no permite quitar una opción si solo quedan 2 en una pregunta de opción múltiple", () => {
     render(<ExamForm courses={courses} />);
 
-    const removeOptionButtons = screen.getAllByRole("button", { name: "Quitar" });
+    const removeOptionButtons = screen.getAllByRole("button", {
+      name: /^Quitar Pregunta \d+ - Opción \d+$/,
+    });
     for (const button of removeOptionButtons) {
       expect(button).toBeDisabled();
     }
@@ -222,7 +224,9 @@ describe("ExamForm", () => {
       // Con 2 preguntas se puede quitar la primera (question-1); con 1
       // sola pregunta el botón queda deshabilitado a propósito (regla de
       // "el examen necesita al menos una pregunta", ver siguiente test).
-      const removeButtonsBeforeDelete = screen.getAllByRole("button", { name: "Quitar pregunta" });
+      const removeButtonsBeforeDelete = screen.getAllByRole("button", {
+        name: /^Quitar Pregunta \d+$/,
+      });
       await user.click(removeButtonsBeforeDelete[0]);
 
       // Queda solo question-2 (ahora "Pregunta 1"); se agrega una nueva sin id.
@@ -276,10 +280,10 @@ describe("ExamForm", () => {
       const user = userEvent.setup();
       render(<ExamForm courses={courses} examId="exam-1" initialValues={initialValues} />);
 
-      const removeButtons = screen.getAllByRole("button", { name: "Quitar pregunta" });
+      const removeButtons = screen.getAllByRole("button", { name: /^Quitar Pregunta \d+$/ });
       await user.click(removeButtons[0]);
 
-      expect(screen.getByRole("button", { name: "Quitar pregunta" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Quitar Pregunta 1" })).toBeDisabled();
     });
   });
 });
