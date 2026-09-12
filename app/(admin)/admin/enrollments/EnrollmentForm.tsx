@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 
 import { Button, Input, Select } from "@/components/ui";
+import { CheckIcon } from "@/components/ui/icons";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { Cohort, Enrollment, User } from "@/types";
@@ -121,6 +122,9 @@ export function EnrollmentForm({ cohorts }: EnrollmentFormProps) {
 
       {error ? <p className="text-sm text-accent-red">{error}</p> : null}
       {successMessage ? (
+        // El "éxito" no tiene color propio en la paleta cerrada de 4
+        // colores: se comunica con ícono + texto en accent-blue, no con
+        // un verde nuevo.
         <p className="flex items-start gap-2 text-sm text-accent-blue">
           <CheckIcon className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{successMessage}</span>
@@ -131,21 +135,5 @@ export function EnrollmentForm({ cohorts }: EnrollmentFormProps) {
         Matricular estudiante
       </Button>
     </form>
-  );
-}
-
-// El "éxito" no tiene color propio en la paleta cerrada de 4 colores: se
-// comunica con este ícono + texto en accent-blue, no con un verde nuevo.
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={className}>
-      <path
-        d="M4 10.5 8 14.5 16 5.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
