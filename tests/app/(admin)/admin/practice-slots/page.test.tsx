@@ -154,7 +154,7 @@ describe("PracticeSlotsPage", () => {
     const [chip] = screen.getAllByRole("button", { name: /Bruno Salas/ });
     await user.click(chip);
 
-    expect(screen.getByRole("button", { name: "Editar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Editar franja" })).toBeDisabled();
   });
 
   it("desde el detalle de una franja disponible, 'Editar' abre el formulario prefilled", async () => {
@@ -168,7 +168,7 @@ describe("PracticeSlotsPage", () => {
 
     const [chip] = screen.getAllByRole("button", { name: /Bruno Salas/ });
     await user.click(chip);
-    await user.click(screen.getByRole("button", { name: "Editar" }));
+    await user.click(screen.getByRole("button", { name: "Editar franja" }));
 
     const dialog = screen.getByRole("dialog", { name: "Editar franja" });
     expect(within(dialog).getByLabelText("Cohorte")).toBeDisabled();

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { Button, StatusBadge } from "@/components/ui";
+import { IconButton, StatusBadge } from "@/components/ui";
+import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { PracticeSlotWithNames } from "@/types";
@@ -77,18 +78,23 @@ export function PracticeSlotDetail({ slot, onEdit, onDeleted }: PracticeSlotDeta
       {error ? <p className="text-sm text-accent-red">{error}</p> : null}
 
       <div className="flex justify-end gap-3">
-        <Button
-          type="button"
+        <IconButton
+          icon={<TrashIcon className="h-5 w-5" />}
           variant="danger"
           disabled={!canModify || isDeleting}
           isLoading={isDeleting}
           onClick={() => void handleDelete()}
-        >
-          Eliminar
-        </Button>
-        <Button type="button" variant="secondary" disabled={!canModify} onClick={onEdit}>
-          Editar
-        </Button>
+          aria-label="Eliminar franja"
+          title={canModify ? undefined : "Solo se puede eliminar una franja disponible"}
+        />
+        <IconButton
+          icon={<EditIcon className="h-5 w-5" />}
+          variant="secondary"
+          disabled={!canModify}
+          onClick={onEdit}
+          aria-label="Editar franja"
+          title={canModify ? undefined : "Solo se puede editar una franja disponible"}
+        />
       </div>
     </div>
   );
