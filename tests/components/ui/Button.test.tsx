@@ -33,4 +33,22 @@ describe("Button", () => {
 
     expect(screen.getByRole("button", { name: "Guardar" })).toBeDisabled();
   });
+
+  it("renders an optional icon before the text", () => {
+    render(<Button icon={<svg data-testid="icon" />}>Reclamar</Button>);
+
+    const button = screen.getByRole("button", { name: "Reclamar" });
+    expect(button.querySelector('[data-testid="icon"]')).toBeInTheDocument();
+  });
+
+  it("hides the icon while isLoading (el texto ya cambia a Cargando...)", () => {
+    render(
+      <Button icon={<svg data-testid="icon" />} isLoading>
+        Reclamar
+      </Button>,
+    );
+
+    const button = screen.getByRole("button", { name: "Cargando..." });
+    expect(button.querySelector('[data-testid="icon"]')).not.toBeInTheDocument();
+  });
 });

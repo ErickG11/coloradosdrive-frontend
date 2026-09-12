@@ -6,6 +6,8 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
+import { XIcon } from "./icons";
+
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -68,7 +70,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
                 aria-label="Cerrar"
                 className="ml-auto shrink-0 rounded-sm p-1.5 text-text-secondary hover:bg-bg-sunken hover:text-text-primary"
               >
-                <CloseIcon className="h-5 w-5" />
+                <XIcon className="h-5 w-5" />
               </button>
             </div>
             {children}
@@ -76,18 +78,5 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
         </div>
       ) : null}
     </AnimatePresence>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={className}>
-      <path
-        d="M5 5l10 10M15 5 5 15"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
   );
 }
