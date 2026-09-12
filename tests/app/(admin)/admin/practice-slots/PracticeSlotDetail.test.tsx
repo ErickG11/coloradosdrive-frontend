@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PracticeSlotDetail } from "@/app/(admin)/admin/practice-slots/PracticeSlotDetail";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import type { PracticeSlot } from "@/types";
+import type { PracticeSlotWithNames } from "@/types";
 
 vi.mock("@/lib/api/client", () => ({
   api: {
@@ -15,7 +15,7 @@ vi.mock("@/lib/api/client", () => ({
 
 const mockedDelete = vi.mocked(api.delete);
 
-function buildSlot(overrides: Partial<PracticeSlot> = {}): PracticeSlot {
+function buildSlot(overrides: Partial<PracticeSlotWithNames> = {}): PracticeSlotWithNames {
   return {
     id: "slot-1",
     cohortId: "cohort-1",
@@ -30,6 +30,8 @@ function buildSlot(overrides: Partial<PracticeSlot> = {}): PracticeSlot {
     attended: null,
     createdAt: "",
     updatedAt: "",
+    instructorName: "Bruno Salas",
+    studentName: null,
     ...overrides,
   };
 }
@@ -42,9 +44,7 @@ describe("PracticeSlotDetail", () => {
   it("muestra instructor, estudiante y estado", () => {
     render(
       <PracticeSlotDetail
-        slot={buildSlot({ status: "asignado" })}
-        instructorName="Bruno Salas"
-        studentName="Ana Torres"
+        slot={buildSlot({ status: "asignado", studentName: "Ana Torres" })}
         onEdit={vi.fn()}
         onDeleted={vi.fn()}
       />,
@@ -57,13 +57,7 @@ describe("PracticeSlotDetail", () => {
 
   it("habilita Editar/Eliminar y no muestra la nota cuando la franja está disponible", () => {
     render(
-      <PracticeSlotDetail
-        slot={buildSlot({ status: "disponible" })}
-        instructorName="Bruno Salas"
-        studentName={null}
-        onEdit={vi.fn()}
-        onDeleted={vi.fn()}
-      />,
+      <PracticeSlotDetail slot={buildSlot({ status: "disponible" })} onEdit={vi.fn()} onDeleted={vi.fn()} />,
     );
 
     expect(screen.getByRole("button", { name: "Editar" })).toBeEnabled();
@@ -74,9 +68,7 @@ describe("PracticeSlotDetail", () => {
   it("deshabilita Editar/Eliminar y explica por qué cuando la franja no está disponible", () => {
     render(
       <PracticeSlotDetail
-        slot={buildSlot({ status: "confirmado", studentId: "student-1" })}
-        instructorName="Bruno Salas"
-        studentName="Ana Torres"
+        slot={buildSlot({ status: "confirmado", studentId: "student-1", studentName: "Ana Torres" })}
         onEdit={vi.fn()}
         onDeleted={vi.fn()}
       />,
@@ -90,15 +82,7 @@ describe("PracticeSlotDetail", () => {
   it("llama a onEdit al hacer clic en Editar", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
-    render(
-      <PracticeSlotDetail
-        slot={buildSlot()}
-        instructorName="Bruno Salas"
-        studentName={null}
-        onEdit={onEdit}
-        onDeleted={vi.fn()}
-      />,
-    );
+    render(<PracticeSlotDetail slot={buildSlot()} onEdit={onEdit} onDeleted={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: "Editar" }));
 
@@ -109,15 +93,7 @@ describe("PracticeSlotDetail", () => {
     const user = userEvent.setup();
     const onDeleted = vi.fn();
     mockedDelete.mockResolvedValue(undefined);
-    render(
-      <PracticeSlotDetail
-        slot={buildSlot()}
-        instructorName="Bruno Salas"
-        studentName={null}
-        onEdit={vi.fn()}
-        onDeleted={onDeleted}
-      />,
-    );
+    render(<PracticeSlotDetail slot={buildSlot()} onEdit={vi.fn()} onDeleted={onDeleted} />);
 
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
 
@@ -131,15 +107,7 @@ describe("PracticeSlotDetail", () => {
   it("muestra el error del backend si la eliminación falla (ej. condición de carrera)", async () => {
     const user = userEvent.setup();
     mockedDelete.mockRejectedValue(new ApiError("Esta franja ya no está disponible", 409));
-    render(
-      <PracticeSlotDetail
-        slot={buildSlot()}
-        instructorName="Bruno Salas"
-        studentName={null}
-        onEdit={vi.fn()}
-        onDeleted={vi.fn()}
-      />,
-    );
+    render(<PracticeSlotDetail slot={buildSlot()} onEdit={vi.fn()} onDeleted={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
 

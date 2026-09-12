@@ -12,7 +12,7 @@ import {
   isInMonth,
   type CalendarViewMode,
 } from "@/lib/utils/calendar";
-import type { PracticeSlot } from "@/types";
+import type { PracticeSlotWithNames } from "@/types";
 
 const MONTH_VISIBLE_SLOTS = 3;
 
@@ -24,31 +24,16 @@ function formatDayLabel(date: Date): string {
   return date.toLocaleDateString("es-EC", { weekday: "short", day: "numeric", month: "short" });
 }
 
-interface SlotLookup {
-  instructorName: string;
-  studentName: string | null;
-}
-
-function lookupSlot(
-  slot: PracticeSlot,
-  instructorsById: Map<string, string>,
-  studentsById: Map<string, string>,
-): SlotLookup {
-  return {
-    instructorName: instructorsById.get(slot.instructorId) ?? "Instructor",
-    studentName: slot.studentId ? (studentsById.get(slot.studentId) ?? "Estudiante") : null,
-  };
-}
-
 interface SlotChipProps {
-  slot: PracticeSlot;
-  instructorName: string;
-  studentName: string | null;
+  slot: PracticeSlotWithNames;
   compact?: boolean;
   onClick: () => void;
 }
 
-function SlotChip({ slot, instructorName, studentName, compact = false, onClick }: SlotChipProps) {
+// instructorName/studentName vienen embebidos desde el backend (ver
+// docs/adr/008 en el backend) - no hace falta resolverlos contra ningún
+// Map local.
+function SlotChip({ slot, compact = false, onClick }: SlotChipProps) {
   return (
     <button
       type="button"
@@ -56,9 +41,11 @@ function SlotChip({ slot, instructorName, studentName, compact = false, onClick 
       className="flex w-full flex-col items-start gap-1 rounded-sm border border-border bg-bg-field px-2 py-1.5 text-left text-xs transition-colors hover:border-border-strong"
     >
       <span className="font-medium text-text-primary">
-        {formatTime(slot.scheduledAt)} · {instructorName}
+        {formatTime(slot.scheduledAt)} · {slot.instructorName}
       </span>
-      {!compact && studentName ? <span className="text-text-secondary">{studentName}</span> : null}
+      {!compact && slot.studentName ? (
+        <span className="text-text-secondary">{slot.studentName}</span>
+      ) : null}
       <StatusBadge status={slot.status} />
     </button>
   );
@@ -66,25 +53,14 @@ function SlotChip({ slot, instructorName, studentName, compact = false, onClick 
 
 interface DayCellProps {
   day: Date;
-  slots: PracticeSlot[];
+  slots: PracticeSlotWithNames[];
   dimmed: boolean;
   compact: boolean;
-  instructorsById: Map<string, string>;
-  studentsById: Map<string, string>;
-  onSelectSlot: (slot: PracticeSlot) => void;
+  onSelectSlot: (slot: PracticeSlotWithNames) => void;
   onSelectEmptyDay: (date: Date) => void;
 }
 
-function DayCell({
-  day,
-  slots,
-  dimmed,
-  compact,
-  instructorsById,
-  studentsById,
-  onSelectSlot,
-  onSelectEmptyDay,
-}: DayCellProps) {
+function DayCell({ day, slots, dimmed, compact, onSelectSlot, onSelectEmptyDay }: DayCellProps) {
   const [expanded, setExpanded] = useState(false);
   const visibleSlots = compact && !expanded ? slots.slice(0, MONTH_VISIBLE_SLOTS) : slots;
   const hiddenCount = slots.length - visibleSlots.length;
@@ -108,19 +84,9 @@ function DayCell({
         </button>
       </div>
       <div className="flex flex-col gap-1">
-        {visibleSlots.map((slot) => {
-          const { instructorName, studentName } = lookupSlot(slot, instructorsById, studentsById);
-          return (
-            <SlotChip
-              key={slot.id}
-              slot={slot}
-              instructorName={instructorName}
-              studentName={studentName}
-              compact={compact}
-              onClick={() => onSelectSlot(slot)}
-            />
-          );
-        })}
+        {visibleSlots.map((slot) => (
+          <SlotChip key={slot.id} slot={slot} compact={compact} onClick={() => onSelectSlot(slot)} />
+        ))}
       </div>
       {hiddenCount > 0 ? (
         <button
@@ -136,12 +102,10 @@ function DayCell({
 }
 
 export interface PracticeSlotCalendarProps {
-  slots: PracticeSlot[];
-  instructorsById: Map<string, string>;
-  studentsById: Map<string, string>;
+  slots: PracticeSlotWithNames[];
   viewMode: CalendarViewMode;
   currentDate: Date;
-  onSelectSlot: (slot: PracticeSlot) => void;
+  onSelectSlot: (slot: PracticeSlotWithNames) => void;
   onSelectEmptyDay: (date: Date) => void;
 }
 
@@ -151,8 +115,6 @@ export interface PracticeSlotCalendarProps {
 // legible a 375px (ver discusión de responsive del sprint).
 export function PracticeSlotCalendar({
   slots,
-  instructorsById,
-  studentsById,
   viewMode,
   currentDate,
   onSelectSlot,
@@ -175,8 +137,6 @@ export function PracticeSlotCalendar({
               slots={daySlots}
               dimmed={viewMode === "mes" && !isInMonth(day, currentDate)}
               compact={viewMode === "mes"}
-              instructorsById={instructorsById}
-              studentsById={studentsById}
               onSelectSlot={onSelectSlot}
               onSelectEmptyDay={onSelectEmptyDay}
             />
@@ -205,22 +165,9 @@ export function PracticeSlotCalendar({
                 <p className="text-sm text-text-secondary">Sin franjas.</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {daySlots.map((slot) => {
-                    const { instructorName, studentName } = lookupSlot(
-                      slot,
-                      instructorsById,
-                      studentsById,
-                    );
-                    return (
-                      <SlotChip
-                        key={slot.id}
-                        slot={slot}
-                        instructorName={instructorName}
-                        studentName={studentName}
-                        onClick={() => onSelectSlot(slot)}
-                      />
-                    );
-                  })}
+                  {daySlots.map((slot) => (
+                    <SlotChip key={slot.id} slot={slot} onClick={() => onSelectSlot(slot)} />
+                  ))}
                 </div>
               )}
             </div>

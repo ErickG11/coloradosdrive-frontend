@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { Button, Card, StatusBadge } from "@/components/ui";
 import { useCurrentUserId } from "@/hooks/useCurrentUserId";
@@ -9,7 +9,7 @@ import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
-import type { PracticeSlot, PracticeSlotStatus, UserSummary } from "@/types";
+import type { PracticeSlotStatus, PracticeSlotWithNames } from "@/types";
 
 const ACTIVE_OWN_STATUSES: PracticeSlotStatus[] = ["asignado", "confirmado"];
 const AVAILABLE_STATUSES: PracticeSlotStatus[] = ["disponible", "liberado"];
@@ -25,17 +25,15 @@ function formatDateTime(iso: string): string {
 }
 
 export default function StudentSchedulePage() {
+  // instructorName ya viene embebido en cada franja (ver docs/adr/008 en
+  // el backend) - el estudiante no necesita (ni puede: GET /users es
+  // admin-only) resolverlo aparte contra /users.
   const {
     data: slots,
-    isLoading: isLoadingSlots,
-    error: slotsError,
+    isLoading,
+    error,
     refetch: refetchSlots,
-  } = useFetch<PracticeSlot[]>("/practice-slots");
-  const {
-    data: instructors,
-    isLoading: isLoadingInstructors,
-    error: instructorsError,
-  } = useFetch<UserSummary[]>("/users?rol=instructor");
+  } = useFetch<PracticeSlotWithNames[]>("/practice-slots");
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
@@ -61,14 +59,6 @@ export default function StudentSchedulePage() {
       refetchSlots();
     },
   });
-
-  const instructorsById = useMemo(
-    () => new Map((instructors ?? []).map((user) => [user.id, user.nombreCompleto])),
-    [instructors],
-  );
-
-  const isLoading = isLoadingSlots || isLoadingInstructors;
-  const error = slotsError ?? instructorsError;
 
   // Cualquier franja con studentId no nulo en esta lista es, por
   // construcción, del propio estudiante (el backend solo incluye
@@ -166,15 +156,12 @@ export default function StudentSchedulePage() {
                 return (
                   <Card
                     key={slot.id}
-                    className={cn(
-                      "flex flex-col gap-3",
-                      isConfirmationDue && "border-accent-red",
-                    )}
+                    className={cn("flex flex-col gap-3", isConfirmationDue && "border-accent-red")}
                   >
                     {isConfirmationDue ? (
                       <p className="text-sm font-medium text-accent-red">
-                        Tu práctica está por empezar. Confirma tu asistencia o cancela para
-                        liberar el cupo.
+                        Tu práctica está por empezar. Confirma tu asistencia o cancela para liberar
+                        el cupo.
                       </p>
                     ) : null}
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -183,8 +170,7 @@ export default function StudentSchedulePage() {
                           {formatDateTime(slot.scheduledAt)}
                         </span>
                         <span className="text-sm text-text-secondary">
-                          {slot.durationMinutes} min ·{" "}
-                          {instructorsById.get(slot.instructorId) ?? "Instructor"}
+                          {slot.durationMinutes} min · {slot.instructorName}
                         </span>
                       </div>
                       <StatusBadge status={slot.status} />
@@ -232,11 +218,13 @@ export default function StudentSchedulePage() {
                         {formatDateTime(slot.scheduledAt)}
                       </span>
                       <span className="text-sm text-text-secondary">
-                        {slot.durationMinutes} min ·{" "}
-                        {instructorsById.get(slot.instructorId) ?? "Instructor"}
+                        {slot.durationMinutes} min · {slot.instructorName}
                       </span>
                     </div>
-                    <Button isLoading={pendingSlotId === slot.id} onClick={() => handleClaim(slot.id)}>
+                    <Button
+                      isLoading={pendingSlotId === slot.id}
+                      onClick={() => handleClaim(slot.id)}
+                    >
                       Reclamar
                     </Button>
                   </Card>

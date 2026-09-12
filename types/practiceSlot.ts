@@ -26,6 +26,16 @@ export interface PracticeSlot {
   updatedAt: string;
 }
 
+// Forma que devuelve GET /practice-slots (admin/estudiante/instructor):
+// el backend embebe estos 2 nombres vía PostgREST en vez de que cada rol
+// tenga que resolverlos por su cuenta contra /users (ver docs/adr/008 en
+// el backend). Las acciones (crear/editar/reclamar/confirmar/cancelar/
+// marcar asistencia) siguen devolviendo PracticeSlot, sin nombres.
+export interface PracticeSlotWithNames extends PracticeSlot {
+  instructorName: string;
+  studentName: string | null;
+}
+
 // El admin crea la franja sin estudiante (status inicial 'disponible' lo
 // aplica el backend, no se envía aquí).
 export interface CreatePracticeSlotInput {

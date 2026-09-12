@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import PracticeSlotsPage from "@/app/(admin)/admin/practice-slots/page";
 import { useFetch } from "@/hooks/useFetch";
-import type { Cohort, PracticeSlot, UserSummary } from "@/types";
+import type { Cohort, PracticeSlotWithNames, UserSummary } from "@/types";
 
 vi.mock("@/hooks/useFetch", () => ({
   useFetch: vi.fn(),
@@ -27,7 +27,6 @@ const cohorts: Cohort[] = [
 ];
 
 const instructors: UserSummary[] = [{ id: "instructor-1", nombreCompleto: "Bruno Salas" }];
-const students: UserSummary[] = [{ id: "student-1", nombreCompleto: "Ana Torres" }];
 
 // La página arranca en la semana de "hoy" (sin prop para inyectar otra
 // fecha) - se fecha la franja de prueba en el propio día real, en vez de
@@ -43,7 +42,7 @@ const slotScheduledAt = new Date(
   0,
 ).toISOString();
 
-const slot: PracticeSlot = {
+const slot: PracticeSlotWithNames = {
   id: "slot-1",
   cohortId: "cohort-1",
   instructorId: "instructor-1",
@@ -57,10 +56,12 @@ const slot: PracticeSlot = {
   attended: null,
   createdAt: "",
   updatedAt: "",
+  instructorName: "Bruno Salas",
+  studentName: "Ana Torres",
 };
 
 function mockFetch(
-  slotsResult: { data: PracticeSlot[] | null; isLoading: boolean; error: string | null } = {
+  slotsResult: { data: PracticeSlotWithNames[] | null; isLoading: boolean; error: string | null } = {
     data: [slot],
     isLoading: false,
     error: null,
@@ -72,9 +73,6 @@ function mockFetch(
     }
     if (path === "/users?rol=instructor") {
       return { data: instructors, isLoading: false, error: null, refetch: vi.fn() };
-    }
-    if (path === "/users?rol=estudiante") {
-      return { data: students, isLoading: false, error: null, refetch: vi.fn() };
     }
     if (typeof path === "string" && path.startsWith("/practice-slots")) {
       return { ...slotsResult, refetch: vi.fn() };

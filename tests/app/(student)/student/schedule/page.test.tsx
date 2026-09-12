@@ -7,7 +7,7 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { useFetch } from "@/hooks/useFetch";
 import { createClient } from "@/lib/supabase/client";
-import type { PracticeSlot, UserSummary } from "@/types";
+import type { PracticeSlotWithNames } from "@/types";
 
 vi.mock("@/hooks/useFetch", () => ({
   useFetch: vi.fn(),
@@ -69,9 +69,7 @@ function mockSupabaseClient(userId: string | null): Map<string, MockChannel> {
   return channels;
 }
 
-const instructors: UserSummary[] = [{ id: "instructor-1", nombreCompleto: "Bruno Salas" }];
-
-function buildSlot(overrides: Partial<PracticeSlot> = {}): PracticeSlot {
+function buildSlot(overrides: Partial<PracticeSlotWithNames> = {}): PracticeSlotWithNames {
   return {
     id: "slot-1",
     cohortId: "cohort-1",
@@ -86,19 +84,18 @@ function buildSlot(overrides: Partial<PracticeSlot> = {}): PracticeSlot {
     attended: null,
     createdAt: "",
     updatedAt: "",
+    instructorName: "Bruno Salas",
+    studentName: null,
     ...overrides,
   };
 }
 
 const refetchSlots = vi.fn();
 
-function mockFetch(slots: PracticeSlot[]) {
+function mockFetch(slots: PracticeSlotWithNames[]) {
   mockedUseFetch.mockImplementation((path: unknown) => {
     if (path === "/practice-slots") {
       return { data: slots, isLoading: false, error: null, refetch: refetchSlots };
-    }
-    if (path === "/users?rol=instructor") {
-      return { data: instructors, isLoading: false, error: null, refetch: vi.fn() };
     }
     throw new Error(`useFetch mockeado con un path inesperado: ${String(path)}`);
   });
