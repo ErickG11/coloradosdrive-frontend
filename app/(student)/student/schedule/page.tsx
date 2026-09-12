@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Button, Card, StatusBadge } from "@/components/ui";
+import { CheckIcon, ClaimIcon, XIcon } from "@/components/ui/icons";
 import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { useFetch } from "@/hooks/useFetch";
 import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
@@ -179,6 +180,7 @@ export default function StudentSchedulePage() {
                       {slot.status === "asignado" ? (
                         <Button
                           variant="secondary"
+                          icon={<CheckIcon className="h-4 w-4" />}
                           isLoading={pendingSlotId === slot.id}
                           onClick={() => handleConfirm(slot.id)}
                         >
@@ -187,6 +189,7 @@ export default function StudentSchedulePage() {
                       ) : null}
                       <Button
                         variant="danger"
+                        icon={<XIcon className="h-4 w-4" />}
                         isLoading={pendingSlotId === slot.id}
                         onClick={() => handleCancel(slot.id)}
                       >
@@ -222,6 +225,7 @@ export default function StudentSchedulePage() {
                       </span>
                     </div>
                     <Button
+                      icon={<ClaimIcon className="h-4 w-4" />}
                       isLoading={pendingSlotId === slot.id}
                       onClick={() => handleClaim(slot.id)}
                     >
