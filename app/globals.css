@@ -55,13 +55,13 @@
   /* --- Gradiente decorativo de fondo: modo claro ---
      Propuesta: el canvas se queda claro (no oscurecerlo detrás del vidrio
      blanco — apagaría la sensación "clara" y podría bajar el contraste del
-     texto en algunas zonas). En vez de eso, dos glows muy tenues del azul
-     y el rojo de acento (7% / 5%) le dan al glassmorphism algo de color
-     que "atrapar" sin comprometer que el modo claro se sienta luminoso y
-     profesional. */
+     texto en algunas zonas). En vez de eso, dos glows del azul y el rojo
+     de acento (18% / 13%) le dan al glassmorphism algo de color notorio
+     sin comprometer que el modo claro se sienta luminoso y profesional
+     (subidos desde 7%/5% en la pasada de refinamiento visual). */
   --gradient-decorative:
-    radial-gradient(circle at 10% -5%, rgb(59 91 219 / 7%), transparent 45%),
-    radial-gradient(circle at 95% 105%, rgb(225 59 59 / 5%), transparent 40%);
+    radial-gradient(circle at 10% -5%, rgb(59 91 219 / 18%), transparent 45%),
+    radial-gradient(circle at 95% 105%, rgb(225 59 59 / 13%), transparent 40%);
 
   /* --- Acentos: CONSTANTES entre temas --- */
   --color-accent-red: #e13b3b;

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { XIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils/cn";
 import type { Role } from "@/types/user";
 
@@ -184,7 +185,7 @@ export function Sidebar({ email, role }: SidebarProps) {
                   aria-label="Cerrar menú"
                   className="rounded-sm p-1.5 text-text-primary hover:bg-bg-sunken"
                 >
-                  <CloseIcon className="h-5 w-5" />
+                  <XIcon className="h-5 w-5" />
                 </button>
               </div>
               <nav className="flex flex-1 flex-col overflow-y-auto">{navLinks}</nav>
@@ -225,19 +226,6 @@ function MenuIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={className}>
       <path
         d="M3 5h14M3 10h14M3 15h14"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={className}>
-      <path
-        d="M5 5l10 10M15 5 5 15"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"

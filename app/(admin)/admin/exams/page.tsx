@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 
-import { buttonClassName } from "@/components/ui";
+import { buttonClassName, iconButtonClassName } from "@/components/ui";
+import { EditIcon } from "@/components/ui/icons";
 import { useFetch } from "@/hooks/useFetch";
 import type { Course, Exam } from "@/types";
 
@@ -79,9 +80,11 @@ export default function ExamsPage() {
                     <td className="px-4 py-2 text-right">
                       <Link
                         href={`/admin/exams/${exam.id}/edit`}
-                        className="text-accent-blue underline underline-offset-2 hover:text-accent-blue-hover"
+                        aria-label={`Editar ${exam.title}`}
+                        title={`Editar ${exam.title}`}
+                        className={iconButtonClassName("ghost", "ml-auto")}
                       >
-                        Editar
+                        <EditIcon className="h-5 w-5" />
                       </Link>
                     </td>
                   </tr>

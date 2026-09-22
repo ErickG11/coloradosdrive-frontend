@@ -2,7 +2,7 @@
 
 import { forwardRef } from "react";
 import { motion } from "framer-motion";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ReactElement } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
@@ -18,6 +18,11 @@ export interface ButtonProps extends NativeButtonProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
+  /** Ícono opcional antes del texto - refuerzo visual, nunca reemplaza el
+   * texto (RNF-04: un ícono sin texto es ambiguo la primera vez que
+   * alguien lo ve). Se oculta mientras isLoading (el texto ya cambia a
+   * "Cargando..."). */
+  icon?: ReactElement;
 }
 
 // danger reutiliza el rojo de acento (no un rojo aparte): la paleta se
@@ -54,7 +59,16 @@ export function buttonClassName(
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, variant = "primary", size = "md", isLoading = false, disabled, children, ...props },
+  {
+    className,
+    variant = "primary",
+    size = "md",
+    isLoading = false,
+    disabled,
+    icon,
+    children,
+    ...props
+  },
   ref,
 ) {
   return (
@@ -67,7 +81,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       className={buttonClassName(variant, size, className)}
       {...props}
     >
-      {isLoading ? "Cargando..." : children}
+      {isLoading ? (
+        "Cargando..."
+      ) : (
+        <>
+          {icon}
+          {children}
+        </>
+      )}
     </motion.button>
   );
 });
