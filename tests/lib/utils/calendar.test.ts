@@ -5,6 +5,8 @@ import {
   addMonths,
   addWeeks,
   dayKey,
+  formatMonthLabel,
+  formatWeekRangeLabel,
   getMonthGrid,
   getWeekDays,
   groupByDay,
@@ -111,5 +113,32 @@ describe("groupByDay", () => {
     expect([...groups.keys()]).toEqual(["2026-01-05", "2026-01-06"]);
     expect(groups.get("2026-01-05")?.map((item) => item.id)).toEqual(["a", "b"]);
     expect(groups.get("2026-01-06")?.map((item) => item.id)).toEqual(["c"]);
+  });
+});
+
+describe("formatMonthLabel", () => {
+  it('capitaliza el mes: "Septiembre 2026"', () => {
+    expect(formatMonthLabel(new Date(2026, 8, 1))).toBe("Septiembre 2026");
+  });
+});
+
+describe("formatWeekRangeLabel", () => {
+  it("misma semana dentro de un solo mes: solo un día y mes al final", () => {
+    // 2026-09-15 es martes -> semana lunes 14 a domingo 20 de septiembre.
+    expect(formatWeekRangeLabel(new Date(2026, 8, 15))).toBe("14 - 20 de septiembre, 2026");
+  });
+
+  it("semana que cruza de mes (mismo año)", () => {
+    // 2026-09-28 es lunes -> semana lunes 28 sept a domingo 4 de octubre.
+    expect(formatWeekRangeLabel(new Date(2026, 8, 28))).toBe(
+      "28 de septiembre - 4 de octubre, 2026",
+    );
+  });
+
+  it("semana que cruza de año", () => {
+    // 2025-12-29 es lunes -> semana lunes 29 dic 2025 a domingo 4 ene 2026.
+    expect(formatWeekRangeLabel(new Date(2025, 11, 29))).toBe(
+      "29 de diciembre de 2025 - 4 de enero de 2026",
+    );
   });
 });

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 
-import { buttonClassName } from "@/components/ui";
+import { buttonClassName, iconButtonClassName } from "@/components/ui";
+import { EditIcon } from "@/components/ui/icons";
 import { useFetch } from "@/hooks/useFetch";
 import type { Cohort, Course } from "@/types";
 
@@ -78,9 +79,11 @@ export default function CohortsPage() {
                     <td className="px-4 py-2 text-right">
                       <Link
                         href={`/admin/cohorts/${cohort.id}/edit`}
-                        className="text-accent-blue underline underline-offset-2 hover:text-accent-blue-hover"
+                        aria-label={`Editar ${cohort.nombre}`}
+                        title={`Editar ${cohort.nombre}`}
+                        className={iconButtonClassName("ghost", "ml-auto")}
                       >
-                        Editar
+                        <EditIcon className="h-5 w-5" />
                       </Link>
                     </td>
                   </tr>

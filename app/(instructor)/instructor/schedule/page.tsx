@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Button, Card, StatusBadge } from "@/components/ui";
+import { CheckIcon, XIcon } from "@/components/ui/icons";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -93,6 +94,7 @@ export default function InstructorSchedulePage() {
                     </span>
                     <Button
                       variant={slot.attended === false ? "primary" : "secondary"}
+                      icon={<XIcon className="h-4 w-4" />}
                       isLoading={pendingSlotId === slot.id}
                       onClick={() => void handleMarkAttendance(slot.id, false)}
                     >
@@ -100,6 +102,7 @@ export default function InstructorSchedulePage() {
                     </Button>
                     <Button
                       variant={slot.attended === true ? "primary" : "secondary"}
+                      icon={<CheckIcon className="h-4 w-4" />}
                       isLoading={pendingSlotId === slot.id}
                       onClick={() => void handleMarkAttendance(slot.id, true)}
                     >

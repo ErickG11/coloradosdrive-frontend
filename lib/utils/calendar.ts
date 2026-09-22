@@ -70,6 +70,40 @@ export function getMonthGrid(date: Date): Date[][] {
   return weeks;
 }
 
+// "Septiembre 2026" - encabezado de la vista de mes. Capitalizado porque
+// aparece solo (es el único texto que le dice al admin en qué mes está),
+// a diferencia del rango de semana, donde el mes queda en minúscula
+// dentro de la frase ("8 - 14 de septiembre, 2026").
+export function formatMonthLabel(date: Date): string {
+  const monthName = date.toLocaleDateString("es-EC", { month: "long" });
+  return `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${date.getFullYear()}`;
+}
+
+// Encabezado de la vista de semana - el admin necesita saber qué rango de
+// fechas está viendo sin tener que deducirlo de la grilla. 3 formatos
+// según si la semana cruza mes y/o año (nombres completos de mes, no
+// abreviados, para no depender de puntuación específica del locale en
+// las abreviaturas de es-EC):
+//   misma semana, mismo mes:  "8 - 14 de septiembre, 2026"
+//   cruza de mes:             "29 de septiembre - 4 de octubre, 2026"
+//   cruza de año:             "29 de diciembre de 2025 - 4 de enero de 2026"
+export function formatWeekRangeLabel(currentDate: Date): string {
+  const [start, , , , , , end] = getWeekDays(currentDate);
+
+  const startMonth = start.toLocaleDateString("es-EC", { month: "long" });
+  const endMonth = end.toLocaleDateString("es-EC", { month: "long" });
+  const startYear = start.getFullYear();
+  const endYear = end.getFullYear();
+
+  if (startYear !== endYear) {
+    return `${start.getDate()} de ${startMonth} de ${startYear} - ${end.getDate()} de ${endMonth} de ${endYear}`;
+  }
+  if (startMonth !== endMonth) {
+    return `${start.getDate()} de ${startMonth} - ${end.getDate()} de ${endMonth}, ${startYear}`;
+  }
+  return `${start.getDate()} - ${end.getDate()} de ${startMonth}, ${startYear}`;
+}
+
 // Clave estable yyyy-MM-dd en hora LOCAL (no UTC): agrupa por el día de
 // calendario que el usuario ve, no por el día UTC del timestamp crudo del
 // backend.

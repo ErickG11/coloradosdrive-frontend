@@ -2,9 +2,16 @@
 
 import { useMemo, useState } from "react";
 
-import { Button, Modal, Select } from "@/components/ui";
+import { Button, IconButton, Modal, Select } from "@/components/ui";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { useFetch } from "@/hooks/useFetch";
-import { addMonths, addWeeks, type CalendarViewMode } from "@/lib/utils/calendar";
+import {
+  addMonths,
+  addWeeks,
+  formatMonthLabel,
+  formatWeekRangeLabel,
+  type CalendarViewMode,
+} from "@/lib/utils/calendar";
 import type { Cohort, PracticeSlotWithNames, UserSummary } from "@/types";
 
 import { PracticeSlotCalendar } from "./PracticeSlotCalendar";
@@ -71,6 +78,9 @@ export default function PracticeSlotsPage() {
     setCurrentDate((date) => (viewMode === "semana" ? addWeeks(date, 1) : addMonths(date, 1)));
   }
 
+  const periodLabel =
+    viewMode === "semana" ? formatWeekRangeLabel(currentDate) : formatMonthLabel(currentDate);
+
   const modalTitle =
     modalState.type === "create"
       ? "Nueva franja"
@@ -119,17 +129,26 @@ export default function PracticeSlotsPage() {
           ))}
         </Select>
 
-        <div className="ml-auto flex flex-wrap items-end gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium whitespace-nowrap text-text-primary">
+            {periodLabel}
+          </span>
           <div className="flex gap-1">
-            <Button variant="secondary" size="sm" aria-label="Anterior" onClick={goToPrevious}>
-              ‹
-            </Button>
+            <IconButton
+              icon={<ChevronLeftIcon className="h-5 w-5" />}
+              variant="secondary"
+              aria-label="Anterior"
+              onClick={goToPrevious}
+            />
             <Button variant="secondary" size="sm" onClick={() => setCurrentDate(new Date())}>
               Hoy
             </Button>
-            <Button variant="secondary" size="sm" aria-label="Siguiente" onClick={goToNext}>
-              ›
-            </Button>
+            <IconButton
+              icon={<ChevronRightIcon className="h-5 w-5" />}
+              variant="secondary"
+              aria-label="Siguiente"
+              onClick={goToNext}
+            />
           </div>
           <Select
             label="Vista"

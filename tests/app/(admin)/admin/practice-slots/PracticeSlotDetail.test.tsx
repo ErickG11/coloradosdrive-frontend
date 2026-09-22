@@ -60,8 +60,8 @@ describe("PracticeSlotDetail", () => {
       <PracticeSlotDetail slot={buildSlot({ status: "disponible" })} onEdit={vi.fn()} onDeleted={vi.fn()} />,
     );
 
-    expect(screen.getByRole("button", { name: "Editar" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Eliminar" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Editar franja" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Eliminar franja" })).toBeEnabled();
     expect(screen.queryByText(/Solo se puede editar o eliminar/)).not.toBeInTheDocument();
   });
 
@@ -74,8 +74,8 @@ describe("PracticeSlotDetail", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Editar" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Eliminar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Editar franja" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Eliminar franja" })).toBeDisabled();
     expect(screen.getByText(/Solo se puede editar o eliminar/)).toBeInTheDocument();
   });
 
@@ -84,7 +84,7 @@ describe("PracticeSlotDetail", () => {
     const onEdit = vi.fn();
     render(<PracticeSlotDetail slot={buildSlot()} onEdit={onEdit} onDeleted={vi.fn()} />);
 
-    await user.click(screen.getByRole("button", { name: "Editar" }));
+    await user.click(screen.getByRole("button", { name: "Editar franja" }));
 
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
@@ -95,7 +95,7 @@ describe("PracticeSlotDetail", () => {
     mockedDelete.mockResolvedValue(undefined);
     render(<PracticeSlotDetail slot={buildSlot()} onEdit={vi.fn()} onDeleted={onDeleted} />);
 
-    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+    await user.click(screen.getByRole("button", { name: "Eliminar franja" }));
 
     expect(mockedDelete).toHaveBeenCalledWith("/practice-slots/slot-1");
     // El padre (ver page.tsx) es quien cierra el Modal al recibir
@@ -109,7 +109,7 @@ describe("PracticeSlotDetail", () => {
     mockedDelete.mockRejectedValue(new ApiError("Esta franja ya no está disponible", 409));
     render(<PracticeSlotDetail slot={buildSlot()} onEdit={vi.fn()} onDeleted={vi.fn()} />);
 
-    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+    await user.click(screen.getByRole("button", { name: "Eliminar franja" }));
 
     expect(await screen.findByText("Esta franja ya no está disponible")).toBeInTheDocument();
   });
