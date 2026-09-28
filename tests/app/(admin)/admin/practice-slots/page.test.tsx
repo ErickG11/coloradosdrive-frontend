@@ -67,7 +67,11 @@ const slot: PracticeSlotWithNames = {
 };
 
 function mockFetch(
-  slotsResult: { data: PracticeSlotWithNames[] | null; isLoading: boolean; error: string | null } = {
+  slotsResult: {
+    data: PracticeSlotWithNames[] | null;
+    isLoading: boolean;
+    error: string | null;
+  } = {
     data: [slot],
     isLoading: false,
     error: null,
