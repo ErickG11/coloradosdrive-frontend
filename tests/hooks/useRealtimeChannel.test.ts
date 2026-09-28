@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -10,33 +10,55 @@ import { createClient } from "@/lib/supabase/client";
 
 const mockedCreateClient = vi.mocked(createClient);
 
+type SubscribeCallback = (status: string, err?: Error) => void;
+
 interface MockChannel {
   on: ReturnType<typeof vi.fn>;
   subscribe: ReturnType<typeof vi.fn>;
   emit: (event: string, payload: unknown) => void;
+  triggerSubscribeStatus: (status: string, err?: Error) => void;
 }
 
 function createMockChannel(): MockChannel {
   const listeners = new Map<string, (arg: { payload: unknown }) => void>();
+  let subscribeCallback: SubscribeCallback | undefined;
   const channel = {
-    on: vi.fn((_type: string, filter: { event: string }, cb: (arg: { payload: unknown }) => void) => {
-      listeners.set(filter.event, cb);
+    on: vi.fn(
+      (_type: string, filter: { event: string }, cb: (arg: { payload: unknown }) => void) => {
+        listeners.set(filter.event, cb);
+        return channel;
+      },
+    ),
+    subscribe: vi.fn((cb?: SubscribeCallback) => {
+      subscribeCallback = cb;
       return channel;
     }),
-    subscribe: vi.fn().mockReturnThis(),
     emit: (event: string, payload: unknown) => listeners.get(event)?.({ payload }),
+    triggerSubscribeStatus: (status: string, err?: Error) => subscribeCallback?.(status, err),
   };
   return channel as unknown as MockChannel;
 }
 
-function mockClientWith(channel: MockChannel | (() => MockChannel)) {
+// Por defecto simula una sesión ya activa con el token aplicado de
+// inmediato - así los tests que no les importa el flujo de auth (la
+// mayoría, ya escritos antes de esa validación) no tienen que preocuparse
+// por él.
+function mockClientWith(
+  channel: MockChannel | (() => MockChannel),
+  session: { access_token: string } | null = { access_token: "test-access-token" },
+) {
   const removeChannel = vi.fn();
-  const channelFactory = typeof channel === "function" ? vi.fn(channel) : vi.fn().mockReturnValue(channel);
+  const channelFactory =
+    typeof channel === "function" ? vi.fn(channel) : vi.fn().mockReturnValue(channel);
+  const getSession = vi.fn().mockResolvedValue({ data: { session } });
+  const setAuth = vi.fn().mockResolvedValue(undefined);
   mockedCreateClient.mockReturnValue({
     channel: channelFactory,
     removeChannel,
+    auth: { getSession },
+    realtime: { setAuth },
   } as unknown as ReturnType<typeof createClient>);
-  return { channelFactory, removeChannel };
+  return { channelFactory, removeChannel, getSession, setAuth };
 }
 
 describe("useRealtimeChannel", () => {
@@ -116,5 +138,115 @@ describe("useRealtimeChannel", () => {
     rerender({ name: "cohort-2-practice-slots" });
 
     expect(removeChannel).toHaveBeenCalledWith(channelA);
+  });
+
+  describe("sesión de Supabase Auth antes de suscribirse", () => {
+    it("espera la sesión y aplica el JWT a realtime (setAuth) ANTES de llamar a subscribe()", async () => {
+      const channel = createMockChannel();
+      const { getSession, setAuth } = mockClientWith(channel);
+
+      renderHook(() => useRealtimeChannel("cohort-1-practice-slots", { "slot-released": vi.fn() }));
+
+      await waitFor(() => {
+        expect(channel.subscribe).toHaveBeenCalled();
+      });
+
+      expect(getSession).toHaveBeenCalled();
+      expect(setAuth).toHaveBeenCalledWith("test-access-token");
+      // Orden: setAuth debe resolverse antes de que se llame a subscribe,
+      // no solo "en algún momento" - si no, el join puede salir sin el JWT
+      // aplicado todavía.
+      const setAuthOrder = setAuth.mock.invocationCallOrder[0];
+      const subscribeOrder = channel.subscribe.mock.invocationCallOrder[0];
+      expect(setAuthOrder).toBeLessThan(subscribeOrder);
+    });
+
+    it("si no hay sesión activa, nunca llama a subscribe() y loguea un error claro", async () => {
+      const channel = createMockChannel();
+      mockClientWith(channel, null);
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      renderHook(() => useRealtimeChannel("cohort-1-practice-slots", { "slot-released": vi.fn() }));
+
+      await waitFor(() => {
+        expect(errorSpy).toHaveBeenCalled();
+      });
+
+      expect(channel.subscribe).not.toHaveBeenCalled();
+      expect(errorSpy.mock.calls[0][0]).toContain("cohort-1-practice-slots");
+
+      errorSpy.mockRestore();
+    });
+
+    it("no se suscribe si el efecto ya se limpió (unmount) mientras la sesión seguía resolviéndose", async () => {
+      const channel = createMockChannel();
+      let resolveSession!: (value: { data: { session: { access_token: string } | null } }) => void;
+      const getSession = vi.fn(
+        () =>
+          new Promise((resolve) => {
+            resolveSession = resolve;
+          }),
+      );
+      const removeChannel = vi.fn();
+      mockedCreateClient.mockReturnValue({
+        channel: vi.fn().mockReturnValue(channel),
+        removeChannel,
+        auth: { getSession },
+        realtime: { setAuth: vi.fn().mockResolvedValue(undefined) },
+      } as unknown as ReturnType<typeof createClient>);
+
+      const { unmount } = renderHook(() =>
+        useRealtimeChannel("cohort-1-practice-slots", { "slot-released": vi.fn() }),
+      );
+      unmount();
+      resolveSession({ data: { session: { access_token: "demasiado-tarde" } } });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(channel.subscribe).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("manejo de CHANNEL_ERROR (no falla en silencio)", () => {
+    it("loguea un error claro si el status de subscribe() es CHANNEL_ERROR", async () => {
+      const channel = createMockChannel();
+      mockClientWith(channel);
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      renderHook(() => useRealtimeChannel("cohort-1-practice-slots", { "slot-released": vi.fn() }));
+
+      await waitFor(() => {
+        expect(channel.subscribe).toHaveBeenCalled();
+      });
+      channel.triggerSubscribeStatus(
+        "CHANNEL_ERROR",
+        new Error("politica RLS rechazo la suscripcion"),
+      );
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("cohort-1-practice-slots"),
+        expect.any(Error),
+      );
+      expect(errorSpy.mock.calls[0][0]).toContain("CHANNEL_ERROR");
+
+      errorSpy.mockRestore();
+    });
+
+    it("no loguea nada cuando el status es SUBSCRIBED", async () => {
+      const channel = createMockChannel();
+      mockClientWith(channel);
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      renderHook(() => useRealtimeChannel("cohort-1-practice-slots", { "slot-released": vi.fn() }));
+
+      await waitFor(() => {
+        expect(channel.subscribe).toHaveBeenCalled();
+      });
+      channel.triggerSubscribeStatus("SUBSCRIBED");
+
+      expect(errorSpy).not.toHaveBeenCalled();
+
+      errorSpy.mockRestore();
+    });
   });
 });
