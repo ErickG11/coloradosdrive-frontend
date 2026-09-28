@@ -41,8 +41,14 @@ export default function EditCohortPage() {
             nombre: cohort.nombre,
             precio: String(cohort.precio),
             cupoMaximo: String(cohort.cupoMaximo),
-            fechaInicio: cohort.fechaInicio,
-            fechaFin: cohort.fechaFin,
+            fechaInicioMatricula: cohort.fechaInicioMatricula,
+            fechaFinMatricula: cohort.fechaFinMatricula,
+            fechaInicioCurso: cohort.fechaInicioCurso,
+            fechaFinCurso: cohort.fechaFinCurso,
+            tipoModalidad: cohort.tipoModalidad ?? "",
+            horariosCapacitacionTeoria: cohort.horariosCapacitacionTeoria ?? "",
+            numeroVehiculos: cohort.numeroVehiculos === null ? "" : String(cohort.numeroVehiculos),
+            numeroAulas: cohort.numeroAulas === null ? "" : String(cohort.numeroAulas),
           }}
         />
       ) : null}
