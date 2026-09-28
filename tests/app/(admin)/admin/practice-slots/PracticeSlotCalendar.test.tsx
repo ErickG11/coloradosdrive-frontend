@@ -46,7 +46,9 @@ describe("PracticeSlotCalendar", () => {
   it("muestra el nombre del estudiante cuando la franja está asignada", () => {
     render(
       <PracticeSlotCalendar
-        slots={[buildSlot({ studentId: "student-1", status: "asignado", studentName: "Ana Torres" })]}
+        slots={[
+          buildSlot({ studentId: "student-1", status: "asignado", studentName: "Ana Torres" }),
+        ]}
         viewMode="semana"
         currentDate={new Date(2026, 0, 12)}
         onSelectSlot={vi.fn()}
@@ -99,7 +101,9 @@ describe("PracticeSlotCalendar", () => {
   it("en vista de mes, atenúa (opacity-50) los días fuera del mes actual", () => {
     const month = new Date(2026, 1, 1); // febrero 2026 (28 días)
     const totalGridDays = getMonthGrid(month).flat().length;
-    const daysInMonth = getMonthGrid(month).flat().filter((day) => isInMonth(day, month)).length;
+    const daysInMonth = getMonthGrid(month)
+      .flat()
+      .filter((day) => isInMonth(day, month)).length;
 
     const { container } = render(
       <PracticeSlotCalendar
