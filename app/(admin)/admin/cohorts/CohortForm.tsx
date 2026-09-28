@@ -13,8 +13,14 @@ export interface CohortFormValues {
   nombre: string;
   precio: string;
   cupoMaximo: string;
-  fechaInicio: string;
-  fechaFin: string;
+  fechaInicioMatricula: string;
+  fechaFinMatricula: string;
+  fechaInicioCurso: string;
+  fechaFinCurso: string;
+  tipoModalidad: string;
+  horariosCapacitacionTeoria: string;
+  numeroVehiculos: string;
+  numeroAulas: string;
 }
 
 const EMPTY_VALUES: CohortFormValues = {
@@ -22,8 +28,14 @@ const EMPTY_VALUES: CohortFormValues = {
   nombre: "",
   precio: "",
   cupoMaximo: "",
-  fechaInicio: "",
-  fechaFin: "",
+  fechaInicioMatricula: "",
+  fechaFinMatricula: "",
+  fechaInicioCurso: "",
+  fechaFinCurso: "",
+  tipoModalidad: "",
+  horariosCapacitacionTeoria: "",
+  numeroVehiculos: "",
+  numeroAulas: "",
 };
 
 interface CohortFormProps {
@@ -31,6 +43,16 @@ interface CohortFormProps {
   /** Presente => modo edición (PATCH). Ausente => modo creación (POST). */
   cohortId?: string;
   initialValues?: CohortFormValues;
+}
+
+function optionalText(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+function optionalInt(value: string): number | null {
+  const trimmed = value.trim();
+  return trimmed === "" ? null : Number(trimmed);
 }
 
 export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps) {
@@ -47,6 +69,16 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (values.fechaFinMatricula < values.fechaInicioMatricula) {
+      setError("El fin de matrícula no puede ser anterior al inicio de matrícula.");
+      return;
+    }
+    if (values.fechaFinCurso < values.fechaInicioCurso) {
+      setError("El fin de curso no puede ser anterior al inicio de curso.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const body = {
@@ -54,8 +86,14 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
       nombre: values.nombre,
       precio: Number(values.precio),
       cupoMaximo: Number(values.cupoMaximo),
-      fechaInicio: values.fechaInicio,
-      fechaFin: values.fechaFin,
+      fechaInicioMatricula: values.fechaInicioMatricula,
+      fechaFinMatricula: values.fechaFinMatricula,
+      fechaInicioCurso: values.fechaInicioCurso,
+      fechaFinCurso: values.fechaFinCurso,
+      tipoModalidad: optionalText(values.tipoModalidad),
+      horariosCapacitacionTeoria: optionalText(values.horariosCapacitacionTeoria),
+      numeroVehiculos: optionalInt(values.numeroVehiculos),
+      numeroAulas: optionalInt(values.numeroAulas),
     };
 
     try {
@@ -122,23 +160,94 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input
-          label="Fecha de inicio"
-          name="fechaInicio"
-          type="date"
-          required
-          value={values.fechaInicio}
-          onChange={(event) => updateField("fechaInicio", event.target.value)}
-        />
-        <Input
-          label="Fecha de fin"
-          name="fechaFin"
-          type="date"
-          required
-          value={values.fechaFin}
-          onChange={(event) => updateField("fechaFin", event.target.value)}
-        />
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-text-primary">Ventana de matrícula</p>
+        <p className="text-xs text-text-secondary">
+          El fin de matrícula es el plazo real que se comunica al estudiante para entregar
+          documentos físicos completos.
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Inicio de matrícula"
+            name="fechaInicioMatricula"
+            type="date"
+            required
+            value={values.fechaInicioMatricula}
+            onChange={(event) => updateField("fechaInicioMatricula", event.target.value)}
+          />
+          <Input
+            label="Fin de matrícula"
+            name="fechaFinMatricula"
+            type="date"
+            required
+            value={values.fechaFinMatricula}
+            onChange={(event) => updateField("fechaFinMatricula", event.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-text-primary">Ventana de curso</p>
+        <p className="text-xs text-text-secondary">
+          Todas las prácticas que elija un estudiante de esta cohorte deben caber dentro de esta
+          ventana.
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Inicio de curso"
+            name="fechaInicioCurso"
+            type="date"
+            required
+            value={values.fechaInicioCurso}
+            onChange={(event) => updateField("fechaInicioCurso", event.target.value)}
+          />
+          <Input
+            label="Fin de curso"
+            name="fechaFinCurso"
+            type="date"
+            required
+            value={values.fechaFinCurso}
+            onChange={(event) => updateField("fechaFinCurso", event.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-text-primary">
+          Datos informativos para el oficio a la ANT (opcional)
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Tipo de modalidad"
+            name="tipoModalidad"
+            value={values.tipoModalidad}
+            onChange={(event) => updateField("tipoModalidad", event.target.value)}
+          />
+          <Input
+            label="Horarios de capacitación teórica"
+            name="horariosCapacitacionTeoria"
+            value={values.horariosCapacitacionTeoria}
+            onChange={(event) => updateField("horariosCapacitacionTeoria", event.target.value)}
+          />
+          <Input
+            label="Número de vehículos"
+            name="numeroVehiculos"
+            type="number"
+            min="0"
+            step="1"
+            value={values.numeroVehiculos}
+            onChange={(event) => updateField("numeroVehiculos", event.target.value)}
+          />
+          <Input
+            label="Número de aulas"
+            name="numeroAulas"
+            type="number"
+            min="0"
+            step="1"
+            value={values.numeroAulas}
+            onChange={(event) => updateField("numeroAulas", event.target.value)}
+          />
+        </div>
       </div>
 
       {error ? <p className="text-sm text-accent-red">{error}</p> : null}

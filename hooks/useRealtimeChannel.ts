@@ -38,7 +38,13 @@ export function useRealtimeChannel(
     if (!channelName) return undefined;
 
     const supabase = createClient();
-    const channel = supabase.channel(channelName);
+    // Canal privado: la suscripción exige una política RLS sobre
+    // realtime.messages que autorice este topic para el usuario
+    // autenticado (ver migrations/011_realtime_broadcast_authorization.sql
+    // en el backend) - sin esto, cualquiera con la anon key que
+    // adivinara/conociera el nombre del canal podía suscribirse sin
+    // ninguna verificación.
+    const channel = supabase.channel(channelName, { config: { private: true } });
 
     for (const event of eventNames.split(",").filter(Boolean)) {
       channel.on("broadcast", { event }, ({ payload }: { payload: unknown }) => {
@@ -46,9 +52,41 @@ export function useRealtimeChannel(
       });
     }
 
-    channel.subscribe();
+    // `createClient()` construye un cliente nuevo cada vez; su envío
+    // inicial del JWT al cliente de Realtime (`realtime.setAuth`, ver
+    // SupabaseClient._listenForAuthEvents en supabase-js) es asíncrono. Sin
+    // esperarlo, `channel.subscribe()` puede intentar el join ANTES de que
+    // el token esté aplicado - con un canal privado, eso es un
+    // CHANNEL_ERROR seguro, aunque la política RLS sea correcta y el
+    // usuario sí tenga sesión (falla por orden de ejecución, no por
+    // autorización real). getSession() además confirma que hay sesión: sin
+    // ninguna, ni vale la pena intentar un canal privado.
+    let cancelled = false;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
+
+      if (!session) {
+        console.error(
+          `[useRealtimeChannel] No hay sesión de Supabase Auth activa; no se puede suscribir al canal privado "${channelName}".`,
+        );
+        return;
+      }
+
+      void supabase.realtime.setAuth(session.access_token).then(() => {
+        if (cancelled) return;
+        channel.subscribe((status, err) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            console.error(
+              `[useRealtimeChannel] No se pudo suscribir al canal "${channelName}" (${status}).`,
+              err,
+            );
+          }
+        });
+      });
+    });
 
     return () => {
+      cancelled = true;
       void supabase.removeChannel(channel);
     };
     // eventNames (no `handlers`) es la dependencia real: solo debe

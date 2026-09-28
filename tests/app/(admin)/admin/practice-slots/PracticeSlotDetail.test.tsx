@@ -57,7 +57,11 @@ describe("PracticeSlotDetail", () => {
 
   it("habilita Editar/Eliminar y no muestra la nota cuando la franja está disponible", () => {
     render(
-      <PracticeSlotDetail slot={buildSlot({ status: "disponible" })} onEdit={vi.fn()} onDeleted={vi.fn()} />,
+      <PracticeSlotDetail
+        slot={buildSlot({ status: "disponible" })}
+        onEdit={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
     );
 
     expect(screen.getByRole("button", { name: "Editar franja" })).toBeEnabled();
@@ -68,7 +72,11 @@ describe("PracticeSlotDetail", () => {
   it("deshabilita Editar/Eliminar y explica por qué cuando la franja no está disponible", () => {
     render(
       <PracticeSlotDetail
-        slot={buildSlot({ status: "confirmado", studentId: "student-1", studentName: "Ana Torres" })}
+        slot={buildSlot({
+          status: "confirmado",
+          studentId: "student-1",
+          studentName: "Ana Torres",
+        })}
         onEdit={vi.fn()}
         onDeleted={vi.fn()}
       />,

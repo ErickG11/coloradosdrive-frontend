@@ -40,10 +40,12 @@ interface MockChannel {
 function createMockChannel(): MockChannel {
   const listeners = new Map<string, (arg: { payload: unknown }) => void>();
   const channel = {
-    on: vi.fn((_type: string, filter: { event: string }, cb: (arg: { payload: unknown }) => void) => {
-      listeners.set(filter.event, cb);
-      return channel;
-    }),
+    on: vi.fn(
+      (_type: string, filter: { event: string }, cb: (arg: { payload: unknown }) => void) => {
+        listeners.set(filter.event, cb);
+        return channel;
+      },
+    ),
     subscribe: vi.fn().mockReturnThis(),
     emit: (event: string, payload: unknown) => listeners.get(event)?.({ payload }),
   };
@@ -64,7 +66,14 @@ function mockSupabaseClient(userId: string | null): Map<string, MockChannel> {
     removeChannel: vi.fn(),
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: userId ? { id: userId } : null } }),
+      // useRealtimeChannel exige una sesión activa antes de suscribirse a
+      // un canal privado (ver hooks/useRealtimeChannel.ts) - se simula una
+      // ya resuelta para no tener que esperarla en cada test de esta página.
+      getSession: vi
+        .fn()
+        .mockResolvedValue({ data: { session: { access_token: "test-access-token" } } }),
     },
+    realtime: { setAuth: vi.fn().mockResolvedValue(undefined) },
   } as unknown as ReturnType<typeof createClient>);
   return channels;
 }
@@ -116,7 +125,9 @@ describe("StudentSchedulePage", () => {
     render(<StudentSchedulePage />);
 
     expect(screen.getByText("No tienes ninguna franja reclamada todavía.")).toBeInTheDocument();
-    expect(screen.getByText("No hay franjas disponibles en tu cohorte por ahora.")).toBeInTheDocument();
+    expect(
+      screen.getByText("No hay franjas disponibles en tu cohorte por ahora."),
+    ).toBeInTheDocument();
   });
 
   it("lista las franjas disponibles con el nombre del instructor", () => {
@@ -236,9 +247,7 @@ describe("StudentSchedulePage", () => {
       mockFetch([buildSlot({ status: "asignado", studentId: "student-1", cohortId: "cohort-1" })]);
 
       render(<StudentSchedulePage />);
-      await waitFor(() =>
-        expect(channels.has("user-student-1-practice-slots")).toBe(true),
-      );
+      await waitFor(() => expect(channels.has("user-student-1-practice-slots")).toBe(true));
 
       expect(screen.queryByText(/Tu práctica está por empezar/)).not.toBeInTheDocument();
 
@@ -260,9 +269,7 @@ describe("StudentSchedulePage", () => {
       mockFetch([]);
 
       render(<StudentSchedulePage />);
-      await waitFor(() =>
-        expect(channels.has("user-student-1-practice-slots")).toBe(true),
-      );
+      await waitFor(() => expect(channels.has("user-student-1-practice-slots")).toBe(true));
 
       act(() => {
         channels
