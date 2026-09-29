@@ -1,5 +1,6 @@
 export * from "./user";
 export * from "./course";
+export * from "./publicCourse";
 export * from "./cohort";
 export * from "./cohortAssignment";
 export * from "./enrollment";
