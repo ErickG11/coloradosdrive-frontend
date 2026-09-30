@@ -123,7 +123,8 @@ export function StepConfirmar({
             </label>
           )}
           <p>
-            Sin regenerar, el reenvío indica usar las credenciales actuales. No se guardan
+            Las cuentas nuevas con contraseña temporal pendiente requieren regenerarla
+            explícitamente. Las cuentas existentes conservan sus credenciales. No se guardan
             contraseñas para reenviarlas.
           </p>
           <Button variant="secondary" isLoading={busy} onClick={() => void onResend(regenerate)}>
