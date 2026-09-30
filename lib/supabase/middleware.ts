@@ -32,5 +32,8 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return { supabaseResponse, user };
+  const {
+    data: { session },
+  } = user ? await supabase.auth.getSession() : { data: { session: null } };
+  return { supabaseResponse, user, accessToken: session?.access_token };
 }

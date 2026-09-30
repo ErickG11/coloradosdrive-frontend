@@ -1,80 +1,117 @@
-import type {
-  CourseType,
-  Enrollment,
-  InstructorSugerido,
-  Modalidad,
-  SugerirPracticaResult,
-} from "@/types";
-
+import type { CourseType, InstructorSugerido, Modalidad, SugerirPracticaResult } from "@/types";
+export const BASE = "/admin/manual-enrollments";
 export const WIZARD_STEPS = [1, 2, 3, 4] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];
-
 export interface StudentData {
+  mode: "new" | "existing";
+  id?: string;
   cedula: string;
   nombreCompleto: string;
   correo: string;
   telefono: string;
+  vigentes?: { tipo: CourseType; status: string }[];
 }
-
 export const EMPTY_STUDENT: StudentData = {
+  mode: "new",
   cedula: "",
   nombreCompleto: "",
   correo: "",
   telefono: "",
 };
-
-// courseId/courseTipo/courseNombre se fijan al elegir el tipo de curso en
-// el paso 2; cohortId es la sugerencia de CohortAssignmentService o la
-// cohorte que el admin eligió a mano ("cambiar cohorte"); null cuando
-// ninguna cohorte tiene matrícula abierta hoy (se asignará después).
+export interface CatalogEntry {
+  tipo: CourseType;
+  nombre: string;
+  courseId: string | null;
+}
+export interface PreviewCohort {
+  id: string;
+  course_id: string;
+  nombre: string;
+  precio: string;
+  cupo_maximo: number;
+  ocupados: number;
+  fecha_inicio_matricula: string;
+  fecha_fin_matricula: string;
+  fecha_inicio_curso: string;
+  fecha_fin_curso: string;
+}
 export interface CourseSelection {
   courseId: string;
   courseTipo: CourseType;
   courseNombre: string;
   cohortId: string | null;
   manualOverride: boolean;
+  cohort?: PreviewCohort;
 }
-
-export type PracticeEndMode = "numeroSesiones" | "fechaFin";
-
+export interface CoursePreview {
+  courseId: string;
+  tipo: CourseType;
+  suggestion: {
+    cohortId: string | null;
+    warning: string | null;
+    precio: number | null;
+    cohortNombre: string | null;
+  };
+  cohorts: PreviewCohort[];
+}
 export interface PracticeFormData {
+  semanas: 1 | 2 | 3;
   modalidad: Modalidad;
   horasPorDia: number;
   fechaInicio: string;
   horaDeseada: string;
-  endMode: PracticeEndMode;
-  numeroSesiones: number;
   fechaFin: string;
+  manual: boolean;
 }
-
 export const EMPTY_PRACTICE: PracticeFormData = {
+  semanas: 1,
   modalidad: "entre_semana",
   horasPorDia: 2,
   fechaInicio: "",
   horaDeseada: "08:00",
-  endMode: "numeroSesiones",
-  numeroSesiones: 20,
   fechaFin: "",
+  manual: false,
 };
-
+export interface PracticePlan {
+  timezone: string;
+  semanas: number;
+  modalidad: Modalidad;
+  fechaInicio: string;
+  primerDiaEfectivo: string;
+  fechaFin: string;
+  fechaFinElegida: string;
+  manual: boolean;
+  fechas: string[];
+  dias: number;
+  bloques: number;
+  horas: number;
+}
 export interface PracticeChoice {
   form: PracticeFormData;
-  suggestion: SugerirPracticaResult;
-  instructor: InstructorSugerido;
+  plan: PracticePlan;
+  suggestion: SugerirPracticaResult | null;
+  instructor: InstructorSugerido | null;
 }
-
-export interface WizardState {
-  step: WizardStep;
-  student: StudentData;
-  course: CourseSelection | null;
-  enrollment: Enrollment | null;
-  practice: PracticeChoice | null;
+export interface ManualResult {
+  operationId: string;
+  studentId: string;
+  studentCreated: boolean;
+  enrollmentId: string;
+  courseId: string;
+  courseType: CourseType;
+  cohortId: string | null;
+  status: "activo" | "pendiente_cohorte";
+  slotsCreated: number;
+  emailStatus: "sent" | "failed" | "pending" | "sending";
+  plan: PracticePlan;
 }
-
-export const INITIAL_WIZARD_STATE: WizardState = {
-  step: 1,
-  student: EMPTY_STUDENT,
-  course: null,
-  enrollment: null,
-  practice: null,
-};
+export function practicePayload(form: PracticeFormData) {
+  return {
+    semanas: form.semanas,
+    modalidad: form.modalidad,
+    horasPorDia: form.horasPorDia,
+    fechaInicio: form.fechaInicio,
+    horaDeseada: form.horaDeseada,
+    ...(form.manual ? { fechaFin: form.fechaFin } : {}),
+  };
+}
