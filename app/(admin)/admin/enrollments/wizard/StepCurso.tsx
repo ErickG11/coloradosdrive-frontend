@@ -1,192 +1,148 @@
 "use client";
-
-import { useState } from "react";
-
+import { useRef, useState } from "react";
 import { Button, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import { cn } from "@/lib/utils/cn";
-import type { Cohort, CohortAssignmentPreview, Course } from "@/types";
+import { BASE, type CatalogEntry, type CourseSelection, type CoursePreview } from "./wizardTypes";
 
-import type { CourseSelection } from "./wizardTypes";
-
-interface StepCursoProps {
-  courses: Course[];
-  cohorts: Cohort[];
+export function StepCurso({
+  catalog,
+  onBack,
+  onNext,
+}: {
+  catalog: CatalogEntry[];
   value: CourseSelection | null;
   onBack: () => void;
-  onNext: (value: CourseSelection) => void;
-}
-
-function formatFecha(fecha: string): string {
-  return new Date(fecha).toLocaleDateString("es-EC");
-}
-
-export function StepCurso({ courses, cohorts, value, onBack, onNext }: StepCursoProps) {
-  const [selection, setSelection] = useState<CourseSelection | null>(value);
-  const [preview, setPreview] = useState<CohortAssignmentPreview | null>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [showManualSelector, setShowManualSelector] = useState(false);
-
-  async function handleSelectTipo(course: Course) {
-    setShowManualSelector(false);
+  onNext: (c: CourseSelection) => void;
+}) {
+  // Al volver, consultar otra vez: una selección anterior no acredita cupo.
+  const [selection, setSelection] = useState<CourseSelection | null>(null);
+  const [preview, setPreview] = useState<CoursePreview | null>(null);
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null),
+    [manual, setManual] = useState(false);
+  const sequence = useRef(0);
+  async function select(c: CatalogEntry) {
+    const request = ++sequence.current;
+    setSelection(null);
     setPreview(null);
-    setPreviewError(null);
-    setSelection({
-      courseId: course.id,
-      courseTipo: course.tipo,
-      courseNombre: course.nombre,
-      cohortId: null,
-      manualOverride: false,
-    });
-    setIsLoadingPreview(true);
-
+    setError(null);
+    setBusy(true);
+    setManual(false);
     try {
-      const result = await api.post<CohortAssignmentPreview>("/admin/cohort-assignment/preview", {
-        courseId: course.id,
-      });
-      setPreview(result);
+      const p = await api.post<CoursePreview>(`${BASE}/course-preview`, { courseType: c.tipo });
+      if (request !== sequence.current) return;
+      setPreview(p);
       setSelection({
-        courseId: course.id,
-        courseTipo: course.tipo,
-        courseNombre: course.nombre,
-        cohortId: result.cohortId,
+        courseId: p.courseId,
+        courseTipo: c.tipo,
+        courseNombre: c.nombre,
+        cohortId: p.suggestion.cohortId,
         manualOverride: false,
+        cohort: p.cohorts.find((x) => x.id === p.suggestion.cohortId),
       });
-    } catch (err) {
-      setPreviewError(
-        err instanceof ApiError ? err.message : "No se pudo consultar la cohorte sugerida.",
-      );
+    } catch (e) {
+      if (request === sequence.current)
+        setError(e instanceof ApiError ? e.message : "No se pudo consultar la cohorte.");
     } finally {
-      setIsLoadingPreview(false);
+      if (request === sequence.current) setBusy(false);
     }
   }
-
-  function handleManualCohortChange(cohortId: string) {
-    if (!selection) return;
-    setSelection({ ...selection, cohortId: cohortId || null, manualOverride: true });
-  }
-
-  const cohortesDelCurso = selection
-    ? cohorts.filter((cohort) => cohort.courseId === selection.courseId)
-    : [];
-  const cohorteSeleccionada = selection?.cohortId
-    ? cohortesDelCurso.find((cohort) => cohort.id === selection.cohortId)
-    : undefined;
-
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <p className="mb-3 text-sm font-medium text-text-secondary">Tipo de curso</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {courses.map((course) => {
-            const isSelected = selection?.courseId === course.id;
-            return (
-              <button
-                key={course.id}
-                type="button"
-                onClick={() => void handleSelectTipo(course)}
-                className={cn(
-                  "rounded-md border p-4 text-left transition-colors",
-                  isSelected
-                    ? "border-accent-blue bg-accent-blue-subtle"
-                    : "border-border bg-bg-field hover:border-border-strong",
-                )}
-              >
-                <p className="font-display text-lg font-bold text-text-primary">
-                  Tipo {course.tipo}
-                </p>
-                <p className="text-sm text-text-secondary">{course.nombre}</p>
-              </button>
-            );
-          })}
-        </div>
+    <div className="flex flex-col gap-5">
+      <p>Elige el tipo de curso. El cupo y la cohorte se vuelven a validar al confirmar.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {(["A", "B"] as const).map((tipo) => {
+          const c = catalog.find((c) => c.tipo === tipo);
+          return (
+            <button
+              key={tipo}
+              type="button"
+              aria-pressed={selection?.courseTipo === tipo}
+              disabled={!c?.courseId}
+              className={`rounded-md border p-4 text-left ${selection?.courseTipo === tipo ? "border-accent-blue bg-accent-blue-subtle" : "border-border"}`}
+              onClick={() => c && void select(c)}
+            >
+              <strong>Tipo {tipo}</strong>
+              <p>{tipo === "A" ? "Motocicletas" : "Vehículos livianos"}</p>
+              {!c?.courseId && <p>Catálogo sin configurar</p>}
+            </button>
+          );
+        })}
       </div>
-
-      {selection ? (
-        <div className="rounded-md border border-border bg-bg-sunken p-4">
-          {isLoadingPreview ? (
-            <p className="text-sm text-text-secondary">Buscando cohorte disponible…</p>
-          ) : previewError ? (
-            <p className="text-sm text-accent-red">{previewError}</p>
-          ) : preview && preview.cohortId === null ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm text-text-primary">
-                Sin cohorte disponible: {preview.mensaje}. Se asignará una cohorte más adelante.
+      {busy && <p>Buscando cohorte disponible…</p>}
+      {error && (
+        <p role="alert" className="text-accent-red">
+          {error}
+        </p>
+      )}
+      {selection && preview && (
+        <div className="rounded-md border border-border p-4">
+          {selection.cohort ? (
+            <>
+              <p>
+                {selection.manualOverride ? "Cohorte elegida manualmente" : "Cohorte sugerida"}:{" "}
+                <strong>{selection.cohort.nombre}</strong>
               </p>
-              {!showManualSelector ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="self-start"
-                  onClick={() => setShowManualSelector(true)}
-                >
-                  Elegir cohorte manualmente
-                </Button>
-              ) : null}
-            </div>
-          ) : cohorteSeleccionada ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-sm text-text-secondary">
-                {selection.manualOverride ? "Cohorte elegida manualmente" : "Cohorte sugerida"}
+              <p>
+                Matrícula: {selection.cohort.fecha_inicio_matricula} a{" "}
+                {selection.cohort.fecha_fin_matricula}
               </p>
-              <p className="font-display text-base font-bold text-text-primary">
-                {cohorteSeleccionada.nombre}
+              <p>
+                Curso: {selection.cohort.fecha_inicio_curso} a {selection.cohort.fecha_fin_curso}
               </p>
-              <p className="text-sm text-text-secondary">
-                Matrícula: {formatFecha(cohorteSeleccionada.fechaInicioMatricula)} –{" "}
-                {formatFecha(cohorteSeleccionada.fechaFinMatricula)} · Curso:{" "}
-                {formatFecha(cohorteSeleccionada.fechaInicioCurso)} –{" "}
-                {formatFecha(cohorteSeleccionada.fechaFinCurso)}
+              <p>
+                Cupos disponibles: {selection.cohort.cupo_maximo - selection.cohort.ocupados} ·
+                Precio: ${Number(selection.cohort.precio).toFixed(2)}
               </p>
-              {preview && "warning" in preview && preview.warning === "matricula_por_cerrar" ? (
-                <p className="text-sm text-accent-red">
-                  La matrícula de esta cohorte está por cerrar.
-                </p>
-              ) : null}
-              {!showManualSelector ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="self-start"
-                  onClick={() => setShowManualSelector(true)}
-                >
-                  Cambiar cohorte
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-
-          {showManualSelector ? (
-            <div className="mt-3">
-              <Select
-                label="Elegir cohorte manualmente"
-                name="cohortId"
-                value={selection.cohortId ?? ""}
-                onChange={(event) => handleManualCohortChange(event.target.value)}
-              >
-                <option value="">Sin cohorte (asignar después)</option>
-                {cohortesDelCurso.map((cohort) => (
-                  <option key={cohort.id} value={cohort.id}>
-                    {cohort.nombre} — ${cohort.precio.toFixed(2)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          ) : null}
+            </>
+          ) : (
+            <p>
+              Sin cohorte elegible: quedará pendiente de cohorte. Se conservarán el tipo, el curso
+              solicitado y el plan de prácticas; aún no se generarán franjas.
+            </p>
+          )}
+          {preview.suggestion.warning && <p>La matrícula está por cerrar.</p>}
+          {!manual && preview.cohorts.length > 0 && (
+            <Button variant="secondary" onClick={() => setManual(true)}>
+              Cambiar cohorte
+            </Button>
+          )}
+          {manual && (
+            <Select
+              name="cohortId"
+              label="Cohorte del mismo tipo con cupo"
+              value={selection.cohortId ?? ""}
+              onChange={(e) => {
+                const cohort = preview.cohorts.find((c) => c.id === e.target.value);
+                if (cohort)
+                  setSelection({
+                    ...selection,
+                    cohortId: cohort.id,
+                    courseId: cohort.course_id,
+                    manualOverride: true,
+                    cohort,
+                  });
+              }}
+            >
+              <option value="" disabled>
+                Selecciona una cohorte
+              </option>
+              {preview.cohorts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre} — {c.cupo_maximo - c.ocupados} cupos
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
-      ) : null}
-
-      <div className="mt-2 flex justify-between">
-        <Button type="button" variant="secondary" onClick={onBack}>
+      )}
+      <div className="flex justify-between">
+        <Button variant="secondary" onClick={onBack}>
           Atrás
         </Button>
         <Button
-          type="button"
-          disabled={!selection || isLoadingPreview}
+          disabled={!selection || busy || !!error}
           onClick={() => selection && onNext(selection)}
         >
           Continuar

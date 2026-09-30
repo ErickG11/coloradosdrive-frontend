@@ -1,205 +1,262 @@
 "use client";
-
-import { motion } from "framer-motion";
-import { useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import type {
-  Cohort,
-  ConfirmarPracticaInput,
-  ConfirmarPracticaResult,
-  Course,
-  CreateEnrollmentInput,
-  EnrollStudentResult,
-} from "@/types";
-
-import { StepConfirmar } from "./StepConfirmar";
-import { StepCurso } from "./StepCurso";
 import { StepDatosEstudiante } from "./StepDatosEstudiante";
+import { StepCurso } from "./StepCurso";
 import { StepPracticas } from "./StepPracticas";
+import { StepConfirmar } from "./StepConfirmar";
 import { WizardProgress } from "./WizardProgress";
 import {
-  INITIAL_WIZARD_STATE,
+  BASE,
+  EMPTY_STUDENT,
+  practicePayload,
+  type CatalogEntry,
+  type StudentData,
   type CourseSelection,
   type PracticeChoice,
-  type StudentData,
-  type WizardState,
+  type ManualResult,
+  type WizardStep,
 } from "./wizardTypes";
 
-interface EnrollmentWizardProps {
-  courses: Course[];
-  cohorts: Cohort[];
+interface Draft {
+  student: StudentData;
+  course: CourseSelection;
+  practice: PracticeChoice;
 }
-
-// Solo entrada (sin exit vía AnimatePresence): con mode="wait" el paso
-// anterior no se desmonta hasta terminar su animación de salida, lo que en
-// jsdom (sin rAF real) lo deja indefinidamente montado junto al nuevo paso
-// - dos formularios con el mismo botón "Continuar" a la vez, ambigüedad
-// real para tests y para cualquier lector de pantalla. Con solo entrada,
-// React desmonta el paso anterior al instante (como sin animación) y el
-// nuevo entra con el mismo fade+slide corto (0.15-0.2s, sin springs) que
-// ya usan Modal.tsx y el drawer móvil de Sidebar.
-const STEP_VARIANTS = {
-  initial: { opacity: 0, x: 16 },
-  animate: { opacity: 1, x: 0 },
-};
-
-export function EnrollmentWizard({ courses, cohorts }: EnrollmentWizardProps) {
-  const [state, setState] = useState<WizardState>(INITIAL_WIZARD_STATE);
-  const [isCreatingEnrollment, setIsCreatingEnrollment] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [confirmResult, setConfirmResult] = useState<ConfirmarPracticaResult | null>(null);
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [confirmError, setConfirmError] = useState<string | null>(null);
-  const [isFinished, setIsFinished] = useState(false);
-
-  function handleStudentNext(student: StudentData) {
-    setState((current) => ({ ...current, student, step: 2 }));
+interface Pending {
+  key: string;
+  payload: object;
+  draft: Draft;
+}
+interface Operation {
+  phase: string;
+  result: Omit<ManualResult, "emailStatus"> | null;
+  emailStatus: ManualResult["emailStatus"];
+}
+const STORAGE = "coloradosdrive.manual-enrollment.confirmation";
+export function EnrollmentWizard() {
+  const [step, setStep] = useState<WizardStep>(1),
+    [student, setStudent] = useState(EMPTY_STUDENT);
+  const [course, setCourse] = useState<CourseSelection | null>(null),
+    [practice, setPractice] = useState<PracticeChoice | null>(null);
+  const [catalog, setCatalog] = useState<CatalogEntry[]>([]),
+    [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<ManualResult | null>(null),
+    [busy, setBusy] = useState(false),
+    [uncertain, setUncertain] = useState(false);
+  const pending = useRef<Pending | null>(null),
+    inFlight = useRef(false);
+  async function check(p: Pending) {
+    const op = await api.get<Operation>(`${BASE}/operations/${p.key}`);
+    if (op.phase === "committed" && op.result) {
+      setResult({ ...op.result, emailStatus: op.emailStatus });
+      setUncertain(false);
+      setError(null);
+      sessionStorage.removeItem(STORAGE);
+    } else {
+      setUncertain(op.phase !== "failed");
+      if (op.phase === "failed") {
+        sessionStorage.removeItem(STORAGE);
+        setError(
+          (current) =>
+            current ?? "La operación no se confirmó. Puedes corregir el borrador o reintentar.",
+        );
+      }
+    }
   }
-
-  function handleCourseBack() {
-    setState((current) => ({ ...current, step: 1 }));
+  useEffect(() => {
+    api
+      .get<CatalogEntry[]>(`${BASE}/catalog`)
+      .then(setCatalog)
+      .catch((e) => setError(e instanceof ApiError ? e.message : "No se pudo cargar el catálogo."));
+    // Restaurar almacenamiento externo después del montaje, antes de consultar
+    // el estado. El temporizador se cancela si el componente se desmonta.
+    const restore = setTimeout(() => {
+      const saved = sessionStorage.getItem(STORAGE);
+      if (saved) {
+        try {
+          const p = JSON.parse(saved) as Pending;
+          if (!p.key || !p.draft?.student || !p.draft?.course || !p.draft?.practice)
+            throw Error("Borrador inválido");
+          pending.current = p;
+          setStudent(p.draft.student);
+          setCourse(p.draft.course);
+          setPractice(p.draft.practice);
+          setStep(4);
+          setUncertain(true);
+          check(p).catch(() =>
+            setError(
+              "No se pudo recuperar el estado. Consulta de nuevo antes de crear otra operación.",
+            ),
+          );
+        } catch {
+          sessionStorage.removeItem(STORAGE);
+        }
+      }
+    }, 0);
+    return () => clearTimeout(restore);
+  }, []);
+  function edit() {
+    pending.current = null;
+    sessionStorage.removeItem(STORAGE);
+    setError(null);
   }
-
-  async function handleCourseNext(course: CourseSelection) {
-    setCreateError(null);
-    setIsCreatingEnrollment(true);
-
-    try {
-      const payload: CreateEnrollmentInput = {
-        cedula: state.student.cedula,
-        nombreCompleto: state.student.nombreCompleto,
-        correo: state.student.correo,
-        telefono: state.student.telefono || undefined,
-        ...(course.cohortId ? { cohortId: course.cohortId } : { courseId: course.courseId }),
+  async function confirm() {
+    if (!course || !practice || inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError(null);
+    if (!pending.current) {
+      const { form, suggestion, instructor } = practice;
+      pending.current = {
+        key: crypto.randomUUID(),
+        draft: { student, course, practice },
+        payload: {
+          student:
+            student.mode === "existing"
+              ? { mode: "existing", id: student.id }
+              : {
+                  mode: "new",
+                  cedula: student.cedula,
+                  nombreCompleto: student.nombreCompleto,
+                  correo: student.correo,
+                  telefono: student.telefono || undefined,
+                },
+          courseType: course.courseTipo,
+          cohortId: course.cohortId,
+          automatic: !course.manualOverride,
+          practice: {
+            ...practicePayload(form),
+            ...(suggestion && instructor
+              ? { horaResuelta: suggestion.horaResuelta, instructorId: instructor.id }
+              : {}),
+          },
+        },
       };
-      const result = await api.post<EnrollStudentResult>("/enrollments", payload);
-      setState((current) => ({ ...current, course, enrollment: result.enrollment, step: 3 }));
-    } catch (err) {
-      setCreateError(
-        err instanceof ApiError ? err.message : "No se pudo completar la matrícula.",
-      );
-    } finally {
-      setIsCreatingEnrollment(false);
     }
-  }
-
-  function handlePracticeSkip() {
-    setState((current) => ({ ...current, practice: null, step: 4 }));
-  }
-
-  function handlePracticeNext(practice: PracticeChoice) {
-    setState((current) => ({ ...current, practice, step: 4 }));
-  }
-
-  async function handleConfirm() {
-    if (!state.enrollment) return;
-
-    if (!state.practice) {
-      setIsFinished(true);
-      return;
-    }
-
-    setConfirmError(null);
-    setIsConfirming(true);
+    const p = pending.current;
+    sessionStorage.setItem(STORAGE, JSON.stringify(p));
     try {
-      const { form, suggestion, instructor } = state.practice;
-      const payload: ConfirmarPracticaInput = {
-        fechaInicio: form.fechaInicio,
-        modalidad: form.modalidad,
-        horasPorDia: form.horasPorDia,
-        horaResuelta: suggestion.horaResuelta,
-        instructorId: instructor.id,
-        ...(form.endMode === "numeroSesiones"
-          ? { numeroSesiones: form.numeroSesiones }
-          : { fechaFin: form.fechaFin }),
-      };
-      const result = await api.post<ConfirmarPracticaResult>(
-        `/admin/enrollments/${state.enrollment.id}/confirmar-practica`,
-        payload,
+      setResult(
+        await api.post<ManualResult>(`${BASE}/confirm`, p.payload, {
+          headers: { "Idempotency-Key": p.key },
+        }),
       );
-      setConfirmResult(result);
-      setIsFinished(true);
-    } catch (err) {
-      setConfirmError(
-        err instanceof ApiError ? err.message : "No se pudo confirmar el horario de práctica.",
+      setUncertain(false);
+      sessionStorage.removeItem(STORAGE);
+    } catch (e) {
+      setError(
+        e instanceof ApiError
+          ? e.message
+          : "No se pudo confirmar. Consulta el estado antes de reintentar.",
       );
+      try {
+        await check(p);
+      } catch (statusError) {
+        if (statusError instanceof ApiError && statusError.status === 404) {
+          setUncertain(false);
+          sessionStorage.removeItem(STORAGE);
+        } else setUncertain(true);
+      }
     } finally {
-      setIsConfirming(false);
+      setBusy(false);
+      inFlight.current = false;
     }
   }
-
-  function handleReset() {
-    setState(INITIAL_WIZARD_STATE);
-    setCreateError(null);
-    setConfirmResult(null);
-    setConfirmError(null);
-    setIsFinished(false);
+  function reset() {
+    edit();
+    setStudent(EMPTY_STUDENT);
+    setCourse(null);
+    setPractice(null);
+    setResult(null);
+    setStep(1);
+    setUncertain(false);
   }
-
-  // Se usa enrollment.cohortId (verdad post-creación), no course.cohortId
-  // (la intención antes de crear la matrícula): si hubo una condición de
-  // carrera por cupo, el backend pudo haber reintentado con otra cohorte.
-  const cohortSeleccionada = state.enrollment?.cohortId
-    ? cohorts.find((cohort) => cohort.id === state.enrollment?.cohortId)
-    : undefined;
-
   return (
     <div>
-      <WizardProgress currentStep={state.step} />
-
-      <motion.div
-        key={state.step}
-        variants={STEP_VARIANTS}
-        initial="initial"
-        animate="animate"
-        transition={{ duration: 0.18 }}
-      >
-          {state.step === 1 ? (
-            <StepDatosEstudiante value={state.student} onNext={handleStudentNext} />
-          ) : null}
-
-          {state.step === 2 ? (
-            <div className="flex flex-col gap-3">
-              <StepCurso
-                courses={courses}
-                cohorts={cohorts}
-                value={state.course}
-                onBack={handleCourseBack}
-                onNext={(course) => void handleCourseNext(course)}
-              />
-              {isCreatingEnrollment ? (
-                <p className="text-sm text-text-secondary">Creando matrícula…</p>
-              ) : null}
-              {createError ? <p className="text-sm text-accent-red">{createError}</p> : null}
-            </div>
-          ) : null}
-
-          {state.step === 3 && state.enrollment ? (
-            <StepPracticas
-              enrollment={state.enrollment}
-              onSkip={handlePracticeSkip}
-              onNext={handlePracticeNext}
-            />
-          ) : null}
-
-          {state.step === 4 && state.enrollment && state.course ? (
-            <StepConfirmar
-              student={state.student}
-              course={state.course}
-              cohort={cohortSeleccionada}
-              enrollment={state.enrollment}
-              practice={state.practice}
-              confirmResult={confirmResult}
-              isFinished={isFinished}
-              isSubmitting={isConfirming}
-              error={confirmError}
-              onConfirm={() => void handleConfirm()}
-              onReset={handleReset}
-            />
-          ) : null}
-      </motion.div>
+      <WizardProgress currentStep={step} />
+      {step === 1 && (
+        <StepDatosEstudiante
+          value={student}
+          onNext={(s) => {
+            edit();
+            setStudent(s);
+            setStep(2);
+          }}
+        />
+      )}
+      {step === 2 && (
+        <StepCurso
+          catalog={catalog}
+          value={course}
+          onBack={() => setStep(1)}
+          onNext={(c) => {
+            edit();
+            setCourse(c);
+            setStep(3);
+          }}
+        />
+      )}
+      {step === 3 && course && (
+        <StepPracticas
+          course={course}
+          value={practice}
+          onBack={() => setStep(2)}
+          onNext={(p) => {
+            edit();
+            setPractice(p);
+            setStep(4);
+          }}
+        />
+      )}
+      {step === 4 && course && practice && (
+        <StepConfirmar
+          student={student}
+          course={course}
+          practice={practice}
+          result={result}
+          busy={busy}
+          error={error}
+          uncertain={uncertain}
+          onConfirm={() => void confirm()}
+          onBack={() => {
+            edit();
+            setStep(3);
+          }}
+          onReset={reset}
+          onCheck={() => {
+            if (pending.current)
+              void check(pending.current).catch(() => setError("No se pudo consultar el estado."));
+          }}
+          onResend={async (regenerate) => {
+            if (!result) return;
+            setBusy(true);
+            setError(null);
+            try {
+              setResult(
+                await api.post<ManualResult>(
+                  `${BASE}/operations/${result.operationId}/resend-email`,
+                  { regenerateTemporaryPassword: regenerate },
+                ),
+              );
+            } catch (e) {
+              setError(
+                e instanceof ApiError
+                  ? e.message
+                  : "No se pudo reenviar. Consulta el estado de envío.",
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      )}
+      {error && step !== 4 && (
+        <p role="alert" className="text-accent-red">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
