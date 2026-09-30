@@ -3,12 +3,18 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import Page from "@/app/(student)/student/change-password/page";
 import { api } from "@/lib/api/client";
-const { replace, refresh } = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
+const { replace, refresh, signOut } = vi.hoisted(() => ({
+  replace: vi.fn(),
+  refresh: vi.fn(),
+  signOut: vi.fn(),
+}));
+vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: { signOut } }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh }) }));
 vi.mock("@/lib/api/client", () => ({ api: { post: vi.fn() } }));
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.post).mockResolvedValue({});
+  signOut.mockResolvedValue({ error: null });
 });
 it("exige coincidencia y usa la API autenticada existente", async () => {
   const user = userEvent.setup();
@@ -23,7 +29,10 @@ it("exige coincidencia y usa la API autenticada existente", async () => {
   expect(api.post).toHaveBeenCalledWith("/estudiantes/cambiar-password", {
     nuevaPassword: "new-local-password",
   });
-  expect(replace).toHaveBeenCalledWith("/student");
+  await screen.findByRole("status");
+  expect(signOut).toHaveBeenCalledWith({ scope: "local" });
+  await user.click(screen.getByRole("button", { name: "Iniciar sesión con nueva contraseña" }));
+  expect(replace).toHaveBeenCalledWith("/login");
 });
 it("no envía contraseñas que no coinciden", async () => {
   const user = userEvent.setup();
