@@ -28,7 +28,8 @@ export interface PreviewCohort {
   id: string;
   course_id: string;
   nombre: string;
-  precio: string;
+  // La fila numeric puede serializarse como número o cadena en course-preview.
+  precio: number | string;
   cupo_maximo: number;
   ocupados: number;
   fecha_inicio_matricula: string;

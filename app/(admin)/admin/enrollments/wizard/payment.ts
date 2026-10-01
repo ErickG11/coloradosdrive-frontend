@@ -1,7 +1,13 @@
 import type { CourseSelection, PaymentDraft } from "./wizardTypes";
 
-export function parseCents(value: string): number | null {
-  if (!/^(0|[1-9]\d*)(?:\.(\d{1,2}))?$/.test(value)) return null;
+export function parseCents(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value < 0) return null;
+    const scaled = value * 100;
+    const cents = Math.round(scaled);
+    return Number.isSafeInteger(cents) && Math.abs(scaled - cents) < 1e-7 ? cents : null;
+  }
+  if (typeof value !== "string" || !/^(0|[1-9]\d*)(?:\.(\d{1,2}))?$/.test(value)) return null;
   const [whole, fraction = ""] = value.split(".");
   const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
   return Number.isSafeInteger(cents) ? cents : null;

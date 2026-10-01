@@ -6,6 +6,11 @@ import { ApiError } from "@/lib/api/errors";
 import { formatCents, parseCents } from "./payment";
 import { BASE, type CatalogEntry, type CourseSelection, type CoursePreview } from "./wizardTypes";
 
+function displayPrice(value: number | string): string {
+  const cents = parseCents(value);
+  return cents === null ? "No disponible" : formatCents(cents);
+}
+
 export function StepCurso({
   catalog,
   onBack,
@@ -94,10 +99,7 @@ export function StepCurso({
               </p>
               <p>
                 Cupos disponibles: {selection.cohort.cupo_maximo - selection.cohort.ocupados} ·
-                Precio:{" "}
-                {parseCents(selection.cohort.precio) === null
-                  ? "No disponible"
-                  : formatCents(parseCents(selection.cohort.precio)!)}
+                Precio: {displayPrice(selection.cohort.precio)}
               </p>
             </>
           ) : (
