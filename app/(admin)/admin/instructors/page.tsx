@@ -10,7 +10,7 @@ import type { InstructorDetail, InstructorList } from "@/types";
 
 import { InstructorForm } from "./InstructorForm";
 
-type Action = "desactivar" | "reactivar" | "reenviar-credenciales" | "restablecer-password";
+type Action = "desactivar" | "reactivar" | "restablecer-password";
 type Dialog = "closed" | "create" | "detail" | "edit" | "confirm";
 
 export default function InstructorsPage() {
@@ -186,9 +186,6 @@ export default function InstructorsPage() {
               <Button variant={selected.activo ? "danger" : "secondary"}
                 onClick={() => ask(selected.activo ? "desactivar" : "reactivar")}>
                 {selected.activo ? "Desactivar" : "Reactivar"}
-              </Button>
-              <Button variant="secondary" onClick={() => ask("reenviar-credenciales")}>
-                Reenviar credenciales
               </Button>
               {selected.activo ? (
                 <Button variant="secondary" onClick={() => ask("restablecer-password")}>

@@ -65,8 +65,9 @@ describe("InstructorsPage", () => {
     render(<InstructorsPage />);
 
     await user.click(screen.getByRole("button", { name: "Ver y gestionar" }));
-    await user.click(within(await screen.findByRole("dialog", { name: "Instructor" }))
-      .getByRole("button", { name: "Restablecer contraseña" }));
+    const detail = within(await screen.findByRole("dialog", { name: "Instructor" }));
+    expect(detail.queryByRole("button", { name: "Reenviar credenciales" })).not.toBeInTheDocument();
+    await user.click(detail.getByRole("button", { name: "Restablecer contraseña" }));
     const confirmation = await screen.findByRole("dialog", { name: "Confirmar acción" });
     expect(within(confirmation).getByText(
       "Se enviará una contraseña temporal al correo del instructor y deberá cambiarla al entrar",
@@ -89,8 +90,9 @@ describe("InstructorsPage", () => {
     render(<InstructorsPage />);
 
     await user.click(screen.getByRole("button", { name: "Ver y gestionar" }));
-    expect(within(await screen.findByRole("dialog", { name: "Instructor" }))
-      .queryByRole("button", { name: "Restablecer contraseña" })).not.toBeInTheDocument();
+    const detail = within(await screen.findByRole("dialog", { name: "Instructor" }));
+    expect(detail.queryByRole("button", { name: "Restablecer contraseña" })).not.toBeInTheDocument();
+    expect(detail.queryByRole("button", { name: "Reenviar credenciales" })).not.toBeInTheDocument();
   });
 
   it("muestra el error del backend al restablecer", async () => {
