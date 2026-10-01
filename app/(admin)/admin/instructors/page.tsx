@@ -10,7 +10,7 @@ import type { InstructorDetail, InstructorList } from "@/types";
 
 import { InstructorForm } from "./InstructorForm";
 
-type Action = "desactivar" | "reactivar" | "reenviar-credenciales";
+type Action = "desactivar" | "reactivar" | "reenviar-credenciales" | "restablecer-password";
 type Dialog = "closed" | "create" | "detail" | "edit" | "confirm";
 
 export default function InstructorsPage() {
@@ -23,6 +23,7 @@ export default function InstructorsPage() {
   const [action, setAction] = useState<Action>("desactivar");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const pageSize = 10;
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -35,6 +36,7 @@ export default function InstructorsPage() {
 
   async function openDetail(id: string) {
     setActionError(null);
+    setActionSuccess(null);
     setBusy(true);
     try {
       const instructor = await api.get<InstructorDetail>(`/admin/instructores/${id}`);
@@ -56,6 +58,7 @@ export default function InstructorsPage() {
   function ask(actionToConfirm: Action) {
     setAction(actionToConfirm);
     setActionError(null);
+    setActionSuccess(null);
     setDialog("confirm");
   }
 
@@ -65,6 +68,9 @@ export default function InstructorsPage() {
     setActionError(null);
     try {
       await api.post<InstructorDetail | void>(`/admin/instructores/${selected.id}/${action}`);
+      if (action === "restablecer-password") {
+        setActionSuccess("Se envió una contraseña temporal al correo del instructor.");
+      }
       setDialog("closed");
       setSelected(null);
       refetch();
@@ -105,6 +111,7 @@ export default function InstructorsPage() {
       {error ? <p role="alert" className="text-sm text-accent-red">{error}</p> : null}
       {actionError && dialog === "closed" ?
         <p role="alert" className="text-sm text-accent-red">{actionError}</p> : null}
+      {actionSuccess ? <p role="status" className="text-sm text-accent-blue">{actionSuccess}</p> : null}
       {!isLoading && !error ? (
         <>
           <div className="overflow-x-auto rounded-md border border-border bg-bg-surface">
@@ -183,6 +190,11 @@ export default function InstructorsPage() {
               <Button variant="secondary" onClick={() => ask("reenviar-credenciales")}>
                 Reenviar credenciales
               </Button>
+              {selected.activo ? (
+                <Button variant="secondary" onClick={() => ask("restablecer-password")}>
+                  Restablecer contraseña
+                </Button>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -190,7 +202,9 @@ export default function InstructorsPage() {
       <Modal isOpen={dialog === "confirm"} onClose={() => setDialog("detail")}
         title="Confirmar acción">
         <div className="flex flex-col gap-4">
-          <p>¿Confirmas {action.replaceAll("-", " ")} para {selected?.nombreCompleto}?</p>
+          <p>{action === "restablecer-password"
+            ? "Se enviará una contraseña temporal al correo del instructor y deberá cambiarla al entrar"
+            : `¿Confirmas ${action.replaceAll("-", " ")} para ${selected?.nombreCompleto}?`}</p>
           {actionError ? <p role="alert" className="text-sm text-accent-red">{actionError}</p> : null}
           <div className="flex flex-wrap justify-end gap-2">
             <Button variant="secondary" onClick={() => setDialog("detail")}>Cancelar</Button>

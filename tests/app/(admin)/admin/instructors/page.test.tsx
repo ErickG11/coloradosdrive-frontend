@@ -57,4 +57,55 @@ describe("InstructorsPage", () => {
       `/admin/instructores/${instructor.id}/desactivar`,
     );
   });
+
+  it("confirma el restablecimiento de un instructor activo y muestra el éxito sin clave", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue(instructor);
+    mockedPost.mockResolvedValue(undefined);
+    render(<InstructorsPage />);
+
+    await user.click(screen.getByRole("button", { name: "Ver y gestionar" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Instructor" }))
+      .getByRole("button", { name: "Restablecer contraseña" }));
+    const confirmation = await screen.findByRole("dialog", { name: "Confirmar acción" });
+    expect(within(confirmation).getByText(
+      "Se enviará una contraseña temporal al correo del instructor y deberá cambiarla al entrar",
+    )).toBeInTheDocument();
+    expect(mockedPost).not.toHaveBeenCalled();
+
+    await user.click(within(confirmation).getByRole("button", { name: "Confirmar" }));
+    await waitFor(() => expect(mockedPost).toHaveBeenCalledWith(
+      `/admin/instructores/${instructor.id}/restablecer-password`,
+    ));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Se envió una contraseña temporal al correo del instructor.",
+    );
+    expect(screen.queryByText(/contraseña:\s*\S+/i)).not.toBeInTheDocument();
+  });
+
+  it("oculta el restablecimiento para instructores inactivos", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue({ ...instructor, activo: false });
+    render(<InstructorsPage />);
+
+    await user.click(screen.getByRole("button", { name: "Ver y gestionar" }));
+    expect(within(await screen.findByRole("dialog", { name: "Instructor" }))
+      .queryByRole("button", { name: "Restablecer contraseña" })).not.toBeInTheDocument();
+  });
+
+  it("muestra el error del backend al restablecer", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue(instructor);
+    mockedPost.mockRejectedValue(new ApiError("No se pudo enviar el correo de restablecimiento", 502));
+    render(<InstructorsPage />);
+
+    await user.click(screen.getByRole("button", { name: "Ver y gestionar" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Instructor" }))
+      .getByRole("button", { name: "Restablecer contraseña" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Confirmar acción" }))
+      .getByRole("button", { name: "Confirmar" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "No se pudo enviar el correo de restablecimiento",
+    );
+  });
 });
