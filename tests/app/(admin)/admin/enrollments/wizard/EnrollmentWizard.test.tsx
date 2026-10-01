@@ -14,7 +14,7 @@ const cohort = {
   id: "cohort-a",
   course_id: "course-a",
   nombre: "Cohorte A",
-  precio: "400",
+  precio: 400,
   cupo_maximo: 20,
   ocupados: 2,
   fecha_inicio_matricula: "2026-09-01",
