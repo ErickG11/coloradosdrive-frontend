@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { Button, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import { formatCents, parseCents } from "./payment";
 import { BASE, type CatalogEntry, type CourseSelection, type CoursePreview } from "./wizardTypes";
 
 export function StepCurso({
@@ -93,7 +94,10 @@ export function StepCurso({
               </p>
               <p>
                 Cupos disponibles: {selection.cohort.cupo_maximo - selection.cohort.ocupados} ·
-                Precio: ${Number(selection.cohort.precio).toFixed(2)}
+                Precio:{" "}
+                {parseCents(selection.cohort.precio) === null
+                  ? "No disponible"
+                  : formatCents(parseCents(selection.cohort.precio)!)}
               </p>
             </>
           ) : (

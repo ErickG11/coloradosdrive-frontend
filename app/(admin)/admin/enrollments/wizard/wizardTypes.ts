@@ -1,6 +1,6 @@
 import type { CourseType, InstructorSugerido, Modalidad, SugerirPracticaResult } from "@/types";
 export const BASE = "/admin/manual-enrollments";
-export const WIZARD_STEPS = [1, 2, 3, 4] as const;
+export const WIZARD_STEPS = [1, 2, 3, 4, 5] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];
 export interface StudentData {
   mode: "new" | "existing";
@@ -9,6 +9,7 @@ export interface StudentData {
   nombreCompleto: string;
   correo: string;
   telefono: string;
+  fechaNacimiento?: string;
   vigentes?: { tipo: CourseType; status: string }[];
 }
 export const EMPTY_STUDENT: StudentData = {
@@ -92,6 +93,48 @@ export interface PracticeChoice {
   suggestion: SugerirPracticaResult | null;
   instructor: InstructorSugerido | null;
 }
+export const DOCUMENTS = [
+  { tipo: "cedula", label: "Cédula" },
+  { tipo: "papeleta_votacion", label: "Papeleta de votación" },
+  { tipo: "tipo_sangre", label: "Tipo de sangre" },
+  { tipo: "titulo_bachiller", label: "Título de bachiller o certificado de décimo" },
+] as const;
+export type DocumentType = (typeof DOCUMENTS)[number]["tipo"];
+export type DocumentStatus = "entregado" | "pendiente" | "no_aplica";
+export interface DocumentChoice {
+  tipo: DocumentType;
+  estado: DocumentStatus;
+}
+export interface PaymentDraft {
+  modalidad: "abono" | "completo";
+  descuento: string;
+  montoAbonado: string;
+}
+export interface DocumentsPaymentChoice {
+  documentos: DocumentChoice[];
+  pago: PaymentDraft;
+}
+export const EMPTY_DETAILS: DocumentsPaymentChoice = {
+  documentos: DOCUMENTS.map(({ tipo }) => ({ tipo, estado: "pendiente" })),
+  pago: { modalidad: "abono", descuento: "0", montoAbonado: "0" },
+};
+export interface ManualEnrollmentDetails {
+  enrollmentId: string;
+  studentId: string;
+  cohortId: string | null;
+  montoTotal: number | null;
+  descuento: number;
+  precioBruto: number | null;
+  montoAbonado: number;
+  saldo: number | null;
+  documentosPendientes: number;
+  documentos: {
+    tipo: DocumentType;
+    estado: DocumentStatus;
+    fechaMarcado: string | null;
+    marcadoPor: string | null;
+  }[];
+}
 export interface ManualResult {
   operationId: string;
   studentId: string;
@@ -104,6 +147,11 @@ export interface ManualResult {
   slotsCreated: number;
   emailStatus: "sent" | "failed" | "pending" | "sending";
   plan: PracticePlan;
+  montoTotal?: number | null;
+  descuento?: number;
+  montoAbonado?: number;
+  saldo?: number | null;
+  documentosPendientes?: number;
 }
 export function practicePayload(form: PracticeFormData) {
   return {

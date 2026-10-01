@@ -10,7 +10,8 @@ const STEP_LABELS: Record<WizardStep, string> = {
   1: "Estudiante",
   2: "Curso",
   3: "Prácticas",
-  4: "Confirmar",
+  4: "Documentos y pago",
+  5: "Confirmar",
 };
 
 interface WizardProgressProps {
