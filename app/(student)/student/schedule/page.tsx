@@ -35,6 +35,9 @@ export default function StudentSchedulePage() {
     error,
     refetch: refetchSlots,
   } = useFetch<PracticeSlotWithNames[]>("/practice-slots");
+  const { data: enrollments, error: enrollmentsError } = useFetch<
+    { cohortId: string | null; courseType: "A" | "B" }[]
+  >("/estudiantes/enrollments");
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
@@ -42,12 +45,14 @@ export default function StudentSchedulePage() {
   const [noPracticeNotice, setNoPracticeNotice] = useState(false);
 
   const userId = useCurrentUserId();
-  // Todas las franjas de esta lista comparten la cohorte del propio
-  // estudiante (ver listSlotsForStudent) - se toma de cualquiera de
-  // ellas, no hay un endpoint aparte para "mi cohorte".
-  const cohortId = slots?.[0]?.cohortId ?? null;
+  // Ambas cohortes propias, incluso si todavía no tienen franjas visibles.
+  const cohortId = enrollments?.find((e) => e.courseType === "A")?.cohortId ?? null;
+  const cohortB = enrollments?.find((e) => e.courseType === "B")?.cohortId ?? null;
 
   useRealtimeChannel(cohortId ? `cohort-${cohortId}-practice-slots` : null, {
+    "slot-released": () => refetchSlots(),
+  });
+  useRealtimeChannel(cohortB ? `cohort-${cohortB}-practice-slots` : null, {
     "slot-released": () => refetchSlots(),
   });
   useRealtimeChannel(userId ? `user-${userId}-practice-slots` : null, {
@@ -126,6 +131,11 @@ export default function StudentSchedulePage() {
 
       {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
       {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {enrollmentsError ? (
+        <p role="alert" className="text-sm text-accent-red">
+          {enrollmentsError}
+        </p>
+      ) : null}
       {actionError ? <p className="text-sm text-accent-red">{actionError}</p> : null}
 
       {noPracticeNotice ? (
@@ -209,7 +219,7 @@ export default function StudentSchedulePage() {
             {availableSlots.length === 0 ? (
               <Card>
                 <p className="text-sm text-text-secondary">
-                  No hay franjas disponibles en tu cohorte por ahora.
+                  No hay franjas disponibles en tus cohortes por ahora.
                 </p>
               </Card>
             ) : (

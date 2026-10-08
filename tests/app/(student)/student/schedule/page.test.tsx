@@ -101,11 +101,23 @@ function buildSlot(overrides: Partial<PracticeSlotWithNames> = {}): PracticeSlot
 
 const refetchSlots = vi.fn();
 
-function mockFetch(slots: PracticeSlotWithNames[]) {
+function mockFetch(
+  slots: PracticeSlotWithNames[],
+  scopes = { A: slots[0]?.cohortId ?? null, B: null as string | null },
+) {
   mockedUseFetch.mockImplementation((path: unknown) => {
     if (path === "/practice-slots") {
       return { data: slots, isLoading: false, error: null, refetch: refetchSlots };
     }
+    if (path === "/estudiantes/enrollments")
+      return {
+        data: Object.entries(scopes)
+          .filter(([, id]) => id)
+          .map(([courseType, cohortId]) => ({ courseType, cohortId })),
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      };
     throw new Error(`useFetch mockeado con un path inesperado: ${String(path)}`);
   });
 }
@@ -126,7 +138,7 @@ describe("StudentSchedulePage", () => {
 
     expect(screen.getByText("No tienes ninguna franja reclamada todavía.")).toBeInTheDocument();
     expect(
-      screen.getByText("No hay franjas disponibles en tu cohorte por ahora."),
+      screen.getByText("No hay franjas disponibles en tus cohortes por ahora."),
     ).toBeInTheDocument();
   });
 
@@ -224,6 +236,16 @@ describe("StudentSchedulePage", () => {
   });
 
   describe("Realtime", () => {
+    it("A+B se suscribe a ambas cohortes propias aunque no haya franjas", async () => {
+      const channels = mockSupabaseClient("student-1");
+      mockFetch([], { A: "cohort-a", B: "cohort-b" });
+      render(<StudentSchedulePage />);
+      await waitFor(() => expect(channels.has("cohort-cohort-b-practice-slots")).toBe(true));
+      expect(channels.has("cohort-cohort-a-practice-slots")).toBe(true);
+      refetchSlots.mockClear();
+      act(() => channels.get("cohort-cohort-b-practice-slots")?.emit("slot-released", {}));
+      expect(refetchSlots).toHaveBeenCalled();
+    });
     it("al liberarse un cupo en el canal de cohorte, refresca la lista", async () => {
       const channels = mockSupabaseClient("student-1");
       mockFetch([buildSlot({ status: "disponible", cohortId: "cohort-1" })]);
