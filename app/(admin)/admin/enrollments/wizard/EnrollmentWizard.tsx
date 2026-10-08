@@ -6,6 +6,8 @@ import { StepDatosEstudiante } from "./StepDatosEstudiante";
 import { StepCurso } from "./StepCurso";
 import { StepPracticas } from "./StepPracticas";
 import { StepConfirmar } from "./StepConfirmar";
+import { StepDocumentosPago } from "./StepDocumentosPago";
+import { summarizePayment } from "./payment";
 import { WizardProgress } from "./WizardProgress";
 import {
   BASE,
@@ -16,6 +18,8 @@ import {
   type CourseSelection,
   type PracticeChoice,
   type ManualResult,
+  type DocumentsPaymentChoice,
+  type ManualEnrollmentDetails,
   type WizardStep,
 } from "./wizardTypes";
 
@@ -23,6 +27,7 @@ interface Draft {
   student: StudentData;
   course: CourseSelection;
   practice: PracticeChoice;
+  details: DocumentsPaymentChoice;
 }
 interface Pending {
   key: string;
@@ -40,6 +45,10 @@ export function EnrollmentWizard() {
     [student, setStudent] = useState(EMPTY_STUDENT);
   const [course, setCourse] = useState<CourseSelection | null>(null),
     [practice, setPractice] = useState<PracticeChoice | null>(null);
+  const [detailsChoice, setDetailsChoice] = useState<DocumentsPaymentChoice | null>(null);
+  const [detailsResult, setDetailsResult] = useState<ManualEnrollmentDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CatalogEntry[]>([]),
     [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ManualResult | null>(null),
@@ -50,14 +59,17 @@ export function EnrollmentWizard() {
   async function check(p: Pending) {
     const op = await api.get<Operation>(`${BASE}/operations/${p.key}`);
     if (op.phase === "committed" && op.result) {
+      setDetailsResult(null);
+      setDetailsLoading(true);
+      setDetailsError(null);
       setResult({ ...op.result, emailStatus: op.emailStatus });
       setUncertain(false);
       setError(null);
       sessionStorage.removeItem(STORAGE);
+      pending.current = null;
     } else {
       setUncertain(op.phase !== "failed");
       if (op.phase === "failed") {
-        sessionStorage.removeItem(STORAGE);
         setError(
           (current) =>
             current ?? "La operación no se confirmó. Puedes corregir el borrador o reintentar.",
@@ -77,13 +89,20 @@ export function EnrollmentWizard() {
       if (saved) {
         try {
           const p = JSON.parse(saved) as Pending;
-          if (!p.key || !p.draft?.student || !p.draft?.course || !p.draft?.practice)
+          if (
+            !p.key ||
+            !p.draft?.student ||
+            !p.draft?.course ||
+            !p.draft?.practice ||
+            !p.draft?.details
+          )
             throw Error("Borrador inválido");
           pending.current = p;
           setStudent(p.draft.student);
           setCourse(p.draft.course);
           setPractice(p.draft.practice);
-          setStep(4);
+          setDetailsChoice(p.draft.details);
+          setStep(5);
           setUncertain(true);
           check(p).catch(() =>
             setError(
@@ -97,13 +116,39 @@ export function EnrollmentWizard() {
     }, 0);
     return () => clearTimeout(restore);
   }, []);
+  useEffect(() => {
+    if (!result?.enrollmentId) return;
+    let cancelled = false;
+    api
+      .get<ManualEnrollmentDetails>(`${BASE}/${result.enrollmentId}/details`)
+      .then((data) => {
+        if (!cancelled) setDetailsResult(data);
+      })
+      .catch((e) => {
+        if (!cancelled)
+          setDetailsError(
+            e instanceof ApiError ? e.message : "No se pudo cargar el detalle de la matrícula.",
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setDetailsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [result?.enrollmentId]);
   function edit() {
     pending.current = null;
     sessionStorage.removeItem(STORAGE);
     setError(null);
   }
   async function confirm() {
-    if (!course || !practice || inFlight.current) return;
+    if (!course || !practice || !detailsChoice || inFlight.current) return;
+    const payment = summarizePayment(course, detailsChoice.pago);
+    if (payment.error) {
+      setError(payment.error);
+      return;
+    }
     inFlight.current = true;
     setBusy(true);
     setError(null);
@@ -111,7 +156,7 @@ export function EnrollmentWizard() {
       const { form, suggestion, instructor } = practice;
       pending.current = {
         key: crypto.randomUUID(),
-        draft: { student, course, practice },
+        draft: { student, course, practice, details: detailsChoice },
         payload: {
           student:
             student.mode === "existing"
@@ -122,6 +167,7 @@ export function EnrollmentWizard() {
                   nombreCompleto: student.nombreCompleto,
                   correo: student.correo,
                   telefono: student.telefono || undefined,
+                  ...(student.fechaNacimiento ? { fechaNacimiento: student.fechaNacimiento } : {}),
                 },
           courseType: course.courseTipo,
           cohortId: course.cohortId,
@@ -132,19 +178,28 @@ export function EnrollmentWizard() {
               ? { horaResuelta: suggestion.horaResuelta, instructorId: instructor.id }
               : {}),
           },
+          documentos: detailsChoice.documentos,
+          pago: {
+            modalidad: detailsChoice.pago.modalidad,
+            descuento: payment.discountCents / 100,
+            montoAbonado: payment.paidCents / 100,
+          },
         },
       };
     }
     const p = pending.current;
     sessionStorage.setItem(STORAGE, JSON.stringify(p));
     try {
-      setResult(
-        await api.post<ManualResult>(`${BASE}/confirm`, p.payload, {
-          headers: { "Idempotency-Key": p.key },
-        }),
-      );
+      const confirmed = await api.post<ManualResult>(`${BASE}/confirm`, p.payload, {
+        headers: { "Idempotency-Key": p.key },
+      });
+      setDetailsResult(null);
+      setDetailsLoading(true);
+      setDetailsError(null);
+      setResult(confirmed);
       setUncertain(false);
       sessionStorage.removeItem(STORAGE);
+      pending.current = null;
     } catch (e) {
       setError(
         e instanceof ApiError
@@ -156,7 +211,6 @@ export function EnrollmentWizard() {
       } catch (statusError) {
         if (statusError instanceof ApiError && statusError.status === 404) {
           setUncertain(false);
-          sessionStorage.removeItem(STORAGE);
         } else setUncertain(true);
       }
     } finally {
@@ -169,6 +223,10 @@ export function EnrollmentWizard() {
     setStudent(EMPTY_STUDENT);
     setCourse(null);
     setPractice(null);
+    setDetailsChoice(null);
+    setDetailsResult(null);
+    setDetailsError(null);
+    setDetailsLoading(false);
     setResult(null);
     setStep(1);
     setUncertain(false);
@@ -194,6 +252,7 @@ export function EnrollmentWizard() {
           onNext={(c) => {
             edit();
             setCourse(c);
+            setDetailsChoice(null);
             setStep(3);
           }}
         />
@@ -211,10 +270,27 @@ export function EnrollmentWizard() {
         />
       )}
       {step === 4 && course && practice && (
+        <StepDocumentosPago
+          student={student}
+          course={course}
+          value={detailsChoice}
+          onBack={() => setStep(3)}
+          onNext={(value) => {
+            edit();
+            setDetailsChoice(value);
+            setStep(5);
+          }}
+        />
+      )}
+      {step === 5 && course && practice && detailsChoice && (
         <StepConfirmar
           student={student}
           course={course}
           practice={practice}
+          choice={detailsChoice}
+          details={detailsResult}
+          detailsLoading={detailsLoading}
+          detailsError={detailsError}
           result={result}
           busy={busy}
           error={error}
@@ -222,7 +298,7 @@ export function EnrollmentWizard() {
           onConfirm={() => void confirm()}
           onBack={() => {
             edit();
-            setStep(3);
+            setStep(4);
           }}
           onReset={reset}
           onCheck={() => {
@@ -252,7 +328,7 @@ export function EnrollmentWizard() {
           }}
         />
       )}
-      {error && step !== 4 && (
+      {error && step !== 5 && (
         <p role="alert" className="text-accent-red">
           {error}
         </p>
