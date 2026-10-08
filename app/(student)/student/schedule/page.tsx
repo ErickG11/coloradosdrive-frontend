@@ -10,7 +10,7 @@ import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
-import type { PracticeSlotStatus, PracticeSlotWithNames } from "@/types";
+import type { PracticeSlotStatus, StudentPracticeSlot } from "@/types";
 
 const ACTIVE_OWN_STATUSES: PracticeSlotStatus[] = ["asignado", "confirmado"];
 const AVAILABLE_STATUSES: PracticeSlotStatus[] = ["disponible", "liberado"];
@@ -26,15 +26,12 @@ function formatDateTime(iso: string): string {
 }
 
 export default function StudentSchedulePage() {
-  // instructorName ya viene embebido en cada franja (ver docs/adr/008 en
-  // el backend) - el estudiante no necesita (ni puede: GET /users es
-  // admin-only) resolverlo aparte contra /users.
   const {
     data: slots,
     isLoading,
     error,
     refetch: refetchSlots,
-  } = useFetch<PracticeSlotWithNames[]>("/practice-slots");
+  } = useFetch<StudentPracticeSlot[]>("/practice-slots");
   const { data: enrollments, error: enrollmentsError } = useFetch<
     { cohortId: string | null; courseType: "A" | "B" }[]
   >("/estudiantes/enrollments");
@@ -181,7 +178,7 @@ export default function StudentSchedulePage() {
                           {formatDateTime(slot.scheduledAt)}
                         </span>
                         <span className="text-sm text-text-secondary">
-                          {slot.durationMinutes} min · {slot.instructorName}
+                          {slot.durationMinutes} min · {"instructorName" in slot ? slot.instructorName : ""}
                         </span>
                       </div>
                       <StatusBadge status={slot.status} />
@@ -231,7 +228,7 @@ export default function StudentSchedulePage() {
                         {formatDateTime(slot.scheduledAt)}
                       </span>
                       <span className="text-sm text-text-secondary">
-                        {slot.durationMinutes} min · {slot.instructorName}
+                        {slot.durationMinutes} min
                       </span>
                     </div>
                     <Button

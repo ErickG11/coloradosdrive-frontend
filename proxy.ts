@@ -42,22 +42,27 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(destination, request.url));
   }
 
-  if (role === "estudiante") {
-    const status = await fetch(`${env.NEXT_PUBLIC_API_URL}/estudiantes/account-status`, {
+  if (role === "estudiante" || role === "instructor") {
+    const prefix = role === "estudiante" ? "estudiantes" : "instructores";
+    const home = role === "estudiante" ? "/student" : "/instructor";
+    const changePath = `${home}/change-password`;
+    const status = await fetch(`${env.NEXT_PUBLIC_API_URL}/${prefix}/account-status`, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     });
+    if (role === "instructor" && status.status === 403)
+      return NextResponse.redirect(new URL("/account-inactive", request.url));
     if (!status.ok)
       return NextResponse.json(
         { message: "No se pudo verificar el estado de la cuenta." },
         { status: 503 },
       );
     const account = (await status.json()) as { mustChangePassword: boolean };
-    const changePage = request.nextUrl.pathname === "/student/change-password";
+    const changePage = request.nextUrl.pathname === changePath;
     if (account.mustChangePassword && !changePage)
-      return NextResponse.redirect(new URL("/student/change-password", request.url));
+      return NextResponse.redirect(new URL(changePath, request.url));
     if (!account.mustChangePassword && changePage)
-      return NextResponse.redirect(new URL("/student", request.url));
+      return NextResponse.redirect(new URL(home, request.url));
   }
 
   return supabaseResponse;

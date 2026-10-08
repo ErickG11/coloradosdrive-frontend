@@ -28,7 +28,9 @@ export function LoginForm() {
     });
 
     if (signInError) {
-      setError("Correo o contraseña incorrectos.");
+      setError(signInError.code === "user_banned"
+        ? "Tu cuenta está inactiva. Contacta al administrador."
+        : "Correo o contraseña incorrectos.");
       setIsLoading(false);
       return;
     }

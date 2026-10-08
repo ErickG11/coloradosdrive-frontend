@@ -36,6 +36,11 @@ export interface PracticeSlotWithNames extends PracticeSlot {
   studentName: string | null;
 }
 
+// La selección del estudiante no revela al instructor en franjas libres.
+export type StudentPracticeSlot =
+  | PracticeSlotWithNames
+  | Omit<PracticeSlotWithNames, "instructorId" | "instructorName">;
+
 // El admin crea la franja sin estudiante (status inicial 'disponible' lo
 // aplica el backend, no se envía aquí).
 export interface CreatePracticeSlotInput {
