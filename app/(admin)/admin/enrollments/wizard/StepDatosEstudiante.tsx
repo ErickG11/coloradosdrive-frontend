@@ -144,6 +144,13 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
             value={values.telefono}
             onChange={(event) => updateField("telefono", event.target.value)}
           />
+          <Input
+            label="Fecha de nacimiento (opcional)"
+            name="fechaNacimiento"
+            type="date"
+            value={values.fechaNacimiento ?? ""}
+            onChange={(event) => updateField("fechaNacimiento", event.target.value)}
+          />
 
           <div className="mt-2 flex justify-end">
             <Button

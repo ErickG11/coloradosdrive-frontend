@@ -7,7 +7,7 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { useFetch } from "@/hooks/useFetch";
 import { createClient } from "@/lib/supabase/client";
-import type { PracticeSlotWithNames } from "@/types";
+import type { PracticeSlotWithNames, StudentPracticeSlot } from "@/types";
 
 vi.mock("@/hooks/useFetch", () => ({
   useFetch: vi.fn(),
@@ -102,7 +102,7 @@ function buildSlot(overrides: Partial<PracticeSlotWithNames> = {}): PracticeSlot
 const refetchSlots = vi.fn();
 
 function mockFetch(
-  slots: PracticeSlotWithNames[],
+  slots: StudentPracticeSlot[],
   scopes = { A: slots[0]?.cohortId ?? null, B: null as string | null },
 ) {
   mockedUseFetch.mockImplementation((path: unknown) => {
@@ -142,13 +142,22 @@ describe("StudentSchedulePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("lista las franjas disponibles con el nombre del instructor", () => {
-    mockFetch([buildSlot({ status: "disponible" })]);
+  it("lista franjas disponibles sin depender de la identidad del instructor", () => {
+    const available = { ...buildSlot({ status: "disponible" }) };
+    Reflect.deleteProperty(available, "instructorId");
+    Reflect.deleteProperty(available, "instructorName");
+    mockFetch([available]);
 
     render(<StudentSchedulePage />);
 
-    expect(screen.getByText(/Bruno Salas/)).toBeInTheDocument();
+    expect(screen.queryByText(/Bruno Salas/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reclamar" })).toBeInTheDocument();
+  });
+
+  it("muestra el instructor en una franja propia ya asignada", () => {
+    mockFetch([buildSlot({ status: "asignado", studentId: "student-1" })]);
+    render(<StudentSchedulePage />);
+    expect(screen.getByText(/Bruno Salas/)).toBeInTheDocument();
   });
 
   it("una franja 'liberado' (sin dueño) aparece como disponible para reclamar", () => {
