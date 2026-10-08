@@ -1,245 +1,251 @@
 "use client";
-
-import { useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
 import { Button, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import type {
-  Enrollment,
-  InstructorSugerido,
-  Modalidad,
-  SugerirPracticaInput,
-  SugerirPracticaResult,
-} from "@/types";
-import { MODALIDADES } from "@/types";
+import type { InstructorSugerido, SugerirPracticaResult } from "@/types";
+import {
+  BASE,
+  EMPTY_PRACTICE,
+  practicePayload,
+  type CourseSelection,
+  type PracticeChoice,
+  type PracticeFormData,
+  type PracticePlan,
+} from "./wizardTypes";
 
-import { EMPTY_PRACTICE, type PracticeChoice, type PracticeFormData } from "./wizardTypes";
-
-interface StepPracticasProps {
-  enrollment: Enrollment;
-  onSkip: () => void;
-  onNext: (choice: PracticeChoice) => void;
-}
-
-const MODALIDAD_LABELS: Record<Modalidad, string> = {
-  entre_semana: "Entre semana",
-  fin_de_semana: "Fin de semana",
-};
-
-export function StepPracticas({ enrollment, onSkip, onNext }: StepPracticasProps) {
-  const [form, setForm] = useState<PracticeFormData>(EMPTY_PRACTICE);
+export function StepPracticas({
+  course,
+  value,
+  onBack,
+  onNext,
+}: {
+  course: CourseSelection;
+  value: PracticeChoice | null;
+  onBack: () => void;
+  onNext: (p: PracticeChoice) => void;
+}) {
+  const [form, setForm] = useState(value?.form ?? EMPTY_PRACTICE);
+  const [plan, setPlan] = useState<PracticePlan | null>(null);
   const [suggestion, setSuggestion] = useState<SugerirPracticaResult | null>(null);
   const [instructor, setInstructor] = useState<InstructorSugerido | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  function updateField<K extends keyof PracticeFormData>(field: K, value: PracticeFormData[K]) {
-    setForm((current) => ({ ...current, [field]: value }));
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null);
+  const version = useRef(0);
+  // Se consulta la misma regla del servidor para automático y manual. Se
+  // descartan respuestas antiguas cuando el usuario modifica el borrador.
+  useEffect(() => {
+    if (!form.fechaInicio || (form.manual && !form.fechaFin)) return;
+    let stale = false;
+    const t = setTimeout(() => {
+      api
+        .post<PracticePlan>(`${BASE}/plan`, { practice: practicePayload(form) })
+        .then((p) => {
+          if (!stale) {
+            setPlan(p);
+            setError(null);
+          }
+        })
+        .catch((e) => {
+          if (!stale) {
+            setPlan(null);
+            setError(e instanceof ApiError ? e.message : "No se pudo calcular el plan.");
+          }
+        });
+    }, 150);
+    return () => {
+      stale = true;
+      clearTimeout(t);
+    };
+  }, [form]);
+  function change<K extends keyof PracticeFormData>(field: K, value: PracticeFormData[K]) {
+    ++version.current;
+    setForm((f) => ({ ...f, [field]: value }));
+    setPlan(null);
     setSuggestion(null);
     setInstructor(null);
+    setError(null);
   }
-
-  if (enrollment.status !== "activo") {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="rounded-md border border-border bg-bg-sunken p-4">
-          <p className="text-sm text-text-primary">
-            Esta matrícula todavía no tiene una cohorte asignada, así que no se puede generar un
-            horario de práctica todavía. Podrás hacerlo apenas se le asigne una cohorte.
-          </p>
-        </div>
-        <div className="flex justify-end">
-          <Button type="button" onClick={onSkip}>
-            Finalizar matrícula sin práctica
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  async function handleVerSugerencia() {
+  async function preview() {
+    const request = ++version.current;
+    setBusy(true);
     setError(null);
     setSuggestion(null);
     setInstructor(null);
-    setIsLoading(true);
-
     try {
-      const payload: SugerirPracticaInput = {
-        fechaInicio: form.fechaInicio,
-        modalidad: form.modalidad,
-        horasPorDia: form.horasPorDia,
-        horaDeseada: form.horaDeseada,
-        ...(form.endMode === "numeroSesiones"
-          ? { numeroSesiones: form.numeroSesiones }
-          : { fechaFin: form.fechaFin }),
-      };
-      const result = await api.post<SugerirPracticaResult>(
-        `/admin/enrollments/${enrollment.id}/sugerir-practica`,
-        payload,
+      const r = await api.post<{ plan: PracticePlan; suggestion: SugerirPracticaResult | null }>(
+        `${BASE}/practice-preview`,
+        {
+          courseType: course.courseTipo,
+          cohortId: course.cohortId,
+          automatic: !course.manualOverride,
+          practice: practicePayload(form),
+        },
       );
-      setSuggestion(result);
-      if (result.instructoresSugeridos.length === 1) {
-        setInstructor(result.instructoresSugeridos[0]);
-      }
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "No se pudo generar la sugerencia de práctica.",
-      );
+      if (request !== version.current) return;
+      setPlan(r.plan);
+      setSuggestion(r.suggestion);
+      if (r.suggestion?.instructoresSugeridos.length === 1)
+        setInstructor(r.suggestion.instructoresSugeridos[0]);
+      if (!course.cohortId) onNext({ form, plan: r.plan, suggestion: null, instructor: null });
+    } catch (e) {
+      if (request === version.current)
+        setError(e instanceof ApiError ? e.message : "No se pudo consultar la sugerencia.");
     } finally {
-      setIsLoading(false);
+      setBusy(false);
     }
   }
-
-  const faltanHoras =
-    suggestion?.horasRequeridas !== null &&
-    suggestion !== null &&
-    suggestion.horasProgramadas < (suggestion.horasRequeridas ?? 0);
-
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4">
-        <Select
-          label="Modalidad"
-          name="modalidad"
-          value={form.modalidad}
-          onChange={(event) => updateField("modalidad", event.target.value as Modalidad)}
-        >
-          {MODALIDADES.map((modalidad) => (
-            <option key={modalidad} value={modalidad}>
-              {MODALIDAD_LABELS[modalidad]}
-            </option>
-          ))}
-        </Select>
-        <Input
-          label="Horas por día"
-          name="horasPorDia"
-          type="number"
-          min={1}
-          max={16}
-          required
-          value={form.horasPorDia}
-          onChange={(event) => updateField("horasPorDia", Number(event.target.value))}
-        />
-        <Input
-          label="Fecha de inicio"
-          name="fechaInicio"
-          type="date"
-          required
-          value={form.fechaInicio}
-          onChange={(event) => updateField("fechaInicio", event.target.value)}
-        />
-        <Input
-          label="Hora deseada"
-          name="horaDeseada"
-          type="time"
-          required
-          value={form.horaDeseada}
-          onChange={(event) => updateField("horaDeseada", event.target.value)}
-        />
-
-        <Select
-          label="¿Hasta cuándo?"
-          name="endMode"
-          value={form.endMode}
-          onChange={(event) =>
-            updateField("endMode", event.target.value as PracticeFormData["endMode"])
-          }
-        >
-          <option value="numeroSesiones">Número de sesiones</option>
-          <option value="fechaFin">Fecha de fin</option>
-        </Select>
-        {form.endMode === "numeroSesiones" ? (
-          <Input
-            label="Número de sesiones"
-            name="numeroSesiones"
-            type="number"
-            min={1}
-            required
-            value={form.numeroSesiones}
-            onChange={(event) => updateField("numeroSesiones", Number(event.target.value))}
-          />
-        ) : (
-          <Input
-            label="Fecha de fin"
-            name="fechaFin"
-            type="date"
-            required
-            value={form.fechaFin}
-            onChange={(event) => updateField("fechaFin", event.target.value)}
-          />
-        )}
-
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="secondary"
-            isLoading={isLoading}
-            disabled={!form.fechaInicio || (form.endMode === "fechaFin" && !form.fechaFin)}
-            onClick={() => void handleVerSugerencia()}
-          >
-            Ver sugerencia
-          </Button>
-        </div>
-      </div>
-
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
-
-      {suggestion ? (
-        <div className="flex flex-col gap-3 rounded-md border border-border bg-bg-sunken p-4">
-          <p className="text-sm text-text-secondary">
-            {suggestion.totalSesiones} sesiones · {suggestion.fechas[0]} a{" "}
-            {suggestion.fechas[suggestion.fechas.length - 1]}
-          </p>
-
-          {suggestion.horaAjustada ? (
-            <p className="rounded-sm bg-accent-blue-subtle p-2 text-sm text-text-primary">
-              La hora deseada ({suggestion.horaDeseada}) no tenía instructor libre; se ajustó a{" "}
-              <strong>{suggestion.horaResuelta}</strong>.
+    <div className="flex flex-col gap-4">
+      <p>Planificación civil: America/Guayaquil. Cada bloque dura 60 minutos.</p>
+      <Select
+        name="semanas"
+        label="Duración"
+        value={form.semanas}
+        onChange={(e) => change("semanas", Number(e.target.value) as 1 | 2 | 3)}
+      >
+        {[1, 2, 3].map((s) => (
+          <option key={s} value={s}>
+            {s} {s === 1 ? "semana" : "semanas"}
+          </option>
+        ))}
+      </Select>
+      <Select
+        name="modalidad"
+        label="Modalidad"
+        value={form.modalidad}
+        onChange={(e) => change("modalidad", e.target.value as PracticeFormData["modalidad"])}
+      >
+        <option value="entre_semana">Entre semana (L–V)</option>
+        <option value="fin_de_semana">Fin de semana (S–D)</option>
+      </Select>
+      <Input
+        name="fechaInicio"
+        label="Fecha de inicio"
+        type="date"
+        value={form.fechaInicio}
+        onChange={(e) => change("fechaInicio", e.target.value)}
+      />
+      <Input
+        name="horaDeseada"
+        label="Hora deseada"
+        type="time"
+        value={form.horaDeseada}
+        onChange={(e) => change("horaDeseada", e.target.value)}
+      />
+      <Input
+        name="horasPorDia"
+        label="Horas por día"
+        type="number"
+        min={1}
+        max={16}
+        value={form.horasPorDia}
+        onChange={(e) => change("horasPorDia", Number(e.target.value))}
+      />
+      <Input
+        name="fechaFin"
+        label="Fecha final"
+        type="date"
+        value={form.manual ? form.fechaFin : (plan?.fechaFinElegida ?? "")}
+        onChange={(e) => {
+          ++version.current;
+          setForm((f) => ({ ...f, manual: true, fechaFin: e.target.value }));
+          setPlan(null);
+          setSuggestion(null);
+          setInstructor(null);
+        }}
+      />
+      <p>
+        {form.manual
+          ? "Ajuste manual: se incluyen solo los días de la modalidad dentro del rango. No cambia la tarifa."
+          : "Cálculo automático por días de práctica: 5 por semana L–V o 2 por semana S–D."}
+      </p>
+      {form.manual && (
+        <Button variant="secondary" onClick={() => change("manual", false)}>
+          Restaurar cálculo automático
+        </Button>
+      )}
+      {plan && (
+        <div aria-live="polite" className="rounded-md border border-border p-3">
+          {plan.primerDiaEfectivo !== form.fechaInicio && (
+            <p>
+              El inicio elegido no corresponde a la modalidad. Primer día efectivo:{" "}
+              <strong>{plan.primerDiaEfectivo}</strong>. Se conserva la fecha elegida{" "}
+              {form.fechaInicio}.
             </p>
-          ) : (
-            <p className="text-sm text-text-primary">Hora confirmada: {suggestion.horaResuelta}</p>
           )}
-
-          <p className="text-sm text-text-primary">
-            Horas programadas: {suggestion.horasProgramadas}
-            {suggestion.horasRequeridas !== null ? ` / ${suggestion.horasRequeridas} requeridas` : ""}
+          <p>
+            {plan.dias} días · {plan.bloques} bloques · {plan.horas} horas. Último día de práctica:{" "}
+            {plan.fechaFin}.
           </p>
-          {faltanHoras ? (
-            <p className="text-sm text-accent-red">
-              Quedan menos horas programadas que las requeridas por el curso; se puede continuar
-              igual y completar las horas restantes después.
-            </p>
-          ) : null}
-
+        </div>
+      )}
+      {!course.cohortId && (
+        <p>
+          El plan se guardará como pendiente de cohorte. Todavía no se pueden generar franjas ni
+          asignar instructor.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-accent-red">
+          {error}
+        </p>
+      )}
+      {course.cohortId && (
+        <Button
+          variant="secondary"
+          isLoading={busy}
+          disabled={!plan}
+          onClick={() => void preview()}
+        >
+          Ver sugerencia
+        </Button>
+      )}
+      {suggestion && (
+        <div className="rounded-md border border-border p-3">
+          <p>
+            {suggestion.horaAjustada ? "Hora ajustada por disponibilidad" : "Hora sugerida"}:{" "}
+            {suggestion.horaResuelta}
+          </p>
+          <p>
+            {suggestion.horasProgramadas} horas programadas
+            {suggestion.horasRequeridas !== null
+              ? ` / ${suggestion.horasRequeridas} requeridas`
+              : ""}
+          </p>
           <Select
-            label="Instructor"
             name="instructorId"
+            label="Instructor"
             value={instructor?.id ?? ""}
-            onChange={(event) => {
-              const found = suggestion.instructoresSugeridos.find(
-                (candidate) => candidate.id === event.target.value,
-              );
-              setInstructor(found ?? null);
-            }}
+            onChange={(e) =>
+              setInstructor(
+                suggestion.instructoresSugeridos.find((i) => i.id === e.target.value) ?? null,
+              )
+            }
           >
             <option value="" disabled>
               Selecciona un instructor
             </option>
-            {suggestion.instructoresSugeridos.map((candidato) => (
-              <option key={candidato.id} value={candidato.id}>
-                {candidato.nombreCompleto}
+            {suggestion.instructoresSugeridos.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.nombreCompleto}
               </option>
             ))}
           </Select>
         </div>
-      ) : null}
-
-      <div className="flex justify-end">
+      )}
+      <div className="flex justify-between">
+        <Button variant="secondary" onClick={onBack}>
+          Atrás
+        </Button>
         <Button
-          type="button"
-          disabled={!suggestion || !instructor}
-          onClick={() => suggestion && instructor && onNext({ form, suggestion, instructor })}
+          isLoading={!course.cohortId && busy}
+          disabled={!plan || (!!course.cohortId && (!suggestion || !instructor)) || busy}
+          onClick={() => {
+            if (!course.cohortId) void preview();
+            else if (plan && suggestion && instructor)
+              onNext({ form, plan, suggestion, instructor });
+          }}
         >
           Continuar
         </Button>
