@@ -1,11 +1,24 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui";
-import type { StudentData, CourseSelection, PracticeChoice, ManualResult } from "./wizardTypes";
+import { formatCents, summarizePayment } from "./payment";
+import {
+  DOCUMENTS,
+  type StudentData,
+  type CourseSelection,
+  type PracticeChoice,
+  type ManualResult,
+  type DocumentsPaymentChoice,
+  type ManualEnrollmentDetails,
+} from "./wizardTypes";
 export function StepConfirmar({
   student,
   course,
   practice,
+  choice,
+  details,
+  detailsLoading,
+  detailsError,
   result,
   busy,
   error,
@@ -19,6 +32,10 @@ export function StepConfirmar({
   student: StudentData;
   course: CourseSelection;
   practice: PracticeChoice;
+  choice: DocumentsPaymentChoice;
+  details: ManualEnrollmentDetails | null;
+  detailsLoading: boolean;
+  detailsError: string | null;
   result: ManualResult | null;
   busy: boolean;
   error: string | null;
@@ -30,6 +47,34 @@ export function StepConfirmar({
   onResend: (regenerate: boolean) => Promise<void>;
 }) {
   const [regenerate, setRegenerate] = useState(false);
+  const payment = summarizePayment(course, choice.pago);
+  const documents = details?.documentos ?? choice.documentos;
+  const pendingDocuments = details?.documentosPendientes ?? result?.documentosPendientes;
+  const resultBalance = details?.saldo !== undefined ? details.saldo : result?.saldo;
+  const money = (amount: number) => formatCents(Math.round(amount * 100));
+  const displayAmount = (amount: number | null | undefined) =>
+    amount === null
+      ? "Se calculará al asignar cohorte"
+      : amount === undefined
+        ? "Actualizando…"
+        : money(amount);
+  const gross = result
+    ? details?.precioBruto
+    : payment.grossCents === null
+      ? null
+      : payment.grossCents / 100;
+  const discount = result ? (details?.descuento ?? result.descuento) : payment.discountCents / 100;
+  const net = result
+    ? (details?.montoTotal ?? result.montoTotal)
+    : payment.netCents === null
+      ? null
+      : payment.netCents / 100;
+  const paid = result ? (details?.montoAbonado ?? result.montoAbonado) : payment.paidCents / 100;
+  const balance = result
+    ? resultBalance
+    : payment.balanceCents === null
+      ? null
+      : payment.balanceCents / 100;
   return (
     <div className="flex flex-col gap-4">
       <h2 className="font-bold">{result ? "Matrícula confirmada" : "Revisar y confirmar"}</h2>
@@ -68,6 +113,41 @@ export function StepConfirmar({
             está pendiente.
           </p>
         )}
+        <div className="mt-4 border-t border-border pt-3">
+          <h3 className="font-semibold">Documentos</h3>
+          <ul className="list-inside list-disc">
+            {DOCUMENTS.map((document) => (
+              <li key={document.tipo}>
+                {document.label}:{" "}
+                {documents.find((item) => item.tipo === document.tipo)?.estado.replace("_", " ") ??
+                  "pendiente"}
+              </li>
+            ))}
+          </ul>
+          {result && pendingDocuments !== undefined && (
+            <p>Documentos pendientes: {pendingDocuments}</p>
+          )}
+          {!result && (
+            <p className="text-sm">
+              El backend determinará si la papeleta no aplica según la edad del estudiante.
+            </p>
+          )}
+          {detailsLoading && <p>Actualizando documentos y pago…</p>}
+          {detailsError && (
+            <p role="alert" className="text-accent-red">
+              {detailsError}
+            </p>
+          )}
+        </div>
+        <div className="mt-4 border-t border-border pt-3">
+          <h3 className="font-semibold">Pago inicial</h3>
+          <p>Modalidad: {choice.pago.modalidad === "completo" ? "Pago completo" : "Abono"}</p>
+          <p>Precio: {displayAmount(gross)}</p>
+          <p>Descuento: {displayAmount(discount)}</p>
+          <p>Neto: {displayAmount(net)}</p>
+          <p>Abonado: {displayAmount(paid)}</p>
+          <p>Saldo: {displayAmount(balance)}</p>
+        </div>
         {result && (
           <>
             <p>

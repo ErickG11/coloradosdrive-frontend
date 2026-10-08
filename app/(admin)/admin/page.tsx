@@ -21,6 +21,12 @@ export default function AdminPage() {
             Cohortes
           </Link>
           <Link
+            href="/admin/instructors"
+            className="text-accent-blue underline underline-offset-2 hover:text-accent-blue-hover"
+          >
+            Instructores
+          </Link>
+          <Link
             href="/admin/enrollments"
             className="text-accent-blue underline underline-offset-2 hover:text-accent-blue-hover"
           >
