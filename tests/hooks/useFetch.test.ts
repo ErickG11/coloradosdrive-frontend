@@ -5,6 +5,17 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn() } }));
 describe("useFetch: resultados anteriores", () => {
+  it("conserva code y lo limpia al reintentar", async () => {
+    vi.mocked(api.get)
+      .mockRejectedValueOnce(new ApiError("Pendiente", 409, { code: "DELETION_PENDING" }))
+      .mockResolvedValueOnce([]);
+    const { result } = renderHook(() => useFetch("/pendientes"));
+    await waitFor(() => expect(result.current.errorCode).toBe("DELETION_PENDING"));
+    act(() => result.current.refetch());
+    await waitFor(() => expect(result.current.data).toEqual([]));
+    expect(result.current.errorCode).toBeNull();
+    expect(result.current.errorStatus).toBeNull();
+  });
   it("ignora una respuesta y un error lentos de consultas anteriores", async () => {
     let oldResolve!: (value: unknown) => void;
     let oldReject!: (reason: unknown) => void;
