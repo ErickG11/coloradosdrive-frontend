@@ -13,6 +13,8 @@ import { StudentActions } from "./StudentActions";
 import { StudentReservations } from "./StudentReservations";
 import { studentActionError } from "@/lib/api/studentActions";
 import { ApiError } from "@/lib/api/errors";
+import { StudentCohortAssignment } from "./StudentCohortAssignment";
+import type { StudentEnrollment } from "@/types/student";
 
 export function studentMoney(value: number | null) {
   return value === null
@@ -28,7 +30,15 @@ export function studentTimestamp(value: string) {
     ? "—"
     : new Intl.DateTimeFormat("es-EC", { dateStyle: "long" }).format(parsed);
 }
-export function StudentProfile({ student }: { student: Detail }) {
+export function StudentProfile({
+  student,
+  onAssignCohort,
+  assignmentDisabled = false,
+}: {
+  student: Detail;
+  onAssignCohort?: (enrollment: StudentEnrollment) => void;
+  assignmentDisabled?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -76,6 +86,22 @@ export function StudentProfile({ student }: { student: Detail }) {
               {enrollment.cohorte?.nombre ?? "Sin cohorte"}
             </span>
           </div>
+          {enrollment.status === "pendiente_cohorte" && onAssignCohort && (
+            <div className="mb-4 flex flex-col items-start gap-2">
+              <Button
+                variant="secondary"
+                disabled={assignmentDisabled || !student.activo}
+                onClick={() => onAssignCohort(enrollment)}
+              >
+                Asignar cohorte
+              </Button>
+              {!student.activo && (
+                <p className="text-sm text-text-secondary">
+                  Reactiva al alumno primero para asignar cohorte.
+                </p>
+              )}
+            </div>
+          )}
           <p className="mb-4 text-sm text-text-secondary">
             Fecha de inscripción:{" "}
             <time dateTime={enrollment.fechaInscripcion}>
@@ -128,6 +154,7 @@ export function StudentDetail({ id }: { id: string }) {
   const [actionBusy, setActionBusy] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [deletionPending, setDeletionPending] = useState(false);
+  const [assigning, setAssigning] = useState<StudentEnrollment | null>(null);
   const params = useSearchParams();
   const { data, isLoading, error, errorStatus, errorCode, refetch } = useFetch<Detail>(
     `/admin/estudiantes/${id}`,
@@ -172,7 +199,7 @@ export function StudentDetail({ id }: { id: string }) {
           )}
           <StudentActions
             student={data}
-            disabled={editing || saving}
+            disabled={editing || saving || assigning !== null}
             deletionPending={deletionPending}
             onBusyChange={setActionBusy}
             onPending={() => setDeletionPending(true)}
@@ -185,7 +212,7 @@ export function StudentDetail({ id }: { id: string }) {
           <Button
             variant="secondary"
             className="self-start"
-            disabled={actionBusy || deletionPending}
+            disabled={actionBusy || deletionPending || assigning !== null}
             onClick={() => {
               setSuccess(false);
               setEditing(true);
@@ -193,7 +220,31 @@ export function StudentDetail({ id }: { id: string }) {
           >
             Editar
           </Button>
-          <StudentProfile student={data} />
+          <StudentProfile
+            student={data}
+            onAssignCohort={setAssigning}
+            assignmentDisabled={
+              editing || saving || actionBusy || deletionPending || assigning !== null
+            }
+          />
+          {assigning && (
+            <StudentCohortAssignment
+              key={assigning.enrollmentId}
+              studentId={id}
+              enrollment={assigning}
+              onClose={() => setAssigning(null)}
+              onReload={() => {
+                setAssigning(null);
+                refetch();
+              }}
+              onDeletionPending={() => setDeletionPending(true)}
+              onSaved={() => {
+                setAssigning(null);
+                setActionNotice("La cohorte se asignó correctamente.");
+                refetch();
+              }}
+            />
+          )}
           <StudentReservations id={id} />
           <Modal
             isOpen={editing}
