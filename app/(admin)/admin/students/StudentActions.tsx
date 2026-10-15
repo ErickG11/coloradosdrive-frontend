@@ -188,6 +188,7 @@ export function StudentActions({
               )}
               {failure.verify && (
                 <Button
+                  type="button"
                   variant="secondary"
                   onClick={() => {
                     close();
