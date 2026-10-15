@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button, Card, buttonClassName } from "@/components/ui";
+import { Button, Card, Modal, buttonClassName } from "@/components/ui";
+import { StudentEditForm } from "./StudentEditForm";
 import { useFetch } from "@/hooks/useFetch";
 import { readStudentFilters, studentListHref } from "@/lib/api/students";
 import type { StudentDetail as Detail } from "@/types";
@@ -16,6 +18,12 @@ export function studentMoney(value: number | null) {
 function date(value: string | null) {
   return value ? value.slice(0, 10).split("-").reverse().join("/") : "—";
 }
+export function studentTimestamp(value: string) {
+  const parsed = new Date(value.length === 10 ? `${value}T12:00:00` : value);
+  return Number.isNaN(parsed.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat("es-EC", { dateStyle: "long" }).format(parsed);
+}
 export function StudentProfile({ student }: { student: Detail }) {
   return (
     <div className="flex flex-col gap-6">
@@ -26,6 +34,10 @@ export function StudentProfile({ student }: { student: Detail }) {
         <ActiveBadge active={student.activo} />
         {student.status && <StudentBadge status={student.status} />}
       </div>
+      <p className="text-sm text-text-secondary">
+        Registrado el{" "}
+        <time dateTime={student.createdAt}>{studentTimestamp(student.createdAt)}</time>
+      </p>
       <Card title="Datos personales">
         <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
           {[
@@ -60,6 +72,12 @@ export function StudentProfile({ student }: { student: Detail }) {
               {enrollment.cohorte?.nombre ?? "Sin cohorte"}
             </span>
           </div>
+          <p className="mb-4 text-sm text-text-secondary">
+            Fecha de inscripción:{" "}
+            <time dateTime={enrollment.fechaInscripcion}>
+              {studentTimestamp(enrollment.fechaInscripcion)}
+            </time>
+          </p>
           <dl className="grid gap-4 text-sm sm:grid-cols-3">
             {(
               [
@@ -100,6 +118,9 @@ export function StudentProfile({ student }: { student: Detail }) {
   );
 }
 export function StudentDetail({ id }: { id: string }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
   const params = useSearchParams();
   const { data, isLoading, error, errorStatus, refetch } = useFetch<Detail>(
     `/admin/estudiantes/${id}`,
@@ -112,6 +133,11 @@ export function StudentDetail({ id }: { id: string }) {
       >
         Volver a Alumnos
       </Link>
+      {success && (
+        <p role="status" className="text-sm text-accent-blue">
+          Los datos del alumno se guardaron correctamente.
+        </p>
+      )}
       {isLoading ? (
         <p role="status" className="text-text-secondary">
           Cargando ficha…
@@ -124,7 +150,43 @@ export function StudentDetail({ id }: { id: string }) {
           </Button>
         </div>
       ) : data ? (
-        <StudentProfile student={data} />
+        <>
+          <Button
+            variant="secondary"
+            className="self-start"
+            onClick={() => {
+              setSuccess(false);
+              setEditing(true);
+            }}
+          >
+            Editar
+          </Button>
+          <StudentProfile student={data} />
+          <Modal
+            isOpen={editing}
+            onClose={() => {
+              if (!saving) setEditing(false);
+            }}
+            title="Editar alumno"
+          >
+            {editing && (
+              <StudentEditForm
+                student={data}
+                onBusyChange={setSaving}
+                onCancel={() => setEditing(false)}
+                onReload={() => {
+                  setEditing(false);
+                  refetch();
+                }}
+                onSaved={() => {
+                  setEditing(false);
+                  setSuccess(true);
+                  refetch();
+                }}
+              />
+            )}
+          </Modal>
+        </>
       ) : null}
     </div>
   );

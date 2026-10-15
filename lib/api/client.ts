@@ -16,7 +16,7 @@ async function getAccessToken(): Promise<string | null> {
   return session?.access_token ?? null;
 }
 
-async function extractErrorMessage(response: Response): Promise<string> {
+async function extractError(response: Response): Promise<ApiError> {
   try {
     const data: unknown = await response.json();
     if (
@@ -25,7 +25,11 @@ async function extractErrorMessage(response: Response): Promise<string> {
       "message" in data &&
       typeof (data as { message: unknown }).message === "string"
     ) {
-      return (data as { message: string }).message;
+      const body = data as { message: string; code?: unknown; field?: unknown };
+      return new ApiError(body.message, response.status, {
+        code: typeof body.code === "string" ? body.code : undefined,
+        field: typeof body.field === "string" ? body.field : undefined,
+      });
     }
   } catch {
     // La respuesta no trae un body JSON parseable.
@@ -33,15 +37,18 @@ async function extractErrorMessage(response: Response): Promise<string> {
 
   switch (response.status) {
     case 401:
-      return "No autorizado. Inicia sesión nuevamente.";
+      return new ApiError("No autorizado. Inicia sesión nuevamente.", response.status);
     case 403:
-      return "No tienes permisos para realizar esta acción.";
+      return new ApiError("No tienes permisos para realizar esta acción.", response.status);
     case 404:
-      return "Recurso no encontrado.";
+      return new ApiError("Recurso no encontrado.", response.status);
     case 500:
-      return "Error interno del servidor. Intenta de nuevo más tarde.";
+      return new ApiError(
+        "Error interno del servidor. Intenta de nuevo más tarde.",
+        response.status,
+      );
     default:
-      return `Error inesperado (${response.status}).`;
+      return new ApiError(`Error inesperado (${response.status}).`, response.status);
   }
 }
 
@@ -63,7 +70,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   });
 
   if (!response.ok) {
-    throw new ApiError(await extractErrorMessage(response), response.status);
+    throw await extractError(response);
   }
 
   if (response.status === 204) {

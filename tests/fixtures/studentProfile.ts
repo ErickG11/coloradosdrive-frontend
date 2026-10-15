@@ -1,0 +1,20 @@
+import type { StudentDetail } from "@/types";
+export const studentProfile: StudentDetail = {
+  id: "11111111-1111-4111-8111-111111111111",
+  nombreCompleto: "Alumno ficticio",
+  cedula: "0100000009",
+  telefono: "0990000000",
+  activo: true,
+  createdAt: "2026-01-05T15:00:00Z",
+  updatedAt: "2026-01-05T15:00:00.123456+00:00",
+  status: "activo",
+  mustChangePassword: false,
+  correo: "ficticio@example.test",
+  correoDisponible: true,
+  fechaNacimiento: "2000-02-29",
+  tipoSangre: null,
+  genero: null,
+  ciudadania: null,
+  direccion: null,
+  enrollments: [],
+};
