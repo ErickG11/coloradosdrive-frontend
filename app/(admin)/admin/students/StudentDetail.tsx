@@ -10,6 +10,7 @@ import type { StudentDetail as Detail } from "@/types";
 import { DOCUMENTS } from "@/app/(admin)/admin/enrollments/wizard/wizardTypes";
 import { ActiveBadge, StudentBadge } from "./StudentBadge";
 import { StudentActions } from "./StudentActions";
+import { StudentReservations } from "./StudentReservations";
 import { studentActionError } from "@/lib/api/studentActions";
 import { ApiError } from "@/lib/api/errors";
 
@@ -193,6 +194,7 @@ export function StudentDetail({ id }: { id: string }) {
             Editar
           </Button>
           <StudentProfile student={data} />
+          <StudentReservations id={id} />
           <Modal
             isOpen={editing}
             onClose={() => {
