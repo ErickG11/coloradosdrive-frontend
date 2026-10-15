@@ -9,6 +9,7 @@ interface UseFetchResult<T> {
   data: T | null;
   isLoading: boolean;
   error: string | null;
+  errorStatus?: number | null;
   refetch: () => void;
 }
 
@@ -19,6 +20,7 @@ export function useFetch<T>(path: string): UseFetchResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export function useFetch<T>(path: string): UseFetchResult<T> {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     setError(null);
+    setErrorStatus(null);
 
     api
       .get<T>(path)
@@ -40,6 +43,7 @@ export function useFetch<T>(path: string): UseFetchResult<T> {
       .catch((err: unknown) => {
         if (!cancelled) {
           setError(err instanceof ApiError ? err.message : "No se pudo conectar con el servidor.");
+          setErrorStatus(err instanceof ApiError ? err.status : null);
         }
       })
       .finally(() => {
@@ -57,5 +61,5 @@ export function useFetch<T>(path: string): UseFetchResult<T> {
     setReloadToken((token) => token + 1);
   }, []);
 
-  return { data, isLoading, error, refetch };
+  return { data, isLoading, error, errorStatus, refetch };
 }

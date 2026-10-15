@@ -38,6 +38,7 @@ export function Sidebar({ email, role }: SidebarProps) {
   const isAdminExamsActive = pathname.startsWith("/admin/exams");
   const isAdminPracticeSlotsActive = pathname.startsWith("/admin/practice-slots");
   const isAdminInstructorsActive = pathname.startsWith("/admin/instructors");
+  const isAdminStudentsActive = pathname.startsWith("/admin/students");
   const isStudentExamsActive = pathname.startsWith("/student/exams");
   const isStudentScheduleActive = pathname.startsWith("/student/schedule");
   const isInstructorScheduleActive = pathname.startsWith("/instructor/schedule");
@@ -62,11 +63,23 @@ export function Sidebar({ email, role }: SidebarProps) {
       <div className="flex flex-col gap-1 px-3 pt-2">
         {role === "admin" ? (
           <>
+            <SidebarLink
+              href="/admin/students"
+              active={isAdminStudentsActive}
+              onClick={closeDrawer}
+            >
+              <UserPlusIcon className="h-5 w-5" />
+              Alumnos
+            </SidebarLink>
             <SidebarLink href="/admin/cohorts" active={isCohortsActive} onClick={closeDrawer}>
               <CalendarIcon className="h-5 w-5" />
               Cohortes
             </SidebarLink>
-            <SidebarLink href="/admin/instructors" active={isAdminInstructorsActive} onClick={closeDrawer}>
+            <SidebarLink
+              href="/admin/instructors"
+              active={isAdminInstructorsActive}
+              onClick={closeDrawer}
+            >
               <UserPlusIcon className="h-5 w-5" />
               Instructores
             </SidebarLink>
