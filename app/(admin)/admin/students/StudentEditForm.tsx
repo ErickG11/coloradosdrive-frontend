@@ -20,12 +20,14 @@ export function StudentEditForm({
   onCancel,
   onReload,
   onBusyChange,
+  onDeletionPending,
 }: {
   student: StudentDetail;
   onSaved: () => void;
   onCancel: () => void;
   onReload: () => void;
   onBusyChange: (busy: boolean) => void;
+  onDeletionPending?: () => void;
 }) {
   const [draft, setDraft] = useState(() => studentDraft(student));
   const [errors, setErrors] = useState<Partial<Record<ProfileField, string>>>({});
@@ -53,6 +55,7 @@ export function StudentEditForm({
       onSaved();
     } catch (error) {
       const result = studentEditError(error);
+      if (result.deletionPending) onDeletionPending?.();
       if (result.field) setErrors({ [result.field]: result.message });
       else setMessage(result.message);
       setReload(Boolean(result.reload));

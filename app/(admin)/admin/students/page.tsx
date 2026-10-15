@@ -39,6 +39,11 @@ export function StudentsList() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-display text-2xl font-bold text-text-primary">Alumnos</h1>
+      {params.get("aviso") === "alumno-eliminado" && (
+        <p role="status" className="text-accent-blue">
+          El alumno se eliminó definitivamente.
+        </p>
+      )}
       <Card>
         <StudentFilters
           filters={filters}
