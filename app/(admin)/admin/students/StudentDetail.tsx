@@ -9,6 +9,9 @@ import { readStudentFilters, studentListHref } from "@/lib/api/students";
 import type { StudentDetail as Detail } from "@/types";
 import { DOCUMENTS } from "@/app/(admin)/admin/enrollments/wizard/wizardTypes";
 import { ActiveBadge, StudentBadge } from "./StudentBadge";
+import { StudentActions } from "./StudentActions";
+import { studentActionError } from "@/lib/api/studentActions";
+import { ApiError } from "@/lib/api/errors";
 
 export function studentMoney(value: number | null) {
   return value === null
@@ -121,8 +124,11 @@ export function StudentDetail({ id }: { id: string }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [deletionPending, setDeletionPending] = useState(false);
   const params = useSearchParams();
-  const { data, isLoading, error, errorStatus, refetch } = useFetch<Detail>(
+  const { data, isLoading, error, errorStatus, errorCode, refetch } = useFetch<Detail>(
     `/admin/estudiantes/${id}`,
   );
   return (
@@ -144,16 +150,41 @@ export function StudentDetail({ id }: { id: string }) {
         </p>
       ) : error ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-accent-red">
-          <span>{errorStatus === 404 ? "Alumno no encontrado" : error}</span>
+          <span>
+            {errorStatus === 404
+              ? "Alumno no encontrado"
+              : errorCode
+                ? studentActionError(new ApiError(error, errorStatus ?? 500, { code: errorCode }))
+                    .message
+                : error}
+          </span>
           <Button variant="secondary" onClick={refetch}>
             Reintentar
           </Button>
         </div>
       ) : data ? (
         <>
+          {actionNotice && (
+            <p role="status" className="text-sm text-accent-blue">
+              {actionNotice}
+            </p>
+          )}
+          <StudentActions
+            student={data}
+            disabled={editing || saving}
+            deletionPending={deletionPending}
+            onBusyChange={setActionBusy}
+            onPending={() => setDeletionPending(true)}
+            onReload={refetch}
+            onChanged={(message) => {
+              setActionNotice(message);
+              refetch();
+            }}
+          />
           <Button
             variant="secondary"
             className="self-start"
+            disabled={actionBusy || deletionPending}
             onClick={() => {
               setSuccess(false);
               setEditing(true);
@@ -173,6 +204,7 @@ export function StudentDetail({ id }: { id: string }) {
               <StudentEditForm
                 student={data}
                 onBusyChange={setSaving}
+                onDeletionPending={() => setDeletionPending(true)}
                 onCancel={() => setEditing(false)}
                 onReload={() => {
                   setEditing(false);

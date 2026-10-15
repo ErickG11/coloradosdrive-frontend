@@ -13,7 +13,10 @@ import { unconfirmedMessage } from "@/lib/api/studentProfile";
 import { useFetch } from "@/hooks/useFetch";
 vi.mock("@/lib/api/client", () => ({ api: { patch: vi.fn() } }));
 vi.mock("@/hooks/useFetch", () => ({ useFetch: vi.fn() }));
-vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams("page=2") }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams("page=2"),
+  useRouter: () => ({ replace: vi.fn() }),
+}));
 const saved = vi.fn(),
   cancel = vi.fn(),
   reload = vi.fn(),
