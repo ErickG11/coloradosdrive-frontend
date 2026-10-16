@@ -66,7 +66,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
         value={value}
         aria-keyshortcuts={shortcut ? "/" : undefined}
         className={cn(
-          "h-12 w-full min-w-0 appearance-none rounded-sm border border-border-strong bg-bg-field pl-11 text-base text-text-primary placeholder:text-text-secondary focus-visible:border-focus [&::-webkit-search-cancel-button]:appearance-none",
+          "h-12 w-full min-w-0 appearance-none rounded-sm border border-border-strong bg-bg-field pl-11 text-base text-text-primary placeholder:text-text-secondary focus-visible:border-brand-ink focus-visible:outline-brand-ink [&::-webkit-search-cancel-button]:appearance-none",
           value ? "pr-14" : "pr-2 sm:pr-14",
           className,
         )}

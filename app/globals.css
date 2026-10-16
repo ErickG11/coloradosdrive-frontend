@@ -10,7 +10,7 @@
   --space-lg: 1.5rem;
   --space-xl: 2rem;
   --space-xxl: 3rem;
-  --content-max: 80rem;
+  --content-max: 82.5rem;
   --sidebar-width: 15rem;
   --color-bg-canvas: #f7f8fa;
   --color-bg-surface: #ffffff;
@@ -26,6 +26,8 @@
   --color-brand-hover: #ad2020;
   --color-brand-pressed: #941b1b;
   --color-brand-ink: #a91e1e;
+  --color-brand-tint: #fbecec;
+  --color-brand-border: #e4a4a4;
   --color-accent-red: #b42323;
   --color-accent-red-hover: #941b1b;
   --color-accent-red-subtle: #fbecec;
@@ -37,8 +39,26 @@
   --color-status-success-bg: #e9f5ed;
   --color-status-warning: #80510b;
   --color-status-warning-bg: #fff4d6;
+  --color-status-info: #22569a;
+  --color-status-info-bg: #eaf2ff;
+  --color-status-neutral: #4d5969;
+  --color-status-neutral-bg: #edf0f3;
   --color-status-error: #a52323;
   --color-status-error-bg: #fdecec;
+  --color-table-heading: #f1f3f6;
+  --color-table-hover: #f5f0f0;
+  --color-avatar-0: #22569a;
+  --color-avatar-0-bg: #eaf2ff;
+  --color-avatar-1: #0d685e;
+  --color-avatar-1-bg: #e6f6f3;
+  --color-avatar-2: #6543a2;
+  --color-avatar-2-bg: #f0eaff;
+  --color-avatar-3: #80510b;
+  --color-avatar-3-bg: #fff4d6;
+  --color-avatar-4: #3d56a5;
+  --color-avatar-4-bg: #edf0ff;
+  --color-avatar-5: #17653b;
+  --color-avatar-5-bg: #e9f5ed;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -59,6 +79,8 @@
   --color-text-secondary: #afb6c2;
   --color-text-disabled: #8993a2;
   --color-brand-ink: #ffb4b4;
+  --color-brand-tint: #352226;
+  --color-brand-border: #a94d55;
   --color-accent-red: #ff9a9a;
   --color-accent-red-hover: #ffc2c2;
   --color-accent-red-subtle: #352226;
@@ -70,8 +92,26 @@
   --color-status-success-bg: #193126;
   --color-status-warning: #f0c36c;
   --color-status-warning-bg: #342c1d;
+  --color-status-info: #a9c9ff;
+  --color-status-info-bg: #1d2b41;
+  --color-status-neutral: #c1c9d4;
+  --color-status-neutral-bg: #2a2e36;
   --color-status-error: #ffb1b1;
   --color-status-error-bg: #3d2227;
+  --color-table-heading: #22252b;
+  --color-table-hover: #292125;
+  --color-avatar-0: #a9c9ff;
+  --color-avatar-0-bg: #1d2b41;
+  --color-avatar-1: #88dccd;
+  --color-avatar-1-bg: #17332e;
+  --color-avatar-2: #c6afff;
+  --color-avatar-2-bg: #302542;
+  --color-avatar-3: #f0c36c;
+  --color-avatar-3-bg: #342c1d;
+  --color-avatar-4: #b0bfff;
+  --color-avatar-4-bg: #242d47;
+  --color-avatar-5: #86d8a8;
+  --color-avatar-5-bg: #193126;
   --shadow-elevated: 0 16px 48px -12px rgb(0 0 0 / 55%);
   --gradient-decorative: linear-gradient(135deg, rgb(198 40 40 / 1.8%), transparent 45%);
 }
@@ -91,6 +131,8 @@
   --color-brand-hover: var(--color-brand-hover);
   --color-brand-pressed: var(--color-brand-pressed);
   --color-brand-ink: var(--color-brand-ink);
+  --color-brand-tint: var(--color-brand-tint);
+  --color-brand-border: var(--color-brand-border);
   --color-accent-red: var(--color-accent-red);
   --color-accent-red-hover: var(--color-accent-red-hover);
   --color-accent-red-subtle: var(--color-accent-red-subtle);
@@ -102,8 +144,14 @@
   --color-status-success-bg: var(--color-status-success-bg);
   --color-status-warning: var(--color-status-warning);
   --color-status-warning-bg: var(--color-status-warning-bg);
+  --color-status-info: var(--color-status-info);
+  --color-status-info-bg: var(--color-status-info-bg);
+  --color-status-neutral: var(--color-status-neutral);
+  --color-status-neutral-bg: var(--color-status-neutral-bg);
   --color-status-error: var(--color-status-error);
   --color-status-error-bg: var(--color-status-error-bg);
+  --color-table-heading: var(--color-table-heading);
+  --color-table-hover: var(--color-table-hover);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -167,6 +215,16 @@ body {
 .data-table__linked:first-child th {
   border-top: none;
 }
+.data-table__linked:hover .data-table__chevron,
+.data-table__linked:focus-within .data-table__chevron {
+  color: var(--color-brand-ink);
+}
+.student-avatar--0 { color: var(--color-avatar-0); background: var(--color-avatar-0-bg); }
+.student-avatar--1 { color: var(--color-avatar-1); background: var(--color-avatar-1-bg); }
+.student-avatar--2 { color: var(--color-avatar-2); background: var(--color-avatar-2-bg); }
+.student-avatar--3 { color: var(--color-avatar-3); background: var(--color-avatar-3-bg); }
+.student-avatar--4 { color: var(--color-avatar-4); background: var(--color-avatar-4-bg); }
+.student-avatar--5 { color: var(--color-avatar-5); background: var(--color-avatar-5-bg); }
 @media (max-width: 767px) {
   .data-table--cards {
     border: 0;

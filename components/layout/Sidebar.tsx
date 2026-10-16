@@ -221,9 +221,9 @@ function SidebarLink({
       aria-current={active ? "page" : undefined}
       onClick={onClick}
       className={cn(
-        "flex min-h-11 items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors",
+        "relative flex min-h-11 items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors",
         active
-          ? "bg-accent-red-subtle text-brand-ink"
+          ? "bg-accent-red-subtle text-brand-ink before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-brand-primary"
           : "text-text-secondary hover:bg-bg-sunken hover:text-text-primary",
       )}
     >

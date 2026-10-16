@@ -29,6 +29,13 @@ function initials(name: string): string {
       .toLocaleUpperCase("es") || "AL"
   );
 }
+function avatarTone(cedula: string): number {
+  const hash = Array.from(cedula).reduce(
+    (value, character) => (Math.imul(value, 31) + character.charCodeAt(0)) >>> 0,
+    0,
+  );
+  return hash % 6;
+}
 function cohortLabel(enrollment: MatchingEnrollment, cohorts: Cohort[]): string | null {
   if (!enrollment.cohortId) return null;
   const name = cohorts.find((cohort) => cohort.id === enrollment.cohortId)?.nombre;
@@ -62,7 +69,7 @@ export function StudentTable({
         <div className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-bg-sunken text-xs font-semibold text-text-secondary"
+            className={`student-avatar--${avatarTone(student.cedula)} flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold`}
           >
             {initials(student.nombreCompleto)}
           </span>
@@ -94,15 +101,13 @@ export function StudentTable({
         const extra = student.matchingEnrollments.length - 1;
         return (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-text-primary">
-              <span>Tipo {enrollment.courseType}</span>
-              {cohort ? (
-                <>
-                  {" "}
-                  · <span>{cohort}</span>
-                </>
-              ) : null}
-            </span>
+            <StatusBadge
+              status={`course_type_${enrollment.courseType}`}
+              tone={enrollment.courseType === "A" ? "warning" : "info"}
+            >
+              Tipo {enrollment.courseType} · {enrollment.courseType === "A" ? "Motocicletas" : "Vehículos livianos"}
+            </StatusBadge>
+            {cohort ? <StatusBadge status="cohort" tone="neutral">{cohort}</StatusBadge> : null}
             {!cohort ? <StatusBadge status="pendiente_cohorte">Sin cohorte</StatusBadge> : null}
             {extra > 0 ? (
               <span
@@ -121,16 +126,6 @@ export function StudentTable({
       header: "Estado de la cuenta",
       className: "whitespace-nowrap",
       render: (student) => <StatusBadge status={student.activo ? "activo" : "inactivo"} />,
-    },
-    {
-      key: "pending",
-      header: "Pendientes",
-      className: "whitespace-nowrap",
-      render: () => (
-        <span className="text-xs" title="Consulta los documentos del alumno en su ficha">
-          No informado
-        </span>
-      ),
     },
     {
       key: "open",
