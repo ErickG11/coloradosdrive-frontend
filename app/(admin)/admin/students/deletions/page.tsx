@@ -19,7 +19,7 @@ const phases: Record<StudentDeletionOperation["phase"], string> = {
   auth: "Cuenta de acceso",
   completo: "Completada",
 };
-export function StudentDeletionsList() {
+function StudentDeletionsList() {
   const params = useSearchParams(),
     router = useRouter();
   const state = ["pendiente", "fallido"].includes(params.get("estado") ?? "")

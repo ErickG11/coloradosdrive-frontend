@@ -16,6 +16,7 @@ export interface AdminStudent {
   telefono: string | null;
   activo: boolean;
   createdAt: string;
+  requirements?: { pending: string[]; unavailable: string[] };
   matchingEnrollments: MatchingEnrollment[];
 }
 export interface StudentList {
@@ -23,6 +24,14 @@ export interface StudentList {
   total: number;
   page: number;
   pageSize: number;
+  cohortSummary?: {
+    id: string;
+    name: string;
+    activeStudents: number;
+    matchingActiveStudents: number;
+    usedCapacity: number;
+    totalCapacity: number;
+  } | null;
 }
 export interface StudentEnrollment extends ManualEnrollmentDetails {
   status: EnrollmentStatus;
