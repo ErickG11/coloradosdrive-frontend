@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { StudentsList } from "@/app/(admin)/admin/students/page";
+import StudentsList from "@/app/(admin)/admin/students/page";
 import {
   StudentDetail,
   StudentProfile,
@@ -189,7 +189,7 @@ describe("Alumnos A1", () => {
     render(<StudentsList />);
     if (kind === "carga") expect(screen.getByRole("status")).toHaveTextContent("Cargando alumnos");
     if (kind === "vacío")
-      expect(screen.getByText("No hay alumnos para estos filtros.")).toBeInTheDocument();
+      expect(screen.getByText("No hay alumnos con esos filtros")).toBeInTheDocument();
     if (kind === "error") {
       expect(screen.getByRole("alert")).toHaveTextContent("No se pudo conectar");
       fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
@@ -282,5 +282,69 @@ describe("Alumnos A1", () => {
       "/admin/students?page=1&activo=false&incluirHistorial=true",
       { scroll: false },
     );
+  });
+});
+
+describe("Búsqueda mejorada", () => {
+  it("limpia búsqueda y todos los filtros, incluso valores false", async () => {
+    vi.useFakeTimers();
+    navigation.params = new URLSearchParams(
+      "page=3&activo=false&documentosPendientes=false&incluirHistorial=true",
+    );
+    render(<StudentsList />);
+    fireEvent.change(screen.getByLabelText("Buscar por nombre, cédula o teléfono"), {
+      target: { value: "José" },
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+    expect(screen.getByLabelText("Buscar por nombre, cédula o teléfono")).toHaveValue("");
+    expect(navigation.replace).toHaveBeenLastCalledWith("/admin/students?page=1", {
+      scroll: false,
+    });
+    expect(vi.mocked(useFetch).mock.lastCall?.[0]).not.toContain("q=");
+  });
+  it("oculta limpiar sin filtros y no inventa requisitos si falta la migración", () => {
+    render(<StudentsList />);
+    expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Requisitos" })).toBeInTheDocument();
+    expect(screen.getByText("No disponible")).toBeInTheDocument();
+  });
+  it.each([
+    [{ pending: [], unavailable: [] }, "Completo"],
+    [{ pending: ["Documentos", "Exámenes"], unavailable: ["Pagos"] }, "2 pendientes"],
+    [{ pending: [], unavailable: ["Pagos"] }, "Sin pendientes verificables"],
+  ])("muestra el resumen calculado en la consulta %j", (requirements, label) => {
+    state.data = { ...list, items: [{ ...list.items[0], requirements }] };
+    render(<StudentsList />);
+    expect(screen.getByText(label)).toBeInTheDocument();
+    if (requirements.unavailable.length)
+      expect(screen.getByText("1 sin verificar")).toBeInTheDocument();
+  });
+  it("muestra el total de cohorte independiente de página y búsqueda", async () => {
+    vi.useFakeTimers();
+    navigation.params = new URLSearchParams("cohortId=" + cohortId);
+    state.data = {
+      ...list,
+      total: 2,
+      cohortSummary: {
+        id: cohortId,
+        name: "A",
+        activeStudents: 25,
+        matchingActiveStudents: 2,
+        usedCapacity: 26,
+        totalCapacity: 30,
+      },
+    };
+    render(<StudentsList />);
+    expect(screen.getByText("Cohorte A: 25 alumnos activos (26/30 cupos)")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Buscar por nombre, cédula o teléfono"), {
+      target: { value: "José" },
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+    expect(screen.getByText("Mostrando 2 de 25 alumnos activos")).toBeInTheDocument();
   });
 });
