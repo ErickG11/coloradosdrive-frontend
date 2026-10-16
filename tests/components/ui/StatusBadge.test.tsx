@@ -9,14 +9,14 @@ describe("StatusBadge", () => {
     expect(screen.getByText("Sin práctica")).toBeInTheDocument();
   });
 
-  it("usa el acento azul para los estados resueltos positivamente", () => {
+  it("usa el color semántico de éxito para estados resueltos positivamente", () => {
     render(<StatusBadge status="confirmado" />);
-    expect(screen.getByText("Confirmado")).toHaveClass("text-accent-blue");
+    expect(screen.getByText("Confirmado")).toHaveClass("text-status-success");
   });
 
-  it("usa el acento rojo para los estados que requieren atención", () => {
+  it("usa el color semántico de advertencia para estados que requieren atención", () => {
     render(<StatusBadge status="liberado" />);
-    expect(screen.getByText("Liberado")).toHaveClass("text-accent-red");
+    expect(screen.getByText("Liberado")).toHaveClass("text-status-warning");
   });
 
   it("usa un tono neutro para disponible", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useId } from "react";
 import type { TextareaHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils/cn";
@@ -18,11 +18,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   { className, label, error, id, name, rows = 3, ...props },
   ref,
 ) {
-  const textareaId = id ?? name;
+  const generatedId = useId();
+  const textareaId = id ?? name ?? generatedId;
   const errorId = error && textareaId ? `${textareaId}-error` : undefined;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       {label ? (
         <label htmlFor={textareaId} className="text-sm font-medium text-text-secondary">
           {label}
@@ -36,14 +37,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         aria-invalid={Boolean(error)}
         aria-describedby={errorId}
         className={cn(
-          "resize-y rounded-sm border border-border bg-bg-field px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled transition-colors focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue",
-          error && "border-accent-red focus:border-accent-red focus:ring-accent-red",
+          "min-h-24 min-w-0 w-full resize-y rounded-sm border border-border-strong bg-bg-field px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled transition-colors focus-visible:border-focus",
+          error && "border-accent-red",
           className,
         )}
         {...props}
       />
       {error ? (
-        <p id={errorId} className="text-sm text-accent-red">
+        <p id={errorId} role="alert" className="text-sm text-accent-red">
           {error}
         </p>
       ) : null}

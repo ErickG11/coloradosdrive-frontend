@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { buttonClassName, iconButtonClassName } from "@/components/ui";
+import { PageHeader, StatusBadge, buttonClassName, iconButtonClassName } from "@/components/ui";
 import { EditIcon } from "@/components/ui/icons";
 import { useFetch } from "@/hooks/useFetch";
 import type { Course, Exam } from "@/types";
@@ -32,29 +32,47 @@ export default function ExamsPage() {
   const coursesById = new Map((courses ?? []).map((course) => [course.id, course]));
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-text-primary">
-          Exámenes
-        </h1>
-        <Link href="/admin/exams/new" className={buttonClassName()}>
-          Nuevo examen
-        </Link>
-      </div>
+    <div className="flex min-w-0 flex-col gap-6">
+      <PageHeader
+        title="Exámenes"
+        count={exams?.length}
+        actions={
+          <Link href="/admin/exams/new" className={buttonClassName()}>
+            Nuevo examen
+          </Link>
+        }
+      />
 
-      {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {isLoading ? (
+        <p role="status" className="text-sm text-text-secondary">
+          Cargando…
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-sm text-accent-red">
+          {error}
+        </p>
+      ) : null}
 
       {!isLoading && !error ? (
-        <div className="overflow-x-auto rounded-md border border-border bg-bg-surface backdrop-blur-md">
-          <table className="min-w-full divide-y divide-border text-sm">
+        <div className="relative min-w-0 max-w-full overflow-x-auto rounded-md border border-border bg-bg-surface">
+          <table className="w-full min-w-[36rem] divide-y divide-border text-sm">
+            <caption className="sr-only">Listado de exámenes</caption>
             <thead className="bg-bg-sunken">
               <tr>
-                <th className="px-4 py-2 text-left font-medium text-text-secondary">Título</th>
-                <th className="px-4 py-2 text-left font-medium text-text-secondary">Curso</th>
-                <th className="px-4 py-2 text-left font-medium text-text-secondary">Tipo</th>
-                <th className="px-4 py-2 text-left font-medium text-text-secondary">Publicado</th>
-                <th className="px-4 py-2 text-left font-medium text-text-secondary">
+                <th scope="col" className="px-4 py-2 text-left font-medium text-text-secondary">
+                  Título
+                </th>
+                <th scope="col" className="px-4 py-2 text-left font-medium text-text-secondary">
+                  Curso
+                </th>
+                <th scope="col" className="px-4 py-2 text-left font-medium text-text-secondary">
+                  Tipo
+                </th>
+                <th scope="col" className="px-4 py-2 text-left font-medium text-text-secondary">
+                  Publicado
+                </th>
+                <th scope="col" className="px-4 py-2 text-left font-medium text-text-secondary">
                   <span className="sr-only">Acciones</span>
                 </th>
               </tr>
@@ -75,7 +93,9 @@ export default function ExamsPage() {
                     </td>
                     <td className="px-4 py-2 text-text-secondary">{TYPE_LABELS[exam.type]}</td>
                     <td className="px-4 py-2 text-text-secondary">
-                      {exam.isPublished ? "Sí" : "No"}
+                      <StatusBadge status={exam.isPublished ? "activo" : "pendiente"}>
+                        {exam.isPublished ? "Sí" : "No"}
+                      </StatusBadge>
                     </td>
                     <td className="px-4 py-2 text-right">
                       <Link

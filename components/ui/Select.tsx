@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useId } from "react";
 import type { SelectHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils/cn";
@@ -17,11 +17,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   { className, label, error, id, name, children, ...props },
   ref,
 ) {
-  const selectId = id ?? name;
+  const generatedId = useId();
+  const selectId = id ?? name ?? generatedId;
   const errorId = error && selectId ? `${selectId}-error` : undefined;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       {label ? (
         <label htmlFor={selectId} className="text-sm font-medium text-text-secondary">
           {label}
@@ -35,8 +36,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           aria-invalid={Boolean(error)}
           aria-describedby={errorId}
           className={cn(
-            "h-10 w-full appearance-none rounded-sm border border-border bg-bg-field px-3 pr-9 text-sm text-text-primary transition-colors focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue",
-            error && "border-accent-red focus:border-accent-red focus:ring-accent-red",
+            "h-11 min-w-0 w-full appearance-none rounded-sm border border-border-strong bg-bg-field px-3 pr-9 text-sm text-text-primary transition-colors focus-visible:border-focus md:h-10",
+            error && "border-accent-red",
             className,
           )}
           {...props}
@@ -59,7 +60,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         </svg>
       </div>
       {error ? (
-        <p id={errorId} className="text-sm text-accent-red">
+        <p id={errorId} role="alert" className="text-sm text-accent-red">
           {error}
         </p>
       ) : null}

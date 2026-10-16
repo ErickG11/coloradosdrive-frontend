@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -28,9 +27,11 @@ export function LoginForm() {
     });
 
     if (signInError) {
-      setError(signInError.code === "user_banned"
-        ? "Tu cuenta está inactiva. Contacta al administrador."
-        : "Correo o contraseña incorrectos.");
+      setError(
+        signInError.code === "user_banned"
+          ? "Tu cuenta está inactiva. Contacta al administrador."
+          : "Correo o contraseña incorrectos.",
+      );
       setIsLoading(false);
       return;
     }
@@ -47,11 +48,7 @@ export function LoginForm() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-    >
+    <div>
       <Card>
         <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
           <Input
@@ -72,12 +69,16 @@ export function LoginForm() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="text-sm text-accent-red">
+              {error}
+            </p>
+          ) : null}
           <Button type="submit" isLoading={isLoading}>
             Iniciar sesión
           </Button>
         </form>
       </Card>
-    </motion.div>
+    </div>
   );
 }
