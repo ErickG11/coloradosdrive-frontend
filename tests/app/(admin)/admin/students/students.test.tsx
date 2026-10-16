@@ -113,17 +113,36 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 describe("Alumnos A1", () => {
+  it("permite limpiar filtros cuando no hay coincidencias", () => {
+    navigation.params = new URLSearchParams("activo=false");
+    state = { data: { ...list, items: [], total: 0 }, error: null, isLoading: false };
+    render(<StudentsList />);
+    expect(screen.getByText("No hay resultados")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Limpiar filtros" })[0]);
+    expect(navigation.replace).toHaveBeenCalledWith("/admin/students?page=1", { scroll: false });
+  });
+  it.each([
+    ["Activos", "activo=true"],
+    ["Inactivos", "activo=false"],
+    ["Sin cohorte", "pendienteCohorte=true"],
+    ["Documentos pendientes", "documentosPendientes=true"],
+  ])("el chip %s utiliza el filtro existente", (label, query) => {
+    render(<StudentsList />);
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    expect(navigation.replace).toHaveBeenCalledWith(`/admin/students?page=1&${query}`, {
+      scroll: false,
+    });
+  });
   it("muestra una sola fila por alumno, matrículas, cohortes, insignias y enlaces sin cédula", () => {
     navigation.params = new URLSearchParams("page=2&activo=false&incluirHistorial=true");
     render(<StudentsList />);
-    expect(screen.getAllByText("Alumno ficticio")).toHaveLength(1);
+    expect(screen.getAllByText("Alumno Ficticio")).toHaveLength(1);
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(screen.getByText("Tipo A")).toBeInTheDocument();
-    expect(screen.getByText("Tipo B")).toBeInTheDocument();
-    expect(screen.getByText("Sin cohorte")).toBeInTheDocument();
+    expect(screen.getByText("+1")).toBeInTheDocument();
     const row = within(screen.getAllByRole("row")[1]);
     expect(row.getByText("Cohorte de prueba")).toBeInTheDocument();
-    expect(row.getByText("Desactivado")).toBeInTheDocument();
+    expect(row.getByText("Inactivo")).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "Ver ficha de Alumno ficticio" });
     expect(link).toHaveAttribute(
       "href",
@@ -188,8 +207,7 @@ describe("Alumnos A1", () => {
           : { data: null, error: "No se pudo conectar con el servidor.", isLoading: false };
     render(<StudentsList />);
     if (kind === "carga") expect(screen.getByRole("status")).toHaveTextContent("Cargando alumnos");
-    if (kind === "vacío")
-      expect(screen.getByText("No hay alumnos para estos filtros.")).toBeInTheDocument();
+    if (kind === "vacío") expect(screen.getByText("Todavía no hay alumnos")).toBeInTheDocument();
     if (kind === "error") {
       expect(screen.getByRole("alert")).toHaveTextContent("No se pudo conectar");
       fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));

@@ -25,7 +25,8 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
         event.altKey ||
         event.metaKey ||
         (target instanceof HTMLElement &&
-          (target.isContentEditable || target.closest("input,textarea,select,[role='textbox']")))
+          (target.isContentEditable ||
+            target.closest("input,textarea,select,[role='textbox'],[role='dialog']")))
       )
         return;
       event.preventDefault();
@@ -65,7 +66,8 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
         value={value}
         aria-keyshortcuts={shortcut ? "/" : undefined}
         className={cn(
-          "h-12 w-full min-w-0 rounded-sm border border-border-strong bg-bg-field pr-14 pl-12 text-base text-text-primary placeholder:text-text-secondary focus-visible:border-focus",
+          "h-12 w-full min-w-0 appearance-none rounded-sm border border-border-strong bg-bg-field pl-11 text-base text-text-primary placeholder:text-text-secondary focus-visible:border-focus [&::-webkit-search-cancel-button]:appearance-none",
+          value ? "pr-14" : "pr-2 sm:pr-14",
           className,
         )}
       />

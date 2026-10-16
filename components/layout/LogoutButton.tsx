@@ -22,7 +22,7 @@ export function LogoutButton() {
     <Button
       variant="ghost"
       size="sm"
-      className="w-full justify-start"
+      className="w-full justify-start pl-12"
       isLoading={isLoading}
       onClick={() => void handleLogout()}
     >
