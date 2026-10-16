@@ -119,21 +119,16 @@ export function StudentsList() {
         onClear={clearFilters}
       />
       {!list.isLoading && !list.error && (list.data?.total ?? 0) > 0 ? (
-        <>
-          <Pagination
-            total={list.data!.total}
-            page={filters.page}
-            pageSize={20}
-            singular="alumno"
-            plural="alumnos"
-            onPageChange={(page) =>
-              router.replace(studentListHref({ ...filters, page }), { scroll: false })
-            }
-          />
-          <p className="text-xs text-text-secondary">
-            Consulta los documentos pendientes en la ficha del alumno.
-          </p>
-        </>
+        <Pagination
+          total={list.data!.total}
+          page={filters.page}
+          pageSize={20}
+          singular="alumno"
+          plural="alumnos"
+          onPageChange={(page) =>
+            router.replace(studentListHref({ ...filters, page }), { scroll: false })
+          }
+        />
       ) : null}
     </div>
   );

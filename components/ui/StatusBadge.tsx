@@ -14,12 +14,13 @@ const LABELS: Record<string, string> = {
   pendiente_cohorte: "Sin cohorte",
   error: "Error",
 };
-export type StatusTone = "success" | "warning" | "error" | "neutral";
+export type StatusTone = "success" | "warning" | "info" | "error" | "neutral";
 const CLASSES: Record<StatusTone, string> = {
   success: "bg-status-success-bg text-status-success",
   warning: "bg-status-warning-bg text-status-warning",
+  info: "bg-status-info-bg text-status-info",
   error: "bg-status-error-bg text-status-error",
-  neutral: "bg-bg-sunken text-text-secondary",
+  neutral: "bg-status-neutral-bg text-status-neutral",
 };
 function toneFor(status: string): StatusTone {
   if (["activo", "confirmado", "completado", "verificado", "entregado"].includes(status))
@@ -27,6 +28,8 @@ function toneFor(status: string): StatusTone {
   if (
     [
       "pendiente",
+      "pendiente_eliminacion",
+      "eliminacion_pendiente",
       "pendiente_cohorte",
       "pendiente_verificacion",
       "pagado_esperando_cohorte",
@@ -48,11 +51,12 @@ export function StatusBadge({ status, tone, children, className }: StatusBadgePr
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-4 font-medium",
+        "inline-flex max-w-full items-center gap-2 rounded-full px-3 py-1.5 text-xs leading-4 font-semibold",
         CLASSES[tone ?? toneFor(status)],
         className,
       )}
     >
+      <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
       {children ?? LABELS[status] ?? status}
     </span>
   );

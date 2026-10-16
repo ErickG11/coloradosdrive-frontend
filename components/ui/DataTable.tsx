@@ -98,7 +98,7 @@ export function DataTable<T>({
     >
       <table className="w-full text-left text-sm" role="table">
         <caption className="sr-only">{caption}</caption>
-        <thead role="rowgroup" className="bg-bg-sunken text-text-secondary">
+        <thead role="rowgroup" className="bg-table-heading text-text-secondary">
           <tr role="row">
             {columns.map((column) => (
               <th
@@ -121,7 +121,7 @@ export function DataTable<T>({
               role="row"
               className={cn(
                 "relative border-t border-border transition-colors",
-                rowHref && "data-table__linked hover:bg-bg-sunken focus-within:bg-bg-sunken",
+                rowHref && "data-table__linked hover:bg-table-hover focus-within:bg-table-hover",
               )}
             >
               {columns.map((column, index) =>

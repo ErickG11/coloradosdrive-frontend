@@ -21,7 +21,7 @@ Todos los tokens de color, tipografía, espacio, radios, sombras y ancho de cont
 - El texto de error y enlace rojo usa un tono más claro en oscuro; los botones mantienen relleno oscuro y texto blanco.
 - Bordes grises neutros. Gradiente de fondo casi imperceptible; sin manchas luminosas ni vidrio en el panel.
 - Unidad base: 4 px; escala 4, 8, 12, 16, 24, 32 y 48 px.
-- Contenido: máximo 1280 px; padding 16 px móvil, 24 px tablet y 32 px escritorio.
+- Contenido: máximo 1320 px; padding 16 px móvil, 24 px tablet y 32 px escritorio.
 - Radio: 8 px controles, 12 px tarjetas/tablas y 16 px diálogos.
 - Sombras sutiles en superficies elevadas y diálogos.
 
@@ -32,8 +32,12 @@ Cada variante tiene tokens de fondo y texto para ambos temas.
 - Éxito, Activo, Confirmado, Completado: verde.
 - Inactivo, Desactivado, Sin datos: gris.
 - Pendiente, Sin cohorte, Borrador: ámbar.
+- Información y curso Tipo B: azul.
+- Curso Tipo A: ámbar; cohorte: chip neutro.
 - Error, Rechazado, destructivo: rojo.
-- Información sin resultado definitivo: neutro.
+- Inactivo y datos neutrales: gris.
+
+Cada tono tiene texto y fondo propios en ambos temas, con contraste de texto de al menos 4.5:1. Las iniciales de alumnos usan seis tonos suaves elegidos de forma estable por cédula. El rojo de marca también indica filtros seleccionados y foco de búsqueda.
 
 Los estados de prácticas conservan sus etiquetas y significado existentes. No se deriva un nuevo estado de fechas o campos ausentes.
 

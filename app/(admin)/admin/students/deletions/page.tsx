@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Card, Select, buttonClassName } from "@/components/ui";
+import { Button, Card, Select, StatusBadge, buttonClassName } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -158,7 +158,9 @@ export function StudentDeletionsList() {
                       </Button>
                     </td>
                     <td className="px-3 py-3">
-                      {op.status === "fallido" ? "Fallida" : "Pendiente"}
+                      <StatusBadge status={op.status === "fallido" ? "error" : "pendiente_eliminacion"}>
+                        {op.status === "fallido" ? "Fallida" : "Eliminación pendiente"}
+                      </StatusBadge>
                     </td>
                     <td className="px-3 py-3">
                       {phases[op.phase]}
