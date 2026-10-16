@@ -16,5 +16,7 @@ export const studentProfile: StudentDetail = {
   genero: null,
   ciudadania: null,
   direccion: null,
+  graduation: { pendingCount: null, enrollments: [] },
+  practiceSchedule: { upcoming: [], recovery: [], recent: [] },
   enrollments: [],
 };

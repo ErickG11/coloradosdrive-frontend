@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Card, Modal, buttonClassName } from "@/components/ui";
 import { StudentEditForm } from "./StudentEditForm";
@@ -10,7 +10,8 @@ import type { StudentDetail as Detail } from "@/types";
 import { DOCUMENTS } from "@/app/(admin)/admin/enrollments/wizard/wizardTypes";
 import { ActiveBadge, StudentBadge } from "./StudentBadge";
 import { StudentActions } from "./StudentActions";
-import { StudentReservations } from "./StudentReservations";
+import { StudentSchedule } from "./StudentSchedule";
+import { StudentGraduation } from "./StudentGraduation";
 import { studentActionError } from "@/lib/api/studentActions";
 import { ApiError } from "@/lib/api/errors";
 import { StudentCohortAssignment } from "./StudentCohortAssignment";
@@ -34,10 +35,12 @@ export function StudentProfile({
   student,
   onAssignCohort,
   assignmentDisabled = false,
+  actions,
 }: {
   student: Detail;
   onAssignCohort?: (enrollment: StudentEnrollment) => void;
   assignmentDisabled?: boolean;
+  actions?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -48,6 +51,52 @@ export function StudentProfile({
         <ActiveBadge active={student.activo} />
         {student.status && <StudentBadge status={student.status} />}
       </div>
+      <Card title="Contacto y matrícula actual">
+        <dl className="grid gap-4 text-sm sm:grid-cols-3">
+          {[
+            ["Cédula", student.cedula],
+            ["Teléfono", student.telefono],
+            ["Correo", student.correoDisponible ? student.correo : "No disponible"],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-text-secondary">{label}</dt>
+              <dd className="break-words">{value ?? "—"}</dd>
+            </div>
+          ))}
+        </dl>
+        {student.enrollments
+          .filter((e) => ["activo", "pendiente_cohorte"].includes(e.status))
+          .map((enrollment) => (
+            <div key={enrollment.enrollmentId} className="mt-4">
+              <p>
+                {enrollment.curso?.nombre ?? "Curso no disponible"} ·{" "}
+                {enrollment.cohorte?.nombre ?? "Sin cohorte asignada"}
+              </p>
+              {enrollment.status === "pendiente_cohorte" && onAssignCohort && (
+                <div className="mb-4 flex flex-col items-start gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={assignmentDisabled || !student.activo}
+                    onClick={() => onAssignCohort(enrollment)}
+                  >
+                    Asignar cohorte
+                  </Button>
+                  {!student.activo && (
+                    <p className="text-sm text-text-secondary">
+                      Reactiva al alumno primero para asignar cohorte.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        {!student.enrollments.some((e) => ["activo", "pendiente_cohorte"].includes(e.status)) && (
+          <p className="mt-3">Sin matrícula vigente · Sin cohorte asignada</p>
+        )}
+      </Card>
+      {actions}
+      <StudentGraduation graduation={student.graduation} />
+      <StudentSchedule schedule={student.practiceSchedule} />
       <p className="text-sm text-text-secondary">
         Registrado el{" "}
         <time dateTime={student.createdAt}>{studentTimestamp(student.createdAt)}</time>
@@ -55,9 +104,6 @@ export function StudentProfile({
       <Card title="Datos personales">
         <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
           {[
-            ["Cédula", student.cedula],
-            ["Teléfono", student.telefono],
-            ["Correo", student.correoDisponible ? student.correo : "No disponible"],
             ["Fecha de nacimiento", date(student.fechaNacimiento)],
             ["Tipo de sangre", student.tipoSangre],
             ["Género", student.genero],
@@ -86,22 +132,6 @@ export function StudentProfile({
               {enrollment.cohorte?.nombre ?? "Sin cohorte"}
             </span>
           </div>
-          {enrollment.status === "pendiente_cohorte" && onAssignCohort && (
-            <div className="mb-4 flex flex-col items-start gap-2">
-              <Button
-                variant="secondary"
-                disabled={assignmentDisabled || !student.activo}
-                onClick={() => onAssignCohort(enrollment)}
-              >
-                Asignar cohorte
-              </Button>
-              {!student.activo && (
-                <p className="text-sm text-text-secondary">
-                  Reactiva al alumno primero para asignar cohorte.
-                </p>
-              )}
-            </div>
-          )}
           <p className="mb-4 text-sm text-text-secondary">
             Fecha de inscripción:{" "}
             <time dateTime={enrollment.fechaInscripcion}>
@@ -197,30 +227,34 @@ export function StudentDetail({ id }: { id: string }) {
               {actionNotice}
             </p>
           )}
-          <StudentActions
-            student={data}
-            disabled={editing || saving || assigning !== null}
-            deletionPending={deletionPending}
-            onBusyChange={setActionBusy}
-            onPending={() => setDeletionPending(true)}
-            onReload={refetch}
-            onChanged={(message) => {
-              setActionNotice(message);
-              refetch();
-            }}
-          />
-          <Button
-            variant="secondary"
-            className="self-start"
-            disabled={actionBusy || deletionPending || assigning !== null}
-            onClick={() => {
-              setSuccess(false);
-              setEditing(true);
-            }}
-          >
-            Editar
-          </Button>
           <StudentProfile
+            actions={
+              <>
+                <StudentActions
+                  student={data}
+                  disabled={editing || saving || assigning !== null}
+                  deletionPending={deletionPending}
+                  onBusyChange={setActionBusy}
+                  onPending={() => setDeletionPending(true)}
+                  onReload={refetch}
+                  onChanged={(message) => {
+                    setActionNotice(message);
+                    refetch();
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  className="self-start"
+                  disabled={actionBusy || deletionPending || assigning !== null}
+                  onClick={() => {
+                    setSuccess(false);
+                    setEditing(true);
+                  }}
+                >
+                  Editar
+                </Button>
+              </>
+            }
             student={data}
             onAssignCohort={setAssigning}
             assignmentDisabled={
@@ -245,7 +279,6 @@ export function StudentDetail({ id }: { id: string }) {
               }}
             />
           )}
-          <StudentReservations id={id} />
           <Modal
             isOpen={editing}
             onClose={() => {

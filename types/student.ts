@@ -46,6 +46,36 @@ export interface StudentEnrollment extends ManualEnrollmentDetails {
     fecha_fin_curso: string;
   } | null;
 }
+export interface GraduationCheck {
+  key: "cohort" | "payments" | "practice" | "exams" | "documents";
+  label: string;
+  fulfilled: boolean;
+  detail: string;
+}
+export interface StudentGraduation {
+  pendingCount: number | null;
+  enrollments: { enrollmentId: string; courseName: string; checks: GraduationCheck[] }[];
+}
+export interface StudentPractice {
+  id: string;
+  scheduledAt: string;
+  durationMinutes: number | null;
+  instructor: string | null;
+  status:
+    | "reservada"
+    | "confirmada"
+    | "liberada"
+    | "pendiente_reprogramar"
+    | "completada"
+    | "sin_practica";
+  attended: boolean | null;
+  reason: string | null;
+}
+export interface StudentSchedule {
+  upcoming: StudentPractice[];
+  recovery: StudentPractice[];
+  recent: StudentPractice[];
+}
 export interface StudentDetail extends Omit<AdminStudent, "matchingEnrollments"> {
   status:
     | "pendiente_verificacion"
@@ -64,6 +94,8 @@ export interface StudentDetail extends Omit<AdminStudent, "matchingEnrollments">
   ciudadania: string | null;
   direccion: string | null;
   updatedAt: string;
+  graduation: StudentGraduation;
+  practiceSchedule: StudentSchedule;
   enrollments: StudentEnrollment[];
 }
 
