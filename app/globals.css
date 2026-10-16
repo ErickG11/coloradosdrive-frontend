@@ -1,112 +1,79 @@
 @import "tailwindcss";
 
-/* =============================================================================
-   ColoradosDrive — sistema de diseño (claro + oscuro, glassmorphism)
-   =============================================================================
-   Arquitectura de temas: los tokens semánticos (--color-bg-canvas, etc.) se
-   definen en :root con sus valores de MODO CLARO (el default), y se
-   sobrescriben dentro de .dark con los valores de MODO OSCURO. Los
-   componentes solo usan las clases de Tailwind generadas (bg-bg-canvas,
-   text-text-primary, ...) — nunca necesitan saber en qué tema están; el
-   valor resuelto cambia solo por la presencia de la clase `dark` en <html>.
-
-   Jerarquía de color (igual en ambos temas):
-   - Fondos: capas (canvas -> surface -> surface-raised), no todo al mismo
-     nivel z. Las superficies "glass" (Card, Navbar) son semi-transparentes
-     + backdrop-blur; los campos de formulario (Input/Select) casi sólidos
-     por legibilidad (bg-field).
-   - Blanco/negro: solo texto y como base de los fondos, nunca un color de
-     acento.
-   - Rojo: acento principal (CTA/primario, destructivo).
-   - Azul marino: acento secundario. Los acentos (rojo/azul, incluidos sus
-     estados hover) se mantienen CONSTANTES entre temas — solo cambian
-     fondos/texto/bordes/sombras. Los "subtle" (washes de fondo) sí varían
-     por tema porque son mezclas de opacidad sobre el fondo de cada tema.
-   - Bordes: finos, de baja opacidad (no bordes sólidos duros).
-   ========================================================================== */
-
+/* Shared design tokens. DESIGN.md documents their roles in both themes. */
 :root {
   color-scheme: light;
-
-  /* --- Fondos: modo claro --- */
-  --color-bg-canvas: #f6f7fa; /* body — casi blanco, no blanco puro plano */
-  --color-bg-sunken: #eceef2; /* zonas hundidas: header de tabla */
-  --color-bg-surface: rgb(255 255 255 / 60%); /* GLASS: Card, Navbar (+ backdrop-blur) */
-  --color-bg-surface-raised: rgb(255 255 255 / 80%); /* GLASS hover/elevado: más opaco */
-  --color-bg-field: rgb(255 255 255 / 92%); /* Input/Select: casi sólido, legible */
-
-  /* --- Bordes: modo claro (finos, baja opacidad) --- */
-  --color-border: rgb(15 23 42 / 8%);
-  --color-border-strong: rgb(15 23 42 / 16%);
-
-  /* --- Texto: modo claro --- */
-  --color-text-primary: #10131f; /* negro-navi, no #000 puro */
-  --color-text-secondary: #4b5566; /* gris medio-oscuro, AA sobre blanco */
-  --color-text-disabled: #9aa3b2;
-
-  /* --- Washes de acento sobre fondo claro (opacidad baja: el blanco de
-     fondo ya aporta luminosidad, no hace falta mucha saturación) --- */
-  --color-accent-red-subtle: rgb(225 59 59 / 8%);
-  --color-accent-blue-subtle: rgb(59 91 219 / 8%);
-
-  /* --- Sombra de elevación: modo claro (sombra difusa convencional) --- */
-  --shadow-elevated: 0 1px 2px rgb(15 23 42 / 5%), 0 12px 32px -8px rgb(15 23 42 / 14%);
-
-  /* --- Gradiente decorativo de fondo: modo claro ---
-     Propuesta: el canvas se queda claro (no oscurecerlo detrás del vidrio
-     blanco — apagaría la sensación "clara" y podría bajar el contraste del
-     texto en algunas zonas). En vez de eso, dos glows del azul y el rojo
-     de acento (18% / 13%) le dan al glassmorphism algo de color notorio
-     sin comprometer que el modo claro se sienta luminoso y profesional
-     (subidos desde 7%/5% en la pasada de refinamiento visual). */
-  --gradient-decorative:
-    radial-gradient(circle at 10% -5%, rgb(59 91 219 / 18%), transparent 45%),
-    radial-gradient(circle at 95% 105%, rgb(225 59 59 / 13%), transparent 40%);
-
-  /* --- Acentos: CONSTANTES entre temas --- */
-  --color-accent-red: #e13b3b;
-  --color-accent-red-hover: #c62e2e;
-  --color-accent-blue: #3b5bdb;
-  --color-accent-blue-hover: #2f49b0;
-
-  /* --- Radios: deliberados, no dependen del tema --- */
-  --radius-sm: 8px; /* inputs, botones, badges */
-  --radius-md: 14px; /* cards, selects, paneles */
-  --radius-lg: 24px; /* contenedores grandes / modales futuros */
+  --spacing: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-xxl: 3rem;
+  --content-max: 80rem;
+  --sidebar-width: 15rem;
+  --color-bg-canvas: #f7f8fa;
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-raised: #ffffff;
+  --color-bg-sunken: #f0f2f5;
+  --color-bg-field: #ffffff;
+  --color-border: #e0e4e9;
+  --color-border-strong: #bdc5d0;
+  --color-text-primary: #18202b;
+  --color-text-secondary: #566171;
+  --color-text-disabled: #717b8a;
+  --color-brand-primary: #c62828;
+  --color-brand-hover: #ad2020;
+  --color-brand-pressed: #941b1b;
+  --color-brand-ink: #a91e1e;
+  --color-accent-red: #b42323;
+  --color-accent-red-hover: #941b1b;
+  --color-accent-red-subtle: #fbecec;
+  --color-accent-blue: #46566e;
+  --color-accent-blue-hover: #29384c;
+  --color-accent-blue-subtle: #eaf0f6;
+  --color-focus: #566b87;
+  --color-status-success: #17653b;
+  --color-status-success-bg: #e9f5ed;
+  --color-status-warning: #80510b;
+  --color-status-warning-bg: #fff4d6;
+  --color-status-error: #a52323;
+  --color-status-error-bg: #fdecec;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-elevated: 0 12px 36px -12px rgb(24 32 43 / 20%);
+  --gradient-decorative: linear-gradient(135deg, rgb(198 40 40 / 1.2%), transparent 45%);
 }
 
 .dark {
   color-scheme: dark;
-
-  /* --- Fondos: modo oscuro --- */
-  --color-bg-canvas: #05070c;
-  --color-bg-sunken: #03050a;
-  --color-bg-surface: rgb(20 26 40 / 55%); /* GLASS */
-  --color-bg-surface-raised: rgb(22 29 45 / 72%); /* GLASS hover/elevado */
-  --color-bg-field: rgb(13 18 28 / 90%); /* Input/Select: casi sólido */
-
-  /* --- Bordes: modo oscuro (hairline claro sobre vidrio oscuro) --- */
-  --color-border: rgb(255 255 255 / 8%);
-  --color-border-strong: rgb(255 255 255 / 16%);
-
-  /* --- Texto: modo oscuro --- */
-  --color-text-primary: #f4f5f7;
-  --color-text-secondary: #9ba4b5;
-  --color-text-disabled: #5b6472;
-
-  /* --- Washes de acento sobre fondo oscuro (opacidad algo más alta: el
-     fondo oscuro necesita más saturación para que el tinte se note) --- */
-  --color-accent-red-subtle: rgb(225 59 59 / 14%);
-  --color-accent-blue-subtle: rgb(59 91 219 / 16%);
-
-  /* --- Sombra de elevación: modo oscuro (resalte superior + sombra
-     difusa hacia abajo — no una sombra de "modo claro" reusada) --- */
-  --shadow-elevated: 0 1px 0 0 rgb(255 255 255 / 6%) inset, 0 8px 32px -8px rgb(0 0 0 / 60%);
-
-  /* --- Gradiente decorativo de fondo: modo oscuro --- */
-  --gradient-decorative:
-    radial-gradient(circle at 15% -10%, rgb(59 91 219 / 20%), transparent 45%),
-    radial-gradient(circle at 90% 110%, rgb(225 59 59 / 12%), transparent 40%);
+  --color-bg-canvas: #101114;
+  --color-bg-surface: #181a1f;
+  --color-bg-surface-raised: #202329;
+  --color-bg-sunken: #22252c;
+  --color-bg-field: #181a1f;
+  --color-border: #30343c;
+  --color-border-strong: #565e6b;
+  --color-text-primary: #f2f3f5;
+  --color-text-secondary: #afb6c2;
+  --color-text-disabled: #8993a2;
+  --color-brand-ink: #ffb4b4;
+  --color-accent-red: #ff9a9a;
+  --color-accent-red-hover: #ffc2c2;
+  --color-accent-red-subtle: #352226;
+  --color-accent-blue: #bcc7d8;
+  --color-accent-blue-hover: #e1e7ef;
+  --color-accent-blue-subtle: #27303b;
+  --color-focus: #c2cddd;
+  --color-status-success: #86d8a8;
+  --color-status-success-bg: #193126;
+  --color-status-warning: #f0c36c;
+  --color-status-warning-bg: #342c1d;
+  --color-status-error: #ffb1b1;
+  --color-status-error-bg: #3d2227;
+  --shadow-elevated: 0 16px 48px -12px rgb(0 0 0 / 55%);
+  --gradient-decorative: linear-gradient(135deg, rgb(198 40 40 / 1.8%), transparent 45%);
 }
 
 @theme inline {
@@ -115,41 +82,156 @@
   --color-bg-surface: var(--color-bg-surface);
   --color-bg-surface-raised: var(--color-bg-surface-raised);
   --color-bg-field: var(--color-bg-field);
-
   --color-border: var(--color-border);
   --color-border-strong: var(--color-border-strong);
-
   --color-text-primary: var(--color-text-primary);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-disabled: var(--color-text-disabled);
-
+  --color-brand-primary: var(--color-brand-primary);
+  --color-brand-hover: var(--color-brand-hover);
+  --color-brand-pressed: var(--color-brand-pressed);
+  --color-brand-ink: var(--color-brand-ink);
   --color-accent-red: var(--color-accent-red);
   --color-accent-red-hover: var(--color-accent-red-hover);
   --color-accent-red-subtle: var(--color-accent-red-subtle);
-
   --color-accent-blue: var(--color-accent-blue);
   --color-accent-blue-hover: var(--color-accent-blue-hover);
   --color-accent-blue-subtle: var(--color-accent-blue-subtle);
-
+  --color-focus: var(--color-focus);
+  --color-status-success: var(--color-status-success);
+  --color-status-success-bg: var(--color-status-success-bg);
+  --color-status-warning: var(--color-status-warning);
+  --color-status-warning-bg: var(--color-status-warning-bg);
+  --color-status-error: var(--color-status-error);
+  --color-status-error-bg: var(--color-status-error-bg);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
-
   --shadow-elevated: var(--shadow-elevated);
-
-  /* Tipografía: Space Grotesk para títulos/wordmark, Inter para texto de
-     UI. Variables pobladas por next/font en app/layout.tsx. */
-  --font-display: var(--font-space-grotesk);
+  --font-display: var(--font-inter);
   --font-sans: var(--font-inter);
 }
 
+html {
+  min-width: 320px;
+}
 body {
+  min-width: 0;
   background: var(--color-bg-canvas);
   background-image: var(--gradient-decorative);
-  background-attachment: fixed;
   color: var(--color-text-primary);
   font-family: var(--font-sans), system-ui, sans-serif;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
+  line-height: 1.5;
+}
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+:where(button, a, summary, input, select) {
+  touch-action: manipulation;
+}
+::selection {
+  background: var(--color-accent-red-subtle);
+  color: var(--color-text-primary);
+}
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  transform: translateY(-200%);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+.data-table table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.data-table__linked:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+.data-table__row-link:focus-visible {
+  outline: none;
+}
+.data-table__linked td,
+.data-table__linked th {
+  border-top: 1px solid var(--color-border);
+}
+.data-table__linked:first-child td,
+.data-table__linked:first-child th {
+  border-top: none;
+}
+@media (max-width: 767px) {
+  .data-table--cards {
+    border: 0;
+    background: transparent;
+    overflow: visible;
+  }
+  .data-table--cards table {
+    display: block;
+  }
+  .data-table--cards thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .data-table--cards tbody {
+    display: grid;
+    gap: var(--space-sm);
+  }
+  .data-table--cards tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    padding: 16px;
+  }
+  .data-table--cards td,
+  .data-table--cards th {
+    display: block;
+    min-width: 0;
+    border: 0;
+    padding: 0;
+  }
+  .data-table--cards td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+  .data-table--cards .data-table__identity,
+  .data-table--cards .data-table__course {
+    grid-column: 1 / -1;
+    padding-right: 20px;
+  }
+  .data-table--cards .data-table__phone {
+    display: none;
+  }
+  .data-table--cards .data-table__chevron {
+    position: absolute;
+    top: 24px;
+    right: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

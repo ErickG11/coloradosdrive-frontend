@@ -1,34 +1,29 @@
-"use client";
-
-import Image from "next/image";
-import { useState } from "react";
-
-// Imagen decorativa de la columna izquierda del login. Si
-// /public/images/login-hero.jpg todavía no existe (caso normal antes de que
-// alguien la suba), el layout no se rompe: onError cambia a un degradado con
-// los colores de la paleta en vez de mostrar el ícono roto del navegador.
-// Ver README para las dimensiones recomendadas.
+// A local, decorative road pattern replaces the missing remote image asset.
 export function LoginHeroImage() {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <div
-        aria-hidden="true"
-        className="h-full w-full bg-gradient-to-br from-accent-blue/25 via-bg-canvas to-accent-red/20"
-      />
-    );
-  }
-
   return (
-    <Image
-      src="/images/login-hero.jpg"
-      alt=""
-      fill
-      priority
-      sizes="50vw"
-      className="object-cover"
-      onError={() => setFailed(true)}
-    />
+    <div
+      aria-hidden="true"
+      className="relative h-full w-full overflow-hidden border-r border-border bg-bg-sunken"
+    >
+      <svg
+        viewBox="0 0 600 1000"
+        fill="none"
+        preserveAspectRatio="xMidYMid slice"
+        className="h-full w-full text-border-strong"
+      >
+        <path
+          d="M-100 1050V730c0-140 140-140 140-280s240-140 240-280V-50M40 1050V730c0-140 140-140 140-280s240-140 240-280V-50"
+          stroke="currentColor"
+          strokeWidth="1"
+        />
+        <path
+          d="M-30 1050V730c0-140 140-140 140-280s240-140 240-280V-50"
+          stroke="currentColor"
+          strokeDasharray="12 12"
+          strokeWidth="2"
+        />
+        <path d="M-100 940h800M-100 80h800" stroke="currentColor" strokeWidth="1" />
+      </svg>
+    </div>
   );
 }

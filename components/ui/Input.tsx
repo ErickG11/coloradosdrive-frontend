@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useId } from "react";
 import type { InputHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils/cn";
@@ -14,14 +14,15 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 // el glassmorphism vive en Card/Navbar/fondos decorativos, no en los
 // controles donde la legibilidad manda.
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, label, error, id, name, ...props },
+  { className, label, error, id, name, autoComplete = "off", spellCheck, ...props },
   ref,
 ) {
-  const inputId = id ?? name;
+  const generatedId = useId();
+  const inputId = id ?? name ?? generatedId;
   const errorId = error && inputId ? `${inputId}-error` : undefined;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       {label ? (
         <label htmlFor={inputId} className="text-sm font-medium text-text-secondary">
           {label}
@@ -31,17 +32,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         ref={ref}
         id={inputId}
         name={name}
+        autoComplete={autoComplete}
+        spellCheck={spellCheck ?? (props.type === "email" ? false : undefined)}
         aria-invalid={Boolean(error)}
         aria-describedby={errorId}
         className={cn(
-          "h-10 rounded-sm border border-border bg-bg-field px-3 text-sm text-text-primary placeholder:text-text-disabled transition-colors focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue",
-          error && "border-accent-red focus:border-accent-red focus:ring-accent-red",
+          "h-11 min-w-0 w-full rounded-sm border border-border-strong bg-bg-field px-3 text-sm text-text-primary placeholder:text-text-disabled transition-colors focus-visible:border-focus md:h-10",
+          error && "border-accent-red",
           className,
         )}
         {...props}
       />
       {error ? (
-        <p id={errorId} className="text-sm text-accent-red">
+        <p id={errorId} role="alert" className="text-sm text-accent-red">
           {error}
         </p>
       ) : null}

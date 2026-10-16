@@ -1,7 +1,6 @@
 "use client";
 
 import { forwardRef } from "react";
-import { motion } from "framer-motion";
 import type { ButtonHTMLAttributes, ReactElement } from "react";
 
 import { cn } from "@/lib/utils/cn";
@@ -31,11 +30,12 @@ export interface IconButtonProps extends NativeButtonProps {
 // vía className del ícono) - RNF-04 pide que cualquier acción sea
 // alcanzable sin dificultad en mobile, no solo en desktop con mouse.
 const ICON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: "bg-accent-red text-white hover:bg-accent-red-hover disabled:opacity-50",
+  primary: "bg-brand-primary text-white hover:bg-brand-hover disabled:opacity-50",
   secondary:
     "bg-bg-field text-text-primary border border-border hover:border-border-strong disabled:opacity-50",
   danger: "bg-transparent text-accent-red hover:bg-accent-red-subtle disabled:opacity-40",
-  ghost: "bg-transparent text-text-secondary hover:bg-bg-sunken hover:text-text-primary disabled:opacity-40",
+  ghost:
+    "bg-transparent text-text-secondary hover:bg-bg-sunken hover:text-text-primary disabled:opacity-40",
 };
 
 // Exportado para estilizar elementos que se ven como IconButton pero no
@@ -43,7 +43,7 @@ const ICON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
 // <button>) - mismo patrón que buttonClassName en Button.tsx.
 export function iconButtonClassName(variant: ButtonVariant = "ghost", className?: string): string {
   return cn(
-    "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-canvas disabled:cursor-not-allowed",
+    "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-sm transition-colors disabled:cursor-not-allowed",
     ICON_VARIANT_CLASSES[variant],
     className,
   );
@@ -63,20 +63,18 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   ref,
 ) {
   return (
-    <motion.button
+    <button
       ref={ref}
       type="button"
       disabled={disabled || isLoading}
+      aria-busy={isLoading || undefined}
       aria-label={ariaLabel}
       title={title ?? ariaLabel}
-      whileHover={disabled || isLoading ? undefined : { scale: 1.05 }}
-      whileTap={disabled || isLoading ? undefined : { scale: 0.95 }}
-      transition={{ duration: 0.12 }}
       className={iconButtonClassName(variant, className)}
       {...props}
     >
-      {isLoading ? <SpinnerIcon className="h-5 w-5 animate-spin" /> : icon}
-    </motion.button>
+      {isLoading ? <SpinnerIcon className="h-5 w-5 motion-safe:animate-spin" /> : icon}
+    </button>
   );
 });
 

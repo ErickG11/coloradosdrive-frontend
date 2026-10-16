@@ -37,3 +37,5 @@ next-env.d.ts
 # se excluyen igual por si se regeneran)
 AGENTS.md
 CLAUDE.md
+# Local browser authentication state
+.local-auth/
