@@ -12,6 +12,7 @@ export interface DataColumn<T> {
   render: (row: T) => ReactNode;
   className?: string;
   mobileLabel?: boolean;
+  screenReaderHeader?: boolean;
 }
 
 export function DataTable<T>({
@@ -106,7 +107,9 @@ export function DataTable<T>({
                 role="columnheader"
                 className={cn("px-4 py-3 font-medium", column.className)}
               >
-                {column.header}
+                <span className={column.screenReaderHeader ? "sr-only" : undefined}>
+                  {column.header}
+                </span>
               </th>
             ))}
           </tr>

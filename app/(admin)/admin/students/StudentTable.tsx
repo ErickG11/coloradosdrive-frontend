@@ -1,92 +1,182 @@
 import Link from "next/link";
-import { buttonClassName } from "@/components/ui";
-import type { AdminStudent, Cohort } from "@/types";
-import { ActiveBadge, StudentBadge } from "./StudentBadge";
+import {
+  Button,
+  DataTable,
+  EmptyState,
+  StatusBadge,
+  buttonClassName,
+  type DataColumn,
+} from "@/components/ui";
+import { ChevronRightIcon } from "@/components/ui/icons";
+import type { AdminStudent, Cohort, MatchingEnrollment } from "@/types";
 
+function displayName(name: string): string {
+  return (
+    name
+      .trim()
+      .toLocaleLowerCase("es")
+      .replace(/(^|\s)\S/gu, (value) => value.toLocaleUpperCase("es")) || "Nombre no informado"
+  );
+}
+function initials(name: string): string {
+  return (
+    name
+      .trim()
+      .split(/\s+/u)
+      .slice(0, 2)
+      .map((part) => part[0] ?? "")
+      .join("")
+      .toLocaleUpperCase("es") || "AL"
+  );
+}
+function cohortLabel(enrollment: MatchingEnrollment, cohorts: Cohort[]): string | null {
+  if (!enrollment.cohortId) return null;
+  const name = cohorts.find((cohort) => cohort.id === enrollment.cohortId)?.nombre;
+  return name ? (/^cohorte\b/iu.test(name) ? name : `Cohorte ${name}`) : "Cohorte no disponible";
+}
 export function StudentTable({
   students,
   cohorts,
   filterQuery,
+  isLoading = false,
+  error,
+  onRetry,
+  filtered = false,
+  onClear,
 }: {
   students: AdminStudent[];
   cohorts: Cohort[];
   filterQuery: string;
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+  filtered?: boolean;
+  onClear?: () => void;
 }) {
+  const columns: DataColumn<AdminStudent>[] = [
+    {
+      key: "student",
+      header: "Alumno",
+      className: "data-table__identity md:min-w-56",
+      render: (student) => (
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-bg-sunken text-xs font-semibold text-text-secondary"
+          >
+            {initials(student.nombreCompleto)}
+          </span>
+          <div className="min-w-0">
+            <p className="break-words font-medium text-text-primary">
+              {displayName(student.nombreCompleto)}
+            </p>
+            <p className="mt-1 text-xs font-normal tabular-nums text-text-secondary">
+              {student.cedula}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "phone",
+      header: "Teléfono",
+      className: "data-table__phone whitespace-nowrap tabular-nums",
+      render: (student) => student.telefono ?? "—",
+    },
+    {
+      key: "course",
+      header: "Curso y cohorte",
+      className: "data-table__course md:min-w-52",
+      render: (student) => {
+        const enrollment = student.matchingEnrollments[0];
+        if (!enrollment) return <span>Sin matrículas coincidentes</span>;
+        const cohort = cohortLabel(enrollment, cohorts);
+        const extra = student.matchingEnrollments.length - 1;
+        return (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-text-primary">
+              <span>Tipo {enrollment.courseType}</span>
+              {cohort ? (
+                <>
+                  {" "}
+                  · <span>{cohort}</span>
+                </>
+              ) : null}
+            </span>
+            {!cohort ? <StatusBadge status="pendiente_cohorte">Sin cohorte</StatusBadge> : null}
+            {extra > 0 ? (
+              <span
+                className="rounded-sm bg-bg-sunken px-2 py-1 text-xs font-medium tabular-nums text-text-secondary"
+                aria-label={`${extra} matrícula${extra === 1 ? "" : "s"} más`}
+              >
+                +{extra}
+              </span>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
+      key: "account",
+      header: "Estado de la cuenta",
+      className: "whitespace-nowrap",
+      render: (student) => <StatusBadge status={student.activo ? "activo" : "inactivo"} />,
+    },
+    {
+      key: "pending",
+      header: "Pendientes",
+      className: "whitespace-nowrap",
+      render: () => (
+        <span className="text-xs" title="Consulta los documentos del alumno en su ficha">
+          No informado
+        </span>
+      ),
+    },
+    {
+      key: "open",
+      header: "Abrir ficha",
+      screenReaderHeader: true,
+      mobileLabel: false,
+      className: "data-table__chevron w-8",
+      render: () => <ChevronRightIcon className="h-4 w-4" />,
+    },
+  ];
   return (
-    <div className="overflow-x-auto rounded-md border border-border bg-bg-surface backdrop-blur-md">
-      <table className="min-w-full divide-y divide-border text-sm">
-        <caption className="sr-only">Alumnos y matrículas coincidentes</caption>
-        <thead className="bg-bg-sunken">
-          <tr>
-            {["Nombre", "Cédula", "Teléfono", "Estado", "Matrículas coincidentes", "Ficha"].map(
-              (title) => (
-                <th
-                  key={title}
-                  scope="col"
-                  className="px-4 py-3 text-left font-medium text-text-secondary"
-                >
-                  {title}
-                </th>
-              ),
-            )}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {students.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
-                No hay alumnos para estos filtros.
-              </td>
-            </tr>
-          ) : (
-            students.map((student) => (
-              <tr key={student.id}>
-                <th scope="row" className="px-4 py-3 text-left font-medium text-text-primary">
-                  {student.nombreCompleto}
-                </th>
-                <td className="px-4 py-3 text-text-secondary">{student.cedula}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
-                  {student.telefono ?? "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <ActiveBadge active={student.activo} />
-                </td>
-                <td className="min-w-64 px-4 py-3">
-                  <ul className="space-y-2">
-                    {student.matchingEnrollments.map((enrollment) => (
-                      <li
-                        key={enrollment.id}
-                        className="flex flex-wrap items-center gap-2 text-text-secondary"
-                      >
-                        <span>Tipo {enrollment.courseType}</span>
-                        <StudentBadge status={enrollment.status} />
-                        <span>
-                          {enrollment.cohortId
-                            ? (cohorts.find((cohort) => cohort.id === enrollment.cohortId)
-                                ?.nombre ?? "Cohorte no disponible")
-                            : "Sin cohorte"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  {student.matchingEnrollments.length === 0 && (
-                    <span className="text-text-secondary">Sin matrículas coincidentes</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <Link
-                    className={buttonClassName("secondary", "sm")}
-                    href={`/admin/students/${student.id}?${filterQuery}`}
-                    aria-label={`Ver ficha de ${student.nombreCompleto}`}
-                  >
-                    Ver ficha
-                  </Link>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      columns={columns}
+      rows={students}
+      getRowKey={(student) => student.id}
+      caption="Listado de alumnos"
+      mobileCards
+      rowHref={(student) => `/admin/students/${student.id}?${filterQuery}`}
+      rowLabel={(student) => `Ver ficha de ${student.nombreCompleto}`}
+      isLoading={isLoading}
+      loadingLabel="Cargando alumnos…"
+      error={error}
+      onRetry={onRetry}
+      empty={
+        filtered ? (
+          <EmptyState
+            title="No hay resultados"
+            description="Prueba con otra búsqueda o elimina alguno de los filtros."
+            action={
+              <Button variant="secondary" onClick={onClear}>
+                Limpiar filtros
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            title="Todavía no hay alumnos"
+            description="Matricula al primer estudiante para comenzar a gestionar su curso y su cuenta."
+            action={
+              <Link href="/admin/enrollments" className={buttonClassName()}>
+                Matricular primer estudiante
+              </Link>
+            }
+          />
+        )
+      }
+    />
   );
 }
