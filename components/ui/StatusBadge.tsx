@@ -27,10 +27,11 @@ const STATUS_CLASSES: Record<PracticeSlotStatus, string> = {
 
 export interface StatusBadgeProps {
   status: PracticeSlotStatus;
+  label?: string;
   className?: string;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   return (
     <span
       className={cn(
@@ -39,7 +40,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
         className,
       )}
     >
-      {STATUS_LABELS[status]}
+      {label ?? STATUS_LABELS[status]}
     </span>
   );
 }
