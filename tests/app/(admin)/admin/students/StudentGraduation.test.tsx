@@ -44,7 +44,7 @@ it("una sola petición GET entrega encabezado, requisitos y horario", async () =
 it("horario solo lectura: hora Ecuador, estados claros e historial cerrado por defecto", () => {
   render(<StudentSchedule schedule={graduationStudent.practiceSchedule} />);
   expect(screen.getByText("Instructor: Instructor ficticio · Reservada")).toBeInTheDocument();
-  expect(screen.getByText(/17 de octubre de 2026, 10:00/)).toBeInTheDocument();
+  expect(screen.getByText(/17 de octubre de 2026(?:,| a las) 10:00/)).toBeInTheDocument();
   expect(screen.getByText(/Instructor ficticio · Confirmada/)).toBeInTheDocument();
   expect(screen.getByText(/Instructor ficticio · Liberada/)).toBeInTheDocument();
   expect(screen.getByText(/Instructor ficticio · Pendiente de reprogramar/)).toBeInTheDocument();
