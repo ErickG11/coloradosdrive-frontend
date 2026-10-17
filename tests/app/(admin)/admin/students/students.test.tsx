@@ -58,6 +58,8 @@ const detail: Detail = {
   ciudadania: null,
   direccion: null,
   updatedAt: "2026-01-01T00:00:00.123456Z",
+  graduation: { pendingCount: null, enrollments: [] },
+  practiceSchedule: { upcoming: [], recovery: [], recent: [] },
   enrollments: [
     {
       enrollmentId: "pendiente",
