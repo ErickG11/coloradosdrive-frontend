@@ -39,3 +39,5 @@ AGENTS.md
 CLAUDE.md
 # Local browser authentication state
 .local-auth/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
