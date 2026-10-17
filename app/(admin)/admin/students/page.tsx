@@ -16,7 +16,7 @@ import {
 import { StudentFilters } from "./StudentFilters";
 import { StudentTable } from "./StudentTable";
 
-export function StudentsList() {
+function StudentsList() {
   const params = useSearchParams();
   const router = useRouter();
   const filters = readStudentFilters(params);
@@ -36,6 +36,16 @@ export function StudentsList() {
   function change(value: Partial<Filters>) {
     router.replace(studentListHref(changeStudentFilter(filters, value)), { scroll: false });
   }
+  const hasFilters = Boolean(
+    q ||
+    filters.courseId ||
+    filters.cohortId ||
+    filters.pendienteCohorte ||
+    filters.documentosPendientes ||
+    filters.activo ||
+    filters.incluirHistorial,
+  );
+  const summary = list.data?.cohortSummary;
   const catalogError = courses.error || cohorts.error;
   return (
     <div className="flex flex-col gap-6">
@@ -63,6 +73,18 @@ export function StudentsList() {
           }}
           onChange={change}
         />
+        {hasFilters && (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setQ("");
+              setSearch("");
+              router.replace("/admin/students?page=1", { scroll: false });
+            }}
+          >
+            Limpiar filtros
+          </Button>
+        )}
       </Card>
       {catalogError && (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-accent-red">
@@ -91,6 +113,20 @@ export function StudentsList() {
         </div>
       ) : (
         <>
+          {filters.cohortId && summary?.id === filters.cohortId && (
+            <Card>
+              <p>
+                Cohorte {summary.name}: {summary.activeStudents} alumnos activos (
+                {summary.usedCapacity}/{summary.totalCapacity} cupos)
+              </p>
+              {search && (
+                <p>
+                  Mostrando {summary.matchingActiveStudents} de {summary.activeStudents} alumnos
+                  activos
+                </p>
+              )}
+            </Card>
+          )}
           <StudentTable
             students={list.data?.items ?? []}
             cohorts={cohorts.data ?? []}

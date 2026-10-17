@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
-import { StudentDeletionsList } from "@/app/(admin)/admin/students/deletions/page";
-import { StudentsList } from "@/app/(admin)/admin/students/page";
+import StudentDeletionsList from "@/app/(admin)/admin/students/deletions/page";
+import StudentsList from "@/app/(admin)/admin/students/page";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
