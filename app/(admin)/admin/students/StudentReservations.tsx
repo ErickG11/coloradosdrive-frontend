@@ -17,6 +17,11 @@ const reasons: Record<string, string> = {
   error_reserva: "No se pudo recuperar la reserva. Requiere revisión.",
   reintentar_recuperacion: "No se pudo confirmar la recuperación. Requiere revisión.",
 };
+export function practiceRecoveryReason(reason: string | null) {
+  return reason
+    ? (reasons[reason] ?? "Motivo no disponible; requiere revisión.")
+    : "Se intentará recuperar al reactivar al alumno.";
+}
 function localDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
