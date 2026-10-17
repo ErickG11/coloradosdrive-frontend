@@ -18,24 +18,30 @@ export function StudentTable({
         <caption className="sr-only">Alumnos y matrículas coincidentes</caption>
         <thead className="bg-bg-sunken">
           <tr>
-            {["Nombre", "Cédula", "Teléfono", "Estado", "Matrículas coincidentes", "Ficha"].map(
-              (title) => (
-                <th
-                  key={title}
-                  scope="col"
-                  className="px-4 py-3 text-left font-medium text-text-secondary"
-                >
-                  {title}
-                </th>
-              ),
-            )}
+            {[
+              "Nombre",
+              "Cédula",
+              "Teléfono",
+              "Estado",
+              "Matrículas coincidentes",
+              "Requisitos",
+              "Ficha",
+            ].map((title) => (
+              <th
+                key={title}
+                scope="col"
+                className="px-4 py-3 text-left font-medium text-text-secondary"
+              >
+                {title}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {students.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
-                No hay alumnos para estos filtros.
+              <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
+                No hay alumnos con esos filtros
               </td>
             </tr>
           ) : (
@@ -71,6 +77,34 @@ export function StudentTable({
                   </ul>
                   {student.matchingEnrollments.length === 0 && (
                     <span className="text-text-secondary">Sin matrículas coincidentes</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-text-secondary">
+                  {student.requirements ? (
+                    <details>
+                      <summary className="cursor-pointer">
+                        {student.requirements.pending.length > 0
+                          ? student.requirements.pending.length + " pendientes"
+                          : student.requirements.unavailable.length === 0
+                            ? "Completo"
+                            : "Sin pendientes verificables"}
+                        {student.requirements.unavailable.length > 0 && (
+                          <span className="block">
+                            {student.requirements.unavailable.length} sin verificar
+                          </span>
+                        )}
+                      </summary>
+                      <ul className="mt-2 space-y-1">
+                        {student.requirements.pending.map((item) => (
+                          <li key={item}>{item}: pendiente</li>
+                        ))}
+                        {student.requirements.unavailable.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : (
+                    "No disponible"
                   )}
                 </td>
                 <td className="px-4 py-3">
