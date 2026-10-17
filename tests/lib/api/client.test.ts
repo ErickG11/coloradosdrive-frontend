@@ -27,6 +27,23 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("apiFetch / api client", () => {
+  it("conserva code y field de errores estructurados", async () => {
+    mockSession("test-access-token");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ message: "Duplicado", code: "CEDULA_DUPLICATE", field: "cedula" }, 409),
+        ),
+    );
+    await expect(apiFetch("/admin/estudiantes/test-id")).rejects.toMatchObject({
+      status: 409,
+      message: "Duplicado",
+      code: "CEDULA_DUPLICATE",
+      field: "cedula",
+    });
+  });
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     mockSession("test-access-token");
