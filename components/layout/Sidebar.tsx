@@ -41,7 +41,8 @@ export function Sidebar({ email, role }: SidebarProps) {
   const isAdminStudentsActive = pathname.startsWith("/admin/students");
   const isStudentExamsActive = pathname.startsWith("/student/exams");
   const isStudentScheduleActive = pathname.startsWith("/student/schedule");
-  const isInstructorScheduleActive = pathname.startsWith("/instructor/schedule");
+  const isInstructorScheduleActive =
+    pathname === "/instructor" || pathname.startsWith("/instructor/schedule");
 
   function closeDrawer() {
     setIsOpen(false);
@@ -123,7 +124,7 @@ export function Sidebar({ email, role }: SidebarProps) {
         ) : null}
         {role === "instructor" ? (
           <SidebarLink
-            href="/instructor/schedule"
+            href="/instructor"
             active={isInstructorScheduleActive}
             onClick={closeDrawer}
           >
