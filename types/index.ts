@@ -9,3 +9,4 @@ export * from "./exam";
 export * from "./examAttempt";
 export * from "./practiceSlot";
 export * from "./instructor";
+export * from "./student";

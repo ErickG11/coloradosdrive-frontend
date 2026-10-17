@@ -18,6 +18,15 @@ function renderSidebar(role: "admin" | "estudiante" | "instructor" | null) {
 }
 
 describe("Sidebar", () => {
+  it.each(["admin", "estudiante", "instructor", null] as const)(
+    "Alumnos solo aparece para admin: %s",
+    (role) => {
+      renderSidebar(role);
+      const links = screen.queryAllByRole("link", { name: /Alumnos/ });
+      expect(links.length).toBe(role === "admin" ? 1 : 0);
+      for (const link of links) expect(link).toHaveAttribute("href", "/admin/students");
+    },
+  );
   it("admin: ve Cohortes, Matricular estudiante, Exámenes y Horarios de práctica, pero no la sección de estudiante", () => {
     renderSidebar("admin");
 
