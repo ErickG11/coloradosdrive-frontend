@@ -102,7 +102,15 @@ export function studentEditError(error: unknown): {
   message: string;
   field?: ProfileField;
   reload?: boolean;
+  deletionPending?: boolean;
 } {
+  if (error instanceof ApiError && ["CD030", "DELETION_PENDING"].includes(error.code ?? ""))
+    return {
+      message:
+        "El alumno tiene una eliminación pendiente. Consulta las eliminaciones pendientes para reanudarla.",
+      reload: true,
+      deletionPending: true,
+    };
   if (!(error instanceof ApiError)) return { message: unconfirmedMessage, reload: true };
   if (error.status === 503 || error.code === "UNCONFIRMED")
     return { message: unconfirmedMessage, reload: true };
