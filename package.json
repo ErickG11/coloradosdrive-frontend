@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:tz": "node scripts/test-tz.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {
