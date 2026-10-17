@@ -66,7 +66,7 @@ describe("Sidebar", () => {
     const scheduleLinks = screen.getAllByRole("link", { name: /Horarios de práctica/ });
     expect(scheduleLinks.length).toBeGreaterThan(0);
     for (const link of scheduleLinks) {
-      expect(link).toHaveAttribute("href", "/instructor/schedule");
+      expect(link).toHaveAttribute("href", "/instructor");
     }
   });
 });
