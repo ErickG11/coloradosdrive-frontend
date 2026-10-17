@@ -7,22 +7,32 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { addWeeks, dayKey, formatWeekRangeLabel, getWeekDays } from "@/lib/utils/calendar";
 import { formatSchoolTime, schoolCalendarDate, schoolWeekRange } from "@/lib/utils/schoolTime";
-import type { PracticeSlot, PracticeSlotStatus, PracticeSlotWithNames } from "@/types";
+import type { PracticeSlot, PracticeSlotWithNames } from "@/types";
 
 const DAY_INITIALS = ["L", "M", "X", "J", "V", "S", "D"];
-const INSTRUCTOR_STATUS_LABELS: Record<PracticeSlotStatus, string> = {
-  disponible: "Libre",
-  liberado: "Libre",
+type StudentSlotStatus = "asignado" | "confirmado" | "completado";
+type StudentSlot = PracticeSlotWithNames & { status: StudentSlotStatus };
+const INSTRUCTOR_STATUS_LABELS: Record<StudentSlotStatus, string> = {
   asignado: "Reservada",
   confirmado: "Confirmada",
   completado: "Realizada",
-  sin_practica: "Sin alumno",
 };
+
+function hasStudent(slot: PracticeSlotWithNames): slot is StudentSlot {
+  return (
+    slot.studentId !== null &&
+    (slot.status === "asignado" || slot.status === "confirmado" || slot.status === "completado")
+  );
+}
+
+function isFree(slot: PracticeSlotWithNames): boolean {
+  return slot.studentId === null && (slot.status === "disponible" || slot.status === "liberado");
+}
 
 // Recibe una fecha civil, como las que produce schoolCalendarDate.
 function formatDayLabel(day: Date): string {
-  const weekday = day.toLocaleDateString("es-EC", { weekday: "long" });
-  const month = day.toLocaleDateString("es-EC", { month: "long" });
+  const weekday = day.toLocaleDateString("es-EC", { weekday: "long" }).toLocaleLowerCase("es-EC");
+  const month = day.toLocaleDateString("es-EC", { month: "long" }).toLocaleLowerCase("es-EC");
   return `${weekday[0].toUpperCase()}${weekday.slice(1)} ${day.getDate()} de ${month}`;
 }
 
@@ -179,6 +189,11 @@ export default function InstructorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updates, setUpdates] = useState<Record<string, PracticeSlot>>({});
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   useEffect(() => {
     let active = true;
     const { from, to } = schoolWeekRange(requestedWeek);
@@ -227,9 +242,13 @@ export default function InstructorPage() {
     }
     return result;
   }, [data, updates]);
-  const todayKey = dayKey(schoolCalendarDate(new Date()));
+  const todayKey = dayKey(schoolCalendarDate(now));
   const selectedKey = dayKey(currentDate);
   const selectedSlots = groups.get(selectedKey) ?? [];
+  const studentSlots = selectedSlots.filter(hasStudent);
+  const freeHours = selectedSlots
+    .filter((slot) => isFree(slot) && (selectedKey !== todayKey || Date.parse(slot.scheduledAt) >= now.getTime()))
+    .map((slot) => formatSchoolTime(slot.scheduledAt));
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -268,7 +287,7 @@ export default function InstructorPage() {
       <nav aria-label="Días de la semana" className="grid min-w-0 grid-cols-7 gap-1">
         {days.map((day, index) => {
           const key = dayKey(day);
-          const count = (groups.get(key) ?? []).filter((slot) => slot.studentId !== null).length;
+          const count = (groups.get(key) ?? []).filter(hasStudent).length;
           const isToday = key === todayKey;
           return (
             <Button
@@ -312,13 +331,11 @@ export default function InstructorPage() {
             {formatDayLabel(currentDate)}
           </h2>
           <Card className="min-w-0">
-            {selectedSlots.length === 0 ? (
-              <p className="text-sm text-text-secondary">No tienes franjas este día.</p>
+            {studentSlots.length === 0 ? (
+              <p className="text-sm text-text-secondary">No tienes prácticas con alumno este día.</p>
             ) : (
               <div className="flex flex-col divide-y divide-border">
-                {selectedSlots.map((slot) => {
-                  const isFree = slot.status === "disponible" || slot.status === "liberado";
-                  const isMuted = isFree || slot.status === "sin_practica";
+                {studentSlots.map((slot) => {
                   const end = new Date(
                     Date.parse(slot.scheduledAt) + slot.durationMinutes * 60_000,
                   );
@@ -331,28 +348,15 @@ export default function InstructorPage() {
                       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                         <time
                           dateTime={slot.scheduledAt}
-                          className={
-                            isMuted
-                              ? "font-medium text-text-secondary"
-                              : "font-medium text-text-primary"
-                          }
+                          className="font-medium text-text-primary"
                         >
                           {formatSchoolTime(slot.scheduledAt)} –{" "}
                           {formatSchoolTime(end.toISOString())}
                         </time>
-                        {!isMuted ? (
-                          <StatusBadge
-                            status={slot.status}
-                            label={INSTRUCTOR_STATUS_LABELS[slot.status]}
-                          />
-                        ) : slot.status === "sin_practica" ? (
-                          <span className="text-sm text-text-secondary">Sin alumno</span>
-                        ) : null}
+                        <StatusBadge status={slot.status} label={INSTRUCTOR_STATUS_LABELS[slot.status]} />
                       </div>
-                      <p
-                        className={`break-words text-sm ${isMuted ? "text-text-secondary" : "text-text-primary"}`}
-                      >
-                        {isFree ? "Libre" : (slot.studentName ?? "Libre")}
+                      <p className="break-words text-sm text-text-primary">
+                        {slot.studentName ?? "Alumno no disponible"}
                       </p>
                       {slot.status === "completado" ? (
                         <SlotAttendance
@@ -367,6 +371,9 @@ export default function InstructorPage() {
                 })}
               </div>
             )}
+            {freeHours.length > 0 ? (
+              <p className="text-sm text-text-secondary">Horas libres: {freeHours.join(", ")}</p>
+            ) : null}
           </Card>
         </section>
       ) : null}

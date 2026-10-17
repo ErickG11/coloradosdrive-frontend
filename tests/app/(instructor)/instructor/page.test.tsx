@@ -120,7 +120,7 @@ describe("agenda diaria del instructor", () => {
     );
     expect(get).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole("button", { name: /Miércoles 11 de marzo/ }));
-    expect(screen.getByText("No tienes franjas este día.")).toBeInTheDocument();
+    expect(screen.getByText("No tienes prácticas con alumno este día.")).toBeInTheDocument();
   });
 
   it("navega por semanas, conserva el día de semana y mantiene los datos mientras carga", async () => {
@@ -143,7 +143,7 @@ describe("agenda diaria del instructor", () => {
     await act(async () => resolve([]));
     expect(screen.getByText("16 - 22 de marzo, 2026")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Martes 17 de marzo" })).toBeInTheDocument();
-    expect(screen.getByText("No tienes franjas este día.")).toBeInTheDocument();
+    expect(screen.getByText("No tienes prácticas con alumno este día.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Semana anterior" }));
     expect(get).toHaveBeenLastCalledWith(currentPath);
     expect(await screen.findByText("Ana Torres")).toBeInTheDocument();
@@ -164,7 +164,7 @@ describe("agenda diaria del instructor", () => {
     expect(screen.getByText("Ana Torres")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Hoy" }));
     expect(get).toHaveBeenLastCalledWith(currentPath);
-    expect(await screen.findByText("No tienes franjas este día.")).toBeInTheDocument();
+    expect(await screen.findByText("No tienes prácticas con alumno este día.")).toBeInTheDocument();
   });
 
   it("muestra carga y error inicial sin presentar datos de otra pantalla", async () => {
@@ -176,38 +176,57 @@ describe("agenda diaria del instructor", () => {
   });
 
   it.each([
-    ["disponible", "Libre", false],
-    ["liberado", "Libre", false],
-    ["asignado", "Reservada", true],
-    ["confirmado", "Confirmada", true],
-    ["completado", "Realizada", true],
-    ["sin_practica", "Sin alumno", false],
+    ["asignado", "Reservada"],
+    ["confirmado", "Confirmada"],
+    ["completado", "Realizada"],
   ] as const)(
-    "traduce %s a %s y muestra asistencia solo si fue realizada",
-    async (status, label, hasStudent) => {
-      get.mockResolvedValueOnce([
-        {
-          ...slot,
-          status,
-          studentId: hasStudent ? slot.studentId : null,
-          studentName: hasStudent ? slot.studentName : null,
-        },
-      ]);
+    "muestra %s con alumno como %s y asistencia solo si fue realizada",
+    async (status, label) => {
+      get.mockResolvedValueOnce([{ ...slot, status }]);
       render(<InstructorPage />);
       const row = await screen.findByRole("article");
       expect(within(row).getByText(label)).toBeInTheDocument();
-      expect(within(row).getByText(hasStudent ? "Ana Torres" : "Libre")).toBeInTheDocument();
-      if (!hasStudent) expect(row.querySelector(".rounded-full")).toBeNull();
+      expect(within(row).getByText("Ana Torres")).toBeInTheDocument();
       expect(screen.queryAllByRole("button", { name: "Asistió" })).toHaveLength(
         status === "completado" ? 1 : 0,
       );
       expect(
         screen.getByRole("button", {
-          name: new RegExp(`Martes 10 de marzo, ${hasStudent ? 1 : 0} franjas con alumno`),
+          name: /Martes 10 de marzo, 1 franjas con alumno/,
         }),
       ).toBeInTheDocument();
     },
   );
+
+  it("muestra las horas libres en una línea, omite sin_practica y filtra las pasadas de hoy", async () => {
+    get.mockResolvedValueOnce([
+      slot,
+      { ...slot, id: "past", status: "disponible", studentId: null, studentName: null, scheduledAt: "2026-03-10T14:00:00Z" },
+      { ...slot, id: "free", status: "disponible", studentId: null, studentName: null, scheduledAt: "2026-03-10T16:00:00Z" },
+      { ...slot, id: "released", status: "liberado", studentId: null, studentName: null, scheduledAt: "2026-03-10T17:00:00Z" },
+      { ...slot, id: "no-practice", status: "sin_practica", studentId: null, studentName: null, scheduledAt: "2026-03-10T18:00:00Z" },
+    ]);
+    render(<InstructorPage />);
+    expect(await screen.findByText("Ana Torres")).toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(1);
+    expect(screen.getByText("Horas libres: 11:00, 12:00")).toBeInTheDocument();
+    expect(screen.queryByText("09:00")).not.toBeInTheDocument();
+    expect(screen.queryByText(/sin_practica|Sin alumno|Liberado/i)).not.toBeInTheDocument();
+  });
+
+  it("muestra las horas libres de un día anterior y deja vacío si solo hay sin_practica", async () => {
+    get.mockResolvedValueOnce([
+      { ...slot, id: "free-yesterday", status: "disponible", studentId: null, studentName: null, scheduledAt: "2026-03-09T13:00:00Z" },
+      { ...slot, id: "no-practice-yesterday", status: "sin_practica", studentId: null, studentName: null, scheduledAt: "2026-03-09T14:00:00Z" },
+    ]);
+    const user = userEvent.setup();
+    render(<InstructorPage />);
+    await screen.findByText("No tienes prácticas con alumno este día.");
+    await user.click(screen.getByRole("button", { name: /Lunes 9 de marzo/ }));
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    expect(screen.getByText("Horas libres: 08:00")).toBeInTheDocument();
+    expect(screen.queryByText("09:00")).not.toBeInTheDocument();
+  });
 
   it.each([true, false])(
     "registra attended=%s sin confirmación y conserva el nombre del alumno",
@@ -332,11 +351,11 @@ describe("bordes de Guayaquil independientes de TZ del runner", () => {
     get.mockResolvedValue([]);
     const user = userEvent.setup();
     render(<InstructorPage />);
-    await screen.findByText("No tienes franjas este día.");
+    await screen.findByText("No tienes prácticas con alumno este día.");
     expect(get).toHaveBeenCalledWith(rangePath(from, to));
     expect(screen.getByRole("heading", { name: day })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Semana siguiente" }));
-    await screen.findByText("No tienes franjas este día.");
+    await screen.findByText("No tienes prácticas con alumno este día.");
     await user.click(screen.getByRole("button", { name: "Hoy" }));
     expect(await screen.findByRole("heading", { name: day })).toBeInTheDocument();
     expect(get).toHaveBeenLastCalledWith(rangePath(from, to));
