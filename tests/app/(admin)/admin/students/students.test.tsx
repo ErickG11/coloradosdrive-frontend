@@ -92,15 +92,17 @@ let state: {
 function mock() {
   vi.mocked(useFetch).mockImplementation(((path: string) => ({
     refetch,
-    ...(path === "/courses"
-      ? {
-          data: [course, { ...course, id: anotherCourse, nombre: "Otro curso" }],
-          error: null,
-          isLoading: false,
-        }
-      : path === "/cohorts"
-        ? { data: [cohort], error: null, isLoading: false }
-        : { ...state }),
+    ...(path.endsWith("/reservas-pendientes")
+      ? { data: [], isLoading: false, error: null }
+      : path === "/courses"
+        ? {
+            data: [course, { ...course, id: anotherCourse, nombre: "Otro curso" }],
+            error: null,
+            isLoading: false,
+          }
+        : path === "/cohorts"
+          ? { data: [cohort], error: null, isLoading: false }
+          : { ...state }),
   })) as typeof useFetch);
 }
 beforeEach(() => {

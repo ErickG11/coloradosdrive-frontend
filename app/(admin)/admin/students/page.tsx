@@ -1,7 +1,8 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, buttonClassName } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import type { Course, Cohort, StudentList } from "@/types";
 import {
@@ -39,6 +40,17 @@ export function StudentsList() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-display text-2xl font-bold text-text-primary">Alumnos</h1>
+      <Link
+        className={buttonClassName("secondary", "sm", "self-start")}
+        href="/admin/students/deletions"
+      >
+        Eliminaciones pendientes
+      </Link>
+      {params.get("aviso") === "alumno-eliminado" && (
+        <p role="status" className="text-accent-blue">
+          El alumno se eliminó definitivamente.
+        </p>
+      )}
       <Card>
         <StudentFilters
           filters={filters}
