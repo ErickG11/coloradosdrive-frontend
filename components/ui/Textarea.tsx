@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import type { TextareaHTMLAttributes } from "react";
 
+import { useValidationMessages } from "@/hooks/useValidationMessages";
 import { cn } from "@/lib/utils/cn";
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -15,9 +16,13 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
 // comunica bien (enunciado de una pregunta, respuesta correcta de texto
 // abierto).
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { className, label, error, id, name, rows = 3, ...props },
+  { className, label, error, id, name, rows = 3, onInvalid, onInput, ...props },
   ref,
 ) {
+  const validation = useValidationMessages<HTMLTextAreaElement>(
+    { onInvalid, onInput },
+    props.value,
+  );
   const textareaId = id ?? name;
   const errorId = error && textareaId ? `${textareaId}-error` : undefined;
 
@@ -41,9 +46,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
           className,
         )}
         {...props}
+        onInvalid={validation.onInvalid}
+        onInput={validation.onInput}
       />
       {error ? (
-        <p id={errorId} className="text-sm text-accent-red">
+        <p id={errorId} role="alert" className="text-sm text-accent-red">
           {error}
         </p>
       ) : null}

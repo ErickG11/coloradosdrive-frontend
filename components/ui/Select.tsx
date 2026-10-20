@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import type { SelectHTMLAttributes } from "react";
 
+import { useValidationMessages } from "@/hooks/useValidationMessages";
 import { cn } from "@/lib/utils/cn";
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -14,9 +15,10 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 // chevron es un SVG en línea (sin librería de íconos nueva) superpuesto
 // sobre un <select appearance-none> para poder estilizarlo con los tokens.
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
-  { className, label, error, id, name, children, ...props },
+  { className, label, error, id, name, children, onInvalid, onInput, ...props },
   ref,
 ) {
+  const validation = useValidationMessages<HTMLSelectElement>({ onInvalid, onInput }, props.value);
   const selectId = id ?? name;
   const errorId = error && selectId ? `${selectId}-error` : undefined;
 
@@ -40,6 +42,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
             className,
           )}
           {...props}
+          onInvalid={validation.onInvalid}
+          onInput={validation.onInput}
         >
           {children}
         </select>
@@ -59,7 +63,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         </svg>
       </div>
       {error ? (
-        <p id={errorId} className="text-sm text-accent-red">
+        <p id={errorId} role="alert" className="text-sm text-accent-red">
           {error}
         </p>
       ) : null}
