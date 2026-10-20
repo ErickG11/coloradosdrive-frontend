@@ -19,10 +19,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   { className, label, error, id, name, rows = 3, onInvalid, onInput, ...props },
   ref,
 ) {
-  const validation = useValidationMessages<HTMLTextAreaElement>(
-    { onInvalid, onInput },
-    props.value,
-  );
+  const validation = useValidationMessages<HTMLTextAreaElement>({ onInvalid, onInput });
   const textareaId = id ?? name;
   const errorId = error && textareaId ? `${textareaId}-error` : undefined;
 

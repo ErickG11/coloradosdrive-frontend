@@ -94,6 +94,50 @@ describe("Input", () => {
       expect(input.checkValidity()).toBe(true);
     });
 
+    it("clears the message when the field becomes valid because min changed", () => {
+      const { rerender } = render(
+        <Input label="Cupo" name="cupo" type="number" min="5" value="3" onChange={() => {}} />,
+      );
+
+      const input = screen.getByLabelText("Cupo") as HTMLInputElement;
+      input.checkValidity();
+      expect(input.validationMessage).toBe("El valor debe ser como mínimo 5.");
+
+      rerender(
+        <Input label="Cupo" name="cupo" type="number" min="1" value="3" onChange={() => {}} />,
+      );
+
+      expect(input.validationMessage).toBe("");
+      expect(input.checkValidity()).toBe(true);
+    });
+
+    it("clears the message when required is lifted", () => {
+      const { rerender } = render(<Input label="Nombre" name="nombre" required defaultValue="" />);
+
+      const input = screen.getByLabelText("Nombre") as HTMLInputElement;
+      input.checkValidity();
+      expect(input.validationMessage).toBe("Completa este campo.");
+
+      rerender(<Input label="Nombre" name="nombre" defaultValue="" />);
+
+      expect(input.validationMessage).toBe("");
+      expect(input.checkValidity()).toBe(true);
+    });
+
+    it("updates the message when the limit changes but the field is still invalid", () => {
+      const { rerender } = render(
+        <Input label="Cupo" name="cupo" type="number" min="5" value="3" onChange={() => {}} />,
+      );
+
+      const input = screen.getByLabelText("Cupo") as HTMLInputElement;
+      input.checkValidity();
+      rerender(
+        <Input label="Cupo" name="cupo" type="number" min="10" value="3" onChange={() => {}} />,
+      );
+
+      expect(input.validationMessage).toBe("El valor debe ser como mínimo 10.");
+    });
+
     it("keeps a custom message set by the form itself", async () => {
       const user = userEvent.setup();
       render(<Input label="Nombre" name="nombre" required />);
