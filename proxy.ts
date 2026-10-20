@@ -25,6 +25,14 @@ function matchProtectedPrefix(pathname: string): string | undefined {
 export async function proxy(request: NextRequest) {
   const { supabaseResponse, user, accessToken } = await updateSession(request);
 
+  // Con sesión activa, /login lleva al home del rol (igual que "/"). Sin rol
+  // se muestra el formulario: así no hay bucle con "/" -> "/login".
+  if (request.nextUrl.pathname === "/login" && user) {
+    const role = getUserRole(user);
+    if (role) return NextResponse.redirect(new URL(getRoleHomePath(role), request.url));
+    return supabaseResponse;
+  }
+
   const matchedPrefix = matchProtectedPrefix(request.nextUrl.pathname);
   if (!matchedPrefix) {
     return supabaseResponse;
@@ -50,7 +58,8 @@ export async function proxy(request: NextRequest) {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     });
-    if (role === "instructor" && status.status === 403)
+    // 403 = cuenta desactivada (el JWT puede seguir vigente unos minutos).
+    if (status.status === 403)
       return NextResponse.redirect(new URL("/account-inactive", request.url));
     if (!status.ok)
       return NextResponse.json(
