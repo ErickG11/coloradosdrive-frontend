@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { Card } from "@/components/ui";
 import { LogoutButton } from "@/components/layout/LogoutButton";
+
+export const metadata: Metadata = { title: "Cuenta inactiva" };
 
 export default function AccountInactivePage() {
   return (

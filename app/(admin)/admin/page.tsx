@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Card } from "@/components/ui";
+
+export const metadata: Metadata = { title: "Panel de administrador" };
 
 // Panel raíz simple a propósito: sin KPIs ni gráficas (RF-08 es Sprint 7,
 // se construye ahí con datos reales). Los enlaces duplican los del Sidebar

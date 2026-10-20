@@ -22,7 +22,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ColoradosDrive",
+  // Cada pantalla define su título en un layout/página y la plantilla le
+  // agrega el sufijo: «Cohortes · ColoradosDrive».
+  title: { default: "ColoradosDrive", template: "%s · ColoradosDrive" },
   description: "Plataforma de gestión de la escuela de conducción ColoradosDrive.",
 };
 
