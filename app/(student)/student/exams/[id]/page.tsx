@@ -148,12 +148,18 @@ export default function TakeExamPage() {
   }
 
   if (view.phase === "loading") {
-    return <p className="text-sm text-text-secondary">Cargando…</p>;
+    return (
+      <div className="flex flex-col gap-4">
+        <ExamHeading />
+        <p className="text-sm text-text-secondary">Cargando…</p>
+      </div>
+    );
   }
 
   if (view.phase === "error") {
     return (
       <div className="flex flex-col gap-4">
+        <ExamHeading />
         <FormError>{view.message}</FormError>
         <BackToListLink />
       </div>
@@ -187,6 +193,14 @@ export default function TakeExamPage() {
   }
 
   return <ResultDetailScreen result={view.result} />;
+}
+
+// Mientras no se conoce el examen (cargando o con error) la pantalla igual
+// necesita su h1; con el examen cargado el h1 es su título.
+function ExamHeading() {
+  return (
+    <h1 className="font-display text-2xl font-bold tracking-tight text-text-primary">Examen</h1>
+  );
 }
 
 function BackToListLink() {
