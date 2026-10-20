@@ -18,7 +18,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { className, label, error, id, name, onInvalid, onInput, ...props },
   ref,
 ) {
-  const validation = useValidationMessages<HTMLInputElement>({ onInvalid, onInput }, props.value);
+  const validation = useValidationMessages<HTMLInputElement>({ onInvalid, onInput });
   const inputId = id ?? name;
   const errorId = error && inputId ? `${inputId}-error` : undefined;
 

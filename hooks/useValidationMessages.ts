@@ -14,13 +14,15 @@ interface ValidationHandlers<E extends ValidatableElement> {
  * mensajes en español: en `invalid` fija el mensaje con setCustomValidity y
  * en `input` lo limpia, para que no quede pegado una vez corregido el campo.
  * Solo toca los mensajes que él mismo puso: un setCustomValidity del
- * formulario se respeta. `value` es el valor controlado: si cambia desde el
- * código (sin evento input), el mensaje también se limpia.
+ * formulario se respeta. Después de cada render revalida el mensaje propio:
+ * si el campo ya es válido por otra vía (el valor controlado cambió sin
+ * evento input, o cambiaron min/max/required/pattern), lo limpia para no
+ * dejar el campo bloqueado por un mensaje viejo.
  */
-export function useValidationMessages<E extends ValidatableElement>(
-  { onInvalid, onInput }: ValidationHandlers<E>,
-  value: unknown,
-) {
+export function useValidationMessages<E extends ValidatableElement>({
+  onInvalid,
+  onInput,
+}: ValidationHandlers<E>) {
   const owned = useRef<{ element: E; message: string } | null>(null);
 
   const clear = useCallback((element?: E) => {
@@ -62,9 +64,19 @@ export function useValidationMessages<E extends ValidatableElement>(
     [clear, onInput],
   );
 
+  // Sin dependencias a propósito: corre tras cada render del campo.
   useEffect(() => {
-    clear();
-  }, [value, clear]);
+    const current = owned.current;
+    if (!current || current.element.validationMessage !== current.message) return;
+    current.element.setCustomValidity("");
+    const message = getValidationMessage(current.element);
+    if (message) {
+      current.element.setCustomValidity(message);
+      owned.current = { element: current.element, message };
+    } else {
+      owned.current = null;
+    }
+  });
 
   return { onInvalid: handleInvalid, onInput: handleInput };
 }

@@ -18,7 +18,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   { className, label, error, id, name, children, onInvalid, onInput, ...props },
   ref,
 ) {
-  const validation = useValidationMessages<HTMLSelectElement>({ onInvalid, onInput }, props.value);
+  const validation = useValidationMessages<HTMLSelectElement>({ onInvalid, onInput });
   const selectId = id ?? name;
   const errorId = error && selectId ? `${selectId}-error` : undefined;
 
