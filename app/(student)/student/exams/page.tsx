@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { buttonClassName, Card } from "@/components/ui";
+import { buttonClassName, Card, FormError } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { Exam, ExamAttempt } from "@/types";
@@ -108,7 +108,7 @@ export default function StudentExamsPage() {
       <h1 className="font-display text-2xl font-bold tracking-tight text-text-primary">Exámenes</h1>
 
       {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
 
       {!isLoading && !error ? (
         (data ?? []).length === 0 ? (

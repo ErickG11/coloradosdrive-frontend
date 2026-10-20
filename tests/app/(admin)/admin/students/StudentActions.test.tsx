@@ -110,6 +110,9 @@ describe("acciones en ficha", () => {
     await waitFor(() => expect(input).toHaveAttribute("aria-invalid", "true"));
     expect(nav.replace).not.toHaveBeenCalled();
     expect(onPending).not.toHaveBeenCalled();
+    // Un solo anuncio: el del campo, no uno más abajo con el mismo texto.
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(input).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
   });
   it.each([true, false])("muestra acceso y confirma cambio desde activo=%s", async (active) => {
     vi.mocked(api.post).mockResolvedValue({

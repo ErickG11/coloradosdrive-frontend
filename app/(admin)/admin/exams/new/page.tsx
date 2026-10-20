@@ -1,6 +1,6 @@
 "use client";
 
-import { Card } from "@/components/ui";
+import { Card, FormError } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import type { Course } from "@/types";
 
@@ -12,7 +12,7 @@ export default function NewExamPage() {
   return (
     <Card title="Nuevo examen" titleAs="h1">
       {isLoading ? <p className="text-sm text-text-secondary">Cargando cursos…</p> : null}
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
       {courses ? <ExamForm courses={courses} /> : null}
     </Card>
   );

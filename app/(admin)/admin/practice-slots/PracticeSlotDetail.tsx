@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { IconButton, StatusBadge } from "@/components/ui";
+import { FormError, IconButton, StatusBadge } from "@/components/ui";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -75,7 +75,7 @@ export function PracticeSlotDetail({ slot, onEdit, onDeleted }: PracticeSlotDeta
         </p>
       ) : null}
 
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
 
       <div className="flex justify-end gap-3">
         <IconButton
