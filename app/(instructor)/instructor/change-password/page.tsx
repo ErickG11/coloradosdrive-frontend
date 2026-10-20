@@ -13,17 +13,20 @@ export default function InstructorChangePasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
   const router = useRouter();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
     if (password !== confirm) {
-      setError("Las contraseñas no coinciden.");
+      // Va junto al campo de confirmación (aria-invalid + aria-describedby).
+      setConfirmError("Las contraseñas no coinciden.");
       return;
     }
+    setConfirmError(null);
     setBusy(true);
-    setError(null);
     try {
       await api.post<void>("/instructores/cambiar-password", { nuevaPassword: password });
       setPassword("");
@@ -54,10 +57,17 @@ export default function InstructorChangePasswordPage() {
           <p>Para continuar, elige una contraseña de al menos 8 caracteres.</p>
           <Input name="newPassword" label="Nueva contraseña" type="password" minLength={8}
             maxLength={128} required autoComplete="new-password" value={password}
-            onChange={(event) => setPassword(event.target.value)} />
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setConfirmError(null);
+            }} />
           <Input name="confirmPassword" label="Confirmar nueva contraseña" type="password"
             minLength={8} maxLength={128} required autoComplete="new-password" value={confirm}
-            onChange={(event) => setConfirm(event.target.value)} />
+            error={confirmError ?? undefined}
+            onChange={(event) => {
+              setConfirm(event.target.value);
+              setConfirmError(null);
+            }} />
           {error ? <p role="alert" className="text-sm text-accent-red">{error}</p> : null}
           <Button type="submit" isLoading={busy}>Guardar contraseña</Button>
         </form>
