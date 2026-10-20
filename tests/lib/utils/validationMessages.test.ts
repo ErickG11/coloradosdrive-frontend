@@ -73,6 +73,24 @@ describe("getValidationMessage", () => {
     );
   });
 
+  it("asks for a whole number when the step is 1", () => {
+    expect(getValidationMessage(input({ type: "number", step: "1", min: "0" }, "1.5"))).toBe(
+      "Escribe un número entero.",
+    );
+  });
+
+  it("limits decimals only for steps that are a power of ten", () => {
+    expect(getValidationMessage(input({ type: "number", step: "0.1" }, "1.05"))).toBe(
+      "Escribe un número con máximo 1 decimal.",
+    );
+  });
+
+  it("asks for multiples when the decimal step is not a power of ten", () => {
+    expect(getValidationMessage(input({ type: "number", step: "0.5", min: "0" }, "0.7"))).toBe(
+      "El valor debe ser un múltiplo de 0.5.",
+    );
+  });
+
   it("explains a number that cannot be parsed", () => {
     const element = withValidity(input({ type: "number" }), { badInput: true });
     expect(getValidationMessage(element)).toBe("Escribe un número válido.");

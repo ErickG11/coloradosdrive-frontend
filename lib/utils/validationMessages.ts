@@ -51,12 +51,16 @@ function badInputMessage(element: ValidatableElement): string {
 
 function stepMismatchMessage(element: ValidatableElement): string {
   const step = element instanceof HTMLInputElement ? element.step : "";
-  if (step && step !== "any") {
+  const value = Number(step);
+  if (step && step !== "any" && value > 0) {
+    if (value === 1) return "Escribe un número entero.";
     const decimals = decimalPlaces(step);
-    if (Number(step) < 1 && decimals > 0) {
+    // Paso 0.1, 0.01…: equivale a limitar los decimales. Otros pasos (0.5,
+    // 5, 10) exigen múltiplos, y decir «máximo N decimales» sería falso.
+    if (decimals > 0 && Math.abs(value - 10 ** -decimals) < 1e-12) {
       return `Escribe un número con máximo ${decimals} ${decimals === 1 ? "decimal" : "decimales"}.`;
     }
-    if (Number(step) >= 1) return `El valor debe ser un múltiplo de ${step}.`;
+    return `El valor debe ser un múltiplo de ${step}.`;
   }
   return "Escribe un valor válido.";
 }
