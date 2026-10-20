@@ -25,4 +25,21 @@ describe("Card", () => {
 
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
   });
+
+  it("renders the title as an h2 by default", () => {
+    render(<Card title="Panel">Contenido</Card>);
+
+    expect(screen.getByRole("heading", { name: "Panel", level: 2 })).toBeInTheDocument();
+  });
+
+  it("renders the title as an h1 when titleAs is h1", () => {
+    render(
+      <Card title="Nueva cohorte" titleAs="h1">
+        Contenido
+      </Card>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Nueva cohorte", level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+  });
 });

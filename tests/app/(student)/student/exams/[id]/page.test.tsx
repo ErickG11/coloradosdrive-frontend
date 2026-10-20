@@ -73,7 +73,9 @@ describe("TakeExamPage", () => {
 
     render(<TakeExamPage />);
 
-    expect(await screen.findByText("Examen de práctica - Señales")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Examen de práctica - Señales" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("30 minutos")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Comenzar examen" })).toBeInTheDocument();
     expect(mockedPost).not.toHaveBeenCalled();

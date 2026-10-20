@@ -12,7 +12,7 @@ export default function AdminPage() {
         aria-hidden="true"
         className="pointer-events-none absolute -top-16 -left-16 h-72 w-72 rounded-full bg-accent-blue/20 blur-3xl"
       />
-      <Card title="Panel de administrador" className="relative z-10">
+      <Card title="Panel de administrador" titleAs="h1" className="relative z-10">
         <nav className="flex flex-col gap-2 text-sm">
           <Link
             href="/admin/cohorts"

@@ -10,7 +10,7 @@ export default function NewExamPage() {
   const { data: courses, isLoading, error } = useFetch<Course[]>("/courses");
 
   return (
-    <Card title="Nuevo examen">
+    <Card title="Nuevo examen" titleAs="h1">
       {isLoading ? <p className="text-sm text-text-secondary">Cargando cursos…</p> : null}
       {error ? <p className="text-sm text-accent-red">{error}</p> : null}
       {courses ? <ExamForm courses={courses} /> : null}

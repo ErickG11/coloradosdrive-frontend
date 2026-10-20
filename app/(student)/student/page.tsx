@@ -9,7 +9,7 @@ export default function StudentPage() {
         aria-hidden="true"
         className="pointer-events-none absolute -top-16 -left-16 h-72 w-72 rounded-full bg-accent-blue/20 blur-3xl"
       />
-      <Card title="Panel de estudiante" className="relative z-10">
+      <Card title="Panel de estudiante" titleAs="h1" className="relative z-10">
         <p className="text-sm text-text-secondary">Próximamente.</p>
       </Card>
     </div>
