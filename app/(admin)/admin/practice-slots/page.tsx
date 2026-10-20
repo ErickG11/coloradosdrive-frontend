@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { Button, IconButton, Modal, Select } from "@/components/ui";
+import { Button, FormError, IconButton, Modal, Select } from "@/components/ui";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { useFetch } from "@/hooks/useFetch";
 import {
@@ -163,7 +163,7 @@ export default function PracticeSlotsPage() {
       </div>
 
       {isLoadingSlots ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
 
       {!isLoadingSlots && !error ? (
         <PracticeSlotCalendar

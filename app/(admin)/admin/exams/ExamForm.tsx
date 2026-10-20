@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { Button, Input, Select } from "@/components/ui";
+import { Button, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { Course, CreateQuestionInput, ExamType, UpdateQuestionInput } from "@/types";
@@ -299,7 +299,7 @@ export function ExamForm({ courses, examId, initialValues }: ExamFormProps) {
         ))}
       </div>
 
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
 
       <Button type="submit" isLoading={isSubmitting}>
         {isEditMode ? "Guardar cambios" : "Crear examen"}

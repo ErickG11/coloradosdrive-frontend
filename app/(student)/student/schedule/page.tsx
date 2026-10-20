@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Button, Card, StatusBadge } from "@/components/ui";
+import { Button, Card, FormError, StatusBadge } from "@/components/ui";
 import { CheckIcon, ClaimIcon, XIcon } from "@/components/ui/icons";
 import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { useFetch } from "@/hooks/useFetch";
@@ -127,13 +127,13 @@ export default function StudentSchedulePage() {
       </h1>
 
       {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
       {enrollmentsError ? (
         <p role="alert" className="text-sm text-accent-red">
           {enrollmentsError}
         </p>
       ) : null}
-      {actionError ? <p className="text-sm text-accent-red">{actionError}</p> : null}
+      {actionError ? <FormError>{actionError}</FormError> : null}
 
       {noPracticeNotice ? (
         <div className="flex items-center justify-between gap-4 rounded-md border border-accent-red bg-accent-red-subtle px-4 py-3 text-sm text-accent-red">

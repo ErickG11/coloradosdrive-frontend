@@ -97,3 +97,25 @@ it("devuelve el foco al correo en cada intento fallido", async () => {
   await userEvent.setup().click(screen.getByRole("button", { name: "Iniciar sesión" }));
   await waitFor(() => expect(screen.getByLabelText("Correo electrónico")).toHaveFocus());
 });
+
+it("relaciona el error con ambos campos sin duplicar el anuncio", async () => {
+  signInWithPassword.mockResolvedValue({ data: null, error: { code: "invalid_credentials" } });
+  render(<LoginForm />);
+  expect(screen.getByLabelText("Correo electrónico")).toHaveAttribute("aria-invalid", "false");
+  await submit();
+  const alert = await screen.findByRole("alert");
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
+  for (const label of ["Correo electrónico", "Contraseña"]) {
+    expect(screen.getByLabelText(label)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText(label)).toHaveAttribute("aria-describedby", alert.id);
+  }
+});
+
+it("pide en español el correo vacío y no llama al servidor", async () => {
+  render(<LoginForm />);
+  await userEvent.setup().click(screen.getByRole("button", { name: "Iniciar sesión" }));
+  expect((screen.getByLabelText("Correo electrónico") as HTMLInputElement).validationMessage).toBe(
+    "Completa este campo.",
+  );
+  expect(signInWithPassword).not.toHaveBeenCalled();
+});

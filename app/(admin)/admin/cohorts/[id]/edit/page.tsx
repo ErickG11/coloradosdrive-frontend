@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 
-import { Card } from "@/components/ui";
+import { Card, FormError } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import type { Cohort, Course } from "@/types";
 
@@ -28,10 +28,8 @@ export default function EditCohortPage() {
   return (
     <Card title="Editar cohorte" titleAs="h1">
       {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
-      {!isLoading && !error && !cohort ? (
-        <p className="text-sm text-accent-red">No se encontró la cohorte.</p>
-      ) : null}
+      {error ? <FormError>{error}</FormError> : null}
+      {!isLoading && !error && !cohort ? <FormError>No se encontró la cohorte.</FormError> : null}
       {courses && cohort ? (
         <CohortForm
           courses={courses}

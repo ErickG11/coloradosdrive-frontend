@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
-import { Button, Input, Select } from "@/components/ui";
+import { Button, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type {
@@ -174,7 +174,7 @@ export function PracticeSlotForm({
         onChange={(event) => updateField("durationMinutes", event.target.value)}
       />
 
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
 
       <div className="flex justify-end gap-3">
         <Button type="button" variant="secondary" onClick={onCancel}>

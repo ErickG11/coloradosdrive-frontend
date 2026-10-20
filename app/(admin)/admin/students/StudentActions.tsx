@@ -178,7 +178,8 @@ export function StudentActions({
                 : "Se habilitará el acceso y se intentará recuperar cada reserva cancelada por desactivación. Los conflictos quedarán pendientes de reprogramar."}
             </p>
           )}
-          {failure && (
+          {/* La confirmación inválida ya se muestra junto al campo (role=alert): no se repite. */}
+          {failure && !failure.invalidConfirmation && (
             <div role="alert" className="space-y-3 text-accent-red">
               <p>{failure.message}</p>
               {(failure.pending || started) && (

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { Button, Card, Textarea } from "@/components/ui";
+import { Button, Card, FormError, Textarea } from "@/components/ui";
 import { useCountdown } from "@/hooks/useCountdown";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -154,7 +154,7 @@ export default function TakeExamPage() {
   if (view.phase === "error") {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-accent-red">{view.message}</p>
+        <FormError>{view.message}</FormError>
         <BackToListLink />
       </div>
     );
@@ -420,7 +420,7 @@ function AnsweringScreen({
 
       {error ? (
         <div className="flex flex-col gap-2">
-          <p className="text-sm text-accent-red">{error}</p>
+          <FormError>{error}</FormError>
           <BackToListLink />
         </div>
       ) : null}

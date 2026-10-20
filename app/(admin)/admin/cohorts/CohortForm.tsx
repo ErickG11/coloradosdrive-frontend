@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { Button, Input, Select } from "@/components/ui";
+import { Button, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { Course } from "@/types";
@@ -38,6 +38,14 @@ const EMPTY_VALUES: CohortFormValues = {
   numeroAulas: "",
 };
 
+type FieldErrors = Partial<Record<keyof CohortFormValues, string>>;
+
+// Al editar una fecha de inicio se descarta también el error de su fecha de fin.
+const RELATED_ERROR: Partial<Record<keyof CohortFormValues, keyof CohortFormValues>> = {
+  fechaInicioMatricula: "fechaFinMatricula",
+  fechaInicioCurso: "fechaFinCurso",
+};
+
 interface CohortFormProps {
   courses: Course[];
   /** Presente => modo edición (PATCH). Ausente => modo creación (POST). */
@@ -60,24 +68,36 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
   const isEditMode = Boolean(cohortId);
   const [values, setValues] = useState<CohortFormValues>(initialValues ?? EMPTY_VALUES);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateField<K extends keyof CohortFormValues>(field: K, value: CohortFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
+    const related = RELATED_ERROR[field];
+    setFieldErrors((current) => {
+      if (!current[field] && !(related && current[related])) return current;
+      const next = { ...current };
+      delete next[field];
+      if (related) delete next[related];
+      return next;
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
+    // Cada regla de fechas se muestra junto al campo que hay que corregir.
+    const dateErrors: FieldErrors = {};
     if (values.fechaFinMatricula < values.fechaInicioMatricula) {
-      setError("El fin de matrícula no puede ser anterior al inicio de matrícula.");
-      return;
+      dateErrors.fechaFinMatricula =
+        "El fin de matrícula no puede ser anterior al inicio de matrícula.";
     }
     if (values.fechaFinCurso < values.fechaInicioCurso) {
-      setError("El fin de curso no puede ser anterior al inicio de curso.");
-      return;
+      dateErrors.fechaFinCurso = "El fin de curso no puede ser anterior al inicio de curso.";
     }
+    setFieldErrors(dateErrors);
+    if (Object.keys(dateErrors).length > 0) return;
 
     setIsSubmitting(true);
 
@@ -180,6 +200,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             name="fechaFinMatricula"
             type="date"
             required
+            error={fieldErrors.fechaFinMatricula}
             value={values.fechaFinMatricula}
             onChange={(event) => updateField("fechaFinMatricula", event.target.value)}
           />
@@ -206,6 +227,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             name="fechaFinCurso"
             type="date"
             required
+            error={fieldErrors.fechaFinCurso}
             value={values.fechaFinCurso}
             onChange={(event) => updateField("fechaFinCurso", event.target.value)}
           />
@@ -250,7 +272,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
         </div>
       </div>
 
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
 
       <Button type="submit" isLoading={isSubmitting}>
         {isEditMode ? "Guardar cambios" : "Crear cohorte"}
