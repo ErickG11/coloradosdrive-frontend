@@ -10,6 +10,7 @@ import { getUserRole } from "@/lib/supabase/getUserRole";
 import { getRoleHomePath } from "@/lib/utils/roleRedirect";
 
 const ERROR_ID = "login-error";
+const INVALID_CREDENTIALS = "Correo o contraseña incorrectos.";
 
 export function LoginForm() {
   const router = useRouter();
@@ -18,6 +19,9 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
+  // Solo las credenciales incorrectas son culpa de los campos; cuenta
+  // inactiva o sin rol no se corrige reescribiéndolos.
+  const fieldsInvalid = error === INVALID_CREDENTIALS;
 
   // Muestra el error y lleva el foco al correo (lo escrito se conserva).
   function fail(message: string) {
@@ -41,7 +45,7 @@ export function LoginForm() {
       fail(
         signInError.code === "user_banned"
           ? "Tu cuenta está inactiva. Contacta al administrador."
-          : "Correo o contraseña incorrectos.",
+          : INVALID_CREDENTIALS,
       );
       return;
     }
@@ -74,7 +78,7 @@ export function LoginForm() {
           <Input
             ref={emailRef}
             label="Correo electrónico"
-            aria-invalid={Boolean(error)}
+            aria-invalid={fieldsInvalid}
             aria-describedby={error ? ERROR_ID : undefined}
             type="email"
             name="email"
@@ -85,7 +89,7 @@ export function LoginForm() {
           />
           <Input
             label="Contraseña"
-            aria-invalid={Boolean(error)}
+            aria-invalid={fieldsInvalid}
             aria-describedby={error ? ERROR_ID : undefined}
             type="password"
             name="password"

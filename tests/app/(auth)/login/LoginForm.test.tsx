@@ -119,3 +119,15 @@ it("pide en español el correo vacío y no llama al servidor", async () => {
   );
   expect(signInWithPassword).not.toHaveBeenCalled();
 });
+
+it("no marca los campos como inválidos cuando la cuenta está inactiva o sin rol", async () => {
+  signInWithPassword.mockResolvedValue({ data: null, error: { code: "user_banned" } });
+  render(<LoginForm />);
+  await submit();
+  const alert = await screen.findByRole("alert");
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
+  for (const label of ["Correo electrónico", "Contraseña"]) {
+    expect(screen.getByLabelText(label)).toHaveAttribute("aria-invalid", "false");
+    expect(screen.getByLabelText(label)).toHaveAttribute("aria-describedby", alert.id);
+  }
+});
