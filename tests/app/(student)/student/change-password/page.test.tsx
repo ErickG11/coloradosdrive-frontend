@@ -19,6 +19,9 @@ beforeEach(() => {
 it("exige coincidencia y usa la API autenticada existente", async () => {
   const user = userEvent.setup();
   render(<Page />);
+  expect(
+    screen.getByRole("heading", { level: 1, name: "Cambiar contraseña temporal" }),
+  ).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Nueva contraseña"), {
     target: { value: "new-local-password" },
   });

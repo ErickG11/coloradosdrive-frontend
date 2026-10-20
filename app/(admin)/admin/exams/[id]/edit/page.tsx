@@ -52,7 +52,7 @@ export default function EditExamPage() {
   const error = coursesError ?? examError;
 
   return (
-    <Card title="Editar examen">
+    <Card title="Editar examen" titleAs="h1">
       {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
       {error ? <p className="text-sm text-accent-red">{error}</p> : null}
       {courses && exam ? (

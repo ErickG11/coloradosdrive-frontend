@@ -41,7 +41,7 @@ export default function InstructorChangePasswordPage() {
   }
 
   return (
-    <Card title="Cambiar contraseña temporal">
+    <Card title="Cambiar contraseña temporal" titleAs="h1">
       {completed ? (
         <div className="flex flex-col gap-4">
           <p role="status">Contraseña actualizada. Inicia sesión con tu nueva contraseña.</p>

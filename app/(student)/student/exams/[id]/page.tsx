@@ -202,7 +202,7 @@ function BackToListLink() {
 
 function StartScreen({ exam, onStart }: { exam: Exam; onStart: () => void }) {
   return (
-    <Card title={exam.title} className="flex flex-col gap-4">
+    <Card title={exam.title} titleAs="h1" className="flex flex-col gap-4">
       <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-text-secondary">Tipo</dt>
@@ -239,7 +239,7 @@ function SummaryScreen({
 }) {
   const resultado = attempt.passed ? "Aprobado" : "Reprobado";
   return (
-    <Card title={exam.title} className="flex flex-col gap-4">
+    <Card title={exam.title} titleAs="h1" className="flex flex-col gap-4">
       <p className="font-display text-2xl font-bold text-text-primary">
         {attempt.scorePercent?.toFixed(2)}% — {resultado}
       </p>
@@ -374,7 +374,7 @@ function AnsweringScreen({
   return (
     <div className="flex flex-col gap-6">
       <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-border bg-bg-surface-raised px-4 py-3 backdrop-blur-md">
-        <span className="font-display text-lg font-semibold text-text-primary">{exam.title}</span>
+        <h1 className="font-display text-lg font-semibold text-text-primary">{exam.title}</h1>
         <span
           className="font-display text-lg font-semibold text-text-primary"
           aria-label="Tiempo restante"
@@ -435,7 +435,7 @@ function AnsweringScreen({
 function ResultDetailScreen({ result }: { result: AttemptResult }) {
   const resultado = result.passed ? "Aprobado" : "Reprobado";
   return (
-    <Card title="Resultado" className="flex flex-col gap-4">
+    <Card title="Resultado" titleAs="h1" className="flex flex-col gap-4">
       <p className="font-display text-2xl font-bold text-text-primary">
         {result.scorePercent.toFixed(2)}% — {resultado}
       </p>
