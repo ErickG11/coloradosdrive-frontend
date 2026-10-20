@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 import { Button, Card, Input } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
@@ -15,6 +15,14 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+
+  // Muestra el error y lleva el foco al correo (lo escrito se conserva).
+  function fail(message: string) {
+    setError(message);
+    setIsLoading(false);
+    emailRef.current?.focus();
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,17 +36,20 @@ export function LoginForm() {
     });
 
     if (signInError) {
-      setError(signInError.code === "user_banned"
-        ? "Tu cuenta está inactiva. Contacta al administrador."
-        : "Correo o contraseña incorrectos.");
-      setIsLoading(false);
+      fail(
+        signInError.code === "user_banned"
+          ? "Tu cuenta está inactiva. Contacta al administrador."
+          : "Correo o contraseña incorrectos.",
+      );
       return;
     }
 
     const role = getUserRole(data.user);
     if (!role) {
-      setError("Tu cuenta no tiene un rol asignado. Contacta al administrador.");
-      setIsLoading(false);
+      // Sin rol no hay panel al que ir: se cierra la sesión recién creada
+      // para no dejar una cookie viva detrás del mensaje.
+      await supabase.auth.signOut();
+      fail("Tu cuenta no tiene un rol asignado. Contacta al administrador.");
       return;
     }
 
@@ -53,8 +64,13 @@ export function LoginForm() {
       transition={{ duration: 0.2 }}
     >
       <Card>
-        <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
+        <form
+          method="post"
+          onSubmit={(event) => void handleSubmit(event)}
+          className="flex flex-col gap-4"
+        >
           <Input
+            ref={emailRef}
             label="Correo electrónico"
             type="email"
             name="email"
@@ -72,7 +88,11 @@ export function LoginForm() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="text-sm text-accent-red">
+              {error}
+            </p>
+          ) : null}
           <Button type="submit" isLoading={isLoading}>
             Iniciar sesión
           </Button>
