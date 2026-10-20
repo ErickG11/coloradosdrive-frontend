@@ -47,8 +47,15 @@ it("no envía contraseñas que no coinciden", async () => {
     target: { value: "different-password" },
   });
   await user.click(screen.getByRole("button", { name: "Guardar contraseña" }));
-  await screen.findByRole("alert");
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Las contraseñas no coinciden.");
+  const confirm = screen.getByLabelText("Confirmar nueva contraseña");
+  expect(confirm).toHaveAttribute("aria-invalid", "true");
+  expect(confirm).toHaveAttribute("aria-describedby", alert.id);
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
   expect(api.post).not.toHaveBeenCalled();
+  fireEvent.change(confirm, { target: { value: "new-local-password" } });
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 it("no muestra el botón hacia /login hasta cerrar la sesión local", async () => {
   let finishSignOut: () => void = () => undefined;

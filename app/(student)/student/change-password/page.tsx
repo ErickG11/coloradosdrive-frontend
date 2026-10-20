@@ -10,16 +10,19 @@ export default function ChangePasswordPage() {
     [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
   const router = useRouter();
   async function submit(e: FormEvent) {
     e.preventDefault();
+    setError(null);
     if (password !== confirm) {
-      setError("Las contraseñas no coinciden.");
+      // Va junto al campo de confirmación (aria-invalid + aria-describedby).
+      setConfirmError("Las contraseñas no coinciden.");
       return;
     }
+    setConfirmError(null);
     setBusy(true);
-    setError(null);
     try {
       await api.post("/estudiantes/cambiar-password", { nuevaPassword: password });
       setPassword("");
@@ -65,7 +68,10 @@ export default function ChangePasswordPage() {
             required
             autoComplete="new-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setConfirmError(null);
+            }}
           />
           <Input
             name="confirmPassword"
@@ -75,7 +81,11 @@ export default function ChangePasswordPage() {
             required
             autoComplete="new-password"
             value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
+            error={confirmError ?? undefined}
+            onChange={(e) => {
+              setConfirm(e.target.value);
+              setConfirmError(null);
+            }}
           />
           {error && <p role="alert">{error}</p>}
           <Button type="submit" isLoading={busy}>

@@ -20,18 +20,20 @@ export function InstructorForm({ instructor, onSaved, onCancel }: InstructorForm
   const [correo, setCorreo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [cedulaError, setCedulaError] = useState<string | null>(null);
+  const [telefonoError, setTelefonoError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setCedulaError(null);
+    setTelefonoError(null);
     if (!instructor && !/^[0-9]{10}$/.test(cedula)) {
       setCedulaError("La cédula debe tener 10 dígitos numéricos.");
       return;
     }
     if (telefono.replace(/\D/g, "").length < 7) {
-      setError("El teléfono debe contener al menos 7 dígitos.");
+      setTelefonoError("El teléfono debe contener al menos 7 dígitos.");
       return;
     }
     setBusy(true);
@@ -66,8 +68,8 @@ export function InstructorForm({ instructor, onSaved, onCancel }: InstructorForm
       <Input name="nombreCompleto" label="Nombre completo" required maxLength={200}
         value={nombreCompleto} onChange={(event) => setNombreCompleto(event.target.value)} />
       <Input name="telefono" label="Teléfono" required type="tel" maxLength={20}
-        pattern="\+?[0-9() -]{7,20}" value={telefono}
-        onChange={(event) => setTelefono(event.target.value)} />
+        pattern="\+?[0-9() -]{7,20}" value={telefono} error={telefonoError ?? undefined}
+        onChange={(event) => { setTelefono(event.target.value); setTelefonoError(null); }} />
       {!instructor ? (
         <Input name="correo" label="Correo electrónico" required type="email" value={correo}
           onChange={(event) => setCorreo(event.target.value)} />
