@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { getPublicCourses } from "@/lib/api/publicCourses";
@@ -5,6 +6,9 @@ import { getUserRole } from "@/lib/supabase/getUserRole";
 import { createClient } from "@/lib/supabase/server";
 import { getRoleHomePath } from "@/lib/utils/roleRedirect";
 import { LandingPage } from "@/components/landing/LandingPage";
+
+// La plantilla del layout raíz no aplica a la página de su mismo segmento.
+export const metadata: Metadata = { title: "ColoradosDrive · Escuela de conducción" };
 
 export default async function Home() {
   const supabase = await createClient();

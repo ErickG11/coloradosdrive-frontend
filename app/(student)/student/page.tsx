@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { Card } from "@/components/ui";
+
+export const metadata: Metadata = { title: "Panel de estudiante" };
 
 // Mismo círculo decorativo que el home de admin (posición/tamaño/color),
 // para consistencia visual entre los 3 paneles de rol.
