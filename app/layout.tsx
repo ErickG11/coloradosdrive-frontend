@@ -23,7 +23,9 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   // Cada pantalla define su título en un layout/página y la plantilla le
-  // agrega el sufijo: «Cohortes · ColoradosDrive».
+  // agrega el sufijo: «Cohortes · ColoradosDrive». Un layout que tiene
+  // pantallas hijas con título propio debe declarar title.default y repetir
+  // el template (un string lo reiniciaría y los hijos perderían el sufijo).
   title: { default: "ColoradosDrive", template: "%s · ColoradosDrive" },
   description: "Plataforma de gestión de la escuela de conducción ColoradosDrive.",
 };
