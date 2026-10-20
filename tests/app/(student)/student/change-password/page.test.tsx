@@ -47,3 +47,16 @@ it("no envía contraseñas que no coinciden", async () => {
   await screen.findByRole("alert");
   expect(api.post).not.toHaveBeenCalled();
 });
+it("no muestra el botón hacia /login hasta cerrar la sesión local", async () => {
+  let finishSignOut: () => void = () => undefined;
+  signOut.mockReturnValue(new Promise<void>((resolve) => { finishSignOut = resolve; }));
+  const user = userEvent.setup();
+  render(<Page />);
+  fireEvent.change(screen.getByLabelText("Nueva contraseña"), { target: { value: "new-local-password" } });
+  fireEvent.change(screen.getByLabelText("Confirmar nueva contraseña"), { target: { value: "new-local-password" } });
+  await user.click(screen.getByRole("button", { name: "Guardar contraseña" }));
+  await vi.waitFor(() => expect(signOut).toHaveBeenCalled());
+  expect(screen.queryByRole("button", { name: "Iniciar sesión con nueva contraseña" })).toBeNull();
+  finishSignOut();
+  expect(await screen.findByRole("button", { name: "Iniciar sesión con nueva contraseña" })).toBeInTheDocument();
+});
