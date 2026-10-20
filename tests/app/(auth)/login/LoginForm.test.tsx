@@ -76,7 +76,7 @@ it("anuncia la cuenta sin rol con role=alert y enfoca el correo", async () => {
   expect(signOut).toHaveBeenCalledTimes(1);
 });
 
-it("devuelve el foco al correo en cada intento fallido y redirige si el login es válido", async () => {
+it("tras un intento fallido y uno válido, limpia el error y redirige al home del rol", async () => {
   signInWithPassword.mockResolvedValueOnce({ data: null, error: { code: "invalid_credentials" } });
   render(<LoginForm />);
   await submit();
@@ -86,4 +86,14 @@ it("devuelve el foco al correo en cada intento fallido y redirige si el login es
   await userEvent.setup().click(screen.getByRole("button", { name: "Iniciar sesión" }));
   await waitFor(() => expect(push).toHaveBeenCalledWith("/admin"));
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+it("devuelve el foco al correo en cada intento fallido", async () => {
+  signInWithPassword.mockResolvedValue({ data: null, error: { code: "invalid_credentials" } });
+  render(<LoginForm />);
+  await submit();
+  await screen.findByRole("alert");
+  (screen.getByLabelText("Contraseña") as HTMLInputElement).focus();
+  await userEvent.setup().click(screen.getByRole("button", { name: "Iniciar sesión" }));
+  await waitFor(() => expect(screen.getByLabelText("Correo electrónico")).toHaveFocus());
 });
