@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import type { InputHTMLAttributes } from "react";
 
+import { useValidationMessages } from "@/hooks/useValidationMessages";
 import { cn } from "@/lib/utils/cn";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -14,9 +15,10 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 // el glassmorphism vive en Card/Navbar/fondos decorativos, no en los
 // controles donde la legibilidad manda.
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, label, error, id, name, ...props },
+  { className, label, error, id, name, onInvalid, onInput, ...props },
   ref,
 ) {
+  const validation = useValidationMessages<HTMLInputElement>({ onInvalid, onInput }, props.value);
   const inputId = id ?? name;
   const errorId = error && inputId ? `${inputId}-error` : undefined;
 
@@ -39,9 +41,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           className,
         )}
         {...props}
+        onInvalid={validation.onInvalid}
+        onInput={validation.onInput}
       />
       {error ? (
-        <p id={errorId} className="text-sm text-accent-red">
+        <p id={errorId} role="alert" className="text-sm text-accent-red">
           {error}
         </p>
       ) : null}
