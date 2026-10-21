@@ -152,4 +152,120 @@ describe("EditCohortPage", () => {
     await screen.findByText("No se encontró la cohorte.");
     expect(mockedGet).toHaveBeenCalledWith("/cohorts/a%2Fb");
   });
+
+  describe("conflicto de versión (409) y recarga", () => {
+    const CONFLICT =
+      "La cohorte cambió desde que abriste la edición. Recarga para ver los cambios.";
+    const NEW_VERSION = "2026-10-19T15:10:00.654321+00:00";
+
+    it("muestra el aviso literal y «Recargar» trae los datos y la versión actuales", async () => {
+      const user = userEvent.setup();
+      mockApi([
+        cohortDetail(),
+        cohortDetail({ nombre: "400 editado por otra persona", updatedAt: NEW_VERSION }),
+      ]);
+      mockedPatch
+        .mockRejectedValueOnce(new ApiError(CONFLICT, 409, { code: "VERSION_CONFLICT" }))
+        .mockResolvedValueOnce({});
+      render(<EditCohortPage />);
+
+      const nombre = await screen.findByLabelText("Nombre de la cohorte");
+      await user.clear(nombre);
+      await user.type(nombre, "Mi cambio");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(CONFLICT);
+      expect(pushMock).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: "Recargar" }));
+
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "Se cargaron los datos actuales de la cohorte.",
+      );
+      expect(screen.getByLabelText("Nombre de la cohorte")).toHaveValue(
+        "400 editado por otra persona",
+      );
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Recargar" })).not.toBeInTheDocument();
+      expect(mockedGet.mock.calls.filter(([path]) => path === "/cohorts/cohort-1")).toHaveLength(2);
+
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(2));
+      expect((mockedPatch.mock.calls[1][1] as { updatedAt: unknown }).updatedAt).toBe(NEW_VERSION);
+      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
+    });
+
+    it("un 409 de campo se marca en el campo y también ofrece recargar", async () => {
+      const user = userEvent.setup();
+      mockApi(cohortDetail());
+      mockedPatch.mockRejectedValueOnce(
+        new ApiError("Ya existe una cohorte con ese nombre en este curso.", 409, {
+          code: "COHORT_NAME_DUPLICATE",
+          field: "nombre",
+        }),
+      );
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText("Nombre de la cohorte");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Ya existe una cohorte con ese nombre en este curso.",
+      );
+      expect(screen.getByLabelText("Nombre de la cohorte")).toHaveAttribute("aria-invalid", "true");
+      expect(
+        screen.getByText("Si otra persona cambió la cohorte, recarga para ver los datos actuales."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Recargar" })).toBeInTheDocument();
+    });
+
+    it("si falta la versión (400 updatedAt) muestra el aviso general y ofrece recargar", async () => {
+      const user = userEvent.setup();
+      const message = "Falta la versión de la cohorte. Recarga la página e inténtalo de nuevo.";
+      mockApi(cohortDetail());
+      mockedPatch.mockRejectedValueOnce(
+        new ApiError(message, 400, { code: "INVALID_FIELD", field: "updatedAt" }),
+      );
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText("Nombre de la cohorte");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(message);
+      expect(screen.getByRole("button", { name: "Recargar" })).toBeInTheDocument();
+    });
+
+    it("un 400 de validación normal no ofrece recargar", async () => {
+      const user = userEvent.setup();
+      mockApi(cohortDetail());
+      mockedPatch.mockRejectedValueOnce(
+        new ApiError("El precio es obligatorio.", 400, { code: "INVALID_FIELD", field: "precio" }),
+      );
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText("Nombre de la cohorte");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      await screen.findByRole("alert");
+      expect(screen.queryByRole("button", { name: "Recargar" })).not.toBeInTheDocument();
+    });
+
+    it("si al recargar la cohorte ya no existe, muestra «No se encontró la cohorte.»", async () => {
+      const user = userEvent.setup();
+      mockApi([
+        cohortDetail(),
+        new ApiError("Cohorte no encontrada.", 404, { code: "COHORT_NOT_FOUND" }),
+      ]);
+      mockedPatch.mockRejectedValueOnce(new ApiError(CONFLICT, 409, { code: "VERSION_CONFLICT" }));
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText("Nombre de la cohorte");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await user.click(await screen.findByRole("button", { name: "Recargar" }));
+
+      expect(await screen.findByText("No se encontró la cohorte.")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Guardar cambios" })).not.toBeInTheDocument();
+    });
+  });
 });

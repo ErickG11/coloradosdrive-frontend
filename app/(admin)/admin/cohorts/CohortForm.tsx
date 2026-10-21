@@ -68,6 +68,12 @@ interface CohortFormProps {
    */
   version?: string;
   initialValues?: CohortFormValues;
+  /**
+   * Vuelve a cargar la cohorte (GET /cohorts/:id) sin salir de la página.
+   * Se ofrece en edición ante un 409 (otra persona la cambió) o si falta
+   * la versión.
+   */
+  onReload?: () => void;
 }
 
 function optionalText(value: string): string | null {
@@ -82,7 +88,13 @@ function optionalNumber(value: string): number | null {
   return trimmed === "" ? null : Number(trimmed);
 }
 
-export function CohortForm({ courses, cohortId, version, initialValues }: CohortFormProps) {
+export function CohortForm({
+  courses,
+  cohortId,
+  version,
+  initialValues,
+  onReload,
+}: CohortFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditMode = Boolean(cohortId);
@@ -90,6 +102,7 @@ export function CohortForm({ courses, cohortId, version, initialValues }: Cohort
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [canReload, setCanReload] = useState(false);
   // Campo que debe recibir el foco cuando ya se haya pintado su error.
   const pendingFocusRef = useRef<keyof CohortFormValues | null>(null);
   // El servidor rechaza fechas posteriores a hoy + 5 años.
@@ -118,6 +131,7 @@ export function CohortForm({ courses, cohortId, version, initialValues }: Cohort
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setCanReload(false);
 
     // Cada regla de fechas se muestra junto al campo que hay que corregir.
     // Solo se compara si ambas fechas existen: una fecha vacía la rechaza
@@ -179,6 +193,16 @@ export function CohortForm({ courses, cohortId, version, initialValues }: Cohort
         setFieldErrors({ [err.field]: err.message });
       } else {
         setError(err instanceof ApiError ? err.message : "No se pudo guardar la cohorte.");
+      }
+      // Cualquier 409 (versión, nombre, curso, cupo, franjas) puede deberse
+      // a datos que otra persona cambió: se invita a recargar (contrato L4b).
+      if (
+        isEditMode &&
+        onReload &&
+        err instanceof ApiError &&
+        (err.status === 409 || err.field === "updatedAt")
+      ) {
+        setCanReload(true);
       }
       setIsSubmitting(false);
     }
@@ -352,6 +376,19 @@ export function CohortForm({ courses, cohortId, version, initialValues }: Cohort
       </div>
 
       {error ? <FormError>{error}</FormError> : null}
+
+      {canReload ? (
+        <div className="flex flex-col items-start gap-2">
+          {error ? null : (
+            <p className="text-sm text-text-secondary">
+              Si otra persona cambió la cohorte, recarga para ver los datos actuales.
+            </p>
+          )}
+          <Button type="button" variant="secondary" onClick={onReload}>
+            Recargar
+          </Button>
+        </div>
+      ) : null}
 
       <Button type="submit" isLoading={isSubmitting}>
         {isEditMode ? "Guardar cambios" : "Crear cohorte"}
