@@ -259,12 +259,15 @@ describe("CohortForm", () => {
     expect(screen.getByLabelText("Nombre de la cohorte")).toHaveValue("Cohorte Julio");
     expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeInTheDocument();
 
+    fireEvent.change(screen.getByLabelText("Nombre de la cohorte"), {
+      target: { value: "Cohorte Julio B" },
+    });
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     await waitFor(() => {
       expect(mockedPatch).toHaveBeenCalledWith("/cohorts/cohort-1", {
         courseId: "course-b",
-        nombre: "Cohorte Julio",
+        nombre: "Cohorte Julio B",
         precio: 200,
         cupoMaximo: 15,
         fechaInicioMatricula: "2026-06-01",
@@ -587,6 +590,9 @@ describe("CohortForm", () => {
         />,
       );
 
+      fireEvent.change(screen.getByLabelText("Nombre de la cohorte"), {
+        target: { value: "Cohorte Agosto" },
+      });
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
       const nombre = screen.getByLabelText("Nombre de la cohorte");
@@ -685,6 +691,9 @@ describe("CohortForm", () => {
         />,
       );
 
+      fireEvent.change(screen.getByLabelText("Tipo de modalidad"), {
+        target: { value: "Presencial" },
+      });
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
       expect(await screen.findByRole("alert")).toHaveTextContent(apiError.message);
@@ -832,5 +841,89 @@ describe("CohortForm", () => {
 
     await screen.findByRole("alert");
     expect(screen.queryByRole("button", { name: "Recargar" })).not.toBeInTheDocument();
+  });
+
+  describe("guardar sin cambios", () => {
+    const initial = {
+      courseId: "course-b",
+      nombre: "Cohorte Julio",
+      precio: "200",
+      cupoMaximo: "15",
+      fechaInicioMatricula: "2026-06-01",
+      fechaFinMatricula: "2026-06-25",
+      fechaInicioCurso: "2026-07-01",
+      fechaFinCurso: "2026-09-01",
+      tipoModalidad: "",
+      horariosCapacitacionTeoria: "",
+      numeroVehiculos: "",
+      numeroAulas: "",
+    };
+
+    function renderEdit() {
+      render(
+        <CohortForm
+          courses={courses}
+          cohortId="cohort-1"
+          version="2026-10-19T15:04:05.123456+00:00"
+          initialValues={initial}
+        />,
+      );
+    }
+
+    it("no llama a la API y avisa que no hay cambios", async () => {
+      const user = userEvent.setup();
+      renderEdit();
+
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(await screen.findByRole("status")).toHaveTextContent("No hay cambios que guardar.");
+      expect(mockedPatch).not.toHaveBeenCalled();
+      expect(pushMock).not.toHaveBeenCalled();
+    });
+
+    it("compara lo que se guardaría: 200 = 200.00 y espacios extremos no cuentan", async () => {
+      const user = userEvent.setup();
+      renderEdit();
+
+      fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "200.00" } });
+      fireEvent.change(screen.getByLabelText("Nombre de la cohorte"), {
+        target: { value: "  Cohorte Julio " },
+      });
+      fireEvent.change(screen.getByLabelText("Tipo de modalidad"), { target: { value: "   " } });
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(await screen.findByRole("status")).toHaveTextContent("No hay cambios que guardar.");
+      expect(mockedPatch).not.toHaveBeenCalled();
+    });
+
+    it("cambiar un campo y volver al valor inicial cuenta como sin cambios", async () => {
+      const user = userEvent.setup();
+      renderEdit();
+
+      fireEvent.change(screen.getByLabelText("Cupo máximo"), { target: { value: "30" } });
+      fireEvent.change(screen.getByLabelText("Cupo máximo"), { target: { value: "15" } });
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(await screen.findByRole("status")).toHaveTextContent("No hay cambios que guardar.");
+      expect(mockedPatch).not.toHaveBeenCalled();
+    });
+
+    it("el aviso desaparece al editar y luego se guarda con PATCH", async () => {
+      const user = userEvent.setup();
+      mockedPatch.mockResolvedValue({});
+      renderEdit();
+
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await screen.findByRole("status");
+
+      fireEvent.change(screen.getByLabelText("Número de aulas"), { target: { value: "0" } });
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
+      expect(mockedPatch.mock.calls[0][1]).toMatchObject({ numeroAulas: 0 });
+      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
+    });
   });
 });
