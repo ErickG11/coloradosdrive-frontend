@@ -97,6 +97,32 @@ function count(value: number, singular: string, plural: string): string {
   return `${value} ${value === 1 ? singular : plural}`;
 }
 
+// Cuerpo que se envía a la API (POST completo; PATCH añade updatedAt).
+function buildBody(values: CohortFormValues) {
+  return {
+    courseId: values.courseId,
+    nombre: values.nombre,
+    precio: optionalNumber(values.precio),
+    cupoMaximo: optionalNumber(values.cupoMaximo),
+    fechaInicioMatricula: values.fechaInicioMatricula,
+    fechaFinMatricula: values.fechaFinMatricula,
+    fechaInicioCurso: values.fechaInicioCurso,
+    fechaFinCurso: values.fechaFinCurso,
+    tipoModalidad: optionalText(values.tipoModalidad),
+    horariosCapacitacionTeoria: optionalText(values.horariosCapacitacionTeoria),
+    numeroVehiculos: optionalNumber(values.numeroVehiculos),
+    numeroAulas: optionalNumber(values.numeroAulas),
+  };
+}
+
+// Compara lo que se guardaría (no el texto escrito): «200» y «200.00», o un
+// nombre con espacios extremos (el servidor lo recorta), cuentan como iguales.
+function sameCohortData(a: CohortFormValues, b: CohortFormValues): boolean {
+  const normalize = (values: CohortFormValues) =>
+    JSON.stringify({ ...buildBody(values), nombre: values.nombre.trim() });
+  return normalize(a) === normalize(b);
+}
+
 export function CohortForm({
   courses,
   cohortId,
@@ -118,6 +144,7 @@ export function CohortForm({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canReload, setCanReload] = useState(false);
+  const [noChanges, setNoChanges] = useState(false);
   // Campo que debe recibir el foco cuando ya se haya pintado su error.
   const pendingFocusRef = useRef<keyof CohortFormValues | null>(null);
   // El servidor rechaza fechas posteriores a hoy + 5 años.
@@ -126,6 +153,7 @@ export function CohortForm({
   function updateField<K extends keyof CohortFormValues>(field: K, value: CohortFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
     onUserActivity?.();
+    setNoChanges(false);
     const cleared = [field, ...(RELATED_ERRORS[field] ?? [])];
     setFieldErrors((current) => {
       if (!cleared.some((name) => current[name])) return current;
@@ -149,6 +177,7 @@ export function CohortForm({
     onUserActivity?.();
     setError(null);
     setCanReload(false);
+    setNoChanges(false);
 
     // Cada regla de fechas se muestra junto al campo que hay que corregir.
     // Solo se compara si ambas fechas existen: una fecha vacía la rechaza
@@ -177,22 +206,16 @@ export function CohortForm({
     setFieldErrors(dateErrors);
     if (Object.keys(dateErrors).length > 0) return;
 
+    // Edición sin cambios: no se llama a la API (guardar cambiaría la
+    // versión aunque los datos sean los mismos).
+    if (isEditMode && initialValues && sameCohortData(values, initialValues)) {
+      setNoChanges(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const body = {
-      courseId: values.courseId,
-      nombre: values.nombre,
-      precio: optionalNumber(values.precio),
-      cupoMaximo: optionalNumber(values.cupoMaximo),
-      fechaInicioMatricula: values.fechaInicioMatricula,
-      fechaFinMatricula: values.fechaFinMatricula,
-      fechaInicioCurso: values.fechaInicioCurso,
-      fechaFinCurso: values.fechaFinCurso,
-      tipoModalidad: optionalText(values.tipoModalidad),
-      horariosCapacitacionTeoria: optionalText(values.horariosCapacitacionTeoria),
-      numeroVehiculos: optionalNumber(values.numeroVehiculos),
-      numeroAulas: optionalNumber(values.numeroAulas),
-    };
+    const body = buildBody(values);
 
     try {
       if (cohortId) {
@@ -432,6 +455,12 @@ export function CohortForm({
             Recargar descarta los cambios que no guardaste.
           </p>
         </div>
+      ) : null}
+
+      {noChanges ? (
+        <p role="status" className="text-sm text-text-secondary">
+          No hay cambios que guardar.
+        </p>
       ) : null}
 
       <Button type="submit" isLoading={isSubmitting}>
