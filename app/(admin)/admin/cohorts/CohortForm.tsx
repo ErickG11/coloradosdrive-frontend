@@ -58,7 +58,9 @@ function optionalText(value: string): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-function optionalInt(value: string): number | null {
+// Un campo numérico vacío se envía como null: Number("") daría 0, que el
+// servidor aceptaría como valor legítimo (precio vacío = $0.00).
+function optionalNumber(value: string): number | null {
   const trimmed = value.trim();
   return trimmed === "" ? null : Number(trimmed);
 }
@@ -104,16 +106,16 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
     const body = {
       courseId: values.courseId,
       nombre: values.nombre,
-      precio: Number(values.precio),
-      cupoMaximo: Number(values.cupoMaximo),
+      precio: optionalNumber(values.precio),
+      cupoMaximo: optionalNumber(values.cupoMaximo),
       fechaInicioMatricula: values.fechaInicioMatricula,
       fechaFinMatricula: values.fechaFinMatricula,
       fechaInicioCurso: values.fechaInicioCurso,
       fechaFinCurso: values.fechaFinCurso,
       tipoModalidad: optionalText(values.tipoModalidad),
       horariosCapacitacionTeoria: optionalText(values.horariosCapacitacionTeoria),
-      numeroVehiculos: optionalInt(values.numeroVehiculos),
-      numeroAulas: optionalInt(values.numeroAulas),
+      numeroVehiculos: optionalNumber(values.numeroVehiculos),
+      numeroAulas: optionalNumber(values.numeroAulas),
     };
 
     try {
