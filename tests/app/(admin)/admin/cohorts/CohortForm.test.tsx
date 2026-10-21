@@ -814,4 +814,21 @@ describe("CohortForm", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
+
+  it("en creación un 409 no ofrece «Recargar»", async () => {
+    const user = userEvent.setup();
+    mockedPost.mockRejectedValue(
+      new ApiError("Ya existe una cohorte con ese nombre en este curso.", 409, {
+        code: "COHORT_NAME_DUPLICATE",
+        field: "nombre",
+      }),
+    );
+    render(<CohortForm courses={courses} onReload={vi.fn()} />);
+
+    fillRequiredFields();
+    await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("button", { name: "Recargar" })).not.toBeInTheDocument();
+  });
 });
