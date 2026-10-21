@@ -357,4 +357,34 @@ describe("Fecha final en modo automático y manual", () => {
     await screen.findByRole("alert");
     expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
   });
+  it("horas por día vacío no se envía como 0 y muestra un error claro", async () => {
+    render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-09-30" } });
+    await waitFor(() => expect(post).toHaveBeenCalled());
+    post.mockClear();
+    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "" } });
+    expect(screen.getByLabelText("Horas por día")).toHaveValue(null);
+    expect(screen.getByLabelText("Horas por día")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent("Ingresa las horas por día.");
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(post).not.toHaveBeenCalled();
+  });
+  it("horas por día fuera de 1 a 16 no consulta el plan", async () => {
+    render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-09-30" } });
+    await waitFor(() => expect(post).toHaveBeenCalled());
+    post.mockClear();
+    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "0" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("entre 1 y 16");
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(post).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "3" } });
+    await waitFor(() =>
+      expect(post).toHaveBeenLastCalledWith(`${BASE}/plan`, {
+        practice: expect.objectContaining({ horasPorDia: 3 }),
+      }),
+    );
+    expect(screen.queryByText(/entre 1 y 16/)).not.toBeInTheDocument();
+  });
 });
