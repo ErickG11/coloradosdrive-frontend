@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import type { Course } from "@/types";
+import type { CohortStudentCounts, Course } from "@/types";
 
 import { COHORT_LIMITS, maxCohortDate } from "./cohortLimits";
 
@@ -74,6 +74,8 @@ interface CohortFormProps {
    * la versión.
    */
   onReload?: () => void;
+  /** Matrículas de la cohorte (solo edición). Con alumnos no se cambia el curso. */
+  alumnos?: CohortStudentCounts;
 }
 
 function optionalText(value: string): string | null {
@@ -94,10 +96,15 @@ export function CohortForm({
   version,
   initialValues,
   onReload,
+  alumnos,
 }: CohortFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditMode = Boolean(cohortId);
+  // El servidor rechaza cambiar el curso si hay matrículas de cualquier estado
+  // (COHORT_HAS_STUDENTS); aquí se bloquea y se explica antes de enviar.
+  const courseLocked = isEditMode && (alumnos?.total ?? 0) > 0;
+  const activeStudents = isEditMode ? (alumnos?.activos ?? 0) : 0;
   const [values, setValues] = useState<CohortFormValues>(initialValues ?? EMPTY_VALUES);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -219,6 +226,8 @@ export function CohortForm({
         name="courseId"
         error={fieldErrors.courseId}
         required
+        disabled={courseLocked}
+        {...(courseLocked ? { "aria-describedby": "courseId-locked" } : {})}
         value={values.courseId}
         onChange={(event) => updateField("courseId", event.target.value)}
       >
@@ -231,6 +240,12 @@ export function CohortForm({
           </option>
         ))}
       </Select>
+      {courseLocked && alumnos ? (
+        <p id="courseId-locked" className="-mt-2 text-xs text-text-secondary">
+          {`No se puede cambiar el curso porque la cohorte tiene alumnos asociados (${alumnos.total}): ` +
+            `${alumnos.activos} activos, ${alumnos.finalizados} finalizados y ${alumnos.retirados} retirados.`}
+        </p>
+      ) : null}
 
       <Input
         label="Nombre de la cohorte"
@@ -255,18 +270,26 @@ export function CohortForm({
           value={values.precio}
           onChange={(event) => updateField("precio", event.target.value)}
         />
-        <Input
-          label="Cupo máximo"
-          name="cupoMaximo"
-          error={fieldErrors.cupoMaximo}
-          type="number"
-          min={COHORT_LIMITS.cupoMin}
-          max={COHORT_LIMITS.cupoMax}
-          step="1"
-          required
-          value={values.cupoMaximo}
-          onChange={(event) => updateField("cupoMaximo", event.target.value)}
-        />
+        <div className="flex flex-col gap-1">
+          <Input
+            label="Cupo máximo"
+            name="cupoMaximo"
+            error={fieldErrors.cupoMaximo}
+            type="number"
+            min={COHORT_LIMITS.cupoMin}
+            max={COHORT_LIMITS.cupoMax}
+            step="1"
+            required
+            {...(activeStudents > 0 ? { "aria-describedby": "cupoMaximo-activos" } : {})}
+            value={values.cupoMaximo}
+            onChange={(event) => updateField("cupoMaximo", event.target.value)}
+          />
+          {activeStudents > 0 ? (
+            <p id="cupoMaximo-activos" className="text-xs text-text-secondary">
+              {`Alumnos activos: ${activeStudents}. El cupo máximo no puede ser menor.`}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">

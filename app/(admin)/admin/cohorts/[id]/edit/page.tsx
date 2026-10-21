@@ -54,6 +54,7 @@ export default function EditCohortPage() {
           courses={courses}
           cohortId={cohort.id}
           version={cohort.updatedAt}
+          alumnos={cohort.alumnos}
           initialValues={{
             courseId: cohort.courseId,
             nombre: cohort.nombre,
