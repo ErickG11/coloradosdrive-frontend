@@ -8,6 +8,8 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { Course } from "@/types";
 
+import { COHORT_LIMITS, maxCohortDate } from "./cohortLimits";
+
 export interface CohortFormValues {
   courseId: string;
   nombre: string;
@@ -72,6 +74,8 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // El servidor rechaza fechas posteriores a hoy + 5 años.
+  const [maxDate] = useState(() => maxCohortDate());
 
   function updateField<K extends keyof CohortFormValues>(field: K, value: CohortFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -155,6 +159,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
         label="Nombre de la cohorte"
         name="nombre"
         required
+        maxLength={COHORT_LIMITS.nombreMaxLength}
         value={values.nombre}
         onChange={(event) => updateField("nombre", event.target.value)}
       />
@@ -164,8 +169,9 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           label="Precio"
           name="precio"
           type="number"
-          min="0"
-          step="0.01"
+          min={COHORT_LIMITS.precioMin}
+          max={COHORT_LIMITS.precioMax}
+          step={COHORT_LIMITS.precioStep}
           required
           value={values.precio}
           onChange={(event) => updateField("precio", event.target.value)}
@@ -174,7 +180,8 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           label="Cupo máximo"
           name="cupoMaximo"
           type="number"
-          min="1"
+          min={COHORT_LIMITS.cupoMin}
+          max={COHORT_LIMITS.cupoMax}
           step="1"
           required
           value={values.cupoMaximo}
@@ -194,6 +201,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             name="fechaInicioMatricula"
             type="date"
             required
+            max={maxDate}
             value={values.fechaInicioMatricula}
             onChange={(event) => updateField("fechaInicioMatricula", event.target.value)}
           />
@@ -202,6 +210,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             name="fechaFinMatricula"
             type="date"
             required
+            max={maxDate}
             error={fieldErrors.fechaFinMatricula}
             value={values.fechaFinMatricula}
             onChange={(event) => updateField("fechaFinMatricula", event.target.value)}
@@ -221,6 +230,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             name="fechaInicioCurso"
             type="date"
             required
+            max={maxDate}
             value={values.fechaInicioCurso}
             onChange={(event) => updateField("fechaInicioCurso", event.target.value)}
           />
@@ -229,6 +239,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             name="fechaFinCurso"
             type="date"
             required
+            max={maxDate}
             error={fieldErrors.fechaFinCurso}
             value={values.fechaFinCurso}
             onChange={(event) => updateField("fechaFinCurso", event.target.value)}
@@ -244,12 +255,14 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           <Input
             label="Tipo de modalidad"
             name="tipoModalidad"
+            maxLength={COHORT_LIMITS.tipoModalidadMaxLength}
             value={values.tipoModalidad}
             onChange={(event) => updateField("tipoModalidad", event.target.value)}
           />
           <Input
             label="Horarios de capacitación teórica"
             name="horariosCapacitacionTeoria"
+            maxLength={COHORT_LIMITS.horariosMaxLength}
             value={values.horariosCapacitacionTeoria}
             onChange={(event) => updateField("horariosCapacitacionTeoria", event.target.value)}
           />
@@ -257,7 +270,8 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             label="Número de vehículos"
             name="numeroVehiculos"
             type="number"
-            min="0"
+            min={COHORT_LIMITS.recursosMin}
+            max={COHORT_LIMITS.recursosMax}
             step="1"
             value={values.numeroVehiculos}
             onChange={(event) => updateField("numeroVehiculos", event.target.value)}
@@ -266,7 +280,8 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             label="Número de aulas"
             name="numeroAulas"
             type="number"
-            min="0"
+            min={COHORT_LIMITS.recursosMin}
+            max={COHORT_LIMITS.recursosMax}
             step="1"
             value={values.numeroAulas}
             onChange={(event) => updateField("numeroAulas", event.target.value)}

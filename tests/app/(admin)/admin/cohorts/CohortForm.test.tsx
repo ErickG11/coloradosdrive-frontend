@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CohortForm } from "@/app/(admin)/admin/cohorts/CohortForm";
+import { maxCohortDate } from "@/app/(admin)/admin/cohorts/cohortLimits";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { Course } from "@/types";
@@ -354,4 +355,67 @@ describe("CohortForm", () => {
       expect(mockedPatch.mock.calls[0][1]).toMatchObject({ precio: null });
     });
   });
+
+  describe("límites coherentes con el servidor", () => {
+    it("declara los límites de cada campo", () => {
+      render(<CohortForm courses={courses} />);
+
+      expect(screen.getByLabelText("Nombre de la cohorte")).toHaveAttribute("maxLength", "100");
+      expect(screen.getByLabelText("Tipo de modalidad")).toHaveAttribute("maxLength", "100");
+      expect(screen.getByLabelText("Horarios de capacitación teórica")).toHaveAttribute(
+        "maxLength",
+        "500",
+      );
+
+      const precio = screen.getByLabelText("Precio");
+      expect(precio).toHaveAttribute("min", "0");
+      expect(precio).toHaveAttribute("max", "9999.99");
+      expect(precio).toHaveAttribute("step", "0.01");
+
+      const cupo = screen.getByLabelText("Cupo máximo");
+      expect(cupo).toHaveAttribute("min", "1");
+      expect(cupo).toHaveAttribute("max", "500");
+      expect(cupo).toHaveAttribute("step", "1");
+
+      for (const label of ["Número de vehículos", "Número de aulas"]) {
+        const field = screen.getByLabelText(label);
+        expect(field).toHaveAttribute("min", "0");
+        expect(field).toHaveAttribute("max", "100");
+        expect(field).toHaveAttribute("step", "1");
+      }
+    });
+
+    it("limita las fechas a hoy + 5 años", () => {
+      render(<CohortForm courses={courses} />);
+
+      const expected = maxCohortDate();
+      for (const label of [
+        "Inicio de matrícula",
+        "Fin de matrícula",
+        "Inicio de curso",
+        "Fin de curso",
+      ]) {
+        expect(screen.getByLabelText(label)).toHaveAttribute("type", "date");
+        expect(screen.getByLabelText(label)).toHaveAttribute("max", expected);
+      }
+    });
+
+    it.each([
+      ["Cupo máximo", "501", "El valor debe ser como máximo 500."],
+      ["Precio", "10000", "El valor debe ser como máximo 9999.99."],
+      ["Número de vehículos", "101", "El valor debe ser como máximo 100."],
+      ["Número de aulas", "101", "El valor debe ser como máximo 100."],
+    ])("bloquea %s fuera de rango (%s) sin llamar a la API", async (label, value, message) => {
+      const user = userEvent.setup();
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+      expect((screen.getByLabelText(label) as HTMLInputElement).validationMessage).toBe(message);
+      expect(mockedPost).not.toHaveBeenCalled();
+    });
+  });
 });
+
