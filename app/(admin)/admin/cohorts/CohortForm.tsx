@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button, FormError, Input, Select } from "@/components/ui";
+import { Button, buttonClassName, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { CohortStudentCounts, Course } from "@/types";
@@ -463,9 +464,15 @@ export function CohortForm({
         </p>
       ) : null}
 
-      <Button type="submit" isLoading={isSubmitting}>
-        {isEditMode ? "Guardar cambios" : "Crear cohorte"}
-      </Button>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {/* Volver sin guardar: por simpleza no se pregunta si hay cambios. */}
+        <Link href="/admin/cohorts" className={buttonClassName("secondary")}>
+          Cancelar
+        </Link>
+        <Button type="submit" isLoading={isSubmitting}>
+          {isEditMode ? "Guardar cambios" : "Crear cohorte"}
+        </Button>
+      </div>
     </form>
   );
 }

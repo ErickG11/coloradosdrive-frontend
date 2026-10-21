@@ -926,4 +926,52 @@ describe("CohortForm", () => {
       expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
     });
   });
+
+  describe("Cancelar", () => {
+    it("en creación vuelve al listado sin llamar a la API", async () => {
+      const user = userEvent.setup();
+      render(<CohortForm courses={courses} />);
+
+      const cancel = screen.getByRole("link", { name: "Cancelar" });
+      expect(cancel).toHaveAttribute("href", "/admin/cohorts");
+      fillRequiredFields();
+      await user.click(cancel);
+
+      expect(mockedPost).not.toHaveBeenCalled();
+    });
+
+    it("en edición también vuelve al listado sin guardar", async () => {
+      const user = userEvent.setup();
+      render(
+        <CohortForm
+          courses={courses}
+          cohortId="cohort-1"
+          version="2026-10-19T15:04:05.123456+00:00"
+          initialValues={{
+            courseId: "course-b",
+            nombre: "Cohorte Julio",
+            precio: "200",
+            cupoMaximo: "15",
+            fechaInicioMatricula: "2026-06-01",
+            fechaFinMatricula: "2026-06-25",
+            fechaInicioCurso: "2026-07-01",
+            fechaFinCurso: "2026-09-01",
+            tipoModalidad: "",
+            horariosCapacitacionTeoria: "",
+            numeroVehiculos: "",
+            numeroAulas: "",
+          }}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText("Nombre de la cohorte"), {
+        target: { value: "Otro nombre" },
+      });
+      const cancel = screen.getByRole("link", { name: "Cancelar" });
+      expect(cancel).toHaveAttribute("href", "/admin/cohorts");
+      await user.click(cancel);
+
+      expect(mockedPatch).not.toHaveBeenCalled();
+    });
+  });
 });
