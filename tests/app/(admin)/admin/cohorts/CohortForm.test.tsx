@@ -529,6 +529,16 @@ describe("CohortForm", () => {
         render(<CohortForm courses={courses} />);
 
         fillRequiredFields();
+        // Al recibir el foco, el campo ya debe estar marcado como inválido
+        // y enlazado a su mensaje (el foco se mueve tras pintar el error).
+        const atFocus: { invalid: string | null; describedBy: string | null }[] = [];
+        const target = screen.getByLabelText(label);
+        target.addEventListener("focus", () =>
+          atFocus.push({
+            invalid: target.getAttribute("aria-invalid"),
+            describedBy: target.getAttribute("aria-describedby"),
+          }),
+        );
         await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
 
         const alert = await screen.findByRole("alert");
@@ -539,7 +549,8 @@ describe("CohortForm", () => {
         const input = screen.getByLabelText(label);
         expect(input).toHaveAttribute("aria-invalid", "true");
         expect(input).toHaveAttribute("aria-describedby", alert.id);
-        expect(input).toHaveFocus();
+        await waitFor(() => expect(input).toHaveFocus());
+        expect(atFocus).toEqual([{ invalid: "true", describedBy: alert.id }]);
         expect(pushMock).not.toHaveBeenCalled();
         expect(screen.getByRole("button", { name: "Crear cohorte" })).toBeEnabled();
       },

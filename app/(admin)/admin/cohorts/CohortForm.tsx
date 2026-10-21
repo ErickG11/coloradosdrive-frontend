@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Button, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
@@ -84,6 +84,8 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Campo que debe recibir el foco cuando ya se haya pintado su error.
+  const pendingFocusRef = useRef<keyof CohortFormValues | null>(null);
   // El servidor rechaza fechas posteriores a hoy + 5 años.
   const [maxDate] = useState(() => maxCohortDate());
 
@@ -97,6 +99,15 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
       return next;
     });
   }
+
+  // El foco se mueve tras el render, cuando el campo ya tiene aria-invalid y
+  // aria-describedby apuntando a su mensaje.
+  useEffect(() => {
+    const field = pendingFocusRef.current;
+    if (!field) return;
+    pendingFocusRef.current = null;
+    formRef.current?.querySelector<HTMLElement>(`[name="${field}"]`)?.focus();
+  }, [fieldErrors]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -158,9 +169,8 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
       if (err instanceof ApiError && isFormField(err.field)) {
         // Error de un campo concreto (400 de validación, 404 de curso,
         // 409 de nombre duplicado): se muestra junto a ese campo.
-        const field = err.field;
-        setFieldErrors({ [field]: err.message });
-        formRef.current?.querySelector<HTMLElement>(`[name="${field}"]`)?.focus();
+        pendingFocusRef.current = err.field;
+        setFieldErrors({ [err.field]: err.message });
       } else {
         setError(err instanceof ApiError ? err.message : "No se pudo guardar la cohorte.");
       }
