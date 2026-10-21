@@ -55,6 +55,13 @@ const courses: Course[] = [
 
 const refetchCohorts = vi.fn();
 
+// Hay varias regiones vivas siempre montadas: se junta su texto.
+const statusText = () =>
+  screen
+    .getAllByRole("status")
+    .map((region) => region.textContent)
+    .join("");
+
 function mockFetchResults(options: {
   cohorts?: { data: Cohort[] | null; isLoading: boolean; error: string | null };
   courses?: { data: Course[] | null; isLoading: boolean; error: string | null };
@@ -156,7 +163,7 @@ describe("CohortsPage", () => {
 
       render(<CohortsPage />);
 
-      expect(screen.getByRole("status")).toHaveTextContent(text);
+      expect(statusText()).toBe(text);
       // Recargar o volver a esta entrada del historial ya no repite el aviso.
       expect(window.location.pathname).toBe("/admin/cohorts");
       expect(window.location.search).toBe("");
@@ -170,7 +177,7 @@ describe("CohortsPage", () => {
       searchParams = new URLSearchParams();
       rerender(<CohortsPage />);
 
-      expect(screen.getByRole("status")).toHaveTextContent("Cohorte creada correctamente.");
+      expect(statusText()).toBe("Cohorte creada correctamente.");
     });
 
     it("sin aviso (o con uno desconocido) no muestra nada ni toca la URL", () => {
@@ -180,7 +187,7 @@ describe("CohortsPage", () => {
 
       render(<CohortsPage />);
 
-      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(statusText()).toBe("");
       expect(window.location.search).toBe("?aviso=otra-cosa");
     });
   });
@@ -224,9 +231,7 @@ describe("CohortsPage", () => {
       );
       await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
 
-      await waitFor(() =>
-        expect(screen.getByRole("status")).toHaveTextContent("Cohorte «Cohorte Marzo» eliminada."),
-      );
+      await waitFor(() => expect(statusText()).toBe("Cohorte «Cohorte Marzo» eliminada."));
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.queryByText("Cohorte Marzo")).not.toBeInTheDocument();
       expect(screen.getByText("Cohorte Abril")).toBeInTheDocument();
@@ -253,7 +258,65 @@ describe("CohortsPage", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.getByText("Cohorte Marzo")).toBeInTheDocument();
       expect(refetchCohorts).not.toHaveBeenCalled();
-      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(statusText()).toBe("");
+    });
+
+    it("tras eliminar, el foco pasa al mensaje de éxito y no queda en body", async () => {
+      const user = userEvent.setup();
+      mockedDelete.mockResolvedValue({
+        id: "cohort-1",
+        nombre: "Cohorte Marzo",
+        message: "Cohorte eliminada.",
+      });
+      renderList();
+
+      await user.click(screen.getByRole("button", { name: "Eliminar Cohorte Marzo" }));
+      await user.type(
+        screen.getByLabelText("Para confirmar, escribe el nombre exacto de la cohorte:"),
+        "Cohorte Marzo",
+      );
+      await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
+
+      await waitFor(() => expect(statusText()).toContain("eliminada."));
+      const region = screen
+        .getAllByRole("status")
+        .find((r) => r.textContent?.includes("eliminada."));
+      expect(region).toHaveFocus();
+    });
+
+    it("el aviso de creación se oculta al abrir una eliminación y al completarla", async () => {
+      const user = userEvent.setup();
+      searchParams = new URLSearchParams("aviso=cohorte-creada");
+      mockedDelete.mockResolvedValue({
+        id: "cohort-1",
+        nombre: "Cohorte Marzo",
+        message: "Cohorte eliminada.",
+      });
+      renderList();
+      expect(statusText()).toBe("Cohorte creada correctamente.");
+
+      await user.click(screen.getByRole("button", { name: "Eliminar Cohorte Marzo" }));
+      expect(statusText()).toBe("");
+
+      await user.type(
+        screen.getByLabelText("Para confirmar, escribe el nombre exacto de la cohorte:"),
+        "Cohorte Marzo",
+      );
+      await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
+
+      await waitFor(() => expect(statusText()).toBe("Cohorte «Cohorte Marzo» eliminada."));
+    });
+
+    it("un refetch con datos ya cargados no reemplaza la tabla por «Cargando…»", () => {
+      mockFetchResults({
+        cohorts: { data: cohorts, isLoading: true, error: null },
+        courses: { data: courses, isLoading: true, error: null },
+      });
+
+      render(<CohortsPage />);
+
+      expect(screen.queryByText("Cargando…")).not.toBeInTheDocument();
+      expect(screen.getByText("Cohorte Marzo")).toBeInTheDocument();
     });
   });
 });
