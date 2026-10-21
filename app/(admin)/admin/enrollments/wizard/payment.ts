@@ -1,3 +1,4 @@
+import { formatMoneyFromCents } from "@/lib/utils/money";
 import type { CourseSelection, PaymentDraft } from "./wizardTypes";
 
 export function parseCents(value: unknown): number | null {
@@ -14,7 +15,7 @@ export function parseCents(value: unknown): number | null {
 }
 
 export function formatCents(cents: number): string {
-  return new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(cents / 100);
+  return formatMoneyFromCents(cents);
 }
 
 export interface PaymentSummary {
