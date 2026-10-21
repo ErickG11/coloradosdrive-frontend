@@ -66,7 +66,14 @@ export function DeleteCohortModal({
       onDeleted(`Cohorte «${result.nombre}» eliminada.`);
       return;
     } catch (err) {
-      if (err instanceof ApiError && err.field === "confirmacionNombre") {
+      if (err instanceof ApiError && err.code === "CONFIRMATION_MISMATCH") {
+        // Puede que otra persona haya renombrado la cohorte: se recarga el
+        // listado y hay que reabrir el diálogo para ver el nombre vigente.
+        setFieldError(
+          `${err.message} Si la cohorte cambió de nombre, cierra este diálogo y vuelve a abrirlo.`,
+        );
+        onGone();
+      } else if (err instanceof ApiError && err.field === "confirmacionNombre") {
         setFieldError(err.message);
       } else {
         setError(err instanceof ApiError ? err.message : "No se pudo eliminar la cohorte.");
@@ -97,6 +104,7 @@ export function DeleteCohortModal({
           id="cohort-delete-confirmation"
           label="Para confirmar, escribe el nombre exacto de la cohorte:"
           autoComplete="off"
+          autoFocus
           value={confirmation}
           disabled={isDeleting || blocked}
           error={fieldError ?? undefined}
