@@ -130,4 +130,17 @@ describe("apiFetch / api client", () => {
 
     expect(result).toBeUndefined();
   });
+
+  it("api.delete envía method DELETE con el body JSON indicado", async () => {
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValue(
+      jsonResponse({ id: "1", nombre: "A", message: "Cohorte eliminada." }),
+    );
+
+    await api.delete("/cohorts/1", { body: { confirmacionNombre: "A" } });
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(options.method).toBe("DELETE");
+    expect(options.body).toBe(JSON.stringify({ confirmacionNombre: "A" }));
+  });
 });
