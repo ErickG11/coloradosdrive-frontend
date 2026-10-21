@@ -62,6 +62,14 @@ function fillRequiredFields() {
   fireEvent.change(screen.getByLabelText("Fin de curso"), { target: { value: "2026-06-01" } });
 }
 
+// Envía el formulario sin la validación nativa (como hace la suite @servidor
+// con noValidate): permite comprobar qué llega a la API con campos vacíos.
+function submitWithoutNativeValidation() {
+  const form = screen.getByRole("button", { name: /Crear cohorte|Guardar cambios/ }).closest("form");
+  if (!form) throw new Error("form not found");
+  fireEvent.submit(form);
+}
+
 describe("CohortForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -275,5 +283,75 @@ describe("CohortForm", () => {
 
     expect(await screen.findByText("El precio debe ser mayor o igual a 0")).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  describe("campos numéricos vacíos", () => {
+    it("envía precio null (no 0) cuando el precio está vacío", async () => {
+      mockedPost.mockResolvedValue({});
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "" } });
+      submitWithoutNativeValidation();
+
+      await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+      expect(mockedPost.mock.calls[0][1]).toMatchObject({ precio: null });
+    });
+
+    it("envía cupo null (no 0) cuando el cupo está vacío", async () => {
+      mockedPost.mockResolvedValue({});
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText("Cupo máximo"), { target: { value: "" } });
+      submitWithoutNativeValidation();
+
+      await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+      expect(mockedPost.mock.calls[0][1]).toMatchObject({ cupoMaximo: null });
+    });
+
+    it("conserva el precio 0 escrito explícitamente", async () => {
+      const user = userEvent.setup();
+      mockedPost.mockResolvedValue({});
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "0" } });
+      fireEvent.change(screen.getByLabelText("Número de vehículos"), { target: { value: "0" } });
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+      await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+      expect(mockedPost.mock.calls[0][1]).toMatchObject({ precio: 0, numeroVehiculos: 0 });
+    });
+
+    it("en edición, vaciar el precio envía null en el PATCH", async () => {
+      mockedPatch.mockResolvedValue({});
+      render(
+        <CohortForm
+          courses={courses}
+          cohortId="cohort-1"
+          initialValues={{
+            courseId: "course-b",
+            nombre: "Cohorte Julio",
+            precio: "200",
+            cupoMaximo: "15",
+            fechaInicioMatricula: "2026-06-01",
+            fechaFinMatricula: "2026-06-25",
+            fechaInicioCurso: "2026-07-01",
+            fechaFinCurso: "2026-09-01",
+            tipoModalidad: "",
+            horariosCapacitacionTeoria: "",
+            numeroVehiculos: "",
+            numeroAulas: "",
+          }}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "" } });
+      submitWithoutNativeValidation();
+
+      await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
+      expect(mockedPatch.mock.calls[0][1]).toMatchObject({ precio: null });
+    });
   });
 });
