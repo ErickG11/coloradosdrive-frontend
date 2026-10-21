@@ -117,7 +117,7 @@ describe("CohortForm", () => {
         numeroAulas: null,
       });
     });
-    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
+    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-creada");
   });
 
   it("envía los campos de metadata opcional cuando se completan", async () => {
@@ -642,7 +642,9 @@ describe("CohortForm", () => {
 
       await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
 
-      await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/admin/cohorts"));
+      await waitFor(() =>
+        expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-creada"),
+      );
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Precio")).toHaveAttribute("aria-invalid", "false");
     });
