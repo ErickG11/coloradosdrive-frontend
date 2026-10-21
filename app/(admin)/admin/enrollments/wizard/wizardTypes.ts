@@ -59,7 +59,8 @@ export interface CoursePreview {
 export interface PracticeFormData {
   semanas: 1 | 2 | 3;
   modalidad: Modalidad;
-  horasPorDia: number;
+  /** "" mientras el campo está vacío: no debe convertirse en 0. */
+  horasPorDia: number | "";
   fechaInicio: string;
   horaDeseada: string;
   fechaFin: string;
@@ -154,6 +155,16 @@ export interface ManualResult {
   saldo?: number | null;
   documentosPendientes?: number;
 }
+export const HORAS_POR_DIA_MIN = 1;
+export const HORAS_POR_DIA_MAX = 16;
+
+export function horasPorDiaError(value: number | ""): string | null {
+  if (value === "") return "Ingresa las horas por día.";
+  if (!Number.isInteger(value) || value < HORAS_POR_DIA_MIN || value > HORAS_POR_DIA_MAX)
+    return `Las horas por día deben ser un entero entre ${HORAS_POR_DIA_MIN} y ${HORAS_POR_DIA_MAX}.`;
+  return null;
+}
+
 export function practicePayload(form: PracticeFormData) {
   return {
     semanas: form.semanas,

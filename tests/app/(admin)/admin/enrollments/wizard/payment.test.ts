@@ -52,4 +52,35 @@ describe("importes de matrícula en centavos", () => {
         .error,
     ).toMatch(/pago completo/);
   });
+
+  describe("montos vacíos en el pago inicial", () => {
+    const noCohort: CourseSelection = { ...course, cohortId: null, cohort: undefined };
+
+    it("abono vacío no se interpreta como 0: queda con error y sin continuar", () => {
+      const summary = summarizePayment(noCohort, {
+        modalidad: "abono",
+        descuento: "0",
+        montoAbonado: "",
+      });
+      expect(summary.error).toBe("Ingresa montos no negativos con hasta dos decimales.");
+    });
+
+    it("descuento vacío no se interpreta como 0", () => {
+      const summary = summarizePayment(noCohort, {
+        modalidad: "abono",
+        descuento: "",
+        montoAbonado: "0",
+      });
+      expect(summary.error).toBe("Ingresa montos no negativos con hasta dos decimales.");
+    });
+
+    it("un 0 escrito a propósito sigue siendo válido", () => {
+      const summary = summarizePayment(noCohort, {
+        modalidad: "abono",
+        descuento: "0",
+        montoAbonado: "0",
+      });
+      expect(summary.error).toBeNull();
+    });
+  });
 });

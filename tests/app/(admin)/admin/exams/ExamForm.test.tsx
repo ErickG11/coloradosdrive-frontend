@@ -286,4 +286,42 @@ describe("ExamForm", () => {
       expect(screen.getByRole("button", { name: "Quitar Pregunta 1" })).toBeDisabled();
     });
   });
+
+  it("campos numéricos vacíos no se envían como 0: el envío se bloquea con mensaje en español", async () => {
+    const user = userEvent.setup();
+    render(<ExamForm courses={courses} />);
+    fillRequiredExamFields();
+    fillFirstQuestionAsMultipleChoice();
+    fireEvent.change(screen.getByLabelText("Tiempo límite (minutos)"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("Puntaje mínimo de aprobación (%)"), {
+      target: { value: "" },
+    });
+    fireEvent.change(screen.getByLabelText("Pregunta 1 - Puntos"), { target: { value: "" } });
+
+    await user.click(screen.getByRole("button", { name: "Crear examen" }));
+
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Pregunta 1 - Puntos")).toBeRequired();
+    const limit = screen.getByLabelText("Tiempo límite (minutos)") as HTMLInputElement;
+    expect(limit.checkValidity()).toBe(false);
+    expect(limit.validationMessage).toBe("Completa este campo.");
+  });
+
+  it("un puntaje mínimo de 0 escrito a propósito sí se envía (0 es válido)", async () => {
+    const user = userEvent.setup();
+    mockedPost.mockResolvedValue({});
+    render(<ExamForm courses={courses} />);
+    fillRequiredExamFields();
+    fillFirstQuestionAsMultipleChoice();
+    fireEvent.change(screen.getByLabelText("Puntaje mínimo de aprobación (%)"), {
+      target: { value: "0" },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Crear examen" }));
+
+    expect(mockedPost).toHaveBeenCalledWith(
+      "/exams",
+      expect.objectContaining({ passingScorePercent: 0, timeLimitMinutes: 30 }),
+    );
+  });
 });

@@ -151,4 +151,28 @@ describe("PracticeSlotForm", () => {
 
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
+
+  it("duración vacía no se envía como 0: el envío se bloquea con mensaje en español", async () => {
+    const user = userEvent.setup();
+    render(
+      <PracticeSlotForm
+        cohorts={cohorts}
+        instructors={instructors}
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Cohorte"), { target: { value: "cohort-1" } });
+    fireEvent.change(screen.getByLabelText("Instructor"), { target: { value: "instructor-1" } });
+    fireEvent.change(screen.getByLabelText("Fecha y hora"), {
+      target: { value: "2026-03-10T10:00" },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Crear franja" }));
+
+    expect(mockedPost).not.toHaveBeenCalled();
+    const duration = screen.getByLabelText("Duración (minutos)") as HTMLInputElement;
+    expect(duration).toBeRequired();
+    expect(duration.validationMessage).toBe("Completa este campo.");
+  });
 });
