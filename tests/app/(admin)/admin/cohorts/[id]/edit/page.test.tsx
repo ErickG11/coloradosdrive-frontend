@@ -158,6 +158,38 @@ describe("EditCohortPage", () => {
       "La cohorte cambió desde que abriste la edición. Recarga para ver los cambios.";
     const NEW_VERSION = "2026-10-19T15:10:00.654321+00:00";
 
+    it("avisa antes de recargar que se descartan los cambios no guardados", async () => {
+      const user = userEvent.setup();
+      mockApi(cohortDetail());
+      mockedPatch.mockRejectedValueOnce(new ApiError(CONFLICT, 409, { code: "VERSION_CONFLICT" }));
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText("Nombre de la cohorte");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      const reload = await screen.findByRole("button", { name: "Recargar" });
+      const warning = screen.getByText("Recargar descarta los cambios que no guardaste.");
+      expect(reload).toHaveAttribute("aria-describedby", warning.id);
+      expect(reload).toHaveAccessibleDescription("Recargar descarta los cambios que no guardaste.");
+    });
+
+    it("si el PATCH responde 404 (cohorte eliminada) ofrece recargar y muestra «No se encontró la cohorte.»", async () => {
+      const user = userEvent.setup();
+      const gone = new ApiError("Cohorte no encontrada.", 404, { code: "COHORT_NOT_FOUND" });
+      mockApi([cohortDetail(), gone]);
+      mockedPatch.mockRejectedValueOnce(gone);
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText("Nombre de la cohorte");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Cohorte no encontrada.");
+      await user.click(screen.getByRole("button", { name: "Recargar" }));
+
+      expect(await screen.findByText("No se encontró la cohorte.")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Guardar cambios" })).not.toBeInTheDocument();
+    });
+
     it("muestra el aviso literal y «Recargar» trae los datos y la versión actuales", async () => {
       const user = userEvent.setup();
       mockApi([
