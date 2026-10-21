@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -209,11 +209,16 @@ describe("EditCohortPage", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent(CONFLICT);
       expect(pushMock).not.toHaveBeenCalled();
 
+      // La región viva existe desde el inicio (vacía): solo cambia su texto.
+      const status = screen.getByRole("status");
+      expect(status).toBeEmptyDOMElement();
+
       await user.click(screen.getByRole("button", { name: "Recargar" }));
 
-      expect(await screen.findByRole("status")).toHaveTextContent(
-        "Se cargaron los datos actuales de la cohorte.",
+      await waitFor(() =>
+        expect(status).toHaveTextContent("Se cargaron los datos actuales de la cohorte."),
       );
+      expect(screen.getByRole("status")).toBe(status);
       expect(screen.getByLabelText("Nombre de la cohorte")).toHaveValue(
         "400 editado por otra persona",
       );
@@ -222,10 +227,30 @@ describe("EditCohortPage", () => {
       expect(mockedGet.mock.calls.filter(([path]) => path === "/cohorts/cohort-1")).toHaveLength(2);
 
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      // Enviar oculta el aviso de recarga.
+      expect(status).toBeEmptyDOMElement();
 
       await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(2));
       expect((mockedPatch.mock.calls[1][1] as { updatedAt: unknown }).updatedAt).toBe(NEW_VERSION);
       expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
+    });
+
+    it("el aviso de recarga se oculta en cuanto el usuario edita un campo", async () => {
+      const user = userEvent.setup();
+      mockApi([cohortDetail(), cohortDetail({ updatedAt: NEW_VERSION })]);
+      mockedPatch.mockRejectedValueOnce(new ApiError(CONFLICT, 409, { code: "VERSION_CONFLICT" }));
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText("Nombre de la cohorte");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await user.click(await screen.findByRole("button", { name: "Recargar" }));
+      const status = screen.getByRole("status");
+      await waitFor(() => expect(status).toHaveTextContent("Se cargaron los datos actuales"));
+
+      fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "210" } });
+
+      expect(status).toBeEmptyDOMElement();
+      expect(status).toBeInTheDocument();
     });
 
     it("un 409 de campo se marca en el campo y también ofrece recargar", async () => {

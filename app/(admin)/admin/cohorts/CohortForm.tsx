@@ -74,6 +74,8 @@ interface CohortFormProps {
    * la versión.
    */
   onReload?: () => void;
+  /** Se llama cuando el usuario edita un campo o envía el formulario. */
+  onUserActivity?: () => void;
   /** Matrículas de la cohorte (solo edición). Con alumnos no se cambia el curso. */
   alumnos?: CohortStudentCounts;
 }
@@ -101,6 +103,7 @@ export function CohortForm({
   version,
   initialValues,
   onReload,
+  onUserActivity,
   alumnos,
 }: CohortFormProps) {
   const router = useRouter();
@@ -122,6 +125,7 @@ export function CohortForm({
 
   function updateField<K extends keyof CohortFormValues>(field: K, value: CohortFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
+    onUserActivity?.();
     const cleared = [field, ...(RELATED_ERRORS[field] ?? [])];
     setFieldErrors((current) => {
       if (!cleared.some((name) => current[name])) return current;
@@ -142,6 +146,7 @@ export function CohortForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    onUserActivity?.();
     setError(null);
     setCanReload(false);
 
