@@ -66,7 +66,9 @@ function fillRequiredFields() {
 // Envía el formulario sin la validación nativa (como hace la suite @servidor
 // con noValidate): permite comprobar qué llega a la API con campos vacíos.
 function submitWithoutNativeValidation() {
-  const form = screen.getByRole("button", { name: /Crear cohorte|Guardar cambios/ }).closest("form");
+  const form = screen
+    .getByRole("button", { name: /Crear cohorte|Guardar cambios/ })
+    .closest("form");
   if (!form) throw new Error("form not found");
   fireEvent.submit(form);
 }
@@ -160,9 +162,7 @@ describe("CohortForm", () => {
     await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
 
     expect(
-      await screen.findByText(
-        "El fin de matrícula no puede ser anterior al inicio de matrícula.",
-      ),
+      await screen.findByText("El fin de matrícula no puede ser anterior al inicio de matrícula."),
     ).toBeInTheDocument();
     expect(mockedPost).not.toHaveBeenCalled();
   });
@@ -198,15 +198,19 @@ describe("CohortForm", () => {
     expect(screen.getByLabelText("Fin de curso")).toHaveAttribute("aria-invalid", "false");
   });
 
-  it("anuncia como alerta el error devuelto por el servidor", async () => {
+  it("anuncia como alerta general el error del servidor sin campo", async () => {
     const user = userEvent.setup();
-    mockedPost.mockRejectedValue(new ApiError("Ya existe una cohorte", 409));
+    mockedPost.mockRejectedValue(
+      new ApiError("Ya existe un registro con esos datos.", 409, { code: "DUPLICATE" }),
+    );
     render(<CohortForm courses={courses} />);
 
     fillRequiredFields();
     await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Ya existe una cohorte");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Ya existe un registro con esos datos.",
+    );
   });
 
   it("muestra en español el aviso de campo obligatorio vacío", async () => {
@@ -215,9 +219,9 @@ describe("CohortForm", () => {
 
     await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
 
-    expect((screen.getByLabelText("Nombre de la cohorte") as HTMLInputElement).validationMessage).toBe(
-      "Completa este campo.",
-    );
+    expect(
+      (screen.getByLabelText("Nombre de la cohorte") as HTMLInputElement).validationMessage,
+    ).toBe("Completa este campo.");
     expect((screen.getByLabelText("Curso") as HTMLSelectElement).validationMessage).toBe(
       "Selecciona una opción.",
     );
@@ -276,13 +280,19 @@ describe("CohortForm", () => {
 
   it("muestra el mensaje de error del backend si falla el guardado", async () => {
     const user = userEvent.setup();
-    mockedPost.mockRejectedValue(new ApiError("El precio debe ser mayor o igual a 0", 400));
+    mockedPost.mockRejectedValue(
+      new ApiError("Los datos no cumplen las reglas de validación.", 400, {
+        code: "CHECK_VIOLATION",
+      }),
+    );
     render(<CohortForm courses={courses} />);
 
     fillRequiredFields();
     await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
 
-    expect(await screen.findByText("El precio debe ser mayor o igual a 0")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Los datos no cumplen las reglas de validación."),
+    ).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
   });
 
@@ -417,5 +427,285 @@ describe("CohortForm", () => {
       expect(mockedPost).not.toHaveBeenCalled();
     });
   });
-});
 
+  describe("errores del servidor por campo (contrato L3b)", () => {
+    // [field, etiqueta, status, code, mensaje literal del contrato]
+    const cases: [string, string, number, string, string][] = [
+      ["courseId", "Curso", 400, "INVALID_FIELD", "Selecciona un curso válido."],
+      ["courseId", "Curso", 404, "COURSE_NOT_FOUND", "El curso indicado no existe."],
+      ["nombre", "Nombre de la cohorte", 400, "INVALID_FIELD", "El nombre es obligatorio."],
+      [
+        "nombre",
+        "Nombre de la cohorte",
+        400,
+        "INVALID_FIELD",
+        "El nombre no puede superar 100 caracteres.",
+      ],
+      [
+        "nombre",
+        "Nombre de la cohorte",
+        409,
+        "COHORT_NAME_DUPLICATE",
+        "Ya existe una cohorte con ese nombre en este curso.",
+      ],
+      ["precio", "Precio", 400, "INVALID_FIELD", "El precio es obligatorio."],
+      ["precio", "Precio", 400, "INVALID_FIELD", "El precio debe estar entre 0 y 9999.99."],
+      ["precio", "Precio", 400, "INVALID_FIELD", "El precio admite como máximo 2 decimales."],
+      [
+        "cupoMaximo",
+        "Cupo máximo",
+        400,
+        "INVALID_FIELD",
+        "El cupo máximo debe ser un entero entre 1 y 500.",
+      ],
+      [
+        "fechaInicioMatricula",
+        "Inicio de matrícula",
+        400,
+        "INVALID_FIELD",
+        "La fecha de inicio de matrícula no es válida.",
+      ],
+      [
+        "fechaFinMatricula",
+        "Fin de matrícula",
+        400,
+        "INVALID_FIELD",
+        "La fecha de fin de matrícula no es válida.",
+      ],
+      [
+        "fechaInicioCurso",
+        "Inicio de curso",
+        400,
+        "INVALID_FIELD",
+        "La fecha no puede superar 5 años a partir de hoy.",
+      ],
+      [
+        "fechaFinCurso",
+        "Fin de curso",
+        400,
+        "INVALID_FIELD",
+        "El curso no puede terminar antes de que abra la matrícula.",
+      ],
+      [
+        "tipoModalidad",
+        "Tipo de modalidad",
+        400,
+        "INVALID_FIELD",
+        "La modalidad debe ser un texto de hasta 100 caracteres.",
+      ],
+      [
+        "horariosCapacitacionTeoria",
+        "Horarios de capacitación teórica",
+        400,
+        "INVALID_FIELD",
+        "Los horarios de capacitación teórica deben ser un texto de hasta 500 caracteres.",
+      ],
+      [
+        "numeroVehiculos",
+        "Número de vehículos",
+        400,
+        "INVALID_FIELD",
+        "El número de vehículos debe ser un entero entre 0 y 100.",
+      ],
+      [
+        "numeroAulas",
+        "Número de aulas",
+        400,
+        "INVALID_FIELD",
+        "El número de aulas debe ser un entero entre 0 y 100.",
+      ],
+    ];
+
+    it.each(cases)(
+      "muestra el error de %s junto al campo «%s» (%i %s)",
+      async (field, label, status, code, message) => {
+        const user = userEvent.setup();
+        mockedPost.mockRejectedValue(new ApiError(message, status, { code, field }));
+        render(<CohortForm courses={courses} />);
+
+        fillRequiredFields();
+        await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent(message);
+        // Un solo anuncio: no se repite como error general.
+        expect(screen.getAllByRole("alert")).toHaveLength(1);
+        expect(screen.getAllByText(message)).toHaveLength(1);
+        const input = screen.getByLabelText(label);
+        expect(input).toHaveAttribute("aria-invalid", "true");
+        expect(input).toHaveAttribute("aria-describedby", alert.id);
+        expect(input).toHaveFocus();
+        expect(pushMock).not.toHaveBeenCalled();
+        expect(screen.getByRole("button", { name: "Crear cohorte" })).toBeEnabled();
+      },
+    );
+
+    it("en edición, el nombre duplicado (409) se marca en el nombre y se limpia al cambiarlo", async () => {
+      const user = userEvent.setup();
+      mockedPatch.mockRejectedValue(
+        new ApiError("Ya existe una cohorte con ese nombre en este curso.", 409, {
+          code: "COHORT_NAME_DUPLICATE",
+          field: "nombre",
+        }),
+      );
+      render(
+        <CohortForm
+          courses={courses}
+          cohortId="cohort-1"
+          initialValues={{
+            courseId: "course-b",
+            nombre: "Cohorte Julio",
+            precio: "200",
+            cupoMaximo: "15",
+            fechaInicioMatricula: "2026-06-01",
+            fechaFinMatricula: "2026-06-25",
+            fechaInicioCurso: "2026-07-01",
+            fechaFinCurso: "2026-09-01",
+            tipoModalidad: "",
+            horariosCapacitacionTeoria: "",
+            numeroVehiculos: "",
+            numeroAulas: "",
+          }}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      const nombre = screen.getByLabelText("Nombre de la cohorte");
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Ya existe una cohorte con ese nombre en este curso.",
+      );
+      expect(nombre).toHaveAttribute("aria-invalid", "true");
+
+      fireEvent.change(nombre, { target: { value: "Cohorte Julio 2" } });
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(nombre).toHaveAttribute("aria-invalid", "false");
+    });
+
+    it("al cambiar de curso se descarta el aviso de nombre duplicado", async () => {
+      const user = userEvent.setup();
+      mockedPost.mockRejectedValue(
+        new ApiError("Ya existe una cohorte con ese nombre en este curso.", 409, {
+          code: "COHORT_NAME_DUPLICATE",
+          field: "nombre",
+        }),
+      );
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+      await screen.findByRole("alert");
+
+      fireEvent.change(screen.getByLabelText("Curso"), { target: { value: "course-b" } });
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Nombre de la cohorte")).toHaveAttribute(
+        "aria-invalid",
+        "false",
+      );
+    });
+
+    it("al reenviar descarta el error de campo anterior", async () => {
+      const user = userEvent.setup();
+      mockedPost
+        .mockRejectedValueOnce(
+          new ApiError("El precio admite como máximo 2 decimales.", 400, {
+            code: "INVALID_FIELD",
+            field: "precio",
+          }),
+        )
+        .mockResolvedValueOnce({});
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+      await screen.findByRole("alert");
+
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+      await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/admin/cohorts"));
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Precio")).toHaveAttribute("aria-invalid", "false");
+    });
+
+    it.each([
+      [
+        "sin campo (404 de cohorte)",
+        new ApiError("Cohorte no encontrada.", 404, { code: "COHORT_NOT_FOUND" }),
+      ],
+      [
+        "con field=id",
+        new ApiError("La cohorte indicada no es válida.", 400, {
+          code: "INVALID_FIELD",
+          field: "id",
+        }),
+      ],
+    ])("un error %s se muestra como error general", async (_name, apiError) => {
+      const user = userEvent.setup();
+      mockedPatch.mockRejectedValue(apiError);
+      render(
+        <CohortForm
+          courses={courses}
+          cohortId="cohort-1"
+          initialValues={{
+            courseId: "course-b",
+            nombre: "Cohorte Julio",
+            precio: "200",
+            cupoMaximo: "15",
+            fechaInicioMatricula: "2026-06-01",
+            fechaFinMatricula: "2026-06-25",
+            fechaInicioCurso: "2026-07-01",
+            fechaFinCurso: "2026-09-01",
+            tipoModalidad: "",
+            horariosCapacitacionTeoria: "",
+            numeroVehiculos: "",
+            numeroAulas: "",
+          }}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(apiError.message);
+      for (const input of screen.getAllByRole("textbox")) {
+        expect(input).toHaveAttribute("aria-invalid", "false");
+      }
+    });
+
+    it("un fallo que no es de la API muestra el aviso genérico", async () => {
+      const user = userEvent.setup();
+      mockedPost.mockRejectedValue(new TypeError("Failed to fetch"));
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo guardar la cohorte.");
+    });
+
+    it("con una fecha de fin vacía no inventa el error de orden y deja que responda el servidor", async () => {
+      mockedPost.mockRejectedValue(
+        new ApiError("La fecha de fin de matrícula no es válida.", 400, {
+          code: "INVALID_FIELD",
+          field: "fechaFinMatricula",
+        }),
+      );
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText("Fin de matrícula"), { target: { value: "" } });
+      submitWithoutNativeValidation();
+
+      await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+      expect(mockedPost.mock.calls[0][1]).toMatchObject({ fechaFinMatricula: "" });
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "La fecha de fin de matrícula no es válida.",
+      );
+      expect(
+        screen.queryByText("El fin de matrícula no puede ser anterior al inicio de matrícula."),
+      ).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Fin de matrícula")).toHaveAttribute("aria-invalid", "true");
+    });
+  });
+});
