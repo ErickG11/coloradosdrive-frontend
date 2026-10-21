@@ -24,9 +24,9 @@ describe("precio de cohorte recibido en course-preview", () => {
   });
 
   it.each([
-    [200, /200,00/],
-    [190.5, /190,50/],
-    ["200.00", /200,00/],
+    [200, /200\.00/],
+    [190.5, /190\.50/],
+    ["200.00", /200\.00/],
     ["incorrecto", /No disponible/],
   ])("renderiza el paso Curso con precio %s", async (precio, expected) => {
     post.mockResolvedValueOnce({

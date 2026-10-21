@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCents, summarizePayment } from "@/app/(admin)/admin/enrollments/wizard/payment";
+import { formatCents, parseCents, summarizePayment } from "@/app/(admin)/admin/enrollments/wizard/payment";
 import type { CourseSelection } from "@/app/(admin)/admin/enrollments/wizard/wizardTypes";
 
 const course: CourseSelection = {
@@ -82,5 +82,12 @@ describe("importes de matrícula en centavos", () => {
       });
       expect(summary.error).toBeNull();
     });
+  });
+});
+
+describe("formatCents", () => {
+  it("delega en el formato único de moneda (punto decimal)", () => {
+    expect(formatCents(19000)).toBe("$190.00");
+    expect(formatCents(100000)).toBe("$1,000.00");
   });
 });
