@@ -31,26 +31,34 @@ export default function EditCohortPage() {
   // Cada recarga monta un formulario nuevo con los datos y la versión
   // actuales (descarta lo escrito y los errores anteriores).
   const [reloadCount, setReloadCount] = useState(0);
+  // Aviso tras recargar; se oculta en cuanto el usuario edita o envía.
+  const [showReloadNotice, setShowReloadNotice] = useState(false);
 
   function handleReload() {
     setReloadCount((count) => count + 1);
+    setShowReloadNotice(true);
     refetchCohort();
   }
+
+  const reloadNotice =
+    showReloadNotice && !isLoadingCohort && cohort && !notFound && !cohortError
+      ? "Se cargaron los datos actuales de la cohorte. Revísalos y vuelve a guardar."
+      : "";
 
   return (
     <Card title="Editar cohorte" titleAs="h1">
       {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
       {error ? <FormError>{error}</FormError> : null}
       {notFound ? <FormError>No se encontró la cohorte.</FormError> : null}
-      {reloadCount > 0 && !isLoadingCohort && cohort && !notFound && !cohortError ? (
-        <p role="status" className="text-sm text-text-secondary">
-          Se cargaron los datos actuales de la cohorte. Revísalos y vuelve a guardar.
-        </p>
-      ) : null}
+      {/* Región viva siempre montada: solo cambia su texto, así se anuncia. */}
+      <p role="status" className={reloadNotice ? "mb-4 text-sm text-text-secondary" : undefined}>
+        {reloadNotice}
+      </p>
       {courses && cohort && !isLoadingCohort && !notFound && !cohortError ? (
         <CohortForm
           key={reloadCount}
           onReload={handleReload}
+          onUserActivity={() => setShowReloadNotice(false)}
           courses={courses}
           cohortId={cohort.id}
           version={cohort.updatedAt}
