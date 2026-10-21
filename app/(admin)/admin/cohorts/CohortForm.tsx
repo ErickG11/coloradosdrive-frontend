@@ -90,6 +90,11 @@ function optionalNumber(value: string): number | null {
   return trimmed === "" ? null : Number(trimmed);
 }
 
+// «1 activo», «2 activos»: número con la palabra en singular o plural.
+function count(value: number, singular: string, plural: string): string {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
 export function CohortForm({
   courses,
   cohortId,
@@ -243,8 +248,9 @@ export function CohortForm({
       </Select>
       {courseLocked && alumnos ? (
         <p id="courseId-locked" className="-mt-2 text-xs text-text-secondary">
-          {`No se puede cambiar el curso porque la cohorte tiene alumnos asociados (${alumnos.total}): ` +
-            `${alumnos.activos} activos, ${alumnos.finalizados} finalizados y ${alumnos.retirados} retirados.`}
+          {`No se puede cambiar el curso porque la cohorte tiene ${count(alumnos.total, "alumno asociado", "alumnos asociados")}: ` +
+            `${count(alumnos.activos, "activo", "activos")}, ${count(alumnos.finalizados, "finalizado", "finalizados")} ` +
+            `y ${count(alumnos.retirados, "retirado", "retirados")}.`}
         </p>
       ) : null}
 

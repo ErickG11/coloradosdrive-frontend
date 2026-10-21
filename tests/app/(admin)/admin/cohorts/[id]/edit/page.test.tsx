@@ -311,7 +311,7 @@ describe("EditCohortPage", () => {
       const curso = await screen.findByLabelText("Curso");
       expect(curso).toBeDisabled();
       const hint = screen.getByText(
-        "No se puede cambiar el curso porque la cohorte tiene alumnos asociados (4): 2 activos, 1 finalizados y 1 retirados.",
+        "No se puede cambiar el curso porque la cohorte tiene 4 alumnos asociados: 2 activos, 1 finalizado y 1 retirado.",
       );
       expect(curso).toHaveAttribute("aria-describedby", hint.id);
 
@@ -319,6 +319,23 @@ describe("EditCohortPage", () => {
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
       await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
       expect(mockedPatch.mock.calls[0][1]).toMatchObject({ courseId: "course-b" });
+    });
+
+    it.each([
+      [
+        { total: 1, activos: 1, finalizados: 0, retirados: 0 },
+        "No se puede cambiar el curso porque la cohorte tiene 1 alumno asociado: 1 activo, 0 finalizados y 0 retirados.",
+      ],
+      [
+        { total: 5, activos: 0, finalizados: 2, retirados: 3 },
+        "No se puede cambiar el curso porque la cohorte tiene 5 alumnos asociados: 0 activos, 2 finalizados y 3 retirados.",
+      ],
+    ])("concuerda singular y plural en los conteos (%o)", async (alumnos, text) => {
+      mockApi(cohortDetail({ alumnos }));
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText("Curso");
+      expect(screen.getByText(text)).toBeInTheDocument();
     });
 
     it("sin alumnos el curso se puede cambiar", async () => {
