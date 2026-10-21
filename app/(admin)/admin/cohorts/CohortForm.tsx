@@ -43,11 +43,13 @@ const EMPTY_VALUES: CohortFormValues = {
 type FieldErrors = Partial<Record<keyof CohortFormValues, string>>;
 
 // Al editar un campo se descartan también los errores que dependen de él:
-// la fecha de fin de su ventana y, al cambiar de curso, el nombre duplicado.
-const RELATED_ERROR: Partial<Record<keyof CohortFormValues, keyof CohortFormValues>> = {
-  fechaInicioMatricula: "fechaFinMatricula",
-  fechaInicioCurso: "fechaFinCurso",
-  courseId: "nombre",
+// las fechas de fin que se comparan con una fecha de inicio (incluida la
+// regla «el curso no puede terminar antes de que abra la matrícula») y, al
+// cambiar de curso, el nombre duplicado (la unicidad es por curso).
+const RELATED_ERRORS: Partial<Record<keyof CohortFormValues, (keyof CohortFormValues)[]>> = {
+  fechaInicioMatricula: ["fechaFinMatricula", "fechaFinCurso"],
+  fechaInicioCurso: ["fechaFinCurso"],
+  courseId: ["nombre"],
 };
 
 // El servidor indica en `field` el campo del cuerpo (mismo nombre que el input).
@@ -87,12 +89,11 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
 
   function updateField<K extends keyof CohortFormValues>(field: K, value: CohortFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
-    const related = RELATED_ERROR[field];
+    const cleared = [field, ...(RELATED_ERRORS[field] ?? [])];
     setFieldErrors((current) => {
-      if (!current[field] && !(related && current[related])) return current;
+      if (!cleared.some((name) => current[name])) return current;
       const next = { ...current };
-      delete next[field];
-      if (related) delete next[related];
+      for (const name of cleared) delete next[name];
       return next;
     });
   }
@@ -118,6 +119,12 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
       values.fechaFinCurso < values.fechaInicioCurso
     ) {
       dateErrors.fechaFinCurso = "El fin de curso no puede ser anterior al inicio de curso.";
+    } else if (
+      bothDates(values.fechaInicioMatricula, values.fechaFinCurso) &&
+      values.fechaFinCurso < values.fechaInicioMatricula
+    ) {
+      // Misma regla y frase que el servidor (contrato L3b).
+      dateErrors.fechaFinCurso = "El curso no puede terminar antes de que abra la matrícula.";
     }
     setFieldErrors(dateErrors);
     if (Object.keys(dateErrors).length > 0) return;

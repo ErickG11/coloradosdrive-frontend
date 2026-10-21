@@ -329,10 +329,15 @@ describe("CohortForm", () => {
       fillRequiredFields();
       fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "0" } });
       fireEvent.change(screen.getByLabelText("Número de vehículos"), { target: { value: "0" } });
+      fireEvent.change(screen.getByLabelText("Número de aulas"), { target: { value: "0" } });
       await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
 
       await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
-      expect(mockedPost.mock.calls[0][1]).toMatchObject({ precio: 0, numeroVehiculos: 0 });
+      expect(mockedPost.mock.calls[0][1]).toMatchObject({
+        precio: 0,
+        numeroVehiculos: 0,
+        numeroAulas: 0,
+      });
     });
 
     it("en edición, vaciar el precio envía null en el PATCH", async () => {
@@ -668,8 +673,12 @@ describe("CohortForm", () => {
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
       expect(await screen.findByRole("alert")).toHaveTextContent(apiError.message);
-      for (const input of screen.getAllByRole("textbox")) {
-        expect(input).toHaveAttribute("aria-invalid", "false");
+      // Ningún control (texto, número, fecha, selector) queda marcado.
+      const form = screen.getByRole("button", { name: "Guardar cambios" }).closest("form");
+      const controls = form?.querySelectorAll("input, select") ?? [];
+      expect(controls).toHaveLength(12);
+      for (const control of controls) {
+        expect(control).toHaveAttribute("aria-invalid", "false");
       }
     });
 
@@ -706,6 +715,90 @@ describe("CohortForm", () => {
         screen.queryByText("El fin de matrícula no puede ser anterior al inicio de matrícula."),
       ).not.toBeInTheDocument();
       expect(screen.getByLabelText("Fin de matrícula")).toHaveAttribute("aria-invalid", "true");
+    });
+  });
+
+  describe("regla cruzada: el curso no termina antes de que abra la matrícula", () => {
+    it("la valida en el cliente junto a «Fin de curso» sin llamar al servidor", async () => {
+      const user = userEvent.setup();
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      // Ventana de curso coherente (fin >= inicio) pero termina antes de la matrícula.
+      fireEvent.change(screen.getByLabelText("Inicio de matrícula"), {
+        target: { value: "2026-05-01" },
+      });
+      fireEvent.change(screen.getByLabelText("Fin de matrícula"), {
+        target: { value: "2026-05-20" },
+      });
+      fireEvent.change(screen.getByLabelText("Inicio de curso"), {
+        target: { value: "2026-03-01" },
+      });
+      fireEvent.change(screen.getByLabelText("Fin de curso"), {
+        target: { value: "2026-04-01" },
+      });
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("El curso no puede terminar antes de que abra la matrícula.");
+      expect(screen.getByLabelText("Fin de curso")).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByLabelText("Fin de curso")).toHaveAttribute("aria-describedby", alert.id);
+      expect(mockedPost).not.toHaveBeenCalled();
+    });
+
+    it("permite que la matrícula cierre después de que empiece el curso", async () => {
+      const user = userEvent.setup();
+      mockedPost.mockResolvedValue({});
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText("Fin de matrícula"), {
+        target: { value: "2026-03-15" },
+      });
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+      await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+    });
+
+    it("el error del servidor en «Fin de curso» se limpia al corregir «Inicio de matrícula»", async () => {
+      const user = userEvent.setup();
+      mockedPost.mockRejectedValue(
+        new ApiError("El curso no puede terminar antes de que abra la matrícula.", 400, {
+          code: "INVALID_FIELD",
+          field: "fechaFinCurso",
+        }),
+      );
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+      await screen.findByRole("alert");
+      expect(screen.getByLabelText("Fin de curso")).toHaveAttribute("aria-invalid", "true");
+
+      fireEvent.change(screen.getByLabelText("Inicio de matrícula"), {
+        target: { value: "2026-01-15" },
+      });
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Fin de curso")).toHaveAttribute("aria-invalid", "false");
+    });
+
+    it("al editar «Inicio de matrícula» también se limpia el error de «Fin de matrícula»", async () => {
+      const user = userEvent.setup();
+      render(<CohortForm courses={courses} />);
+
+      fillRequiredFields();
+      fireEvent.change(screen.getByLabelText("Fin de matrícula"), {
+        target: { value: "2026-01-01" },
+      });
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+      await screen.findByRole("alert");
+
+      fireEvent.change(screen.getByLabelText("Inicio de matrícula"), {
+        target: { value: "2025-12-01" },
+      });
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
 });
