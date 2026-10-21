@@ -139,6 +139,7 @@ export function StepPracticas({
         name="horasPorDia"
         label="Horas por día"
         type="number"
+        required
         min={1}
         max={16}
         value={form.horasPorDia}
