@@ -207,7 +207,8 @@ export function CohortForm({
         isEditMode &&
         onReload &&
         err instanceof ApiError &&
-        (err.status === 409 || err.field === "updatedAt")
+        // 404: la cohorte se eliminó; al recargar se ve «No se encontró la cohorte.».
+        (err.status === 409 || err.status === 404 || err.field === "updatedAt")
       ) {
         setCanReload(true);
       }
@@ -407,9 +408,17 @@ export function CohortForm({
               Si otra persona cambió la cohorte, recarga para ver los datos actuales.
             </p>
           )}
-          <Button type="button" variant="secondary" onClick={onReload}>
+          <Button
+            type="button"
+            variant="secondary"
+            aria-describedby="cohort-reload-warning"
+            onClick={onReload}
+          >
             Recargar
           </Button>
+          <p id="cohort-reload-warning" className="text-xs text-text-secondary">
+            Recargar descarta los cambios que no guardaste.
+          </p>
         </div>
       ) : null}
 
