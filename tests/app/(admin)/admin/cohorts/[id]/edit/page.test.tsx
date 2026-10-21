@@ -268,4 +268,116 @@ describe("EditCohortPage", () => {
       expect(screen.queryByRole("button", { name: "Guardar cambios" })).not.toBeInTheDocument();
     });
   });
+
+  describe("alumnos de la cohorte", () => {
+    it("con alumnos bloquea el cambio de curso y explica los conteos", async () => {
+      const user = userEvent.setup();
+      mockApi(cohortDetail({ alumnos: { total: 4, activos: 2, finalizados: 1, retirados: 1 } }));
+      mockedPatch.mockResolvedValue({});
+      render(<EditCohortPage />);
+
+      const curso = await screen.findByLabelText("Curso");
+      expect(curso).toBeDisabled();
+      const hint = screen.getByText(
+        "No se puede cambiar el curso porque la cohorte tiene alumnos asociados (4): 2 activos, 1 finalizados y 1 retirados.",
+      );
+      expect(curso).toHaveAttribute("aria-describedby", hint.id);
+
+      // Se puede guardar el resto: el curso se reenvía sin cambios.
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
+      expect(mockedPatch.mock.calls[0][1]).toMatchObject({ courseId: "course-b" });
+    });
+
+    it("sin alumnos el curso se puede cambiar", async () => {
+      mockApi(cohortDetail());
+      render(<EditCohortPage />);
+
+      const curso = await screen.findByLabelText("Curso");
+      expect(curso).toBeEnabled();
+      expect(curso).not.toHaveAttribute("aria-describedby");
+      expect(screen.queryByText(/alumnos asociados/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Alumnos activos/)).not.toBeInTheDocument();
+    });
+
+    it("con alumnos activos indica el mínimo del cupo junto al campo", async () => {
+      mockApi(cohortDetail({ alumnos: { total: 3, activos: 3, finalizados: 0, retirados: 0 } }));
+      render(<EditCohortPage />);
+
+      const cupo = await screen.findByLabelText("Cupo máximo");
+      const hint = screen.getByText("Alumnos activos: 3. El cupo máximo no puede ser menor.");
+      expect(cupo).toHaveAttribute("aria-describedby", hint.id);
+    });
+
+    it("solo con finalizados o retirados bloquea el curso pero no muestra aviso de cupo", async () => {
+      mockApi(cohortDetail({ alumnos: { total: 2, activos: 0, finalizados: 1, retirados: 1 } }));
+      render(<EditCohortPage />);
+
+      expect(await screen.findByLabelText("Curso")).toBeDisabled();
+      expect(screen.queryByText(/Alumnos activos/)).not.toBeInTheDocument();
+    });
+
+    it.each([
+      [
+        "courseId",
+        "Curso",
+        "COHORT_HAS_STUDENTS",
+        "No se puede cambiar el curso porque la cohorte tiene alumnos asociados (1).",
+      ],
+      [
+        "cupoMaximo",
+        "Cupo máximo",
+        "COHORT_CUPO_BELOW_ACTIVE",
+        "El cupo máximo no puede ser menor que los alumnos activos de la cohorte (2).",
+      ],
+      [
+        "fechaInicioCurso",
+        "Inicio de curso",
+        "COHORT_SLOTS_OUTSIDE_WINDOW",
+        "No se pueden cambiar las fechas del curso porque quedarían franjas de práctica fuera de la nueva ventana (3).",
+      ],
+      [
+        "fechaFinCurso",
+        "Fin de curso",
+        "COHORT_SLOTS_OUTSIDE_WINDOW",
+        "No se pueden cambiar las fechas del curso porque quedarían franjas de práctica fuera de la nueva ventana (1).",
+      ],
+    ])("el 409 de %s (%s) se muestra junto al campo", async (field, label, code, message) => {
+      const user = userEvent.setup();
+      mockApi(cohortDetail({ alumnos: { total: 0, activos: 0, finalizados: 0, retirados: 0 } }));
+      mockedPatch.mockRejectedValueOnce(new ApiError(message, 409, { code, field }));
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText(label);
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent(message);
+      const input = screen.getByLabelText(label);
+      expect(input).toHaveAttribute("aria-invalid", "true");
+      expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(alert.id);
+      expect(screen.getByRole("button", { name: "Recargar" })).toBeInTheDocument();
+    });
+
+    it("el error de cupo se enlaza junto con la ayuda de alumnos activos", async () => {
+      const user = userEvent.setup();
+      const message =
+        "El cupo máximo no puede ser menor que los alumnos activos de la cohorte (2).";
+      mockApi(cohortDetail({ alumnos: { total: 2, activos: 2, finalizados: 0, retirados: 0 } }));
+      mockedPatch.mockRejectedValueOnce(
+        new ApiError(message, 409, { code: "COHORT_CUPO_BELOW_ACTIVE", field: "cupoMaximo" }),
+      );
+      render(<EditCohortPage />);
+
+      await screen.findByLabelText("Cupo máximo");
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+      const alert = await screen.findByRole("alert");
+      const hint = screen.getByText("Alumnos activos: 2. El cupo máximo no puede ser menor.");
+      expect(screen.getByLabelText("Cupo máximo")).toHaveAttribute(
+        "aria-describedby",
+        `${hint.id} ${alert.id}`,
+      );
+    });
+  });
 });
