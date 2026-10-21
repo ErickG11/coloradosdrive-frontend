@@ -142,5 +142,6 @@ describe("apiFetch / api client", () => {
     const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(options.method).toBe("DELETE");
     expect(options.body).toBe(JSON.stringify({ confirmacionNombre: "A" }));
+    expect(new Headers(options.headers).get("Content-Type")).toBe("application/json");
   });
 });
