@@ -15,12 +15,25 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 // chevron es un SVG en línea (sin librería de íconos nueva) superpuesto
 // sobre un <select appearance-none> para poder estilizarlo con los tokens.
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
-  { className, label, error, id, name, children, onInvalid, onInput, ...props },
+  {
+    className,
+    label,
+    error,
+    id,
+    name,
+    children,
+    onInvalid,
+    onInput,
+    "aria-describedby": describedBy,
+    ...props
+  },
   ref,
 ) {
   const validation = useValidationMessages<HTMLSelectElement>({ onInvalid, onInput });
   const selectId = id ?? name;
   const errorId = error && selectId ? `${selectId}-error` : undefined;
+  // Una descripción propia (p. ej. una ayuda) se combina con la del error.
+  const describedByIds = [describedBy, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="flex flex-col gap-1">
@@ -35,7 +48,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           id={selectId}
           name={name}
           aria-invalid={Boolean(error)}
-          aria-describedby={errorId}
+          aria-describedby={describedByIds}
           className={cn(
             "h-10 w-full appearance-none rounded-sm border border-border bg-bg-field px-3 pr-9 text-sm text-text-primary transition-colors focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue",
             error && "border-accent-red focus:border-accent-red focus:ring-accent-red",

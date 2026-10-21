@@ -15,12 +15,24 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 // el glassmorphism vive en Card/Navbar/fondos decorativos, no en los
 // controles donde la legibilidad manda.
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, label, error, id, name, onInvalid, onInput, ...props },
+  {
+    className,
+    label,
+    error,
+    id,
+    name,
+    onInvalid,
+    onInput,
+    "aria-describedby": describedBy,
+    ...props
+  },
   ref,
 ) {
   const validation = useValidationMessages<HTMLInputElement>({ onInvalid, onInput });
   const inputId = id ?? name;
   const errorId = error && inputId ? `${inputId}-error` : undefined;
+  // Una descripción propia (p. ej. una ayuda) se combina con la del error.
+  const describedByIds = [describedBy, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="flex flex-col gap-1">
@@ -34,7 +46,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         id={inputId}
         name={name}
         aria-invalid={Boolean(error)}
-        aria-describedby={errorId}
+        aria-describedby={describedByIds}
         className={cn(
           "h-10 rounded-sm border border-border bg-bg-field px-3 text-sm text-text-primary placeholder:text-text-disabled transition-colors focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue",
           error && "border-accent-red focus:border-accent-red focus:ring-accent-red",
