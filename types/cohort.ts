@@ -25,3 +25,19 @@ export interface Cohort {
   createdAt: string;
   updatedAt: string;
 }
+
+// Matrículas de la cohorte por estado (GET /cohorts/:id, contrato L4b).
+// `activos` ocupa cupo; cualquier matrícula (total > 0) impide cambiar el curso.
+export interface CohortStudentCounts {
+  total: number;
+  activos: number;
+  finalizados: number;
+  retirados: number;
+}
+
+// Detalle de una cohorte (GET /cohorts/:id). `updatedAt` es la versión para
+// el PATCH: se guarda y se reenvía como cadena EXACTA (con microsegundos),
+// nunca convertida a Date.
+export interface CohortDetail extends Cohort {
+  alumnos: CohortStudentCounts;
+}

@@ -238,6 +238,7 @@ describe("CohortForm", () => {
       <CohortForm
         courses={courses}
         cohortId="cohort-1"
+        version="2026-10-19T15:04:05.123456+00:00"
         initialValues={{
           courseId: "course-b",
           nombre: "Cohorte Julio",
@@ -274,6 +275,7 @@ describe("CohortForm", () => {
         horariosCapacitacionTeoria: null,
         numeroVehiculos: null,
         numeroAulas: null,
+        updatedAt: "2026-10-19T15:04:05.123456+00:00",
       });
     });
   });

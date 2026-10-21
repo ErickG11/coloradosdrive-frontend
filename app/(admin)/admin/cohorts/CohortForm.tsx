@@ -61,6 +61,12 @@ interface CohortFormProps {
   courses: Course[];
   /** Presente => modo edición (PATCH). Ausente => modo creación (POST). */
   cohortId?: string;
+  /**
+   * Versión de la cohorte (updatedAt de GET /cohorts/:id) para el PATCH.
+   * Se reenvía como cadena exacta: convertirla a Date pierde los
+   * microsegundos y el servidor respondería siempre 409.
+   */
+  version?: string;
   initialValues?: CohortFormValues;
 }
 
@@ -76,7 +82,7 @@ function optionalNumber(value: string): number | null {
   return trimmed === "" ? null : Number(trimmed);
 }
 
-export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps) {
+export function CohortForm({ courses, cohortId, version, initialValues }: CohortFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditMode = Boolean(cohortId);
@@ -159,7 +165,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
 
     try {
       if (cohortId) {
-        await api.patch(`/cohorts/${cohortId}`, body);
+        await api.patch(`/cohorts/${cohortId}`, { ...body, updatedAt: version });
       } else {
         await api.post("/cohorts", body);
       }
