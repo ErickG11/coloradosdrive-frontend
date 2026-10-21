@@ -174,6 +174,72 @@ describe("DeleteCohortModal", () => {
     expect(deleteButton()).toBeDisabled();
   });
 
+  it("si el nombre cambió en el servidor (CONFIRMATION_MISMATCH) recarga el listado y pide reabrir el diálogo", async () => {
+    const user = userEvent.setup();
+    mockedDelete.mockRejectedValue(
+      new ApiError("Confirmación inválida: escribe el nombre exacto de la cohorte.", 400, {
+        code: "CONFIRMATION_MISMATCH",
+        field: "confirmacionNombre",
+      }),
+    );
+    renderModal();
+
+    await user.type(confirmField(), "Cohorte Marzo 2026");
+    await user.click(deleteButton());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "cierra este diálogo y vuelve a abrirlo",
+    );
+    expect(onGone).toHaveBeenCalledTimes(1);
+  });
+
+  it("el campo de confirmación recibe el foco al abrir", () => {
+    renderModal();
+
+    expect(confirmField()).toHaveFocus();
+  });
+
+  describe("durante el envío", () => {
+    function pendingDelete() {
+      let resolve!: (value: unknown) => void;
+      mockedDelete.mockReturnValue(new Promise((r) => (resolve = r)) as never);
+      return () =>
+        resolve({ id: "cohort-1", nombre: "Cohorte Marzo 2026", message: "Cohorte eliminada." });
+    }
+
+    it("un doble envío llama a la API una sola vez", async () => {
+      const user = userEvent.setup();
+      const finish = pendingDelete();
+      renderModal();
+
+      await user.type(confirmField(), "Cohorte Marzo 2026");
+      const form = deleteButton().closest("form")!;
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+
+      expect(mockedDelete).toHaveBeenCalledTimes(1);
+      finish();
+      await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+    });
+
+    it("Escape, la X y Cancelar no cierran el diálogo", async () => {
+      const user = userEvent.setup();
+      const finish = pendingDelete();
+      renderModal();
+
+      await user.type(confirmField(), "Cohorte Marzo 2026");
+      fireEvent.submit(deleteButton().closest("form")!);
+
+      await user.keyboard("{Escape}");
+      await user.click(screen.getByRole("button", { name: "Cerrar" }));
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+
+      finish();
+      await waitFor(() => expect(onDeleted).toHaveBeenCalled());
+    });
+  });
+
   it("Cancelar cierra sin llamar a la API", async () => {
     const user = userEvent.setup();
     renderModal();
