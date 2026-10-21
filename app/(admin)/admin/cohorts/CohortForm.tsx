@@ -200,7 +200,8 @@ export function CohortForm({
       } else {
         await api.post("/cohorts", body);
       }
-      router.push("/admin/cohorts");
+      // El listado muestra el aviso de éxito y limpia el parámetro de la URL.
+      router.push(`/admin/cohorts?aviso=${isEditMode ? "cohorte-guardada" : "cohorte-creada"}`);
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError && isFormField(err.field)) {
