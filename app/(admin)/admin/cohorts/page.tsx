@@ -7,6 +7,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { buttonClassName, FormError, IconButton, iconButtonClassName } from "@/components/ui";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { useFetch } from "@/hooks/useFetch";
+import { formatMoney } from "@/lib/utils/money";
 import type { Cohort, Course } from "@/types";
 
 import { DeleteCohortModal } from "./DeleteCohortModal";
@@ -140,7 +141,7 @@ export default function CohortsPage() {
                     <td className="px-4 py-2 text-text-secondary">
                       {courseLabel(coursesById.get(cohort.courseId))}
                     </td>
-                    <td className="px-4 py-2 text-text-secondary">${cohort.precio.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-text-secondary">{formatMoney(cohort.precio)}</td>
                     <td className="px-4 py-2 text-text-secondary">
                       {new Date(cohort.createdAt).toLocaleDateString("es-EC")}
                     </td>
