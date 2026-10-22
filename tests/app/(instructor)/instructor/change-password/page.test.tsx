@@ -45,6 +45,15 @@ it("no envía claves que no coinciden", async () => {
     target: { value: "different-password" },
   });
   await user.click(screen.getByRole("button", { name: "Guardar contraseña" }));
-  expect(screen.getByRole("alert")).toHaveTextContent("Las contraseñas no coinciden.");
+  const alert = screen.getByRole("alert");
+  expect(alert).toHaveTextContent("Las contraseñas no coinciden.");
+  const confirm = screen.getByLabelText("Confirmar nueva contraseña");
+  expect(confirm).toHaveAttribute("aria-invalid", "true");
+  expect(confirm).toHaveAttribute("aria-describedby", alert.id);
+  expect(screen.getByLabelText("Nueva contraseña")).toHaveAttribute("aria-invalid", "false");
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
   expect(api.post).not.toHaveBeenCalled();
+  // Al corregir la confirmación el error desaparece.
+  fireEvent.change(confirm, { target: { value: "new-local-password" } });
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });

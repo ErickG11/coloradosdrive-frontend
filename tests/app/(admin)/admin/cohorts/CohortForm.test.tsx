@@ -158,6 +158,66 @@ describe("CohortForm", () => {
     expect(mockedPost).not.toHaveBeenCalled();
   });
 
+  it("asocia el error de fechas al campo y lo anuncia sin marcar los demás", async () => {
+    const user = userEvent.setup();
+    render(<CohortForm courses={courses} />);
+
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText("Fin de curso"), { target: { value: "2026-02-01" } });
+    await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("El fin de curso no puede ser anterior al inicio de curso.");
+    const field = screen.getByLabelText("Fin de curso");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAttribute("aria-describedby", alert.id);
+    expect(screen.getByLabelText("Fin de matrícula")).toHaveAttribute("aria-invalid", "false");
+  });
+
+  it("quita el error de fechas en cuanto se corrige el campo", async () => {
+    const user = userEvent.setup();
+    render(<CohortForm courses={courses} />);
+
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText("Fin de curso"), { target: { value: "2026-02-01" } });
+    await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+    await screen.findByRole("alert");
+
+    fireEvent.change(screen.getByLabelText("Fin de curso"), { target: { value: "2026-06-01" } });
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Fin de curso")).toHaveAttribute("aria-invalid", "false");
+  });
+
+  it("anuncia como alerta el error devuelto por el servidor", async () => {
+    const user = userEvent.setup();
+    mockedPost.mockRejectedValue(new ApiError("Ya existe una cohorte", 409));
+    render(<CohortForm courses={courses} />);
+
+    fillRequiredFields();
+    await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ya existe una cohorte");
+  });
+
+  it("muestra en español el aviso de campo obligatorio vacío", async () => {
+    const user = userEvent.setup();
+    render(<CohortForm courses={courses} />);
+
+    await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+    expect((screen.getByLabelText("Nombre de la cohorte") as HTMLInputElement).validationMessage).toBe(
+      "Completa este campo.",
+    );
+    expect((screen.getByLabelText("Curso") as HTMLSelectElement).validationMessage).toBe(
+      "Selecciona una opción.",
+    );
+    expect((screen.getByLabelText("Cupo máximo") as HTMLInputElement).validationMessage).toBe(
+      "Completa este campo.",
+    );
+    expect(mockedPost).not.toHaveBeenCalled();
+  });
+
   it("en modo edición prellena los valores y envía PATCH /cohorts/:id", async () => {
     const user = userEvent.setup();
     mockedPatch.mockResolvedValue({});

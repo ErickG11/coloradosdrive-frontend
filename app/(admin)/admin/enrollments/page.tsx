@@ -6,7 +6,7 @@ import { EnrollmentWizard } from "./wizard/EnrollmentWizard";
 
 export default function EnrollmentsPage() {
   return (
-    <Card title="Matricular estudiante">
+    <Card title="Matricular estudiante" titleAs="h1">
       <EnrollmentWizard />
     </Card>
   );

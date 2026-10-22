@@ -33,6 +33,22 @@ describe("InstructorForm", () => {
     expect(mockedPost).not.toHaveBeenCalled();
   });
 
+  it("muestra junto al teléfono que necesita al menos 7 dígitos", () => {
+    render(<InstructorForm onSaved={onSaved} onCancel={onCancel} />);
+    fill();
+    fireEvent.change(screen.getByLabelText("Teléfono"), { target: { value: "((((((((" } });
+    fireEvent.submit(screen.getByRole("button", { name: "Guardar" }).closest("form")!);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("El teléfono debe contener al menos 7 dígitos.");
+    const phone = screen.getByLabelText("Teléfono");
+    expect(phone).toHaveAttribute("aria-invalid", "true");
+    expect(phone).toHaveAttribute("aria-describedby", alert.id);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(mockedPost).not.toHaveBeenCalled();
+    fireEvent.change(phone, { target: { value: "0991234567" } });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("muestra junto a cédula el rechazo del dígito verificador del backend", async () => {
     mockedPost.mockRejectedValue(new ApiError("cedula debe ser una cédula ecuatoriana válida", 400));
     render(<InstructorForm onSaved={onSaved} onCancel={onCancel} />);

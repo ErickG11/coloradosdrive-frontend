@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { LoginForm } from "./LoginForm";
+
+export const metadata: Metadata = { title: "Iniciar sesión" };
 
 export default function LoginPage() {
   return (

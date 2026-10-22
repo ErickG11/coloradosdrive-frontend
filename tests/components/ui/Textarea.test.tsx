@@ -30,4 +30,26 @@ describe("Textarea", () => {
     expect(textarea).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("El enunciado es obligatorio")).toBeInTheDocument();
   });
+
+  it("links the error to the textarea and announces it with role=alert", () => {
+    render(<Textarea label="Enunciado" name="prompt" error="El enunciado es obligatorio" />);
+
+    const textarea = screen.getByLabelText("Enunciado");
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("El enunciado es obligatorio");
+    expect(textarea).toHaveAttribute("aria-describedby", alert.id);
+  });
+
+  it("replaces the browser message and clears it when the user types", async () => {
+    const user = userEvent.setup();
+    render(<Textarea label="Enunciado" name="prompt" required />);
+
+    const textarea = screen.getByLabelText("Enunciado") as HTMLTextAreaElement;
+    textarea.checkValidity();
+    expect(textarea.validationMessage).toBe("Completa este campo.");
+
+    await user.type(textarea, "Pregunta");
+
+    expect(textarea.validationMessage).toBe("");
+  });
 });
