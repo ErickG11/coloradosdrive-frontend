@@ -470,6 +470,17 @@ describe("Errores del servidor al confirmar llevan al paso del campo", () => {
     expect(sessionStorage.getItem("coloradosdrive.manual-enrollment.confirmation")).toBeNull();
     expect(get).not.toHaveBeenCalledWith(expect.stringContaining("/operations/"));
   });
+  it.each([
+    ["BIRTH_DATE_FUTURE", "La fecha de nacimiento no puede ser futura."],
+    ["BIRTH_DATE_TOO_YOUNG", "La edad mínima para registrar a un estudiante es de 15 años."],
+    ["BIRTH_DATE_TOO_OLD", "La edad máxima permitida es de 100 años."],
+  ])("%s vuelve al paso 1 con el mensaje junto a la fecha de nacimiento", async (code, message) => {
+    await confirmWith(new ApiError(message, 400, { code, field: "student.fechaNacimiento" }));
+    const input = await screen.findByLabelText("Fecha de nacimiento (opcional)");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveFocus();
+    expect(screen.getByText(message)).toHaveAttribute("role", "alert");
+  });
   it("DUPLICATE_EMAIL vuelve al paso 1 con el aviso junto al correo", async () => {
     await confirmWith(
       new ApiError("El correo ya existe. Busca y selecciona el estudiante existente.", 409, {

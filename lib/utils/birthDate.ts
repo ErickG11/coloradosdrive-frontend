@@ -8,15 +8,29 @@ export const BIRTH_AGE_MAX = 100;
 // Edad legal mínima para matricularse (18 según la ANT; pendiente de confirmar
 // con la escuela). Está DESACTIVADA a propósito: mientras ENFORCE_LEGAL_MIN_AGE
 // sea false, la edad mínima aplicada es BIRTH_AGE_MIN. Para activarla basta
-// cambiar la bandera a true (y subir el max de birthDateBounds en consecuencia).
+// cambiar la bandera a true.
 export const LEGAL_MIN_AGE = 18;
 export const ENFORCE_LEGAL_MIN_AGE = false as boolean;
 
+// Un mensaje por caso, idénticos a los del servidor (utils/birthDate.ts del
+// backend). «Hoy» tiene 0 años: cae en el caso de menor de la edad mínima; solo
+// una fecha posterior a hoy dice «futura». El campo de fecha NO lleva min ni
+// max: el calendario deja elegir cualquier fecha y estos mensajes explican el
+// motivo del rechazo.
 export const BIRTH_DATE_MESSAGES = {
   invalida: "La fecha de nacimiento no es válida.",
-  hoyOFutura: "La fecha de nacimiento no puede ser hoy ni una fecha futura.",
-  edad: "La edad debe estar entre 15 y 100 años.",
+  futura: "La fecha de nacimiento no puede ser futura.",
+  edadMinima: `La edad mínima para registrar a un estudiante es de ${String(BIRTH_AGE_MIN)} años.`,
+  edadMaxima: `La edad máxima permitida es de ${String(BIRTH_AGE_MAX)} años.`,
   edadLegal: "El alumno debe tener al menos 18 años.",
+} as const;
+
+// Codes que devuelve el servidor para esos mismos casos.
+export const BIRTH_DATE_CODES = {
+  futura: "BIRTH_DATE_FUTURE",
+  edadMinima: "BIRTH_DATE_TOO_YOUNG",
+  edadMaxima: "BIRTH_DATE_TOO_OLD",
+  edadLegal: "BIRTH_DATE_UNDER_LEGAL_AGE",
 } as const;
 
 const todayFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -53,37 +67,6 @@ export function ageOn(birth: string, today: string): number {
   );
 }
 
-const pad = (n: number, size = 2) => String(n).padStart(size, "0");
-
-function shiftYears(date: string, years: number): string {
-  const year = Number(date.slice(0, 4)) + years;
-  const monthDay = date.slice(5);
-  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-  return `${pad(year, 4)}-${monthDay === "02-29" && !leap ? "02-28" : monthDay}`;
-}
-
-/**
- * Valores para los atributos min y max del campo de fecha, coherentes con
- * `birthDateError`: el más antiguo con 100 años cumplidos y el más reciente
- * con 15 cumplidos.
- */
-export function birthDateBounds(now: Date = new Date()): { min: string; max: string } {
-  const today = schoolToday(now);
-  const max = shiftYears(today, -BIRTH_AGE_MIN);
-  // Nace el día siguiente a «hoy hace 101 años»: ese día aún tiene 100 años.
-  const limit = shiftYears(today, -(BIRTH_AGE_MAX + 1));
-  const next = new Date(
-    Date.UTC(Number(limit.slice(0, 4)), Number(limit.slice(5, 7)) - 1, Number(limit.slice(8))),
-  );
-  next.setUTCDate(next.getUTCDate() + 1);
-  // Hoy 29 de febrero y el año de hace 101 no es bisiesto: el límite es el 1 de marzo.
-  const min =
-    today.slice(5) === "02-29" && limit.slice(5) === "02-28"
-      ? `${limit.slice(0, 4)}-03-01`
-      : `${pad(next.getUTCFullYear(), 4)}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
-  return { min, max };
-}
-
 /**
  * Única función de validación de fecha de nacimiento del cliente. Devuelve el
  * mensaje en español o null si es válida. El campo vacío no se valida aquí
@@ -92,9 +75,10 @@ export function birthDateBounds(now: Date = new Date()): { min: string; max: str
 export function birthDateError(value: string, now: Date = new Date()): string | null {
   if (!isRealDate(value)) return BIRTH_DATE_MESSAGES.invalida;
   const today = schoolToday(now);
-  if (value >= today) return BIRTH_DATE_MESSAGES.hoyOFutura;
+  if (value > today) return BIRTH_DATE_MESSAGES.futura;
   const age = ageOn(value, today);
-  if (age < BIRTH_AGE_MIN || age > BIRTH_AGE_MAX) return BIRTH_DATE_MESSAGES.edad;
+  if (age < BIRTH_AGE_MIN) return BIRTH_DATE_MESSAGES.edadMinima; // incluye «hoy» (0 años)
+  if (age > BIRTH_AGE_MAX) return BIRTH_DATE_MESSAGES.edadMaxima;
   if (ENFORCE_LEGAL_MIN_AGE && age < LEGAL_MIN_AGE) return BIRTH_DATE_MESSAGES.edadLegal;
   return null;
 }

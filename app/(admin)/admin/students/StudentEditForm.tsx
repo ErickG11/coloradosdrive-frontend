@@ -12,7 +12,6 @@ import {
   type ProfileField,
   type StudentSaveResult,
 } from "@/lib/api/studentProfile";
-import { birthDateBounds } from "@/lib/utils/birthDate";
 import type { StudentDetail } from "@/types";
 
 export function StudentEditForm({
@@ -36,7 +35,6 @@ export function StudentEditForm({
   const [reload, setReload] = useState(false);
   const [busy, setBusy] = useState(false);
   const patch = buildStudentPatch(student, draft);
-  const birthBounds = birthDateBounds();
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || reload) return;
@@ -96,7 +94,6 @@ export function StudentEditForm({
                     ? "tel"
                     : "text"
             }
-            {...(field === "fechaNacimiento" ? birthBounds : {})}
             required={["cedula", "nombreCompleto", "correo"].includes(field)}
             inputMode={field === "cedula" ? "numeric" : undefined}
           />

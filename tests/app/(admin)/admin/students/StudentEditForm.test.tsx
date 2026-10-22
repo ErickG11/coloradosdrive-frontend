@@ -11,6 +11,7 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { unconfirmedMessage } from "@/lib/api/studentProfile";
 import { useFetch } from "@/hooks/useFetch";
+import { BIRTH_DATE_MESSAGES as BIRTH, schoolToday } from "@/lib/utils/birthDate";
 const toast = vi.hoisted(() => ({ success: vi.fn() }));
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 vi.mock("@/lib/api/client", () => ({ api: { patch: vi.fn() } }));
@@ -65,19 +66,25 @@ describe("StudentEditForm", () => {
     expect(screen.getByLabelText("Cédula")).toHaveAttribute("aria-invalid", "true");
     expect(api.patch).not.toHaveBeenCalled();
   });
-  it("rechaza una fecha de nacimiento de hoy o fuera de 15 a 100 años y fija min y max", () => {
+  it("el campo de fecha de nacimiento no lleva min ni max: el calendario no bloquea ninguna fecha", () => {
     form();
     const input = screen.getByLabelText("Fecha de nacimiento");
-    expect(input).toHaveAttribute("min");
-    expect(input).toHaveAttribute("max");
-    expect((input as HTMLInputElement).max < new Date().toISOString().slice(0, 10)).toBe(true);
-    fireEvent.change(input, { target: { value: "1800-01-01" } });
+    expect(input).not.toHaveAttribute("min");
+    expect(input).not.toHaveAttribute("max");
+  });
+  it.each([
+    ["más de 100 años", "1800-01-01", BIRTH.edadMaxima],
+    ["hoy", schoolToday(), BIRTH.edadMinima],
+    ["este mes", `${schoolToday().slice(0, 8)}01`, BIRTH.edadMinima],
+    ["hace 14 años", `${String(Number(schoolToday().slice(0, 4)) - 14)}-12-31`, BIRTH.edadMinima],
+    ["una fecha futura", "2999-01-01", BIRTH.futura],
+  ])("fecha de nacimiento %s: se puede escribir y muestra su mensaje junto al campo", (_n, value, message) => {
+    form();
+    const input = screen.getByLabelText("Fecha de nacimiento");
+    fireEvent.change(input, { target: { value } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByText("La edad debe estar entre 15 y 100 años.")).toBeInTheDocument();
-    expect(api.patch).not.toHaveBeenCalled();
-    fireEvent.change(input, { target: { value: new Date().toISOString().slice(0, 10) } });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    expect(screen.getByText(message)).toHaveAttribute("role", "alert");
     expect(api.patch).not.toHaveBeenCalled();
   });
   it("un alumno con fecha antigua fuera de rango guarda otros campos sin reenviar ni bloquear la fecha", async () => {
@@ -95,7 +102,7 @@ describe("StudentEditForm", () => {
     await waitFor(() => expect(saved).toHaveBeenCalledOnce());
     const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
     expect(body).not.toHaveProperty("fechaNacimiento");
-    expect(screen.queryByText("La edad debe estar entre 15 y 100 años.")).not.toBeInTheDocument();
+    expect(screen.queryByText(BIRTH.edadMaxima)).not.toBeInTheDocument();
   });
   it("envía solo lo modificado y notifica éxito", async () => {
     form();
@@ -112,6 +119,9 @@ describe("StudentEditForm", () => {
     [409, "CEDULA_DUPLICATE", "cedula", "Cédula duplicada"],
     [409, "EMAIL_DUPLICATE", "correo", "Correo duplicado"],
     [400, "INVALID_FIELD", "direccion", "Dirección inválida"],
+    [400, "BIRTH_DATE_TOO_YOUNG", "fechaNacimiento", BIRTH.edadMinima],
+    [400, "BIRTH_DATE_FUTURE", "fechaNacimiento", BIRTH.futura],
+    [400, "BIRTH_DATE_TOO_OLD", "fechaNacimiento", BIRTH.edadMaxima],
     [409, "VERSION_CONFLICT", undefined, "Conflicto"],
     [503, "UNCONFIRMED", undefined, "Incierto"],
   ])("maneja %s/%s", async (status, code, field, message) => {
@@ -121,7 +131,13 @@ describe("StudentEditForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
     if (field) {
       const label =
-        field === "cedula" ? "Cédula" : field === "correo" ? "Correo electrónico" : "Dirección";
+        field === "cedula"
+          ? "Cédula"
+          : field === "correo"
+            ? "Correo electrónico"
+            : field === "fechaNacimiento"
+              ? "Fecha de nacimiento"
+              : "Dirección";
       await waitFor(() =>
         expect(screen.getByLabelText(label)).toHaveAttribute("aria-invalid", "true"),
       );

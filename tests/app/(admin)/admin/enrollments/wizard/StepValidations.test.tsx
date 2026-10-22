@@ -12,6 +12,7 @@ import {
 } from "@/app/(admin)/admin/enrollments/wizard/wizardTypes";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import { BIRTH_DATE_MESSAGES as BIRTH, schoolToday } from "@/lib/utils/birthDate";
 
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn(), post: vi.fn() } }));
 const post = vi.mocked(api.post);
@@ -120,7 +121,11 @@ describe("Paso 1: validación y duplicados al pulsar Continuar", () => {
       "abc12",
       "Ingresa un teléfono válido de 7 a 20 caracteres (solo dígitos, +, espacios, guiones y paréntesis).",
     ],
-    ["Fecha de nacimiento (opcional)", "1800-01-01", "La edad debe estar entre 15 y 100 años."],
+    ["Fecha de nacimiento (opcional)", "1800-01-01", BIRTH.edadMaxima],
+    // Un año de hace 14 años y una fecha de este mes se escriben y dan un mensaje.
+    ["Fecha de nacimiento (opcional)", `${String(Number(schoolToday().slice(0, 4)) - 14)}-12-31`, BIRTH.edadMinima],
+    ["Fecha de nacimiento (opcional)", `${schoolToday().slice(0, 8)}01`, BIRTH.edadMinima],
+    ["Fecha de nacimiento (opcional)", "2999-01-01", BIRTH.futura],
   ])("%s = %j se rechaza sin consultar duplicados", async (label, value, message) => {
     const onNext = renderStep();
     fillStudent();
@@ -133,19 +138,22 @@ describe("Paso 1: validación y duplicados al pulsar Continuar", () => {
     expect(onNext).not.toHaveBeenCalled();
   });
 
-  it("rechaza hoy (día de Guayaquil) como fecha de nacimiento y fija min y max", async () => {
+  it("el campo de fecha de nacimiento no lleva min ni max (el calendario no bloquea fechas)", () => {
+    renderStep();
+    const date = screen.getByLabelText("Fecha de nacimiento (opcional)");
+    expect(date).not.toHaveAttribute("min");
+    expect(date).not.toHaveAttribute("max");
+  });
+
+  it("rechaza hoy (día de Guayaquil) como fecha de nacimiento con el mensaje de edad mínima", async () => {
     const onNext = renderStep();
     fillStudent();
-    const date = screen.getByLabelText("Fecha de nacimiento (opcional)");
-    expect(date).toHaveAttribute("min");
-    expect(date).toHaveAttribute("max");
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format();
-    expect((date as HTMLInputElement).max < today).toBe(true);
     fill("Fecha de nacimiento (opcional)", today);
     await click("Continuar");
-    expect(
-      screen.getByText("La fecha de nacimiento no puede ser hoy ni una fecha futura."),
-    ).toBeInTheDocument();
+    const alert = screen.getByText(BIRTH.edadMinima);
+    expect(alert).toHaveAttribute("role", "alert");
+    expect(screen.getByLabelText("Fecha de nacimiento (opcional)")).toHaveAttribute("aria-invalid", "true");
     expect(onNext).not.toHaveBeenCalled();
   });
 
