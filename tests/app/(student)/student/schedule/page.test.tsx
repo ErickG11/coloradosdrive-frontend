@@ -13,6 +13,9 @@ vi.mock("@/hooks/useFetch", () => ({
   useFetch: vi.fn(),
 }));
 
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
+
 vi.mock("@/lib/api/client", () => ({
   api: {
     post: vi.fn(),
@@ -178,6 +181,7 @@ describe("StudentSchedulePage", () => {
 
     expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/claim");
     expect(refetchSlots).toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith("Franja reservada correctamente.");
   });
 
   it("muestra el error legible del backend si otro estudiante ya reclamó la franja (409)", async () => {
@@ -189,6 +193,7 @@ describe("StudentSchedulePage", () => {
     await user.click(screen.getByRole("button", { name: "Reclamar" }));
 
     expect(await screen.findByText("Esta franja ya no está disponible")).toBeInTheDocument();
+    expect(toast.success).not.toHaveBeenCalled();
     // Se refresca igual: la lista quedó desactualizada tras la carrera.
     expect(refetchSlots).toHaveBeenCalled();
   });
@@ -211,6 +216,7 @@ describe("StudentSchedulePage", () => {
     await user.click(screen.getByRole("button", { name: "Confirmar" }));
 
     expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/confirm");
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith("Asistencia confirmada correctamente.");
   });
 
   it("una franja propia 'confirmado' solo muestra Cancelar (no Confirmar)", () => {
@@ -231,6 +237,7 @@ describe("StudentSchedulePage", () => {
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
 
     expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/cancel");
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith("Franja cancelada correctamente.");
   });
 
   it("no muestra como propias las franjas completado/sin_practica (historial fuera de alcance)", () => {

@@ -8,6 +8,8 @@ const { replace, refresh, signOut } = vi.hoisted(() => ({
   refresh: vi.fn(),
   signOut: vi.fn(),
 }));
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: { signOut } }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh }) }));
 vi.mock("@/lib/api/client", () => ({ api: { post: vi.fn() } }));
@@ -32,7 +34,10 @@ it("exige coincidencia y usa la API autenticada existente", async () => {
   expect(api.post).toHaveBeenCalledWith("/estudiantes/cambiar-password", {
     nuevaPassword: "new-local-password",
   });
-  await screen.findByRole("status");
+  await screen.findByText(/Inicia sesión con tu nueva contraseña/);
+  expect(toast.success).toHaveBeenCalledExactlyOnceWith("Contraseña actualizada correctamente.");
+  // El éxito va solo en el toast: el panel no repite «Contraseña actualizada».
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
   expect(signOut).toHaveBeenCalledWith({ scope: "local" });
   await user.click(screen.getByRole("button", { name: "Iniciar sesión con nueva contraseña" }));
   expect(replace).toHaveBeenCalledWith("/login");

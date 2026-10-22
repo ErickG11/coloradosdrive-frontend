@@ -7,6 +7,8 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { PracticeSlot, PracticeSlotWithNames } from "@/types";
 
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn(), patch: vi.fn() } }));
 
 const get = vi.mocked(api.get);
@@ -222,8 +224,9 @@ describe("agenda diaria del instructor", () => {
       });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(
-        await screen.findByText(`Asistencia guardada: ${attended ? "Asistió" : "No asistió"}`),
+        await screen.findByText(`Asistencia: ${attended ? "Asistió" : "No asistió"}`),
       ).toBeInTheDocument();
+      expect(toast.success).toHaveBeenCalledExactlyOnceWith("Asistencia registrada correctamente.");
       expect(screen.getByText("Ana Torres")).toBeInTheDocument();
     },
   );
@@ -251,8 +254,9 @@ describe("agenda diaria del instructor", () => {
         attended: !attended,
       });
       expect(
-        await screen.findByText(`Asistencia guardada: ${attended ? "No asistió" : "Asistió"}`),
+        await screen.findByText(`Asistencia: ${attended ? "No asistió" : "Asistió"}`),
       ).toBeInTheDocument();
+      expect(toast.success).toHaveBeenCalledExactlyOnceWith("Asistencia registrada correctamente.");
       expect(screen.getByText("Ana Torres")).toBeInTheDocument();
     },
   );
@@ -267,8 +271,10 @@ describe("agenda diaria del instructor", () => {
     await user.click(screen.getByRole("button", { name: "Asistió" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Cuenta inactiva");
     expect(screen.getByText("Asistencia: Sin registrar")).toBeInTheDocument();
+    expect(toast.success).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Asistió" }));
-    expect(await screen.findByText("Asistencia guardada: Asistió")).toBeInTheDocument();
+    expect(await screen.findByText("Asistencia: Asistió")).toBeInTheDocument();
+    expect(toast.success).toHaveBeenCalledOnce();
   });
 
   it("mantiene el diálogo ante un error de corrección para reintentar", async () => {
@@ -290,7 +296,8 @@ describe("agenda diaria del instructor", () => {
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Confirmar cambio" }),
     );
-    expect(await screen.findByText("Asistencia guardada: No asistió")).toBeInTheDocument();
+    expect(await screen.findByText("Asistencia: No asistió")).toBeInTheDocument();
+    expect(toast.success).toHaveBeenCalledOnce();
   });
 });
 

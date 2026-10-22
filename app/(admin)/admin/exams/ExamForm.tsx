@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { Button, FormError, Input, Select } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { Course, CreateQuestionInput, ExamType, UpdateQuestionInput } from "@/types";
@@ -98,6 +99,7 @@ function buildQuestionUpdatePayload(
 export function ExamForm({ courses, examId, initialValues }: ExamFormProps) {
   const router = useRouter();
   const isEditMode = Boolean(examId);
+  const toast = useToast();
   const [values, setValues] = useState<ExamFormValues>(initialValues ?? EMPTY_VALUES);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -187,6 +189,9 @@ export function ExamForm({ courses, examId, initialValues }: ExamFormProps) {
       } else {
         await createExam();
       }
+      toast.success(
+        examId ? "Cambios del examen guardados correctamente." : "Examen creado correctamente.",
+      );
       router.push("/admin/exams");
       router.refresh();
     } catch (err) {

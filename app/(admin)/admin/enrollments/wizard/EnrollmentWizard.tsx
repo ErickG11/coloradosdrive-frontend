@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { StepDatosEstudiante } from "./StepDatosEstudiante";
@@ -42,6 +43,7 @@ interface Operation {
 }
 const STORAGE = "coloradosdrive.manual-enrollment.confirmation";
 export function EnrollmentWizard() {
+  const toast = useToast();
   const [step, setStep] = useState<WizardStep>(1),
     [student, setStudent] = useState(EMPTY_STUDENT);
   const [course, setCourse] = useState<CourseSelection | null>(null),
@@ -67,6 +69,7 @@ export function EnrollmentWizard() {
       setDetailsLoading(true);
       setDetailsError(null);
       setResult({ ...op.result, emailStatus: op.emailStatus });
+      toast.success("Matrícula registrada correctamente.");
       setUncertain(false);
       setError(null);
       sessionStorage.removeItem(STORAGE);
@@ -201,6 +204,7 @@ export function EnrollmentWizard() {
       setDetailsLoading(true);
       setDetailsError(null);
       setResult(confirmed);
+      toast.success("Matrícula registrada correctamente.");
       setUncertain(false);
       sessionStorage.removeItem(STORAGE);
       pending.current = null;
@@ -335,12 +339,14 @@ export function EnrollmentWizard() {
             setBusy(true);
             setError(null);
             try {
-              setResult(
-                await api.post<ManualResult>(
-                  `${BASE}/operations/${result.operationId}/resend-email`,
-                  { regenerateTemporaryPassword: regenerate },
-                ),
+              const resent = await api.post<ManualResult>(
+                `${BASE}/operations/${result.operationId}/resend-email`,
+                { regenerateTemporaryPassword: regenerate },
               );
+              setResult(resent);
+              if (resent.emailStatus === "sent") {
+                toast.success("Correo de matrícula reenviado correctamente.");
+              }
             } catch (e) {
               setError(
                 e instanceof ApiError

@@ -1,14 +1,22 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import PracticeSlotsPage from "@/app/(admin)/admin/practice-slots/page";
 import { useFetch } from "@/hooks/useFetch";
+import { api } from "@/lib/api/client";
 import type { Cohort, PracticeSlotWithNames, UserSummary } from "@/types";
 
 vi.mock("@/hooks/useFetch", () => ({
   useFetch: vi.fn(),
 }));
+
+vi.mock("@/lib/api/client", () => ({
+  api: { post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+}));
+
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 
 const mockedUseFetch = vi.mocked(useFetch);
 
@@ -183,5 +191,66 @@ describe("PracticeSlotsPage", () => {
     const dialog = screen.getByRole("dialog", { name: "Editar franja" });
     expect(within(dialog).getByLabelText("Cohorte")).toBeDisabled();
     expect(within(dialog).getByLabelText("Instructor")).toHaveValue("instructor-1");
+  });
+  it("crear una franja dispara el toast y cierra el formulario", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.post).mockResolvedValue(slot);
+    mockFetch();
+    render(<PracticeSlotsPage />);
+
+    await user.click(screen.getByRole("button", { name: "Nueva franja" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Nueva franja" }));
+    fireEvent.change(dialog.getByLabelText("Cohorte"), { target: { value: "cohort-1" } });
+    fireEvent.change(dialog.getByLabelText("Instructor"), { target: { value: "instructor-1" } });
+    fireEvent.change(dialog.getByLabelText("Fecha y hora"), {
+      target: { value: "2026-03-10T10:00" },
+    });
+    fireEvent.change(dialog.getByLabelText("Duración (minutos)"), { target: { value: "40" } });
+    await user.click(dialog.getByRole("button", { name: "Crear franja" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledOnce());
+    expect(toast.success).toHaveBeenCalledWith("Franja de práctica creada correctamente.");
+  });
+
+  it("editar una franja dispara el toast de cambios guardados", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.patch).mockResolvedValue(slot);
+    mockFetch({
+      data: [{ ...slot, status: "disponible", studentId: null }],
+      isLoading: false,
+      error: null,
+    });
+    render(<PracticeSlotsPage />);
+
+    const [chip] = screen.getAllByRole("button", { name: /Bruno Salas/ });
+    await user.click(chip);
+    await user.click(screen.getByRole("button", { name: "Editar franja" }));
+    await user.click(
+      within(screen.getByRole("dialog", { name: "Editar franja" })).getByRole("button", {
+        name: /Guardar/,
+      }),
+    );
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledOnce());
+    expect(toast.success).toHaveBeenCalledWith("Cambios de la franja guardados correctamente.");
+  });
+
+  it("eliminar una franja dispara el toast de eliminación", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.delete).mockResolvedValue(undefined);
+    mockFetch({
+      data: [{ ...slot, status: "disponible", studentId: null }],
+      isLoading: false,
+      error: null,
+    });
+    render(<PracticeSlotsPage />);
+
+    const [chip] = screen.getAllByRole("button", { name: /Bruno Salas/ });
+    await user.click(chip);
+    await user.click(screen.getByRole("button", { name: "Eliminar franja" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledOnce());
+    expect(api.delete).toHaveBeenCalledWith("/practice-slots/slot-1");
+    expect(toast.success).toHaveBeenCalledWith("Franja de práctica eliminada correctamente.");
   });
 });

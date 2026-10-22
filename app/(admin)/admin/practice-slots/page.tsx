@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { Button, FormError, IconButton, Modal, Select } from "@/components/ui";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
+import { useToast } from "@/components/ui/Toast";
 import { useFetch } from "@/hooks/useFetch";
 import {
   addMonths,
@@ -38,6 +39,7 @@ export default function PracticeSlotsPage() {
   const [cohortId, setCohortId] = useState("");
   const [instructorId, setInstructorId] = useState("");
   const [modalState, setModalState] = useState<ModalState>({ type: "closed" });
+  const toast = useToast();
 
   const { data: cohorts, error: cohortsError } = useFetch<Cohort[]>("/cohorts");
   // Solo hace falta para el selector del formulario de creación/edición;
@@ -66,6 +68,17 @@ export default function PracticeSlotsPage() {
   }
 
   function handleSaved() {
+    toast.success(
+      modalState.type === "create"
+        ? "Franja de práctica creada correctamente."
+        : "Cambios de la franja guardados correctamente.",
+    );
+    closeModal();
+    refetchSlots();
+  }
+
+  function handleDeleted() {
+    toast.success("Franja de práctica eliminada correctamente.");
     closeModal();
     refetchSlots();
   }
@@ -202,7 +215,7 @@ export default function PracticeSlotsPage() {
           <PracticeSlotDetail
             slot={modalState.slot}
             onEdit={() => setModalState({ type: "edit", slot: modalState.slot })}
-            onDeleted={handleSaved}
+            onDeleted={handleDeleted}
           />
         ) : null}
       </Modal>

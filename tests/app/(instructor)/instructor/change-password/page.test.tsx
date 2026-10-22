@@ -8,6 +8,8 @@ import { api } from "@/lib/api/client";
 const { replace, refresh, signOut } = vi.hoisted(() => ({
   replace: vi.fn(), refresh: vi.fn(), signOut: vi.fn(),
 }));
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: { signOut } }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh }) }));
 vi.mock("@/lib/api/client", () => ({ api: { post: vi.fn() } }));
@@ -31,7 +33,10 @@ it("cambia la clave temporal por el endpoint del instructor y cierra la sesión 
   expect(api.post).toHaveBeenCalledWith("/instructores/cambiar-password", {
     nuevaPassword: "new-local-password",
   });
-  await screen.findByRole("status");
+  await screen.findByText(/Inicia sesión con tu nueva contraseña/);
+  expect(toast.success).toHaveBeenCalledExactlyOnceWith("Contraseña actualizada correctamente.");
+  // El éxito va solo en el toast: el panel no repite «Contraseña actualizada».
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
   expect(signOut).toHaveBeenCalledWith({ scope: "local" });
 });
 

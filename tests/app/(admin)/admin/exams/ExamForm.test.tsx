@@ -14,6 +14,9 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
+
 vi.mock("@/lib/api/client", () => ({
   api: {
     post: vi.fn(),
@@ -153,6 +156,7 @@ describe("ExamForm", () => {
       });
     });
     expect(pushMock).toHaveBeenCalledWith("/admin/exams");
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith("Examen creado correctamente.");
   });
 
   it("muestra el mensaje de error del backend si falla el guardado", async () => {
@@ -166,6 +170,7 @@ describe("ExamForm", () => {
 
     expect(await screen.findByText("El curso indicado no existe")).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   describe("modo edición", () => {
@@ -274,6 +279,9 @@ describe("ExamForm", () => {
           { optionText: "No", isCorrect: false, orderIndex: 2 },
         ],
       });
+      expect(toast.success).toHaveBeenCalledExactlyOnceWith(
+        "Cambios del examen guardados correctamente.",
+      );
     });
 
     it("no permite quitar la última pregunta restante", async () => {

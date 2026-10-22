@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { Button, Card, FormError, Textarea } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import { useCountdown } from "@/hooks/useCountdown";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -329,6 +330,7 @@ function AnsweringScreen({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasSubmittedRef = useRef(false);
+  const toast = useToast();
   const { remainingSeconds } = useCountdown(startedAt, exam.timeLimitMinutes);
 
   async function submit() {
@@ -345,6 +347,7 @@ function AnsweringScreen({
       const result = await api.post<AttemptResult>(`/attempts/${attemptId}/submit`, {
         answers: payloadAnswers,
       });
+      toast.success("Examen enviado correctamente.");
       onSubmitted(result);
     } catch (err) {
       // El backend solo responde 409 en este endpoint cuando el intento

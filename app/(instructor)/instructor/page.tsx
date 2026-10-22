@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Button, Card, Modal, StatusBadge } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { addWeeks, dayKey, formatWeekRangeLabel, getWeekDays } from "@/lib/utils/calendar";
@@ -36,13 +37,12 @@ function SlotAttendance({
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const toast = useToast();
   const [pendingCorrection, setPendingCorrection] = useState<boolean | null>(null);
 
   async function save(attended: boolean) {
     setSaving(true);
     setError(null);
-    setSaved(false);
     try {
       const updated = await api.patch<PracticeSlot>(`/practice-slots/${slot.id}/attendance`, {
         attended,
@@ -50,7 +50,7 @@ function SlotAttendance({
       onSaved(updated);
       setEditing(false);
       setPendingCorrection(null);
-      setSaved(true);
+      toast.success("Asistencia registrada correctamente.");
     } catch (cause) {
       setError(
         cause instanceof ApiError
@@ -78,8 +78,8 @@ function SlotAttendance({
 
   return (
     <div className="flex flex-col gap-2">
-      <p role={saved ? "status" : undefined} className="text-sm text-text-secondary">
-        {saved ? "Asistencia guardada: " : "Asistencia: "}
+      <p className="text-sm text-text-secondary">
+        Asistencia:{" "}
         {slot.attended === null ? "Sin registrar" : slot.attended ? "Asistió" : "No asistió"}
       </p>
       {slot.attended === null || editing ? (
@@ -109,10 +109,7 @@ function SlotAttendance({
           size="sm"
           variant="secondary"
           className="self-start"
-          onClick={() => {
-            setEditing(true);
-            setSaved(false);
-          }}
+          onClick={() => setEditing(true)}
         >
           Cambiar asistencia
         </Button>

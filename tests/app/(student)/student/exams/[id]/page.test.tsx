@@ -11,6 +11,9 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "exam-1" }),
 }));
 
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
+
 vi.mock("@/lib/api/client", () => ({
   api: { get: vi.fn(), post: vi.fn() },
 }));
@@ -167,6 +170,7 @@ describe("TakeExamPage", () => {
     });
     expect(await screen.findByText("100.00% — Aprobado")).toBeInTheDocument();
     expect(screen.getByText("Correcta — 10/10 pts")).toBeInTheDocument();
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith("Examen enviado correctamente.");
   });
 
   it("examen definitivo ya completado: muestra el resumen sin opción de reintentar", async () => {
@@ -354,6 +358,8 @@ describe("TakeExamPage", () => {
     expect(screen.getByText("¿Qué significa una señal triangular roja?")).toBeInTheDocument();
     expect(screen.getByText("Incorrecta")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Volver al listado de exámenes" })).toBeInTheDocument();
+    // El 409 muestra el resultado ya guardado: no hay envío nuevo que celebrar.
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it("si el envío manual falla por un error que no sea 409, muestra el error con un enlace de salida", async () => {
@@ -375,5 +381,6 @@ describe("TakeExamPage", () => {
     expect(screen.getByRole("link", { name: "Volver al listado de exámenes" })).toBeInTheDocument();
     // El formulario sigue disponible para reintentar, no es un callejón sin salida.
     expect(screen.getByRole("button", { name: "Enviar respuestas" })).toBeInTheDocument();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });

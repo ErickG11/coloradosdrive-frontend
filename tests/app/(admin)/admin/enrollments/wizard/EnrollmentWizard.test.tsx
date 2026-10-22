@@ -9,6 +9,8 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn(), post: vi.fn() } }));
 const VALID_CEDULA = "1710034065";
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 const get = vi.mocked(api.get),
   post = vi.mocked(api.post);
 const cohort = {
@@ -195,6 +197,8 @@ describe("Wizard sin escrituras prematuras", () => {
     expect(payload.documentos).toHaveLength(4);
     expect(payload.pago).toEqual({ modalidad: "abono", descuento: 0, montoAbonado: 100 });
     expect(sessionStorage.getItem("coloradosdrive.manual-enrollment.confirmation")).toBeNull();
+    // Panel final conservado y además toast de éxito (una sola vez).
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith("Matrícula registrada correctamente.");
   });
   it("el payload de confirmación lleva correo y nombre recortados", async () => {
     const user = await draft();
@@ -258,6 +262,7 @@ describe("Wizard sin escrituras prematuras", () => {
     get.mockResolvedValue({ phase: "failed", result: null, emailStatus: "pending" });
     await user.click(screen.getByRole("button", { name: "Confirmar matrícula y prácticas" }));
     await screen.findByText(/Ya existe una matrícula vigente/);
+    expect(toast.success).not.toHaveBeenCalled();
     expect(screen.queryByRole("heading", { name: "Matrícula confirmada" })).not.toBeInTheDocument();
     expect(sessionStorage.getItem("coloradosdrive.manual-enrollment.confirmation")).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "Confirmar matrícula y prácticas" }));
@@ -313,11 +318,17 @@ describe("Wizard sin escrituras prematuras", () => {
     post.mockResolvedValueOnce({ ...result, emailStatus: "failed" });
     await user.click(screen.getByRole("button", { name: "Confirmar matrícula y prácticas" }));
     await screen.findByText(/falló; la matrícula sigue confirmada/);
+    // El toast confirma la matrícula; el panel sigue avisando del correo.
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith("Matrícula registrada correctamente.");
     post.mockResolvedValueOnce(result);
     await user.click(screen.getByRole("button", { name: "Reenviar correo de matrícula" }));
     expect(post).toHaveBeenCalledWith(`${BASE}/operations/op/resend-email`, {
       regenerateTemporaryPassword: false,
     });
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenLastCalledWith("Correo de matrícula reenviado correctamente."),
+    );
+    expect(toast.success).toHaveBeenCalledTimes(2);
   });
 });
 describe("Documentos y pago sin cohorte", () => {

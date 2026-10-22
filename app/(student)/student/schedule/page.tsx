@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Button, Card, FormError, StatusBadge } from "@/components/ui";
 import { CheckIcon, ClaimIcon, XIcon } from "@/components/ui/icons";
+import { useToast } from "@/components/ui/Toast";
 import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { useFetch } from "@/hooks/useFetch";
 import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
@@ -38,6 +39,7 @@ export default function StudentSchedulePage() {
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
+  const toast = useToast();
   const [confirmationDue, setConfirmationDue] = useState(false);
   const [noPracticeNotice, setNoPracticeNotice] = useState(false);
 
@@ -80,11 +82,13 @@ export default function StudentSchedulePage() {
     slotId: string,
     action: () => Promise<unknown>,
     fallbackMessage: string,
+    successMessage: string,
   ) {
     setActionError(null);
     setPendingSlotId(slotId);
     try {
       await action();
+      toast.success(successMessage);
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : fallbackMessage);
     } finally {
@@ -101,6 +105,7 @@ export default function StudentSchedulePage() {
       slotId,
       () => api.post(`/practice-slots/${slotId}/claim`),
       "No se pudo reclamar la franja.",
+      "Franja reservada correctamente.",
     );
   }
 
@@ -109,6 +114,7 @@ export default function StudentSchedulePage() {
       slotId,
       () => api.post(`/practice-slots/${slotId}/confirm`),
       "No se pudo confirmar la franja.",
+      "Asistencia confirmada correctamente.",
     );
   }
 
@@ -117,6 +123,7 @@ export default function StudentSchedulePage() {
       slotId,
       () => api.post(`/practice-slots/${slotId}/cancel`),
       "No se pudo cancelar la franja.",
+      "Franja cancelada correctamente.",
     );
   }
 

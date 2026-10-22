@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { createClient } from "@/lib/supabase/client";
@@ -13,6 +14,7 @@ export default function ChangePasswordPage() {
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
   const router = useRouter();
+  const toast = useToast();
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -35,6 +37,7 @@ export default function ChangePasswordPage() {
         .auth.signOut({ scope: "local" })
         .catch(() => undefined);
       setCompleted(true);
+      toast.success("Contraseña actualizada correctamente.");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "No se pudo cambiar la contraseña.");
     } finally {
@@ -45,9 +48,7 @@ export default function ChangePasswordPage() {
     <Card title="Cambiar contraseña temporal" titleAs="h1">
       {completed ? (
         <div className="flex flex-col gap-4">
-          <p role="status">
-            Contraseña actualizada. Inicia sesión con tu nueva contraseña para continuar.
-          </p>
+          <p>Inicia sesión con tu nueva contraseña para continuar.</p>
           <Button
             onClick={() => {
               router.replace("/login");
