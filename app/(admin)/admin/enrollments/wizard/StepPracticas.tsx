@@ -7,6 +7,7 @@ import type { InstructorSugerido, SugerirPracticaResult } from "@/types";
 import {
   BASE,
   EMPTY_PRACTICE,
+  horasPorDiaError,
   practicePayload,
   type CourseSelection,
   type PracticeChoice,
@@ -32,10 +33,11 @@ export function StepPracticas({
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
   const version = useRef(0);
+  const horasError = horasPorDiaError(form.horasPorDia);
   // Se consulta la misma regla del servidor para automático y manual. Se
   // descartan respuestas antiguas cuando el usuario modifica el borrador.
   useEffect(() => {
-    if (!form.fechaInicio || (form.manual && !form.fechaFin)) return;
+    if (!form.fechaInicio || (form.manual && !form.fechaFin) || horasError) return;
     let stale = false;
     const t = setTimeout(() => {
       api
@@ -57,7 +59,7 @@ export function StepPracticas({
       stale = true;
       clearTimeout(t);
     };
-  }, [form]);
+  }, [form, horasError]);
   function change<K extends keyof PracticeFormData>(field: K, value: PracticeFormData[K]) {
     ++version.current;
     setForm((f) => ({ ...f, [field]: value }));
@@ -137,10 +139,12 @@ export function StepPracticas({
         name="horasPorDia"
         label="Horas por día"
         type="number"
+        required
         min={1}
         max={16}
         value={form.horasPorDia}
-        onChange={(e) => change("horasPorDia", Number(e.target.value))}
+        error={horasError ?? undefined}
+        onChange={(e) => change("horasPorDia", e.target.value === "" ? "" : Number(e.target.value))}
       />
       <Input
         name="fechaFin"
