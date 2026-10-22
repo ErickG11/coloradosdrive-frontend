@@ -120,7 +120,7 @@ describe("Paso 1: validación y duplicados al pulsar Continuar", () => {
       "abc12",
       "Ingresa un teléfono válido de 7 a 20 caracteres (solo dígitos, +, espacios, guiones y paréntesis).",
     ],
-    ["Fecha de nacimiento (opcional)", "1800-01-01", "La edad debe estar entre 16 y 100 años."],
+    ["Fecha de nacimiento (opcional)", "1800-01-01", "La edad debe estar entre 15 y 100 años."],
   ])("%s = %j se rechaza sin consultar duplicados", async (label, value, message) => {
     const onNext = renderStep();
     fillStudent();
