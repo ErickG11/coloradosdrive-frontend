@@ -9,7 +9,7 @@ import type { InstructorDetail } from "@/types";
 
 interface InstructorFormProps {
   instructor?: InstructorDetail;
-  onSaved: () => void;
+  onSaved: (name: string) => void;
   onCancel: () => void;
 }
 
@@ -48,7 +48,7 @@ export function InstructorForm({ instructor, onSaved, onCancel }: InstructorForm
           correo: correo.trim(),
         });
       }
-      onSaved();
+      onSaved(nombreCompleto.trim());
     } catch (cause) {
       const message = cause instanceof ApiError ? cause.message : "No se pudo guardar el instructor.";
       if (/c[eé]dula/i.test(message)) setCedulaError(message);

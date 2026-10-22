@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Button, Input, Modal, Select } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -23,7 +24,7 @@ export default function InstructorsPage() {
   const [action, setAction] = useState<Action>("desactivar");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const toast = useToast();
   const pageSize = 10;
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -36,7 +37,6 @@ export default function InstructorsPage() {
 
   async function openDetail(id: string) {
     setActionError(null);
-    setActionSuccess(null);
     setBusy(true);
     try {
       const instructor = await api.get<InstructorDetail>(`/admin/instructores/${id}`);
@@ -49,7 +49,12 @@ export default function InstructorsPage() {
     }
   }
 
-  function saved() {
+  function saved(name: string) {
+    toast.success(
+      dialog === "create"
+        ? `Instructor «${name}» creado correctamente.`
+        : `Cambios de «${name}» guardados correctamente.`,
+    );
     setDialog("closed");
     setSelected(null);
     refetch();
@@ -58,7 +63,6 @@ export default function InstructorsPage() {
   function ask(actionToConfirm: Action) {
     setAction(actionToConfirm);
     setActionError(null);
-    setActionSuccess(null);
     setDialog("confirm");
   }
 
@@ -68,8 +72,12 @@ export default function InstructorsPage() {
     setActionError(null);
     try {
       await api.post<InstructorDetail | void>(`/admin/instructores/${selected.id}/${action}`);
+      const name = selected.nombreCompleto;
       if (action === "restablecer-password") {
-        setActionSuccess("Se envió una contraseña temporal al correo del instructor.");
+        toast.success("Se envió una contraseña temporal al correo del instructor.");
+      } else {
+        const done = action === "desactivar" ? "desactivado" : "reactivado";
+        toast.success(`Instructor «${name}» ${done} correctamente.`);
       }
       setDialog("closed");
       setSelected(null);
@@ -111,7 +119,6 @@ export default function InstructorsPage() {
       {error ? <p role="alert" className="text-sm text-accent-red">{error}</p> : null}
       {actionError && dialog === "closed" ?
         <p role="alert" className="text-sm text-accent-red">{actionError}</p> : null}
-      {actionSuccess ? <p role="status" className="text-sm text-accent-blue">{actionSuccess}</p> : null}
       {!isLoading && !error ? (
         <>
           <div className="overflow-x-auto rounded-md border border-border bg-bg-surface">

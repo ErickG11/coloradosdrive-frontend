@@ -8,6 +8,8 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { InstructorDetail, InstructorList } from "@/types";
 
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 vi.mock("@/hooks/useFetch", () => ({ useFetch: vi.fn() }));
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
 
@@ -78,9 +80,11 @@ describe("InstructorsPage", () => {
     await waitFor(() => expect(mockedPost).toHaveBeenCalledWith(
       `/admin/instructores/${instructor.id}/restablecer-password`,
     ));
-    expect(await screen.findByRole("status")).toHaveTextContent(
+    await waitFor(() => expect(toast.success).toHaveBeenCalledOnce());
+    expect(toast.success).toHaveBeenCalledWith(
       "Se envió una contraseña temporal al correo del instructor.",
     );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByText(/contraseña:\s*\S+/i)).not.toBeInTheDocument();
   });
 
@@ -108,6 +112,85 @@ describe("InstructorsPage", () => {
       .getByRole("button", { name: "Confirmar" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "No se pudo enviar el correo de restablecimiento",
+    );
+  });
+  it.each([
+    [true, "desactivar", "Instructor «Bruno Salas» desactivado correctamente."],
+    [false, "reactivar", "Instructor «Bruno Salas» reactivado correctamente."],
+  ])("activo=%s: al %s dispara el toast de éxito", async (activo, action, message) => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue({ ...instructor, activo });
+    mockedPost.mockResolvedValue(undefined);
+    render(<InstructorsPage />);
+    await user.click(screen.getByRole("button", { name: "Ver y gestionar" }));
+    await user.click(
+      within(await screen.findByRole("dialog", { name: "Instructor" })).getByRole("button", {
+        name: activo ? "Desactivar" : "Reactivar",
+      }),
+    );
+    await user.click(
+      within(await screen.findByRole("dialog", { name: "Confirmar acción" })).getByRole("button", {
+        name: "Confirmar",
+      }),
+    );
+    await waitFor(() => expect(toast.success).toHaveBeenCalledOnce());
+    expect(mockedPost).toHaveBeenCalledWith(`/admin/instructores/${instructor.id}/${action}`);
+    expect(toast.success).toHaveBeenCalledWith(message);
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("un error al desactivar no dispara el toast", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue(instructor);
+    mockedPost.mockRejectedValue(new ApiError("Hay franjas futuras", 409));
+    render(<InstructorsPage />);
+    await user.click(screen.getByRole("button", { name: "Ver y gestionar" }));
+    await user.click(
+      within(await screen.findByRole("dialog", { name: "Instructor" })).getByRole("button", {
+        name: "Desactivar",
+      }),
+    );
+    await user.click(
+      within(await screen.findByRole("dialog", { name: "Confirmar acción" })).getByRole("button", {
+        name: "Confirmar",
+      }),
+    );
+    await screen.findByRole("alert");
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("crear un instructor dispara el toast y recarga la lista", async () => {
+    const user = userEvent.setup();
+    mockedPost.mockResolvedValue(instructor);
+    render(<InstructorsPage />);
+    await user.click(screen.getByRole("button", { name: "Nuevo instructor" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Nuevo instructor" }));
+    await user.type(dialog.getByLabelText("Cédula"), "1710034065");
+    await user.type(dialog.getByLabelText("Nombre completo"), "Bruno Salas");
+    await user.type(dialog.getByLabelText("Teléfono"), "0991234567");
+    await user.type(dialog.getByLabelText("Correo electrónico"), "bruno@example.com");
+    await user.click(dialog.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledOnce());
+    expect(toast.success).toHaveBeenCalledWith("Instructor «Bruno Salas» creado correctamente.");
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("editar un instructor dispara el toast de cambios guardados", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue(instructor);
+    vi.mocked(api.patch).mockResolvedValue(instructor);
+    render(<InstructorsPage />);
+    await user.click(screen.getByRole("button", { name: "Ver y gestionar" }));
+    await user.click(
+      within(await screen.findByRole("dialog", { name: "Instructor" })).getByRole("button", {
+        name: "Editar",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog", { name: "Editar instructor" }));
+    await user.click(dialog.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledOnce());
+    expect(toast.success).toHaveBeenCalledWith(
+      "Cambios de «Bruno Salas» guardados correctamente.",
     );
   });
 });
