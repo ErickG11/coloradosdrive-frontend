@@ -8,6 +8,7 @@ import { BASE, type CourseSelection } from "@/app/(admin)/admin/enrollments/wiza
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn(), post: vi.fn() } }));
+const VALID_CEDULA = "1710034065";
 const get = vi.mocked(api.get),
   post = vi.mocked(api.post);
 const cohort = {
@@ -17,8 +18,8 @@ const cohort = {
   precio: 400,
   cupo_maximo: 20,
   ocupados: 2,
-  fecha_inicio_matricula: "2026-09-01",
-  fecha_fin_matricula: "2026-10-31",
+  fecha_inicio_matricula: "2020-01-01",
+  fecha_fin_matricula: "2099-12-31",
   fecha_inicio_curso: "2026-11-01",
   fecha_fin_curso: "2026-12-31",
 };
@@ -110,6 +111,7 @@ beforeEach(() => {
         suggestion: { cohortId: "cohort-a", warning: null },
         cohorts: [cohort],
       };
+    if (path === `${BASE}/duplicates`) return { cedula: false, correo: false };
     if (path === `${BASE}/plan`) return plan;
     if (path === `${BASE}/practice-preview`) return { plan, suggestion };
     if (path === `${BASE}/confirm`) return result;
@@ -145,7 +147,7 @@ async function draft(existing = false, birthDate?: string) {
     await user.click(screen.getByRole("button", { name: "Buscar estudiante" }));
     await user.click(await screen.findByRole("button", { name: /Ana existente/ }));
   } else {
-    fireEvent.change(screen.getByLabelText("Cédula"), { target: { value: "1234567890" } });
+    fireEvent.change(screen.getByLabelText("Cédula"), { target: { value: VALID_CEDULA } });
     fireEvent.change(screen.getByLabelText("Nombres completos"), {
       target: { value: "Ana nueva" },
     });
@@ -168,6 +170,8 @@ async function draft(existing = false, birthDate?: string) {
   await screen.findByText(/Hora sugerida/);
   await user.click(screen.getByRole("button", { name: "Continuar" }));
   expect(screen.getByRole("heading", { name: "Documentos" })).toBeInTheDocument();
+  // Con cohorte, el abono debe ser mayor que $0.00.
+  fireEvent.change(screen.getByLabelText("Monto abonado (USD)"), { target: { value: "100" } });
   await user.click(screen.getByRole("button", { name: "Continuar" }));
   return user;
 }
@@ -189,7 +193,7 @@ describe("Wizard sin escrituras prematuras", () => {
     };
     expect(payload.student).not.toHaveProperty("fechaNacimiento");
     expect(payload.documentos).toHaveLength(4);
-    expect(payload.pago).toEqual({ modalidad: "abono", descuento: 0, montoAbonado: 0 });
+    expect(payload.pago).toEqual({ modalidad: "abono", descuento: 0, montoAbonado: 100 });
     expect(sessionStorage.getItem("coloradosdrive.manual-enrollment.confirmation")).toBeNull();
   });
   it("A+B usa la identidad seleccionada y no envía contraseña", async () => {
@@ -352,13 +356,16 @@ describe("Fecha final en modo automático y manual", () => {
   });
   it("rango sin días no permite continuar", async () => {
     post.mockRejectedValue(new ApiError("El rango no contiene días aplicables", 400));
-    render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={() => {}} />);
+    const next = vi.fn();
+    render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={next} />);
     fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-10-03" } });
     await screen.findByRole("alert");
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Continuar" }));
+    expect(next).not.toHaveBeenCalled();
   });
   it("horas por día vacío no se envía como 0 y muestra un error claro", async () => {
-    render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={() => {}} />);
+    const next = vi.fn();
+    render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={next} />);
     fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-09-30" } });
     await waitFor(() => expect(post).toHaveBeenCalled());
     post.mockClear();
@@ -366,7 +373,9 @@ describe("Fecha final en modo automático y manual", () => {
     expect(screen.getByLabelText("Horas por día")).toHaveValue(null);
     expect(screen.getByLabelText("Horas por día")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("alert")).toHaveTextContent("Ingresa las horas por día.");
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Continuar" }));
+    expect(next).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Horas por día")).toHaveFocus();
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(post).not.toHaveBeenCalled();
   });
@@ -394,5 +403,114 @@ describe("Fecha final en modo automático y manual", () => {
       }),
     );
     expect(screen.queryByText(/entre 1 y 6/)).not.toBeInTheDocument();
+  });
+});
+describe("Errores del servidor al confirmar llevan al paso del campo", () => {
+  async function confirmWith(error: ApiError) {
+    const user = await draft();
+    post.mockRejectedValueOnce(error);
+    await user.click(screen.getByRole("button", { name: "Confirmar matrícula y prácticas" }));
+    return user;
+  }
+  it("DUPLICATE_CEDULA vuelve al paso 1 con el aviso junto a la cédula y foco", async () => {
+    await confirmWith(
+      new ApiError("La cédula ya existe. Busca y selecciona el estudiante existente.", 409, {
+        code: "DUPLICATE_CEDULA",
+        field: "student.cedula",
+      }),
+    );
+    const cedula = await screen.findByLabelText("Cédula");
+    expect(cedula).toHaveAttribute("aria-invalid", "true");
+    expect(cedula).toHaveFocus();
+    expect(screen.getByText(/La cédula ya existe/)).toHaveAttribute("role", "alert");
+    expect(screen.queryByRole("heading", { name: "Matrícula confirmada" })).not.toBeInTheDocument();
+    // No queda una operación a medias: se descarta la clave y el borrador guardado.
+    expect(sessionStorage.getItem("coloradosdrive.manual-enrollment.confirmation")).toBeNull();
+    expect(get).not.toHaveBeenCalledWith(expect.stringContaining("/operations/"));
+  });
+  it("DUPLICATE_EMAIL vuelve al paso 1 con el aviso junto al correo", async () => {
+    await confirmWith(
+      new ApiError("El correo ya existe. Busca y selecciona el estudiante existente.", 409, {
+        code: "DUPLICATE_EMAIL",
+        field: "student.correo",
+      }),
+    );
+    expect(await screen.findByLabelText("Correo electrónico")).toHaveFocus();
+    expect(screen.getByText(/El correo ya existe/)).toBeInTheDocument();
+  });
+  it.each([
+    ["COHORT_FULL", "La cohorte ya no tiene cupo disponible.", 409],
+    ["COHORT_ENROLLMENT_CLOSED", "La matrícula de la cohorte no está abierta.", 409],
+    ["COHORT_NOT_FOUND", "La cohorte seleccionada no existe.", 404],
+    ["COHORT_COURSE_MISMATCH", "La cohorte seleccionada no corresponde al curso elegido.", 400],
+  ])("%s vuelve al paso Curso con el mensaje", async (code, message, status) => {
+    await confirmWith(new ApiError(message, status, { code, field: "cohortId" }));
+    expect(await screen.findByText(/Elige el tipo de curso/)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+  });
+  it("un error de instructor vuelve al paso Prácticas", async () => {
+    await confirmWith(
+      new ApiError("Selecciona un instructor antes de confirmar.", 400, {
+        code: "INVALID_FIELD",
+        field: "practice.instructorId",
+      }),
+    );
+    expect(await screen.findByLabelText("Fecha de inicio")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Selecciona un instructor antes de confirmar.",
+    );
+  });
+  it("un error de pago vuelve al paso Documentos y pago junto al campo", async () => {
+    await confirmWith(
+      new ApiError("El abono no puede superar el monto total neto", 400, {
+        code: "INVALID_FIELD",
+        field: "pago.montoAbonado",
+      }),
+    );
+    expect(await screen.findByLabelText("Monto abonado (USD)")).toHaveFocus();
+    expect(screen.getByText("El abono no puede superar el monto total neto")).toBeInTheDocument();
+  });
+  it("sin campo (o 5xx) se queda en el paso 5 con el mensaje general", async () => {
+    await confirmWith(
+      new ApiError("El instructor dejó de estar disponible. Consulta una nueva sugerencia.", 409),
+    );
+    expect(await screen.findByText(/El instructor dejó de estar disponible/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirmar matrícula y prácticas" }),
+    ).toBeInTheDocument();
+  });
+  it("tras corregir el dato se envía una operación nueva (otra clave)", async () => {
+    const user = await confirmWith(
+      new ApiError("La cédula ya existe. Busca y selecciona el estudiante existente.", 409, {
+        code: "DUPLICATE_CEDULA",
+        field: "student.cedula",
+      }),
+    );
+    const firstKey = (
+      post.mock.calls.find(([p]) => p === `${BASE}/confirm`)?.[2] as {
+        headers: Record<string, string>;
+      }
+    ).headers["Idempotency-Key"];
+    await screen.findByLabelText("Cédula");
+    fireEvent.change(screen.getByLabelText("Cédula"), { target: { value: "0901234567" } });
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(await screen.findByRole("button", { name: /Tipo A/ }));
+    await screen.findByText(/Cupos disponibles/);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-09-30" } });
+    await screen.findByText(/5 días · 10 bloques/);
+    await user.click(screen.getByRole("button", { name: "Ver sugerencia" }));
+    await screen.findByText(/Hora sugerida/);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    fireEvent.change(screen.getByLabelText("Monto abonado (USD)"), { target: { value: "100" } });
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar matrícula y prácticas" }));
+    await screen.findByRole("heading", { name: "Matrícula confirmada" });
+    const confirms = post.mock.calls.filter(([p]) => p === `${BASE}/confirm`);
+    expect(confirms).toHaveLength(2);
+    expect(
+      (confirms[1][2] as { headers: Record<string, string> }).headers["Idempotency-Key"],
+    ).not.toBe(firstKey);
+    expect((confirms[1][1] as { student: { cedula: string } }).student.cedula).toBe("0901234567");
   });
 });

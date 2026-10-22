@@ -9,6 +9,7 @@ import { StepConfirmar } from "./StepConfirmar";
 import { StepDocumentosPago } from "./StepDocumentosPago";
 import { summarizePayment } from "./payment";
 import { WizardProgress } from "./WizardProgress";
+import { serverFieldError, type ServerFieldError } from "./validation";
 import {
   BASE,
   EMPTY_STUDENT,
@@ -54,6 +55,9 @@ export function EnrollmentWizard() {
   const [result, setResult] = useState<ManualResult | null>(null),
     [busy, setBusy] = useState(false),
     [uncertain, setUncertain] = useState(false);
+  // Error del servidor al confirmar ligado a un campo: se muestra junto a ese
+  // campo en el paso que lo contiene.
+  const [fieldError, setFieldError] = useState<ServerFieldError | null>(null);
   const pending = useRef<Pending | null>(null),
     inFlight = useRef(false);
   async function check(p: Pending) {
@@ -201,6 +205,18 @@ export function EnrollmentWizard() {
       sessionStorage.removeItem(STORAGE);
       pending.current = null;
     } catch (e) {
+      const located = e instanceof ApiError && e.status < 500 ? serverFieldError(e) : null;
+      if (located) {
+        // El servidor rechazó un dato concreto y no creó nada: vuelve al paso
+        // que lo contiene. Se descarta la clave de idempotencia para que, tras
+        // corregirlo, se envíe una operación nueva.
+        pending.current = null;
+        sessionStorage.removeItem(STORAGE);
+        setUncertain(false);
+        setFieldError(located);
+        setStep(located.step);
+        return;
+      }
       setError(
         e instanceof ApiError
           ? e.message
@@ -228,6 +244,7 @@ export function EnrollmentWizard() {
     setDetailsError(null);
     setDetailsLoading(false);
     setResult(null);
+    setFieldError(null);
     setStep(1);
     setUncertain(false);
   }
@@ -237,8 +254,10 @@ export function EnrollmentWizard() {
       {step === 1 && (
         <StepDatosEstudiante
           value={student}
+          serverError={fieldError}
           onNext={(s) => {
             edit();
+            setFieldError(null);
             setStudent(s);
             setStep(2);
           }}
@@ -248,9 +267,11 @@ export function EnrollmentWizard() {
         <StepCurso
           catalog={catalog}
           value={course}
+          serverError={fieldError}
           onBack={() => setStep(1)}
           onNext={(c) => {
             edit();
+            setFieldError(null);
             setCourse(c);
             setDetailsChoice(null);
             setStep(3);
@@ -261,9 +282,11 @@ export function EnrollmentWizard() {
         <StepPracticas
           course={course}
           value={practice}
+          serverError={fieldError}
           onBack={() => setStep(2)}
           onNext={(p) => {
             edit();
+            setFieldError(null);
             setPractice(p);
             setStep(4);
           }}
@@ -274,9 +297,11 @@ export function EnrollmentWizard() {
           student={student}
           course={course}
           value={detailsChoice}
+          serverError={fieldError}
           onBack={() => setStep(3)}
           onNext={(value) => {
             edit();
+            setFieldError(null);
             setDetailsChoice(value);
             setStep(5);
           }}

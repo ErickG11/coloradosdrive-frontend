@@ -1,15 +1,21 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Button, Input, Select } from "@/components/ui";
+import { Button, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { InstructorSugerido, SugerirPracticaResult } from "@/types";
+import {
+  focusFirst,
+  MESSAGES,
+  validatePractice,
+  type PracticeField,
+  type ServerFieldError,
+} from "./validation";
 import {
   BASE,
   EMPTY_PRACTICE,
   HORAS_POR_DIA_MAX,
   HORAS_POR_DIA_MIN,
-  horasPorDiaError,
   practicePayload,
   type CourseSelection,
   type PracticeChoice,
@@ -22,11 +28,14 @@ export function StepPracticas({
   value,
   onBack,
   onNext,
+  serverError,
 }: {
   course: CourseSelection;
   value: PracticeChoice | null;
   onBack: () => void;
   onNext: (p: PracticeChoice) => void;
+  /** Error del servidor al confirmar que corresponde a este paso. */
+  serverError?: ServerFieldError | null;
 }) {
   const [form, setForm] = useState(value?.form ?? EMPTY_PRACTICE);
   const [plan, setPlan] = useState<PracticePlan | null>(null);
@@ -35,11 +44,31 @@ export function StepPracticas({
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
   const version = useRef(0);
-  const horasError = horasPorDiaError(form.horasPorDia);
+  // Los errores de campo se muestran al pulsar «Continuar» y se mantienen al día
+  // mientras se corrigen; las horas por día y la fecha final manual, en vivo.
+  const [attempted, setAttempted] = useState(false);
+  const [serverErrors, setServerErrors] = useState<Record<string, string>>(() =>
+    serverError?.step === 3 ? { [serverError.field]: serverError.message } : {},
+  );
+  const [suggestionError, setSuggestionError] = useState<string | null>(
+    serverError?.step === 3 && serverError.field === "instructorId" ? serverError.message : null,
+  );
+  const [instructorError, setInstructorError] = useState<string | null>(null);
+  const fieldErrors = validatePractice(form);
+  const live: PracticeField[] = ["horasPorDia", ...(form.manual ? (["fechaFin"] as const) : [])];
+  const shown = (field: PracticeField): string | undefined =>
+    (attempted || live.includes(field) ? fieldErrors[field] : undefined) ?? serverErrors[field];
+  const blocked = Object.keys(fieldErrors).length > 0;
+  useEffect(() => {
+    if (!serverError || serverError.step !== 3) return;
+    focusFirst(
+      serverError.field === "instructorId" ? ["sugerencia-error-box"] : [serverError.field],
+    );
+  }, [serverError]);
   // Se consulta la misma regla del servidor para automático y manual. Se
   // descartan respuestas antiguas cuando el usuario modifica el borrador.
   useEffect(() => {
-    if (!form.fechaInicio || (form.manual && !form.fechaFin) || horasError) return;
+    if (blocked) return;
     let stale = false;
     const t = setTimeout(() => {
       api
@@ -61,19 +90,52 @@ export function StepPracticas({
       stale = true;
       clearTimeout(t);
     };
-  }, [form, horasError]);
+  }, [form, blocked]);
   function change<K extends keyof PracticeFormData>(field: K, value: PracticeFormData[K]) {
     ++version.current;
     setForm((f) => ({ ...f, [field]: value }));
+    setServerErrors((e) => ({ ...e, [field]: "" }));
     setPlan(null);
     setSuggestion(null);
     setInstructor(null);
     setError(null);
+    setSuggestionError(null);
+    setInstructorError(null);
+  }
+  const ORDER: PracticeField[] = ["fechaInicio", "horaDeseada", "horasPorDia", "fechaFin"];
+  function submit() {
+    setAttempted(true);
+    const invalid = ORDER.filter((f) => fieldErrors[f]);
+    if (invalid.length) {
+      focusFirst(invalid);
+      return;
+    }
+    if (!plan) {
+      // El plan se calcula solo; si falló, su error ya está en pantalla.
+      if (!error) setError("Espera a que se calcule el plan de prácticas.");
+      return;
+    }
+    if (!course.cohortId) {
+      void preview();
+      return;
+    }
+    if (!suggestion) {
+      setSuggestionError(MESSAGES.sugerencia);
+      focusFirst(["sugerencia-error-box"]);
+      return;
+    }
+    if (!instructor) {
+      setInstructorError(MESSAGES.instructor);
+      focusFirst(["instructorId"]);
+      return;
+    }
+    onNext({ form, plan, suggestion, instructor });
   }
   async function preview() {
     const request = ++version.current;
     setBusy(true);
     setError(null);
+    setSuggestionError(null);
     setSuggestion(null);
     setInstructor(null);
     try {
@@ -127,6 +189,8 @@ export function StepPracticas({
         name="fechaInicio"
         label="Fecha de inicio"
         type="date"
+        required
+        error={shown("fechaInicio")}
         value={form.fechaInicio}
         onChange={(e) => change("fechaInicio", e.target.value)}
       />
@@ -134,6 +198,10 @@ export function StepPracticas({
         name="horaDeseada"
         label="Hora deseada"
         type="time"
+        required
+        min="06:00"
+        max="22:00"
+        error={shown("horaDeseada")}
         value={form.horaDeseada}
         onChange={(e) => change("horaDeseada", e.target.value)}
       />
@@ -145,16 +213,19 @@ export function StepPracticas({
         min={HORAS_POR_DIA_MIN}
         max={HORAS_POR_DIA_MAX}
         value={form.horasPorDia}
-        error={horasError ?? undefined}
+        error={shown("horasPorDia")}
         onChange={(e) => change("horasPorDia", e.target.value === "" ? "" : Number(e.target.value))}
       />
       <Input
         name="fechaFin"
         label="Fecha final"
         type="date"
+        min={form.fechaInicio || undefined}
+        error={shown("fechaFin")}
         value={form.manual ? form.fechaFin : (plan?.fechaFinElegida ?? "")}
         onChange={(e) => {
           ++version.current;
+          setServerErrors((current) => ({ ...current, fechaFin: "" }));
           setForm((f) => ({ ...f, manual: true, fechaFin: e.target.value }));
           setPlan(null);
           setSuggestion(null);
@@ -192,13 +263,13 @@ export function StepPracticas({
           asignar instructor.
         </p>
       )}
-      {error && (
-        <p role="alert" className="text-accent-red">
-          {error}
-        </p>
-      )}
+      <FormError>{error}</FormError>
+      <div id="sugerencia-error-box" tabIndex={-1} className="outline-none">
+        <FormError>{suggestionError}</FormError>
+      </div>
       {course.cohortId && (
         <Button
+          id="ver-sugerencia"
           variant="secondary"
           isLoading={busy}
           disabled={!plan}
@@ -223,11 +294,13 @@ export function StepPracticas({
             name="instructorId"
             label="Instructor"
             value={instructor?.id ?? ""}
-            onChange={(e) =>
+            error={instructorError ?? undefined}
+            onChange={(e) => {
+              setInstructorError(null);
               setInstructor(
                 suggestion.instructoresSugeridos.find((i) => i.id === e.target.value) ?? null,
-              )
-            }
+              );
+            }}
           >
             <option value="" disabled>
               Selecciona un instructor
@@ -244,15 +317,7 @@ export function StepPracticas({
         <Button variant="secondary" onClick={onBack}>
           Atrás
         </Button>
-        <Button
-          isLoading={!course.cohortId && busy}
-          disabled={!plan || (!!course.cohortId && (!suggestion || !instructor)) || busy}
-          onClick={() => {
-            if (!course.cohortId) void preview();
-            else if (plan && suggestion && instructor)
-              onNext({ form, plan, suggestion, instructor });
-          }}
-        >
+        <Button isLoading={!course.cohortId && busy} disabled={busy} onClick={submit}>
           Continuar
         </Button>
       </div>

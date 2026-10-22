@@ -1,9 +1,10 @@
 "use client";
-import { useRef, useState } from "react";
-import { Button, Select } from "@/components/ui";
+import { useEffect, useRef, useState } from "react";
+import { Button, FormError, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { formatCents, parseCents } from "./payment";
+import { focusFirst, validateCourse, type ServerFieldError } from "./validation";
 import { BASE, type CatalogEntry, type CourseSelection, type CoursePreview } from "./wizardTypes";
 
 function displayPrice(value: number | string): string {
@@ -15,11 +16,14 @@ export function StepCurso({
   catalog,
   onBack,
   onNext,
+  serverError,
 }: {
   catalog: CatalogEntry[];
   value: CourseSelection | null;
   onBack: () => void;
   onNext: (c: CourseSelection) => void;
+  /** Error del servidor al confirmar que corresponde a este paso. */
+  serverError?: ServerFieldError | null;
 }) {
   // Al volver, consultar otra vez: una selección anterior no acredita cupo.
   const [selection, setSelection] = useState<CourseSelection | null>(null);
@@ -28,11 +32,34 @@ export function StepCurso({
     [error, setError] = useState<string | null>(null),
     [manual, setManual] = useState(false);
   const sequence = useRef(0);
+  // Error de validación (o del servidor) del curso/cohorte, junto a la selección.
+  const [stepError, setStepError] = useState<string | null>(
+    serverError?.step === 2 ? serverError.message : null,
+  );
+  useEffect(() => {
+    if (serverError?.step === 2) focusFirst(["curso-error-box"]);
+  }, [serverError]);
+  function submit() {
+    const invalid = validateCourse(selection);
+    if (invalid) {
+      setStepError(invalid.message);
+      focusFirst(
+        invalid.field === "cohortId" && manual
+          ? ["cohortId"]
+          : invalid.field === "courseType"
+            ? ["curso-tipo-A", "curso-error-box"]
+            : ["curso-error-box"],
+      );
+      return;
+    }
+    if (selection) onNext(selection);
+  }
   async function select(c: CatalogEntry) {
     const request = ++sequence.current;
     setSelection(null);
     setPreview(null);
     setError(null);
+    setStepError(null);
     setBusy(true);
     setManual(false);
     try {
@@ -63,6 +90,7 @@ export function StepCurso({
           return (
             <button
               key={tipo}
+              id={`curso-tipo-${tipo}`}
               type="button"
               aria-pressed={selection?.courseTipo === tipo}
               disabled={!c?.courseId}
@@ -75,6 +103,9 @@ export function StepCurso({
             </button>
           );
         })}
+      </div>
+      <div id="curso-error-box" tabIndex={-1} className="outline-none">
+        <FormError>{manual && selection ? null : stepError}</FormError>
       </div>
       {busy && <p>Buscando cohorte disponible…</p>}
       {error && (
@@ -119,7 +150,9 @@ export function StepCurso({
               name="cohortId"
               label="Cohorte del mismo tipo con cupo"
               value={selection.cohortId ?? ""}
+              error={stepError ?? undefined}
               onChange={(e) => {
+                setStepError(null);
                 const cohort = preview.cohorts.find((c) => c.id === e.target.value);
                 if (cohort)
                   setSelection({
@@ -147,10 +180,7 @@ export function StepCurso({
         <Button variant="secondary" onClick={onBack}>
           Atrás
         </Button>
-        <Button
-          disabled={!selection || busy || !!error}
-          onClick={() => selection && onNext(selection)}
-        >
+        <Button disabled={busy || !!error} onClick={submit}>
           Continuar
         </Button>
       </div>

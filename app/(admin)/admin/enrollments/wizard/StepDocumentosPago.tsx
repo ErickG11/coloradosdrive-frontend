@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Input, Select } from "@/components/ui";
+import { useEffect, useState } from "react";
+import { Button, FormError, Input, Select } from "@/components/ui";
 import { formatCents, summarizePayment } from "./payment";
+import { focusFirst, type ServerFieldError } from "./validation";
 import {
   DOCUMENTS,
   EMPTY_DETAILS,
@@ -18,15 +19,37 @@ export function StepDocumentosPago({
   value,
   onBack,
   onNext,
+  serverError,
 }: {
   student: StudentData;
   course: CourseSelection;
   value: DocumentsPaymentChoice | null;
   onBack: () => void;
   onNext: (value: DocumentsPaymentChoice) => void;
+  /** Error del servidor al confirmar que corresponde a este paso. */
+  serverError?: ServerFieldError | null;
 }) {
   const [choice, setChoice] = useState<DocumentsPaymentChoice>(value ?? EMPTY_DETAILS);
   const summary = summarizePayment(course, choice.pago);
+  // Los errores se muestran al pulsar «Continuar» y luego se mantienen al día.
+  const [attempted, setAttempted] = useState(false);
+  const [server, setServer] = useState<{ id: string; message: string } | null>(() =>
+    serverError?.step === 4
+      ? {
+          id: serverError.field === "modalidad" ? "modalidadPago" : serverError.field,
+          message: serverError.message,
+        }
+      : null,
+  );
+  useEffect(() => {
+    if (server) focusFirst([server.id]);
+    // Solo al llegar desde un error del servidor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const shown = attempted ? summary.error : null;
+  const fieldError = (id: string): string | undefined =>
+    (shown && summary.errorField === id ? shown : undefined) ??
+    (server?.id === id ? server.message : undefined);
   function setStatus(tipo: (typeof DOCUMENTS)[number]["tipo"], estado: DocumentStatus) {
     setChoice((current) => ({
       ...current,
@@ -34,6 +57,7 @@ export function StepDocumentosPago({
     }));
   }
   function setPayment(patch: Partial<DocumentsPaymentChoice["pago"]>) {
+    setServer(null);
     setChoice((current) => ({ ...current, pago: { ...current.pago, ...patch } }));
   }
   return (
@@ -68,6 +92,7 @@ export function StepDocumentosPago({
           <Select
             name="modalidadPago"
             label="Modalidad de pago"
+            error={fieldError("modalidadPago")}
             value={course.cohortId ? choice.pago.modalidad : "abono"}
             onChange={(event) =>
               setPayment({ modalidad: event.target.value as "abono" | "completo" })
@@ -83,6 +108,7 @@ export function StepDocumentosPago({
             min="0"
             step="0.01"
             disabled={!course.cohortId}
+            error={fieldError("descuento")}
             value={course.cohortId ? choice.pago.descuento : "0"}
             onChange={(event) => setPayment({ descuento: event.target.value })}
           />
@@ -93,6 +119,7 @@ export function StepDocumentosPago({
               type="number"
               min="0"
               step="0.01"
+              error={fieldError("montoAbonado")}
               value={choice.pago.montoAbonado}
               onChange={(event) => setPayment({ montoAbonado: event.target.value })}
             />
@@ -127,26 +154,26 @@ export function StepDocumentosPago({
               : formatCents(summary.balanceCents)}
           </p>
         </div>
-        {summary.error && (
-          <p role="alert" className="mt-2 text-accent-red">
-            {summary.error}
-          </p>
-        )}
+        {shown && summary.errorField === null && <FormError className="mt-2">{shown}</FormError>}
       </section>
       <div className="flex justify-between gap-3">
         <Button variant="secondary" onClick={onBack}>
           Atrás
         </Button>
         <Button
-          disabled={!!summary.error}
-          onClick={() =>
+          onClick={() => {
+            setAttempted(true);
+            if (summary.error) {
+              if (summary.errorField) focusFirst([summary.errorField]);
+              return;
+            }
             onNext({
               documentos: choice.documentos,
               pago: course.cohortId
                 ? choice.pago
                 : { ...choice.pago, modalidad: "abono", descuento: "0" },
-            })
-          }
+            });
+          }}
         >
           Continuar
         </Button>

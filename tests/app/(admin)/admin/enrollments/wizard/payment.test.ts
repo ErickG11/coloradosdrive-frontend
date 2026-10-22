@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatCents, parseCents, summarizePayment } from "@/app/(admin)/admin/enrollments/wizard/payment";
+import {
+  formatCents,
+  parseCents,
+  summarizePayment,
+} from "@/app/(admin)/admin/enrollments/wizard/payment";
 import type { CourseSelection } from "@/app/(admin)/admin/enrollments/wizard/wizardTypes";
 
 const course: CourseSelection = {
@@ -51,6 +55,32 @@ describe("importes de matrícula en centavos", () => {
       summarizePayment(course, { modalidad: "abono", descuento: "0.10", montoAbonado: "0.20" })
         .error,
     ).toMatch(/pago completo/);
+  });
+
+  it("con cohorte el abono debe ser mayor que $0.00; pendiente de cohorte lo permite", () => {
+    expect(
+      summarizePayment(course, { modalidad: "abono", descuento: "0", montoAbonado: "0" }),
+    ).toMatchObject({
+      error: "Con la modalidad Abono, el monto abonado debe ser mayor que $0.00.",
+      errorField: "montoAbonado",
+    });
+    expect(
+      summarizePayment(
+        { ...course, cohortId: null, cohort: undefined },
+        { modalidad: "abono", descuento: "0", montoAbonado: "0" },
+      ).error,
+    ).toBeNull();
+  });
+  it("indica el campo de cada error de pago", () => {
+    const field = (
+      descuento: string,
+      montoAbonado: string,
+      modalidad: "abono" | "completo" = "abono",
+    ) => summarizePayment(course, { modalidad, descuento, montoAbonado }).errorField;
+    expect(field("0.31", "0.01")).toBe("descuento");
+    expect(field("0", "0.31")).toBe("montoAbonado");
+    expect(field("0", "0.30")).toBe("modalidadPago");
+    expect(field("0", "0.10", "completo")).toBeNull();
   });
 
   describe("montos vacíos en el pago inicial", () => {
