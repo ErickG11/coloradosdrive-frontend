@@ -81,6 +81,14 @@ function mockApi(cohort: CohortDetail | Error | (CohortDetail | Error)[]) {
   });
 }
 
+// Guardar sin cambios ya no llama a la API (L5): se cambia un campo antes.
+async function saveWithAChange(user: ReturnType<typeof userEvent.setup>) {
+  fireEvent.change(screen.getByLabelText("Tipo de modalidad"), {
+    target: { value: "Presencial" },
+  });
+  await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+}
+
 describe("EditCohortPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -105,13 +113,13 @@ describe("EditCohortPage", () => {
     render(<EditCohortPage />);
 
     await screen.findByLabelText("Nombre de la cohorte");
-    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await saveWithAChange(user);
 
     await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
     const [path, body] = mockedPatch.mock.calls[0];
     expect(path).toBe("/cohorts/cohort-1");
     expect((body as { updatedAt: unknown }).updatedAt).toBe(VERSION);
-    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
+    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
   });
 
   it.each([
@@ -165,7 +173,7 @@ describe("EditCohortPage", () => {
       render(<EditCohortPage />);
 
       await screen.findByLabelText("Nombre de la cohorte");
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
 
       const reload = await screen.findByRole("button", { name: "Recargar" });
       const warning = screen.getByText("Recargar descarta los cambios que no guardaste.");
@@ -181,7 +189,7 @@ describe("EditCohortPage", () => {
       render(<EditCohortPage />);
 
       await screen.findByLabelText("Nombre de la cohorte");
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
 
       expect(await screen.findByRole("alert")).toHaveTextContent("Cohorte no encontrada.");
       await user.click(screen.getByRole("button", { name: "Recargar" }));
@@ -204,7 +212,7 @@ describe("EditCohortPage", () => {
       const nombre = await screen.findByLabelText("Nombre de la cohorte");
       await user.clear(nombre);
       await user.type(nombre, "Mi cambio");
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
 
       expect(await screen.findByRole("alert")).toHaveTextContent(CONFLICT);
       expect(pushMock).not.toHaveBeenCalled();
@@ -226,13 +234,13 @@ describe("EditCohortPage", () => {
       expect(screen.queryByRole("button", { name: "Recargar" })).not.toBeInTheDocument();
       expect(mockedGet.mock.calls.filter(([path]) => path === "/cohorts/cohort-1")).toHaveLength(2);
 
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
       // Enviar oculta el aviso de recarga.
       expect(status).toBeEmptyDOMElement();
 
       await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(2));
       expect((mockedPatch.mock.calls[1][1] as { updatedAt: unknown }).updatedAt).toBe(NEW_VERSION);
-      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
+      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
     });
 
     it("el aviso de recarga se oculta en cuanto el usuario edita un campo", async () => {
@@ -242,7 +250,7 @@ describe("EditCohortPage", () => {
       render(<EditCohortPage />);
 
       await screen.findByLabelText("Nombre de la cohorte");
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
       await user.click(await screen.findByRole("button", { name: "Recargar" }));
       const status = screen.getByRole("status");
       await waitFor(() => expect(status).toHaveTextContent("Se cargaron los datos actuales"));
@@ -265,7 +273,7 @@ describe("EditCohortPage", () => {
       render(<EditCohortPage />);
 
       await screen.findByLabelText("Nombre de la cohorte");
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
         "Ya existe una cohorte con ese nombre en este curso.",
@@ -287,7 +295,7 @@ describe("EditCohortPage", () => {
       render(<EditCohortPage />);
 
       await screen.findByLabelText("Nombre de la cohorte");
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
 
       expect(await screen.findByRole("alert")).toHaveTextContent(message);
       expect(screen.getByRole("button", { name: "Recargar" })).toBeInTheDocument();
@@ -302,7 +310,7 @@ describe("EditCohortPage", () => {
       render(<EditCohortPage />);
 
       await screen.findByLabelText("Nombre de la cohorte");
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
 
       await screen.findByRole("alert");
       expect(screen.queryByRole("button", { name: "Recargar" })).not.toBeInTheDocument();
@@ -318,7 +326,7 @@ describe("EditCohortPage", () => {
       render(<EditCohortPage />);
 
       await screen.findByLabelText("Nombre de la cohorte");
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
       await user.click(await screen.findByRole("button", { name: "Recargar" }));
 
       expect(await screen.findByText("No se encontró la cohorte.")).toBeInTheDocument();
@@ -341,7 +349,7 @@ describe("EditCohortPage", () => {
       expect(curso).toHaveAttribute("aria-describedby", hint.id);
 
       // Se puede guardar el resto: el curso se reenvía sin cambios.
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
       await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
       expect(mockedPatch.mock.calls[0][1]).toMatchObject({ courseId: "course-b" });
     });
@@ -423,7 +431,7 @@ describe("EditCohortPage", () => {
       render(<EditCohortPage />);
 
       await screen.findByLabelText(label);
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
 
       const alert = await screen.findByRole("alert");
       expect(alert).toHaveTextContent(message);
@@ -444,7 +452,7 @@ describe("EditCohortPage", () => {
       render(<EditCohortPage />);
 
       await screen.findByLabelText("Cupo máximo");
-      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await saveWithAChange(user);
 
       const alert = await screen.findByRole("alert");
       const hint = screen.getByText("Alumnos activos: 2. El cupo máximo no puede ser menor.");

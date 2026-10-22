@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 import { buttonClassName, FormError, iconButtonClassName } from "@/components/ui";
 import { EditIcon } from "@/components/ui/icons";
@@ -12,6 +14,31 @@ function courseLabel(course: Course | undefined): string {
     return "—";
   }
   return `${course.nombre} (Tipo ${course.tipo})`;
+}
+
+// Avisos que llegan desde el formulario (?aviso=...) tras crear o guardar.
+const NOTICES: Record<string, string> = {
+  "cohorte-creada": "Cohorte creada correctamente.",
+  "cohorte-guardada": "Cambios guardados correctamente.",
+};
+
+function CohortNotice() {
+  const params = useSearchParams();
+  // Se lee una sola vez: el aviso sigue visible aunque luego se limpie la URL.
+  const [notice] = useState(() => NOTICES[params.get("aviso") ?? ""] ?? null);
+
+  useEffect(() => {
+    if (!notice) return;
+    // Quita ?aviso de la URL (sin navegar) para que recargar o volver con
+    // Atrás/Adelante no repita el aviso.
+    window.history.replaceState(window.history.state, "", window.location.pathname);
+  }, [notice]);
+
+  return notice ? (
+    <p role="status" className="text-sm text-accent-blue">
+      {notice}
+    </p>
+  ) : null;
 }
 
 export default function CohortsPage() {
@@ -40,6 +67,10 @@ export default function CohortsPage() {
           Nueva cohorte
         </Link>
       </div>
+
+      <Suspense fallback={null}>
+        <CohortNotice />
+      </Suspense>
 
       {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
       {error ? <FormError>{error}</FormError> : null}
