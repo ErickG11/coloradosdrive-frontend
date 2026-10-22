@@ -7,6 +7,8 @@ import type { InstructorSugerido, SugerirPracticaResult } from "@/types";
 import {
   BASE,
   EMPTY_PRACTICE,
+  HORAS_POR_DIA_MAX,
+  HORAS_POR_DIA_MIN,
   horasPorDiaError,
   practicePayload,
   type CourseSelection,
@@ -140,8 +142,8 @@ export function StepPracticas({
         label="Horas por día"
         type="number"
         required
-        min={1}
-        max={16}
+        min={HORAS_POR_DIA_MIN}
+        max={HORAS_POR_DIA_MAX}
         value={form.horasPorDia}
         error={horasError ?? undefined}
         onChange={(e) => change("horasPorDia", e.target.value === "" ? "" : Number(e.target.value))}

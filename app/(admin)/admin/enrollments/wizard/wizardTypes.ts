@@ -156,7 +156,8 @@ export interface ManualResult {
   documentosPendientes?: number;
 }
 export const HORAS_POR_DIA_MIN = 1;
-export const HORAS_POR_DIA_MAX = 16;
+// Máximo de horas por día de práctica (igual que practiceHours.ts del servidor).
+export const HORAS_POR_DIA_MAX = 6;
 
 export function horasPorDiaError(value: number | ""): string | null {
   if (value === "") return "Ingresa las horas por día.";
