@@ -218,7 +218,7 @@ describe("EditCohortPage", () => {
       expect(pushMock).not.toHaveBeenCalled();
 
       // La región viva existe desde el inicio (vacía): solo cambia su texto.
-      const status = screen.getByRole("status");
+      const status = screen.getAllByRole("status")[0];
       expect(status).toBeEmptyDOMElement();
 
       await user.click(screen.getByRole("button", { name: "Recargar" }));
@@ -226,7 +226,7 @@ describe("EditCohortPage", () => {
       await waitFor(() =>
         expect(status).toHaveTextContent("Se cargaron los datos actuales de la cohorte."),
       );
-      expect(screen.getByRole("status")).toBe(status);
+      expect(screen.getAllByRole("status")[0]).toBe(status);
       expect(screen.getByLabelText("Nombre de la cohorte")).toHaveValue(
         "400 editado por otra persona",
       );
@@ -252,7 +252,7 @@ describe("EditCohortPage", () => {
       await screen.findByLabelText("Nombre de la cohorte");
       await saveWithAChange(user);
       await user.click(await screen.findByRole("button", { name: "Recargar" }));
-      const status = screen.getByRole("status");
+      const status = screen.getAllByRole("status")[0];
       await waitFor(() => expect(status).toHaveTextContent("Se cargaron los datos actuales"));
 
       fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "210" } });

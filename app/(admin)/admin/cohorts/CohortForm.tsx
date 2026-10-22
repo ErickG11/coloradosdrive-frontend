@@ -146,6 +146,8 @@ export function CohortForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canReload, setCanReload] = useState(false);
   const [noChanges, setNoChanges] = useState(false);
+  // Cuenta los intentos sin cambios: cada uno vuelve a anunciar el mensaje.
+  const [noChangesCount, setNoChangesCount] = useState(0);
   // Campo que debe recibir el foco cuando ya se haya pintado su error.
   const pendingFocusRef = useRef<keyof CohortFormValues | null>(null);
   // El servidor rechaza fechas posteriores a hoy + 5 años.
@@ -211,6 +213,7 @@ export function CohortForm({
     // versión aunque los datos sean los mismos).
     if (isEditMode && initialValues && sameCohortData(values, initialValues)) {
       setNoChanges(true);
+      setNoChangesCount((count) => count + 1);
       return;
     }
 
@@ -243,7 +246,7 @@ export function CohortForm({
         onReload &&
         err instanceof ApiError &&
         // 404: la cohorte se eliminó; al recargar se ve «No se encontró la cohorte.».
-        (err.status === 409 || err.status === 404 || err.field === "updatedAt")
+        (err.status === 409 || err.code === "COHORT_NOT_FOUND" || err.field === "updatedAt")
       ) {
         setCanReload(true);
       }
@@ -458,11 +461,10 @@ export function CohortForm({
         </div>
       ) : null}
 
-      {noChanges ? (
-        <p role="status" className="text-sm text-text-secondary">
-          No hay cambios que guardar.
-        </p>
-      ) : null}
+      {/* Región viva siempre montada; la clave del texto fuerza un nuevo anuncio. */}
+      <p role="status" className="text-sm text-text-secondary empty:-mb-4">
+        {noChanges ? <span key={noChangesCount}>No hay cambios que guardar.</span> : null}
+      </p>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {/* Volver sin guardar: por simpleza no se pregunta si hay cambios. */}
