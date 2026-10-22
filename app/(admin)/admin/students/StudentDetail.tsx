@@ -14,13 +14,12 @@ import { StudentSchedule } from "./StudentSchedule";
 import { StudentGraduation } from "./StudentGraduation";
 import { studentActionError } from "@/lib/api/studentActions";
 import { ApiError } from "@/lib/api/errors";
+import { formatMoney } from "@/lib/utils/money";
 import { StudentCohortAssignment } from "./StudentCohortAssignment";
 import type { StudentEnrollment } from "@/types/student";
 
 export function studentMoney(value: number | null) {
-  return value === null
-    ? "—"
-    : new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(value);
+  return formatMoney(value);
 }
 function date(value: string | null) {
   return value ? value.slice(0, 10).split("-").reverse().join("/") : "—";

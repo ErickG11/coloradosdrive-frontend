@@ -10,6 +10,7 @@ import {
   studentCohortError,
   studentCohortPath,
 } from "@/lib/api/studentCohort";
+import { formatMoney } from "@/lib/utils/money";
 import type { StudentEnrollment } from "@/types/student";
 import type { StudentCohortOptions } from "@/types/studentCohort";
 
@@ -21,8 +22,7 @@ interface Props {
   onReload: () => void;
   onDeletionPending: () => void;
 }
-const money = (amount: number) =>
-  new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(amount);
+const money = formatMoney;
 const civil = (date: string) => date.split("-").reverse().join("/");
 
 export function StudentCohortAssignment({

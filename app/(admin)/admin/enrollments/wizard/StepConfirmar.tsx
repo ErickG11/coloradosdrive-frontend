@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui";
-import { formatCents, summarizePayment } from "./payment";
+import { formatMoney } from "@/lib/utils/money";
+import { summarizePayment } from "./payment";
 import {
   DOCUMENTS,
   type StudentData,
@@ -51,7 +52,7 @@ export function StepConfirmar({
   const documents = details?.documentos ?? choice.documentos;
   const pendingDocuments = details?.documentosPendientes ?? result?.documentosPendientes;
   const resultBalance = details?.saldo !== undefined ? details.saldo : result?.saldo;
-  const money = (amount: number) => formatCents(Math.round(amount * 100));
+  const money = formatMoney;
   const displayAmount = (amount: number | null | undefined) =>
     amount === null
       ? "Se calculará al asignar cohorte"
