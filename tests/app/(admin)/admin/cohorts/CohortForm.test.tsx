@@ -859,13 +859,14 @@ describe("CohortForm", () => {
       numeroAulas: "",
     };
 
-    function renderEdit() {
+    function renderEdit(onReload?: () => void) {
       render(
         <CohortForm
           courses={courses}
           cohortId="cohort-1"
           version="2026-10-19T15:04:05.123456+00:00"
           initialValues={initial}
+          onReload={onReload}
         />,
       );
     }
@@ -876,9 +877,51 @@ describe("CohortForm", () => {
 
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-      expect(await screen.findByRole("status")).toHaveTextContent("No hay cambios que guardar.");
+      expect(screen.getByRole("status")).toHaveTextContent("No hay cambios que guardar.");
       expect(mockedPatch).not.toHaveBeenCalled();
       expect(pushMock).not.toHaveBeenCalled();
+    });
+
+    it("la región viva está montada desde el inicio y vuelve a anunciar al guardar de nuevo", async () => {
+      const user = userEvent.setup();
+      renderEdit();
+
+      const status = screen.getByRole("status");
+      expect(status).toBeEmptyDOMElement();
+
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      const firstAnnouncement = status.firstElementChild;
+      expect(status).toHaveTextContent("No hay cambios que guardar.");
+
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      expect(screen.getByRole("status")).toBe(status);
+      expect(status).toHaveTextContent("No hay cambios que guardar.");
+      // Un nodo de texto nuevo en la región viva se anuncia otra vez.
+      expect(status.firstElementChild).not.toBe(firstAnnouncement);
+    });
+
+    it("un 404 del curso (field courseId) no ofrece «Recargar»; el 404 de la cohorte sí", async () => {
+      const user = userEvent.setup();
+      mockedPatch
+        .mockRejectedValueOnce(
+          new ApiError("El curso indicado no existe.", 404, {
+            code: "COURSE_NOT_FOUND",
+            field: "courseId",
+          }),
+        )
+        .mockRejectedValueOnce(
+          new ApiError("Cohorte no encontrada.", 404, { code: "COHORT_NOT_FOUND" }),
+        );
+      renderEdit(vi.fn());
+
+      fireEvent.change(screen.getByLabelText("Cupo máximo"), { target: { value: "30" } });
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await screen.findByText("El curso indicado no existe.");
+      expect(screen.queryByRole("button", { name: "Recargar" })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+      await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(2));
+      expect(await screen.findByRole("button", { name: "Recargar" })).toBeInTheDocument();
     });
 
     it("compara lo que se guardaría: 200 = 200.00 y espacios extremos no cuentan", async () => {
@@ -892,7 +935,7 @@ describe("CohortForm", () => {
       fireEvent.change(screen.getByLabelText("Tipo de modalidad"), { target: { value: "   " } });
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-      expect(await screen.findByRole("status")).toHaveTextContent("No hay cambios que guardar.");
+      expect(screen.getByRole("status")).toHaveTextContent("No hay cambios que guardar.");
       expect(mockedPatch).not.toHaveBeenCalled();
     });
 
@@ -904,7 +947,7 @@ describe("CohortForm", () => {
       fireEvent.change(screen.getByLabelText("Cupo máximo"), { target: { value: "15" } });
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-      expect(await screen.findByRole("status")).toHaveTextContent("No hay cambios que guardar.");
+      expect(screen.getByRole("status")).toHaveTextContent("No hay cambios que guardar.");
       expect(mockedPatch).not.toHaveBeenCalled();
     });
 
@@ -914,10 +957,13 @@ describe("CohortForm", () => {
       renderEdit();
 
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
-      await screen.findByRole("status");
+      const status = screen.getByRole("status");
+      expect(status).toHaveTextContent("No hay cambios que guardar.");
 
       fireEvent.change(screen.getByLabelText("Número de aulas"), { target: { value: "0" } });
-      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      // La región sigue montada (vacía): solo cambia su texto.
+      expect(screen.getByRole("status")).toBe(status);
+      expect(status).toBeEmptyDOMElement();
 
       await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 

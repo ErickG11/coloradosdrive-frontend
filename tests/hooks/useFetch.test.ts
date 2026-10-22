@@ -56,4 +56,21 @@ describe("useFetch: resultados anteriores", () => {
     expect(result.current.error).toBeNull();
     expect(result.current.errorStatus).toBeNull();
   });
+
+  it("no guarda caché entre pantallas: cada montaje vuelve a pedir la lista", async () => {
+    // Alumnos y Horarios de práctica cargan las cohortes con useFetch("/cohorts")
+    // al montarse: una cohorte eliminada no reaparece en sus selectores.
+    vi.mocked(api.get).mockReset();
+    vi.mocked(api.get)
+      .mockResolvedValueOnce([{ id: "c1" }, { id: "c2" }])
+      .mockResolvedValueOnce([{ id: "c2" }]);
+    const first = renderHook(() => useFetch("/cohorts"));
+    await waitFor(() => expect(first.result.current.data).toEqual([{ id: "c1" }, { id: "c2" }]));
+    first.unmount();
+
+    const second = renderHook(() => useFetch("/cohorts"));
+    expect(second.result.current.data).toBeNull();
+    await waitFor(() => expect(second.result.current.data).toEqual([{ id: "c2" }]));
+    expect(api.get).toHaveBeenCalledTimes(2);
+  });
 });
