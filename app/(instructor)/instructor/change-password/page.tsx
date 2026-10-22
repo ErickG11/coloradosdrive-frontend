@@ -28,8 +28,11 @@ export default function InstructorChangePasswordPage() {
       await api.post<void>("/instructores/cambiar-password", { nuevaPassword: password });
       setPassword("");
       setConfirm("");
-      setCompleted(true);
+      // Primero se cierra la sesión local: así el botón hacia /login no
+      // aparece mientras la cookie siga vigente (el redirect de /login lo
+      // devolvería al panel).
       await createClient().auth.signOut({ scope: "local" }).catch(() => undefined);
+      setCompleted(true);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "No se pudo cambiar la contraseña.");
     } finally {

@@ -26,10 +26,12 @@ export default function ChangePasswordPage() {
       setConfirm("");
       // La API administrativa de cambio invalida la sesión de Auth. El
       // cambio ya ocurrió: limpiar la sesión local y solicitar otro login.
-      setCompleted(true);
+      // Primero se cierra la sesión local; el botón hacia /login aparece
+      // después, con la cookie ya borrada.
       await createClient()
         .auth.signOut({ scope: "local" })
         .catch(() => undefined);
+      setCompleted(true);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "No se pudo cambiar la contraseña.");
     } finally {

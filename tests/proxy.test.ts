@@ -66,4 +66,68 @@ describe("proxy por rol y estado del instructor", () => {
     expect((await visit("/instructor")).headers.get("location"))
       .toBe("http://localhost:3001/account-inactive");
   });
+
+  it.each([
+    ["admin", "/admin"],
+    ["estudiante", "/student"],
+    ["instructor", "/instructor"],
+  ] as [Role, string][])("redirige /login con sesión de %s a su home", async (role, home) => {
+    session(role);
+    const response = await visit("/login");
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`http://localhost:3001${home}`);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("muestra el formulario en /login sin sesión", async () => {
+    mockedUpdateSession.mockResolvedValue({
+      supabaseResponse: NextResponse.next(),
+      user: null,
+      accessToken: undefined,
+    } as unknown as Awaited<ReturnType<typeof updateSession>>);
+    const response = await visit("/login");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("muestra el formulario en /login si la sesión no tiene rol (sin bucle con /)", async () => {
+    mockedUpdateSession.mockResolvedValue({
+      supabaseResponse: NextResponse.next(),
+      user: { app_metadata: {} },
+      accessToken: "test-token",
+    } as unknown as Awaited<ReturnType<typeof updateSession>>);
+    const response = await visit("/login");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("no hay bucle: de /login el estudiante con clave temporal termina en change-password", async () => {
+    session("estudiante");
+    fetchMock.mockImplementation(async () => Response.json({ mustChangePassword: true }));
+    const first = await visit("/login");
+    expect(first.headers.get("location")).toBe("http://localhost:3001/student");
+    const second = await visit("/student");
+    expect(second.headers.get("location")).toBe("http://localhost:3001/student/change-password");
+    expect((await visit("/student/change-password")).status).toBe(200);
+  });
+
+  it("envía al estudiante desactivado con JWT vigente a /account-inactive, también desde /login", async () => {
+    session("estudiante");
+    fetchMock.mockResolvedValue(new Response(null, { status: 403 }));
+    expect((await visit("/login")).headers.get("location")).toBe("http://localhost:3001/student");
+    expect((await visit("/student")).headers.get("location")).toBe(
+      "http://localhost:3001/account-inactive",
+    );
+    expect((await visit("/account-inactive")).status).toBe(200);
+  });
+
+  it("no hay bucle: de /login el instructor inactivo termina en /account-inactive", async () => {
+    session("instructor");
+    fetchMock.mockResolvedValue(new Response(null, { status: 403 }));
+    expect((await visit("/login")).headers.get("location")).toBe("http://localhost:3001/instructor");
+    expect((await visit("/instructor")).headers.get("location")).toBe(
+      "http://localhost:3001/account-inactive",
+    );
+    expect((await visit("/account-inactive")).status).toBe(200);
+  });
 });
