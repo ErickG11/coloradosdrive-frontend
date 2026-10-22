@@ -63,7 +63,7 @@ describe("StudentEditForm", () => {
     expect(screen.getByLabelText("Cédula")).toHaveAttribute("aria-invalid", "true");
     expect(api.patch).not.toHaveBeenCalled();
   });
-  it("rechaza una fecha de nacimiento de hoy o fuera de 16 a 100 años y fija min y max", () => {
+  it("rechaza una fecha de nacimiento de hoy o fuera de 15 a 100 años y fija min y max", () => {
     form();
     const input = screen.getByLabelText("Fecha de nacimiento");
     expect(input).toHaveAttribute("min");
@@ -72,7 +72,7 @@ describe("StudentEditForm", () => {
     fireEvent.change(input, { target: { value: "1800-01-01" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByText("La edad debe estar entre 16 y 100 años.")).toBeInTheDocument();
+    expect(screen.getByText("La edad debe estar entre 15 y 100 años.")).toBeInTheDocument();
     expect(api.patch).not.toHaveBeenCalled();
     fireEvent.change(input, { target: { value: new Date().toISOString().slice(0, 10) } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
@@ -93,7 +93,7 @@ describe("StudentEditForm", () => {
     await waitFor(() => expect(saved).toHaveBeenCalledOnce());
     const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
     expect(body).not.toHaveProperty("fechaNacimiento");
-    expect(screen.queryByText("La edad debe estar entre 16 y 100 años.")).not.toBeInTheDocument();
+    expect(screen.queryByText("La edad debe estar entre 15 y 100 años.")).not.toBeInTheDocument();
   });
   it("envía solo lo modificado y notifica éxito", async () => {
     form();

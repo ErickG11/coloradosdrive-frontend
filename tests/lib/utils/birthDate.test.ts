@@ -17,14 +17,15 @@ describe("fecha de nacimiento compartida", () => {
     expect(birthDateError("2026-10-21", new Date("2026-10-22T02:00:00Z"))).toBe(M.hoyOFutura);
     expect(birthDateError("2026-10-22", new Date("2026-10-22T02:00:00Z"))).toBe(M.hoyOFutura);
   });
-  it("rechaza hoy y futuras, menores de 16 y mayores de 100", () => {
+  it("rechaza hoy y futuras, menores de 15 y mayores de 100", () => {
     expect(birthDateError("2026-10-21", now)).toBe(M.hoyOFutura);
     expect(birthDateError("2030-01-01", now)).toBe(M.hoyOFutura);
-    expect(birthDateError("2010-10-22", now)).toBe(M.edad);
+    expect(birthDateError("2011-10-22", now)).toBe(M.edad);
     expect(birthDateError("1925-10-21", now)).toBe(M.edad);
   });
   it("los límites de edad son inclusivos", () => {
-    expect(birthDateError("2010-10-21", now)).toBeNull();
+    expect(birthDateError("2011-10-21", now)).toBeNull();
+    expect(birthDateError("2010-10-21", now)).toBeNull(); // 16 años: sigue siendo válido
     expect(birthDateError("1925-10-22", now)).toBeNull();
     expect(birthDateError("1990-05-05", now)).toBeNull();
   });
@@ -40,7 +41,7 @@ describe("fecha de nacimiento compartida", () => {
       const today = schoolToday(at);
       expect(birthDateError(min, at)).toBeNull();
       expect(birthDateError(max, at)).toBeNull();
-      expect(ageOn(max, today)).toBe(16);
+      expect(ageOn(max, today)).toBe(15);
       expect(ageOn(min, today)).toBe(100);
       const before = new Date(`${min}T00:00:00Z`);
       before.setUTCDate(before.getUTCDate() - 1);
@@ -49,6 +50,6 @@ describe("fecha de nacimiento compartida", () => {
       after.setUTCDate(after.getUTCDate() + 1);
       expect(birthDateError(after.toISOString().slice(0, 10), at)).not.toBeNull();
     }
-    expect(birthDateBounds(now)).toEqual({ min: "1925-10-22", max: "2010-10-21" });
+    expect(birthDateBounds(now)).toEqual({ min: "1925-10-22", max: "2011-10-21" });
   });
 });

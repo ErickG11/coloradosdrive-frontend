@@ -2,7 +2,7 @@ import { SCHOOL_TIME_ZONE } from "@/lib/utils/schoolTime";
 
 // Límites de PLAUSIBILIDAD de la fecha de nacimiento (no son una regla legal).
 // Mismos valores y mensajes que utils/birthDate.ts del backend.
-export const BIRTH_AGE_MIN = 16;
+export const BIRTH_AGE_MIN = 15;
 export const BIRTH_AGE_MAX = 100;
 
 // Edad legal mínima para matricularse (18 según la ANT; pendiente de confirmar
@@ -15,7 +15,7 @@ export const ENFORCE_LEGAL_MIN_AGE = false as boolean;
 export const BIRTH_DATE_MESSAGES = {
   invalida: "La fecha de nacimiento no es válida.",
   hoyOFutura: "La fecha de nacimiento no puede ser hoy ni una fecha futura.",
-  edad: "La edad debe estar entre 16 y 100 años.",
+  edad: "La edad debe estar entre 15 y 100 años.",
   edadLegal: "El alumno debe tener al menos 18 años.",
 } as const;
 
@@ -65,7 +65,7 @@ function shiftYears(date: string, years: number): string {
 /**
  * Valores para los atributos min y max del campo de fecha, coherentes con
  * `birthDateError`: el más antiguo con 100 años cumplidos y el más reciente
- * con 16 cumplidos.
+ * con 15 cumplidos.
  */
 export function birthDateBounds(now: Date = new Date()): { min: string; max: string } {
   const today = schoolToday(now);
