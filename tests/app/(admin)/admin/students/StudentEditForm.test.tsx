@@ -63,6 +63,38 @@ describe("StudentEditForm", () => {
     expect(screen.getByLabelText("Cédula")).toHaveAttribute("aria-invalid", "true");
     expect(api.patch).not.toHaveBeenCalled();
   });
+  it("rechaza una fecha de nacimiento de hoy o fuera de 16 a 100 años y fija min y max", () => {
+    form();
+    const input = screen.getByLabelText("Fecha de nacimiento");
+    expect(input).toHaveAttribute("min");
+    expect(input).toHaveAttribute("max");
+    expect((input as HTMLInputElement).max < new Date().toISOString().slice(0, 10)).toBe(true);
+    fireEvent.change(input, { target: { value: "1800-01-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("La edad debe estar entre 16 y 100 años.")).toBeInTheDocument();
+    expect(api.patch).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: new Date().toISOString().slice(0, 10) } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+  it("un alumno con fecha antigua fuera de rango guarda otros campos sin reenviar ni bloquear la fecha", async () => {
+    render(
+      <StudentEditForm
+        student={{ ...student, fechaNacimiento: "1900-01-01" }}
+        onSaved={saved}
+        onCancel={cancel}
+        onReload={reload}
+        onBusyChange={busy}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Nombre completo"), { target: { value: "Corregido" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(body).not.toHaveProperty("fechaNacimiento");
+    expect(screen.queryByText("La edad debe estar entre 16 y 100 años.")).not.toBeInTheDocument();
+  });
   it("envía solo lo modificado y notifica éxito", async () => {
     form();
     fireEvent.change(screen.getByLabelText("Nombre completo"), { target: { value: "Corregido" } });

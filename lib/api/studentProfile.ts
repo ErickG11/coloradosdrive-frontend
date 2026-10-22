@@ -1,4 +1,6 @@
 import type { StudentDetail } from "@/types/student";
+import { birthDateError } from "@/lib/utils/birthDate";
+import { isValidCedulaEcuatoriana } from "@/lib/utils/cedula";
 import { ApiError } from "./errors";
 
 export const studentFieldLabels = {
@@ -51,30 +53,7 @@ export function buildStudentPatch(
   }
   return Object.keys(patch).length === 1 ? null : patch;
 }
-export function validStudentCedula(value: string): boolean {
-  if (!/^[0-9]{10}$/.test(value)) return false;
-  const province = Number(value.slice(0, 2));
-  if (((province < 1 || province > 24) && province !== 30) || Number(value[2]) >= 6) return false;
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    let n = Number(value[i]) * (i % 2 === 0 ? 2 : 1);
-    if (n > 9) n -= 9;
-    sum += n;
-  }
-  return (10 - (sum % 10)) % 10 === Number(value[9]);
-}
-function validDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split("-").map(Number);
-  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-  return (
-    year >= 1 &&
-    month >= 1 &&
-    month <= 12 &&
-    day >= 1 &&
-    day <= [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
-  );
-}
+export const validStudentCedula = isValidCedulaEcuatoriana;
 export function validateStudentPatch(patch: StudentPatch): Partial<Record<ProfileField, string>> {
   const errors: Partial<Record<ProfileField, string>> = {};
   for (const field of fields) {
@@ -89,8 +68,8 @@ export function validateStudentPatch(patch: StudentPatch): Partial<Record<Profil
       errors[field] = `Máximo ${max} caracteres.`;
     else if (field === "cedula" && !validStudentCedula(value ?? ""))
       errors[field] = "Cédula ecuatoriana inválida.";
-    else if (field === "fechaNacimiento" && value !== null && !validDate(value))
-      errors[field] = "Introduce una fecha válida (AAAA-MM-DD).";
+    else if (field === "fechaNacimiento" && value !== null && birthDateError(value))
+      errors[field] = birthDateError(value) ?? undefined;
     else if (field === "correo" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value ?? ""))
       errors[field] = "Introduce un correo válido.";
   }
