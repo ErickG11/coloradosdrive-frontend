@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Button, buttonClassName, FormError, Input, Select } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { CohortStudentCounts, Course } from "@/types";
@@ -134,6 +135,7 @@ export function CohortForm({
   alumnos,
 }: CohortFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditMode = Boolean(cohortId);
   // El servidor rechaza cambiar el curso si hay matrículas de cualquier estado
@@ -227,8 +229,11 @@ export function CohortForm({
       } else {
         await api.post("/cohorts", body);
       }
-      // El listado muestra el aviso de éxito y limpia el parámetro de la URL.
-      router.push(`/admin/cohorts?aviso=${isEditMode ? "cohorte-guardada" : "cohorte-creada"}`);
+      // El toast vive en el layout del panel y sobrevive a la navegación.
+      toast.success(
+        isEditMode ? "Cambios guardados correctamente." : "Cohorte creada correctamente.",
+      );
+      router.push("/admin/cohorts");
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError && isFormField(err.field)) {

@@ -15,6 +15,9 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 
+const toastSuccess = vi.fn();
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ success: toastSuccess }) }));
+
 vi.mock("@/lib/api/client", () => ({
   api: {
     post: vi.fn(),
@@ -117,7 +120,9 @@ describe("CohortForm", () => {
         numeroAulas: null,
       });
     });
-    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-creada");
+    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
+    expect(toastSuccess).toHaveBeenCalledTimes(1);
+    expect(toastSuccess).toHaveBeenCalledWith("Cohorte creada correctamente.");
   });
 
   it("envía los campos de metadata opcional cuando se completan", async () => {
@@ -648,9 +653,8 @@ describe("CohortForm", () => {
 
       await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
 
-      await waitFor(() =>
-        expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-creada"),
-      );
+      await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/admin/cohorts"));
+      expect(toastSuccess).toHaveBeenCalledTimes(1);
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Precio")).toHaveAttribute("aria-invalid", "false");
     });
@@ -969,7 +973,8 @@ describe("CohortForm", () => {
 
       await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
       expect(mockedPatch.mock.calls[0][1]).toMatchObject({ numeroAulas: 0 });
-      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
+      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
+      expect(toastSuccess).toHaveBeenCalledWith("Cambios guardados correctamente.");
     });
   });
 

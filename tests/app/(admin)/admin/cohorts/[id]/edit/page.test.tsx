@@ -119,7 +119,7 @@ describe("EditCohortPage", () => {
     const [path, body] = mockedPatch.mock.calls[0];
     expect(path).toBe("/cohorts/cohort-1");
     expect((body as { updatedAt: unknown }).updatedAt).toBe(VERSION);
-    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
+    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
   });
 
   it.each([
@@ -240,7 +240,7 @@ describe("EditCohortPage", () => {
 
       await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(2));
       expect((mockedPatch.mock.calls[1][1] as { updatedAt: unknown }).updatedAt).toBe(NEW_VERSION);
-      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
+      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
     });
 
     it("el aviso de recarga se oculta en cuanto el usuario edita un campo", async () => {

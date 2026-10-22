@@ -15,10 +15,8 @@ vi.mock("@/hooks/useFetch", () => ({
 vi.mock("@/lib/api/client", () => ({ api: { delete: vi.fn() } }));
 const mockedDelete = vi.mocked(api.delete);
 
-let searchParams = new URLSearchParams();
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => searchParams,
-}));
+const toastSuccess = vi.fn();
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ success: toastSuccess }) }));
 
 const mockedUseFetch = vi.mocked(useFetch);
 
@@ -55,13 +53,6 @@ const courses: Course[] = [
 
 const refetchCohorts = vi.fn();
 
-// Hay varias regiones vivas siempre montadas: se junta su texto.
-const statusText = () =>
-  screen
-    .getAllByRole("status")
-    .map((region) => region.textContent)
-    .join("");
-
 function mockFetchResults(options: {
   cohorts?: { data: Cohort[] | null; isLoading: boolean; error: string | null };
   courses?: { data: Course[] | null; isLoading: boolean; error: string | null };
@@ -86,7 +77,6 @@ function mockFetchResults(options: {
 describe("CohortsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    searchParams = new URLSearchParams();
     window.history.replaceState(null, "", "/admin/cohorts");
   });
 
@@ -149,49 +139,6 @@ describe("CohortsPage", () => {
     expect(names).toEqual(["Cohorte Abril", "Cohorte Marzo", "Cohorte Enero"]);
   });
 
-  describe("aviso tras crear o guardar", () => {
-    it.each([
-      ["cohorte-creada", "Cohorte creada correctamente."],
-      ["cohorte-guardada", "Cambios guardados correctamente."],
-    ])("con ?aviso=%s muestra «%s» y limpia la URL", (aviso, text) => {
-      window.history.replaceState(null, "", `/admin/cohorts?aviso=${aviso}`);
-      searchParams = new URLSearchParams(`aviso=${aviso}`);
-      mockFetchResults({
-        cohorts: { data: cohorts, isLoading: false, error: null },
-        courses: { data: courses, isLoading: false, error: null },
-      });
-
-      render(<CohortsPage />);
-
-      expect(statusText()).toBe(text);
-      // Recargar o volver a esta entrada del historial ya no repite el aviso.
-      expect(window.location.pathname).toBe("/admin/cohorts");
-      expect(window.location.search).toBe("");
-    });
-
-    it("el aviso sigue visible aunque la URL ya no tenga el parámetro", () => {
-      searchParams = new URLSearchParams("aviso=cohorte-creada");
-      mockFetchResults({});
-
-      const { rerender } = render(<CohortsPage />);
-      searchParams = new URLSearchParams();
-      rerender(<CohortsPage />);
-
-      expect(statusText()).toBe("Cohorte creada correctamente.");
-    });
-
-    it("sin aviso (o con uno desconocido) no muestra nada ni toca la URL", () => {
-      window.history.replaceState(null, "", "/admin/cohorts?aviso=otra-cosa");
-      searchParams = new URLSearchParams("aviso=otra-cosa");
-      mockFetchResults({});
-
-      render(<CohortsPage />);
-
-      expect(statusText()).toBe("");
-      expect(window.location.search).toBe("?aviso=otra-cosa");
-    });
-  });
-
   describe("eliminar cohorte", () => {
     const second: Cohort = { ...cohorts[0], id: "cohort-2", nombre: "Cohorte Abril" };
 
@@ -231,7 +178,10 @@ describe("CohortsPage", () => {
       );
       await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
 
-      await waitFor(() => expect(statusText()).toBe("Cohorte «Cohorte Marzo» eliminada."));
+      await waitFor(() => expect(toastSuccess).toHaveBeenCalledTimes(1));
+      expect(toastSuccess).toHaveBeenCalledWith("Cohorte «Cohorte Marzo» eliminada.");
+      // El éxito va solo en el toast: no queda un banner en línea.
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.queryByText("Cohorte Marzo")).not.toBeInTheDocument();
       expect(screen.getByText("Cohorte Abril")).toBeInTheDocument();
@@ -258,10 +208,10 @@ describe("CohortsPage", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.getByText("Cohorte Marzo")).toBeInTheDocument();
       expect(refetchCohorts).not.toHaveBeenCalled();
-      expect(statusText()).toBe("");
+      expect(toastSuccess).not.toHaveBeenCalled();
     });
 
-    it("tras eliminar, el foco pasa al mensaje de éxito y no queda en body", async () => {
+    it("tras eliminar, el foco pasa al título y no queda en body", async () => {
       const user = userEvent.setup();
       mockedDelete.mockResolvedValue({
         id: "cohort-1",
@@ -277,34 +227,8 @@ describe("CohortsPage", () => {
       );
       await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
 
-      await waitFor(() => expect(statusText()).toContain("eliminada."));
-      const region = screen
-        .getAllByRole("status")
-        .find((r) => r.textContent?.includes("eliminada."));
-      expect(region).toHaveFocus();
-    });
-
-    it("el aviso de creación se oculta al abrir una eliminación y al completarla", async () => {
-      const user = userEvent.setup();
-      searchParams = new URLSearchParams("aviso=cohorte-creada");
-      mockedDelete.mockResolvedValue({
-        id: "cohort-1",
-        nombre: "Cohorte Marzo",
-        message: "Cohorte eliminada.",
-      });
-      renderList();
-      expect(statusText()).toBe("Cohorte creada correctamente.");
-
-      await user.click(screen.getByRole("button", { name: "Eliminar Cohorte Marzo" }));
-      expect(statusText()).toBe("");
-
-      await user.type(
-        screen.getByLabelText("Para confirmar, escribe el nombre exacto de la cohorte:"),
-        "Cohorte Marzo",
-      );
-      await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
-
-      await waitFor(() => expect(statusText()).toBe("Cohorte «Cohorte Marzo» eliminada."));
+      await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+      expect(screen.getByRole("heading", { name: "Cohortes" })).toHaveFocus();
     });
 
     it("un refetch con datos ya cargados no reemplaza la tabla por «Cargando…»", () => {
