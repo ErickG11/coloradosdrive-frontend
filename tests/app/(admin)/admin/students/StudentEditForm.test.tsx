@@ -11,6 +11,8 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { unconfirmedMessage } from "@/lib/api/studentProfile";
 import { useFetch } from "@/hooks/useFetch";
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 vi.mock("@/lib/api/client", () => ({ api: { patch: vi.fn() } }));
 vi.mock("@/hooks/useFetch", () => ({ useFetch: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -155,7 +157,9 @@ describe("StudentEditForm", () => {
     fireEvent.change(dialog.getByLabelText("Nombre completo"), { target: { value: "Corregido" } });
     fireEvent.click(dialog.getByRole("button", { name: "Guardar cambios" }));
     await waitFor(() => expect(refetch).toHaveBeenCalledOnce());
-    expect(screen.getByRole("status")).toHaveTextContent("se guardaron correctamente");
+    expect(toast.success).toHaveBeenCalledOnce();
+    expect(toast.success).toHaveBeenCalledWith("Los datos del alumno se guardaron correctamente.");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
   it("muestra la inscripción de cada matrícula", () => {
     render(

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Card, Modal, buttonClassName } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import { StudentEditForm } from "./StudentEditForm";
 import { useFetch } from "@/hooks/useFetch";
 import { readStudentFilters, studentListHref } from "@/lib/api/students";
@@ -179,7 +180,7 @@ export function StudentProfile({
 export function StudentDetail({ id }: { id: string }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const toast = useToast();
   const [actionBusy, setActionBusy] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [deletionPending, setDeletionPending] = useState(false);
@@ -196,11 +197,6 @@ export function StudentDetail({ id }: { id: string }) {
       >
         Volver a Alumnos
       </Link>
-      {success && (
-        <p role="status" className="text-sm text-accent-blue">
-          Los datos del alumno se guardaron correctamente.
-        </p>
-      )}
       {isLoading ? (
         <p role="status" className="text-text-secondary">
           Cargando ficha…
@@ -236,8 +232,8 @@ export function StudentDetail({ id }: { id: string }) {
                   onBusyChange={setActionBusy}
                   onPending={() => setDeletionPending(true)}
                   onReload={refetch}
-                  onChanged={(message) => {
-                    setActionNotice(message);
+                  onChanged={(notice) => {
+                    setActionNotice(notice);
                     refetch();
                   }}
                 />
@@ -245,10 +241,7 @@ export function StudentDetail({ id }: { id: string }) {
                   variant="secondary"
                   className="self-start"
                   disabled={actionBusy || deletionPending || assigning !== null}
-                  onClick={() => {
-                    setSuccess(false);
-                    setEditing(true);
-                  }}
+                  onClick={() => setEditing(true)}
                 >
                   Editar
                 </Button>
@@ -273,7 +266,8 @@ export function StudentDetail({ id }: { id: string }) {
               onDeletionPending={() => setDeletionPending(true)}
               onSaved={() => {
                 setAssigning(null);
-                setActionNotice("La cohorte se asignó correctamente.");
+                setActionNotice(null);
+                toast.success("La cohorte se asignó correctamente.");
                 refetch();
               }}
             />
@@ -297,7 +291,7 @@ export function StudentDetail({ id }: { id: string }) {
                 }}
                 onSaved={() => {
                   setEditing(false);
-                  setSuccess(true);
+                  toast.success("Los datos del alumno se guardaron correctamente.");
                   refetch();
                 }}
               />

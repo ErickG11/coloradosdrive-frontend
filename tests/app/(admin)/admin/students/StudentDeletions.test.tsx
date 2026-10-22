@@ -5,6 +5,8 @@ import StudentsList from "@/app/(admin)/admin/students/page";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 vi.mock("@/hooks/useFetch", () => ({ useFetch: vi.fn() }));
 vi.mock("@/lib/api/client", () => ({ api: { post: vi.fn() } }));
 const nav = vi.hoisted(() => ({ params: new URLSearchParams(), replace: vi.fn() }));
@@ -77,7 +79,9 @@ describe("eliminaciones sin perfil", () => {
     expect(api.post).toHaveBeenCalledWith(`/admin/estudiantes/${id}/eliminar`, {});
     expect(button).toBeDisabled();
     await act(async () => resolve({ status: "completo" }));
-    expect(nav.replace).toHaveBeenCalledWith("/admin/students?aviso=alumno-eliminado");
+    expect(nav.replace).toHaveBeenCalledWith("/admin/students");
+    expect(toast.success).toHaveBeenCalledOnce();
+    expect(toast.success).toHaveBeenCalledWith("El alumno se eliminó definitivamente.");
   });
   it.each(["DELETION_INCOMPLETE", "UNCONFIRMED", "CD030"])(
     "%s refresca la consulta sin reenvío automático",
@@ -126,7 +130,7 @@ describe("eliminaciones sin perfil", () => {
       expect(refetch).toHaveBeenCalledOnce();
     }
   });
-  it("el listado de alumnos muestra aviso fijo de éxito y entrada a eliminaciones", () => {
+  it("el listado de alumnos ya no usa ?aviso= y mantiene la entrada a eliminaciones", () => {
     nav.params = new URLSearchParams("aviso=alumno-eliminado");
     vi.mocked(useFetch).mockImplementation(((path: string) => ({
       data: path === "/courses" || path === "/cohorts" ? [] : { items: [], total: 0 },
@@ -135,7 +139,7 @@ describe("eliminaciones sin perfil", () => {
       refetch,
     })) as typeof useFetch);
     render(<StudentsList />);
-    expect(screen.getByRole("status")).toHaveTextContent("El alumno se eliminó definitivamente.");
+    expect(screen.queryByText("El alumno se eliminó definitivamente.")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Eliminaciones pendientes" })).toHaveAttribute(
       "href",
       "/admin/students/deletions",

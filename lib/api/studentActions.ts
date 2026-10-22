@@ -3,8 +3,8 @@ import { ApiError } from "./errors";
 import type { StudentAccessResult, StudentDeletionOperation } from "@/types/student";
 
 export const studentDeletionsHref = "/admin/students/deletions";
-// Solo un aviso fijo en la URL, nunca datos del alumno ni la confirmación.
-export const studentDeletedHref = "/admin/students?aviso=alumno-eliminado";
+export const studentsHref = "/admin/students";
+export const studentDeletedMessage = "El alumno se eliminó definitivamente.";
 export const setStudentAccess = (id: string, active: boolean) =>
   api.post<StudentAccessResult>(
     `/admin/estudiantes/${id}/${active ? "reactivar" : "desactivar"}`,

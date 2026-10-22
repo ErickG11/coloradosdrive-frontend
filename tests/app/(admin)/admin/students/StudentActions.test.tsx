@@ -7,6 +7,8 @@ import { studentProfile } from "@/tests/fixtures/studentProfile";
 vi.mock("@/lib/api/client", () => ({ api: { post: vi.fn() } }));
 const nav = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => nav }));
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 const onChanged = vi.fn(),
   onPending = vi.fn(),
   onReload = vi.fn(),
@@ -78,7 +80,9 @@ describe("acciones en ficha", () => {
       confirmacionCedula: studentProfile.cedula,
     });
     await act(async () => resolve({ status: "completo" }));
-    expect(nav.replace).toHaveBeenCalledWith("/admin/students?aviso=alumno-eliminado");
+    expect(nav.replace).toHaveBeenCalledWith("/admin/students");
+    expect(toast.success).toHaveBeenCalledOnce();
+    expect(toast.success).toHaveBeenCalledWith("El alumno se eliminó definitivamente.");
     expect(JSON.stringify(nav.replace.mock.calls)).not.toContain(studentProfile.cedula);
   });
   it.each(["UNCONFIRMED", "DELETION_INCOMPLETE", "CD030"])(
@@ -128,13 +132,31 @@ describe("acciones en ficha", () => {
         name: active ? "Desactivar" : "Reactivar",
       }),
     );
-    await waitFor(() =>
-      expect(onChanged).toHaveBeenCalledWith(
-        expect.stringContaining(active ? "Acceso desactivado" : "Acceso reactivado"),
-      ),
-    );
-    if (!active)
+    await waitFor(() => expect(onChanged).toHaveBeenCalledOnce());
+    if (active) {
+      // Éxito limpio: toast y sin aviso en línea.
+      expect(toast.success).toHaveBeenCalledWith(
+        "Acceso desactivado. Se liberaron las reservas futuras.",
+      );
+      expect(onChanged).toHaveBeenCalledWith(null);
+    } else {
+      // Con reservas por reprogramar el aviso se queda en línea, sin toast.
+      expect(toast.success).not.toHaveBeenCalled();
       expect(onChanged).toHaveBeenCalledWith(expect.stringContaining("pendientes de reprogramar"));
+    }
+  });
+  it("reactivar sin pendientes dispara el toast de éxito", async () => {
+    vi.mocked(api.post).mockResolvedValue({
+      activo: true,
+      reservas: [],
+      recuperacionPendiente: false,
+    });
+    show(false);
+    fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Reactivar" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalledWith(null));
+    expect(toast.success).toHaveBeenCalledOnce();
+    expect(toast.success).toHaveBeenCalledWith("Acceso reactivado correctamente.");
   });
   it("una recuperación incierta no se presenta como fallo de acceso", async () => {
     vi.mocked(api.post).mockResolvedValue({
@@ -148,6 +170,7 @@ describe("acciones en ficha", () => {
     await waitFor(() =>
       expect(onChanged).toHaveBeenCalledWith(expect.stringContaining("Acceso reactivado")),
     );
+    expect(toast.success).not.toHaveBeenCalled();
   });
   it("eliminación conocida bloquea nuevas acciones y ofrece enlace", () => {
     show(false, true);

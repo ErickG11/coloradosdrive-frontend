@@ -56,11 +56,6 @@ function StudentsList() {
       >
         Eliminaciones pendientes
       </Link>
-      {params.get("aviso") === "alumno-eliminado" && (
-        <p role="status" className="text-accent-blue">
-          El alumno se eliminó definitivamente.
-        </p>
-      )}
       <Card>
         <StudentFilters
           filters={filters}

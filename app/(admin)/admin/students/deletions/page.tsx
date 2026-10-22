@@ -3,13 +3,15 @@ import Link from "next/link";
 import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Card, Select, buttonClassName } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import { useFetch } from "@/hooks/useFetch";
 import { ApiError } from "@/lib/api/errors";
 import {
   deleteStudent,
   studentActionError,
-  studentDeletedHref,
+  studentDeletedMessage,
   studentDeletionsHref,
+  studentsHref,
 } from "@/lib/api/studentActions";
 import type { StudentDeletions, StudentDeletionOperation } from "@/types/student";
 
@@ -21,7 +23,8 @@ const phases: Record<StudentDeletionOperation["phase"], string> = {
 };
 function StudentDeletionsList() {
   const params = useSearchParams(),
-    router = useRouter();
+    router = useRouter(),
+    toast = useToast();
   const state = ["pendiente", "fallido"].includes(params.get("estado") ?? "")
     ? params.get("estado")!
     : "";
@@ -53,7 +56,8 @@ function StudentDeletionsList() {
       const op = await deleteStudent(id);
       if (op.status === "completo") {
         completed = true;
-        router.replace(studentDeletedHref);
+        toast.success(studentDeletedMessage);
+        router.replace(studentsHref);
         return;
       }
       setMessage("La eliminación sigue pendiente. Revisa la fase antes de reintentar.");

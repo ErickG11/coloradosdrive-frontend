@@ -3,12 +3,14 @@ import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Modal, buttonClassName } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import {
   deleteStudent,
   setStudentAccess,
   studentActionError,
-  studentDeletedHref,
+  studentDeletedMessage,
   studentDeletionsHref,
+  studentsHref,
 } from "@/lib/api/studentActions";
 import type { StudentDetail } from "@/types";
 
@@ -25,11 +27,12 @@ export function StudentActions({
   disabled: boolean;
   deletionPending: boolean;
   onBusyChange: (busy: boolean) => void;
-  onChanged: (message: string) => void;
+  onChanged: (notice: string | null) => void;
   onPending: () => void;
   onReload: () => void;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [action, setAction] = useState<"desactivar" | "reactivar" | "eliminar" | null>(null);
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,7 +75,8 @@ export function StudentActions({
         const op = await deleteStudent(student.id, typed);
         if (op.status === "completo") {
           setStarted(true);
-          router.replace(studentDeletedHref);
+          toast.success(studentDeletedMessage);
+          router.replace(studentsHref);
           return;
         }
         setStarted(true);
@@ -84,15 +88,22 @@ export function StudentActions({
       } else {
         const result = await setStudentAccess(student.id, action === "reactivar");
         const conflicts = result.reservas.some((r) => r.status === "pendiente_reprogramar");
-        const message = !result.activo
-          ? "Acceso desactivado. Se liberaron las reservas futuras."
-          : result.recuperacionPendiente
-            ? "Acceso reactivado. No se pudo confirmar toda la recuperación; consulta las reservas pendientes."
-            : conflicts
-              ? "Acceso reactivado. Hay reservas pendientes de reprogramar."
-              : "Acceso reactivado correctamente.";
         setAction(null);
-        onChanged(message);
+        // Los avisos con pendientes por revisar se quedan en línea (los
+        // muestra la ficha); el éxito limpio va al toast.
+        if (!result.activo) {
+          toast.success("Acceso desactivado. Se liberaron las reservas futuras.");
+          onChanged(null);
+        } else if (result.recuperacionPendiente) {
+          onChanged(
+            "Acceso reactivado. No se pudo confirmar toda la recuperación; consulta las reservas pendientes.",
+          );
+        } else if (conflicts) {
+          onChanged("Acceso reactivado. Hay reservas pendientes de reprogramar.");
+        } else {
+          toast.success("Acceso reactivado correctamente.");
+          onChanged(null);
+        }
       }
     } catch (error) {
       const state = studentActionError(error);

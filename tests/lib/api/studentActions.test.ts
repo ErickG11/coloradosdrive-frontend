@@ -5,7 +5,8 @@ import {
   deleteStudent,
   setStudentAccess,
   studentActionError,
-  studentDeletedHref,
+  studentDeletedMessage,
+  studentsHref,
 } from "@/lib/api/studentActions";
 vi.mock("@/lib/api/client", () => ({ api: { post: vi.fn() } }));
 beforeEach(() => vi.clearAllMocks());
@@ -21,7 +22,8 @@ describe("contrato de acciones de alumnos", () => {
       ["/admin/estudiantes/uuid/eliminar", { confirmacionCedula: "0100000009" }],
       ["/admin/estudiantes/uuid/eliminar", {}],
     ]);
-    expect(studentDeletedHref).toBe("/admin/students?aviso=alumno-eliminado");
+    expect(studentsHref).toBe("/admin/students");
+    expect(studentDeletedMessage).toBe("El alumno se eliminó definitivamente.");
   });
   it.each(["CD030", "DELETION_PENDING", "DELETION_INCOMPLETE"])(
     "%s indica eliminación pendiente",

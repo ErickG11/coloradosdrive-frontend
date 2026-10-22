@@ -6,6 +6,8 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { studentProfile } from "@/tests/fixtures/studentProfile";
 import { cohortOptions, pendingEnrollment } from "@/tests/fixtures/studentCohort";
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn(), post: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
@@ -242,7 +244,11 @@ describe("integración en ficha", () => {
     expect(screen.getByRole("button", { name: "Desactivar" })).toBeDisabled();
     await screen.findByLabelText("Cohorte");
     fireEvent.click(confirm());
-    await screen.findByText("La cohorte se asignó correctamente.");
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("La cohorte se asignó correctamente."),
+    );
+    expect(toast.success).toHaveBeenCalledOnce();
+    expect(screen.queryByText("La cohorte se asignó correctamente.")).not.toBeInTheDocument();
     await waitFor(() =>
       expect(api.get).toHaveBeenCalledWith(`/admin/estudiantes/${studentProfile.id}`),
     );
