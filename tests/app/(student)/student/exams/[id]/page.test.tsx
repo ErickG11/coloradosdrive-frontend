@@ -73,10 +73,30 @@ describe("TakeExamPage", () => {
 
     render(<TakeExamPage />);
 
-    expect(await screen.findByText("Examen de práctica - Señales")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Examen de práctica - Señales" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("30 minutos")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Comenzar examen" })).toBeInTheDocument();
     expect(mockedPost).not.toHaveBeenCalled();
+  });
+
+  it("mientras carga muestra el h1 de la pantalla", () => {
+    mockedGet.mockReturnValue(new Promise(() => {}));
+
+    render(<TakeExamPage />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Examen" })).toBeInTheDocument();
+    expect(screen.getByText("Cargando…")).toBeInTheDocument();
+  });
+
+  it("si el examen no existe muestra el h1 y el error", async () => {
+    mockGetByPath({ "/exams": [], "/exams/exam-1/attempts/me": [] });
+
+    render(<TakeExamPage />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Examen no encontrado.");
+    expect(screen.getByRole("heading", { level: 1, name: "Examen" })).toBeInTheDocument();
   });
 
   it("al comenzar, inicia el intento y muestra las preguntas para responder", async () => {

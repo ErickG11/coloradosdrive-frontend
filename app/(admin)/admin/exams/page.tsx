@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { buttonClassName, iconButtonClassName } from "@/components/ui";
+import { buttonClassName, FormError, iconButtonClassName } from "@/components/ui";
 import { EditIcon } from "@/components/ui/icons";
 import { useFetch } from "@/hooks/useFetch";
 import type { Course, Exam } from "@/types";
@@ -43,7 +43,7 @@ export default function ExamsPage() {
       </div>
 
       {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
 
       {!isLoading && !error ? (
         <div className="overflow-x-auto rounded-md border border-border bg-bg-surface backdrop-blur-md">

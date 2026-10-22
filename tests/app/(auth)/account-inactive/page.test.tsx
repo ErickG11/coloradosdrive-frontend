@@ -8,6 +8,7 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: { signOut
 
 it("ofrece cerrar sesión en vez de un enlace a /login (que rebotaría con sesión vigente)", () => {
   render(<AccountInactivePage />);
+  expect(screen.getByRole("heading", { level: 1, name: "Cuenta inactiva" })).toBeInTheDocument();
   expect(screen.getByRole("alert")).toHaveTextContent("Tu cuenta está inactiva");
   expect(screen.getByRole("button", { name: "Cerrar sesión" })).toBeInTheDocument();
   expect(screen.queryByRole("link")).not.toBeInTheDocument();

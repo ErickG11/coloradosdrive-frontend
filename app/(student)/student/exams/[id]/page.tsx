@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { Button, Card, Textarea } from "@/components/ui";
+import { Button, Card, FormError, Textarea } from "@/components/ui";
 import { useCountdown } from "@/hooks/useCountdown";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -148,13 +148,19 @@ export default function TakeExamPage() {
   }
 
   if (view.phase === "loading") {
-    return <p className="text-sm text-text-secondary">Cargando…</p>;
+    return (
+      <div className="flex flex-col gap-4">
+        <ExamHeading />
+        <p className="text-sm text-text-secondary">Cargando…</p>
+      </div>
+    );
   }
 
   if (view.phase === "error") {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-accent-red">{view.message}</p>
+        <ExamHeading />
+        <FormError>{view.message}</FormError>
         <BackToListLink />
       </div>
     );
@@ -189,6 +195,14 @@ export default function TakeExamPage() {
   return <ResultDetailScreen result={view.result} />;
 }
 
+// Mientras no se conoce el examen (cargando o con error) la pantalla igual
+// necesita su h1; con el examen cargado el h1 es su título.
+function ExamHeading() {
+  return (
+    <h1 className="font-display text-2xl font-bold tracking-tight text-text-primary">Examen</h1>
+  );
+}
+
 function BackToListLink() {
   return (
     <Link
@@ -202,7 +216,7 @@ function BackToListLink() {
 
 function StartScreen({ exam, onStart }: { exam: Exam; onStart: () => void }) {
   return (
-    <Card title={exam.title} className="flex flex-col gap-4">
+    <Card title={exam.title} titleAs="h1" className="flex flex-col gap-4">
       <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-text-secondary">Tipo</dt>
@@ -239,7 +253,7 @@ function SummaryScreen({
 }) {
   const resultado = attempt.passed ? "Aprobado" : "Reprobado";
   return (
-    <Card title={exam.title} className="flex flex-col gap-4">
+    <Card title={exam.title} titleAs="h1" className="flex flex-col gap-4">
       <p className="font-display text-2xl font-bold text-text-primary">
         {attempt.scorePercent?.toFixed(2)}% — {resultado}
       </p>
@@ -374,7 +388,7 @@ function AnsweringScreen({
   return (
     <div className="flex flex-col gap-6">
       <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-border bg-bg-surface-raised px-4 py-3 backdrop-blur-md">
-        <span className="font-display text-lg font-semibold text-text-primary">{exam.title}</span>
+        <h1 className="font-display text-lg font-semibold text-text-primary">{exam.title}</h1>
         <span
           className="font-display text-lg font-semibold text-text-primary"
           aria-label="Tiempo restante"
@@ -420,7 +434,7 @@ function AnsweringScreen({
 
       {error ? (
         <div className="flex flex-col gap-2">
-          <p className="text-sm text-accent-red">{error}</p>
+          <FormError>{error}</FormError>
           <BackToListLink />
         </div>
       ) : null}
@@ -435,7 +449,7 @@ function AnsweringScreen({
 function ResultDetailScreen({ result }: { result: AttemptResult }) {
   const resultado = result.passed ? "Aprobado" : "Reprobado";
   return (
-    <Card title="Resultado" className="flex flex-col gap-4">
+    <Card title="Resultado" titleAs="h1" className="flex flex-col gap-4">
       <p className="font-display text-2xl font-bold text-text-primary">
         {result.scorePercent.toFixed(2)}% — {resultado}
       </p>
