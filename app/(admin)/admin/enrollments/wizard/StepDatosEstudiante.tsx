@@ -6,7 +6,6 @@ import { Button, Input } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 
-import { birthDateBounds } from "@/lib/utils/birthDate";
 
 import {
   focusFirst,
@@ -40,7 +39,6 @@ export function StepDatosEstudiante({ value, onNext, serverError }: StepDatosEst
   );
   const [idError, setIdError] = useState<string | undefined>();
   const [checking, setChecking] = useState(false);
-  const birthBounds = birthDateBounds();
   useEffect(() => {
     if (serverError?.step === 1) focusFirst([serverError.field]);
   }, [serverError]);
@@ -231,8 +229,6 @@ export function StepDatosEstudiante({ value, onNext, serverError }: StepDatosEst
             label="Fecha de nacimiento (opcional)"
             name="fechaNacimiento"
             type="date"
-            min={birthBounds.min}
-            max={birthBounds.max}
             value={values.fechaNacimiento ?? ""}
             error={errors.fechaNacimiento}
             onChange={(event) => updateField("fechaNacimiento", event.target.value)}
