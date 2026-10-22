@@ -23,6 +23,9 @@ import {
   type PracticePlan,
 } from "./wizardTypes";
 
+// Campos con control y aviso propios; el resto de errores del servidor va en un aviso general.
+const VISIBLE: string[] = ["fechaInicio", "horaDeseada", "horasPorDia", "fechaFin"];
+
 export function StepPracticas({
   course,
   value,
@@ -53,6 +56,12 @@ export function StepPracticas({
   const [suggestionError, setSuggestionError] = useState<string | null>(
     serverError?.step === 3 && serverError.field === "instructorId" ? serverError.message : null,
   );
+  // Un error del servidor sigue bloqueando «Continuar» hasta cambiar el campo
+  // afectado. Los que no tienen control propio se muestran en un aviso general.
+  const generalServer = Object.entries(serverErrors).find(
+    ([key, message]) => message && !VISIBLE.includes(key) && key !== "instructorId",
+  )?.[1];
+  const serverBlocked = Object.values(serverErrors).some(Boolean);
   const [instructorError, setInstructorError] = useState<string | null>(null);
   const fieldErrors = validatePractice(form);
   const live: PracticeField[] = ["horasPorDia", ...(form.manual ? (["fechaFin"] as const) : [])];
@@ -62,7 +71,9 @@ export function StepPracticas({
   useEffect(() => {
     if (!serverError || serverError.step !== 3) return;
     focusFirst(
-      serverError.field === "instructorId" ? ["sugerencia-error-box"] : [serverError.field],
+      serverError.field === "instructorId"
+        ? ["sugerencia-error-box"]
+        : [...(VISIBLE.includes(serverError.field) ? [serverError.field] : []), "paso-error-box"],
     );
   }, [serverError]);
   // Se consulta la misma regla del servidor para automático y manual. Se
@@ -91,10 +102,16 @@ export function StepPracticas({
       clearTimeout(t);
     };
   }, [form, blocked]);
+  // Conserva solo los errores del servidor de otros campos con control propio.
+  function clearServer(field: string) {
+    setServerErrors((e) =>
+      Object.fromEntries(Object.entries(e).filter(([k]) => VISIBLE.includes(k) && k !== field)),
+    );
+  }
   function change<K extends keyof PracticeFormData>(field: K, value: PracticeFormData[K]) {
     ++version.current;
     setForm((f) => ({ ...f, [field]: value }));
-    setServerErrors((e) => ({ ...e, [field]: "" }));
+    clearServer(field);
     setPlan(null);
     setSuggestion(null);
     setInstructor(null);
@@ -108,6 +125,15 @@ export function StepPracticas({
     const invalid = ORDER.filter((f) => fieldErrors[f]);
     if (invalid.length) {
       focusFirst(invalid);
+      return;
+    }
+    if (serverBlocked) {
+      const keys = Object.keys(serverErrors).filter((k) => serverErrors[k]);
+      focusFirst(
+        keys.includes("instructorId")
+          ? ["sugerencia-error-box"]
+          : [...keys.filter((k) => VISIBLE.includes(k)), "paso-error-box"],
+      );
       return;
     }
     if (!plan) {
@@ -136,6 +162,7 @@ export function StepPracticas({
     setBusy(true);
     setError(null);
     setSuggestionError(null);
+    setServerErrors((e) => ({ ...e, instructorId: "" }));
     setSuggestion(null);
     setInstructor(null);
     try {
@@ -225,7 +252,7 @@ export function StepPracticas({
         value={form.manual ? form.fechaFin : (plan?.fechaFinElegida ?? "")}
         onChange={(e) => {
           ++version.current;
-          setServerErrors((current) => ({ ...current, fechaFin: "" }));
+          clearServer("fechaFin");
           setForm((f) => ({ ...f, manual: true, fechaFin: e.target.value }));
           setPlan(null);
           setSuggestion(null);
@@ -263,6 +290,9 @@ export function StepPracticas({
           asignar instructor.
         </p>
       )}
+      <div id="paso-error-box" tabIndex={-1} className="outline-none">
+        <FormError>{generalServer}</FormError>
+      </div>
       <FormError>{error}</FormError>
       <div id="sugerencia-error-box" tabIndex={-1} className="outline-none">
         <FormError>{suggestionError}</FormError>

@@ -42,22 +42,28 @@ export function StepDocumentosPago({
       : null,
   );
   useEffect(() => {
-    if (server) focusFirst([server.id]);
+    if (server) focusFirst([server.id, "paso-error-box"]);
     // Solo al llegar desde un error del servidor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const VISIBLE = ["modalidadPago", "descuento", "montoAbonado"];
   const shown = attempted ? summary.error : null;
   const fieldError = (id: string): string | undefined =>
     (shown && summary.errorField === id ? shown : undefined) ??
     (server?.id === id ? server.message : undefined);
   function setStatus(tipo: (typeof DOCUMENTS)[number]["tipo"], estado: DocumentStatus) {
+    setServer((current) => (current && VISIBLE.includes(current.id) ? current : null));
     setChoice((current) => ({
       ...current,
       documentos: current.documentos.map((d) => (d.tipo === tipo ? { ...d, estado } : d)),
     }));
   }
   function setPayment(patch: Partial<DocumentsPaymentChoice["pago"]>) {
-    setServer(null);
+    // Cambiar el campo afectado (o cualquier dato, si el error no tiene control propio).
+    const keys = Object.keys(patch).map((k) => (k === "modalidad" ? "modalidadPago" : k));
+    setServer((current) =>
+      current && VISIBLE.includes(current.id) && !keys.includes(current.id) ? current : null,
+    );
     setChoice((current) => ({ ...current, pago: { ...current.pago, ...patch } }));
   }
   return (
@@ -132,6 +138,11 @@ export function StepDocumentosPago({
             />
           )}
         </div>
+        <div id="paso-error-box" tabIndex={-1} className="outline-none">
+          <FormError className="mt-2">
+            {server && !VISIBLE.includes(server.id) ? server.message : null}
+          </FormError>
+        </div>
         <div className="mt-4" aria-live="polite">
           <p>
             Precio:{" "}
@@ -163,6 +174,10 @@ export function StepDocumentosPago({
         <Button
           onClick={() => {
             setAttempted(true);
+            if (server) {
+              focusFirst([server.id, "paso-error-box"]);
+              return;
+            }
             if (summary.error) {
               if (summary.errorField) focusFirst([summary.errorField]);
               return;

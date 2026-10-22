@@ -196,6 +196,37 @@ describe("Wizard sin escrituras prematuras", () => {
     expect(payload.pago).toEqual({ modalidad: "abono", descuento: 0, montoAbonado: 100 });
     expect(sessionStorage.getItem("coloradosdrive.manual-enrollment.confirmation")).toBeNull();
   });
+  it("el payload de confirmación lleva correo y nombre recortados", async () => {
+    const user = await draft();
+    // El borrador se llenó sin espacios: se vuelve a la cédula para ensuciarlo.
+    await user.click(screen.getByRole("button", { name: "Atrás" }));
+    await user.click(screen.getByRole("button", { name: "Atrás" }));
+    await user.click(screen.getByRole("button", { name: "Atrás" }));
+    await user.click(screen.getByRole("button", { name: "Atrás" }));
+    fireEvent.change(screen.getByLabelText("Nombres completos"), {
+      target: { value: "  Ana nueva  " },
+    });
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), {
+      target: { value: "ana@example.test " },
+    });
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(await screen.findByRole("button", { name: /Tipo A/ }));
+    await screen.findByText(/Cupos disponibles/);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-09-30" } });
+    await screen.findByText(/5 días · 10 bloques/);
+    await user.click(screen.getByRole("button", { name: "Ver sugerencia" }));
+    await screen.findByText(/Hora sugerida/);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    fireEvent.change(screen.getByLabelText("Monto abonado (USD)"), { target: { value: "100" } });
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar matrícula y prácticas" }));
+    const payload = post.mock.calls.find(([path]) => path === `${BASE}/confirm`)?.[1] as {
+      student: { correo: string; nombreCompleto: string };
+    };
+    expect(payload.student.correo).toBe("ana@example.test");
+    expect(payload.student.nombreCompleto).toBe("Ana nueva");
+  });
   it("A+B usa la identidad seleccionada y no envía contraseña", async () => {
     const user = await draft(true);
     await user.click(screen.getByRole("button", { name: "Confirmar matrícula y prácticas" }));

@@ -134,6 +134,7 @@ export interface ServerFieldError {
   /** Campo del cuerpo sin prefijo, p. ej. "cedula" para student.cedula. */
   field: string;
   message: string;
+  code?: string;
 }
 
 /**
@@ -148,6 +149,7 @@ export function serverFieldError(error: ApiError): ServerFieldError | null {
     step: hit[1],
     field: error.field.replace(/^(student|practice|pago)\./, ""),
     message: error.message,
+    code: error.code,
   };
 }
 

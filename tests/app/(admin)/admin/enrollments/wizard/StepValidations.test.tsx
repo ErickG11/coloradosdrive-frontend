@@ -529,3 +529,170 @@ describe("Paso 4: documentos y pago", () => {
     expect(screen.getByText("El abono no puede superar el monto total neto")).toBeInTheDocument();
   });
 });
+
+describe("Errores del servidor devueltos a un paso", () => {
+  const err = (step: 2 | 3 | 4, field: string, message: string, code?: string) => ({
+    step,
+    field,
+    message,
+    code,
+  });
+
+  it("paso 2: cohorte llena o cerrada añade qué hacer", () => {
+    for (const [code, message] of [
+      ["COHORT_FULL", "La cohorte ya no tiene cupo disponible."],
+      ["COHORT_ENROLLMENT_CLOSED", "La matrícula de la cohorte no está abierta."],
+    ]) {
+      const { unmount } = render(
+        <StepCurso
+          catalog={[]}
+          value={null}
+          onBack={() => {}}
+          onNext={() => {}}
+          serverError={err(2, "cohortId", message, code)}
+        />,
+      );
+      expect(screen.getByRole("alert")).toHaveTextContent(`${message} Selecciona otra cohorte.`);
+      unmount();
+    }
+    render(
+      <StepCurso
+        catalog={[]}
+        value={null}
+        onBack={() => {}}
+        onNext={() => {}}
+        serverError={err(2, "cohortId", "La cohorte seleccionada no existe.", "COHORT_NOT_FOUND")}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(/^La cohorte seleccionada no existe\.$/);
+  });
+
+  describe("paso 3", () => {
+    async function ready(serverError: ReturnType<typeof err>) {
+      post.mockImplementation(async (path) =>
+        path === `${BASE}/plan` ? plan : { plan, suggestion },
+      );
+      const onNext = vi.fn();
+      render(
+        <StepPracticas
+          course={selection}
+          value={{
+            form: {
+              semanas: 1,
+              modalidad: "entre_semana",
+              horasPorDia: 2,
+              fechaInicio: "2026-09-30",
+              horaDeseada: "08:00",
+              fechaFin: "",
+              manual: false,
+            },
+            plan: { ...plan, modalidad: "entre_semana" as const },
+            suggestion: null,
+            instructor: null,
+          }}
+          onBack={() => {}}
+          onNext={onNext}
+          serverError={serverError}
+        />,
+      );
+      await screen.findByText(/5 días · 10 bloques/);
+      return onNext;
+    }
+
+    it("el valor rechazado sigue bloqueando Continuar hasta cambiar el campo", async () => {
+      const onNext = await ready(
+        err(3, "horaDeseada", "La hora deseada debe estar entre 06:00 y 22:00."),
+      );
+      await click("Continuar");
+      expect(onNext).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("Hora deseada")).toHaveFocus();
+      fill("Hora deseada", "09:00");
+      expect(screen.queryByText(/debe estar entre 06:00 y 22:00/)).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Ver sugerencia" })).toBeEnabled(),
+      );
+      await click("Ver sugerencia");
+      await screen.findByText(/Hora sugerida/);
+      fill("Instructor", "i1");
+      await click("Continuar");
+      expect(onNext).toHaveBeenCalledOnce();
+    });
+
+    it("un campo sin control propio (practice.semanas) se muestra en un aviso general y bloquea", async () => {
+      const onNext = await ready(
+        err(3, "semanas", "Selecciona una duración de 1, 2 o 3 semanas.", "INVALID_FIELD"),
+      );
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Selecciona una duración de 1, 2 o 3 semanas.",
+      );
+      expect(document.getElementById("paso-error-box")).toHaveFocus();
+      await click("Continuar");
+      expect(onNext).not.toHaveBeenCalled();
+      fill("Duración", "2");
+      expect(screen.queryByText(/Selecciona una duración de 1/)).not.toBeInTheDocument();
+    });
+
+    it("el instructor rechazado bloquea hasta volver a pedir la sugerencia", async () => {
+      const onNext = await ready(
+        err(3, "instructorId", "Selecciona un instructor antes de confirmar."),
+      );
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Selecciona un instructor antes de confirmar.",
+      );
+      await click("Continuar");
+      expect(onNext).not.toHaveBeenCalled();
+      await click("Ver sugerencia");
+      await screen.findByText(/Hora sugerida/);
+      expect(
+        screen.queryByText("Selecciona un instructor antes de confirmar."),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("paso 4", () => {
+    const student = { ...EMPTY_STUDENT, mode: "existing" as const, id: "s" };
+    function renderStep(serverError: ReturnType<typeof err>) {
+      const onNext = vi.fn();
+      render(
+        <StepDocumentosPago
+          student={student}
+          course={selection}
+          value={{
+            documentos: [],
+            pago: { modalidad: "abono", descuento: "0", montoAbonado: "100" },
+          }}
+          onBack={() => {}}
+          onNext={onNext}
+          serverError={serverError}
+        />,
+      );
+      return onNext;
+    }
+
+    it("el abono rechazado sigue bloqueando hasta cambiar ese campo (no otro)", async () => {
+      const onNext = renderStep(
+        err(4, "montoAbonado", "El abono no puede superar el monto total neto"),
+      );
+      await click("Continuar");
+      expect(onNext).not.toHaveBeenCalled();
+      fill("Descuento (USD)", "10");
+      await click("Continuar");
+      expect(onNext).not.toHaveBeenCalled();
+      fill("Monto abonado (USD)", "100.5");
+      await click("Continuar");
+      expect(onNext).toHaveBeenCalledOnce();
+    });
+
+    it("un error sin control propio (pago, documentos) se muestra en un aviso general", async () => {
+      const onNext = renderStep(err(4, "pago", "El pago no es válido.", "INVALID_FIELD"));
+      expect(screen.getByRole("alert")).toHaveTextContent("El pago no es válido.");
+      expect(document.getElementById("paso-error-box")).toHaveFocus();
+      await click("Continuar");
+      expect(onNext).not.toHaveBeenCalled();
+      fill("Monto abonado (USD)", "50");
+      expect(screen.queryByText("El pago no es válido.")).not.toBeInTheDocument();
+      await click("Continuar");
+      expect(onNext).toHaveBeenCalledOnce();
+    });
+  });
+});

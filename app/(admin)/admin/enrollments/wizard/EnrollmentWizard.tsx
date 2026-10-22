@@ -168,8 +168,8 @@ export function EnrollmentWizard() {
               : {
                   mode: "new",
                   cedula: student.cedula,
-                  nombreCompleto: student.nombreCompleto,
-                  correo: student.correo,
+                  nombreCompleto: student.nombreCompleto.trim(),
+                  correo: student.correo.trim(),
                   telefono: student.telefono || undefined,
                   ...(student.fechaNacimiento ? { fechaNacimiento: student.fechaNacimiento } : {}),
                 },

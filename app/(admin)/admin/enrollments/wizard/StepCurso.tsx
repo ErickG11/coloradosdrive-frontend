@@ -34,7 +34,13 @@ export function StepCurso({
   const sequence = useRef(0);
   // Error de validación (o del servidor) del curso/cohorte, junto a la selección.
   const [stepError, setStepError] = useState<string | null>(
-    serverError?.step === 2 ? serverError.message : null,
+    serverError?.step === 2
+      ? `${serverError.message}${
+          serverError.code === "COHORT_FULL" || serverError.code === "COHORT_ENROLLMENT_CLOSED"
+            ? " Selecciona otra cohorte."
+            : ""
+        }`
+      : null,
   );
   useEffect(() => {
     if (serverError?.step === 2) focusFirst(["curso-error-box"]);
