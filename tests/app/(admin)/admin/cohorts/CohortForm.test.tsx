@@ -238,6 +238,7 @@ describe("CohortForm", () => {
       <CohortForm
         courses={courses}
         cohortId="cohort-1"
+        version="2026-10-19T15:04:05.123456+00:00"
         initialValues={{
           courseId: "course-b",
           nombre: "Cohorte Julio",
@@ -274,6 +275,7 @@ describe("CohortForm", () => {
         horariosCapacitacionTeoria: null,
         numeroVehiculos: null,
         numeroAulas: null,
+        updatedAt: "2026-10-19T15:04:05.123456+00:00",
       });
     });
   });
@@ -811,5 +813,22 @@ describe("CohortForm", () => {
 
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
+  });
+
+  it("en creación un 409 no ofrece «Recargar»", async () => {
+    const user = userEvent.setup();
+    mockedPost.mockRejectedValue(
+      new ApiError("Ya existe una cohorte con ese nombre en este curso.", 409, {
+        code: "COHORT_NAME_DUPLICATE",
+        field: "nombre",
+      }),
+    );
+    render(<CohortForm courses={courses} onReload={vi.fn()} />);
+
+    fillRequiredFields();
+    await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("button", { name: "Recargar" })).not.toBeInTheDocument();
   });
 });

@@ -54,4 +54,24 @@ describe("Select", () => {
     expect(select).toHaveAttribute("aria-invalid", "true");
     expect(select).toHaveAttribute("aria-describedby", alert.id);
   });
+
+  it("combina un aria-describedby propio con el del error", () => {
+    const { unmount } = render(
+      <Select label="Campo" name="campo" aria-describedby="ayuda">
+        <option value="a">A</option>
+      </Select>,
+    );
+    expect(screen.getByLabelText("Campo")).toHaveAttribute("aria-describedby", "ayuda");
+    unmount();
+
+    render(
+      <Select label="Campo" name="campo" aria-describedby="ayuda" error="Mal">
+        <option value="a">A</option>
+      </Select>,
+    );
+    expect(screen.getByLabelText("Campo")).toHaveAttribute(
+      "aria-describedby",
+      `ayuda ${screen.getByRole("alert").id}`,
+    );
+  });
 });
