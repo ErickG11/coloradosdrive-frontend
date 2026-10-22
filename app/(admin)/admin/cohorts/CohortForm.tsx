@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Button, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { Course } from "@/types";
+
+import { COHORT_LIMITS, maxCohortDate } from "./cohortLimits";
 
 export interface CohortFormValues {
   courseId: string;
@@ -40,11 +42,20 @@ const EMPTY_VALUES: CohortFormValues = {
 
 type FieldErrors = Partial<Record<keyof CohortFormValues, string>>;
 
-// Al editar una fecha de inicio se descarta también el error de su fecha de fin.
-const RELATED_ERROR: Partial<Record<keyof CohortFormValues, keyof CohortFormValues>> = {
-  fechaInicioMatricula: "fechaFinMatricula",
-  fechaInicioCurso: "fechaFinCurso",
+// Al editar un campo se descartan también los errores que dependen de él:
+// las fechas de fin que se comparan con una fecha de inicio (incluida la
+// regla «el curso no puede terminar antes de que abra la matrícula») y, al
+// cambiar de curso, el nombre duplicado (la unicidad es por curso).
+const RELATED_ERRORS: Partial<Record<keyof CohortFormValues, (keyof CohortFormValues)[]>> = {
+  fechaInicioMatricula: ["fechaFinMatricula", "fechaFinCurso"],
+  fechaInicioCurso: ["fechaFinCurso"],
+  courseId: ["nombre"],
 };
+
+// El servidor indica en `field` el campo del cuerpo (mismo nombre que el input).
+function isFormField(field: string | undefined): field is keyof CohortFormValues {
+  return field !== undefined && Object.prototype.hasOwnProperty.call(EMPTY_VALUES, field);
+}
 
 interface CohortFormProps {
   courses: Course[];
@@ -58,43 +69,73 @@ function optionalText(value: string): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-function optionalInt(value: string): number | null {
+// Un campo numérico vacío se envía como null: Number("") daría 0, que el
+// servidor aceptaría como valor legítimo (precio vacío = $0.00).
+function optionalNumber(value: string): number | null {
   const trimmed = value.trim();
   return trimmed === "" ? null : Number(trimmed);
 }
 
 export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const isEditMode = Boolean(cohortId);
   const [values, setValues] = useState<CohortFormValues>(initialValues ?? EMPTY_VALUES);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Campo que debe recibir el foco cuando ya se haya pintado su error.
+  const pendingFocusRef = useRef<keyof CohortFormValues | null>(null);
+  // El servidor rechaza fechas posteriores a hoy + 5 años.
+  const [maxDate] = useState(() => maxCohortDate());
 
   function updateField<K extends keyof CohortFormValues>(field: K, value: CohortFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
-    const related = RELATED_ERROR[field];
+    const cleared = [field, ...(RELATED_ERRORS[field] ?? [])];
     setFieldErrors((current) => {
-      if (!current[field] && !(related && current[related])) return current;
+      if (!cleared.some((name) => current[name])) return current;
       const next = { ...current };
-      delete next[field];
-      if (related) delete next[related];
+      for (const name of cleared) delete next[name];
       return next;
     });
   }
+
+  // El foco se mueve tras el render, cuando el campo ya tiene aria-invalid y
+  // aria-describedby apuntando a su mensaje.
+  useEffect(() => {
+    const field = pendingFocusRef.current;
+    if (!field) return;
+    pendingFocusRef.current = null;
+    formRef.current?.querySelector<HTMLElement>(`[name="${field}"]`)?.focus();
+  }, [fieldErrors]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
     // Cada regla de fechas se muestra junto al campo que hay que corregir.
+    // Solo se compara si ambas fechas existen: una fecha vacía la rechaza
+    // el navegador (o el servidor, con su propio mensaje).
+    const bothDates = (start: string, end: string) => start !== "" && end !== "";
     const dateErrors: FieldErrors = {};
-    if (values.fechaFinMatricula < values.fechaInicioMatricula) {
+    if (
+      bothDates(values.fechaInicioMatricula, values.fechaFinMatricula) &&
+      values.fechaFinMatricula < values.fechaInicioMatricula
+    ) {
       dateErrors.fechaFinMatricula =
         "El fin de matrícula no puede ser anterior al inicio de matrícula.";
     }
-    if (values.fechaFinCurso < values.fechaInicioCurso) {
+    if (
+      bothDates(values.fechaInicioCurso, values.fechaFinCurso) &&
+      values.fechaFinCurso < values.fechaInicioCurso
+    ) {
       dateErrors.fechaFinCurso = "El fin de curso no puede ser anterior al inicio de curso.";
+    } else if (
+      bothDates(values.fechaInicioMatricula, values.fechaFinCurso) &&
+      values.fechaFinCurso < values.fechaInicioMatricula
+    ) {
+      // Misma regla y frase que el servidor (contrato L3b).
+      dateErrors.fechaFinCurso = "El curso no puede terminar antes de que abra la matrícula.";
     }
     setFieldErrors(dateErrors);
     if (Object.keys(dateErrors).length > 0) return;
@@ -104,16 +145,16 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
     const body = {
       courseId: values.courseId,
       nombre: values.nombre,
-      precio: Number(values.precio),
-      cupoMaximo: Number(values.cupoMaximo),
+      precio: optionalNumber(values.precio),
+      cupoMaximo: optionalNumber(values.cupoMaximo),
       fechaInicioMatricula: values.fechaInicioMatricula,
       fechaFinMatricula: values.fechaFinMatricula,
       fechaInicioCurso: values.fechaInicioCurso,
       fechaFinCurso: values.fechaFinCurso,
       tipoModalidad: optionalText(values.tipoModalidad),
       horariosCapacitacionTeoria: optionalText(values.horariosCapacitacionTeoria),
-      numeroVehiculos: optionalInt(values.numeroVehiculos),
-      numeroAulas: optionalInt(values.numeroAulas),
+      numeroVehiculos: optionalNumber(values.numeroVehiculos),
+      numeroAulas: optionalNumber(values.numeroAulas),
     };
 
     try {
@@ -125,16 +166,28 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
       router.push("/admin/cohorts");
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo guardar la cohorte.");
+      if (err instanceof ApiError && isFormField(err.field)) {
+        // Error de un campo concreto (400 de validación, 404 de curso,
+        // 409 de nombre duplicado): se muestra junto a ese campo.
+        pendingFocusRef.current = err.field;
+        setFieldErrors({ [err.field]: err.message });
+      } else {
+        setError(err instanceof ApiError ? err.message : "No se pudo guardar la cohorte.");
+      }
       setIsSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
+    <form
+      ref={formRef}
+      onSubmit={(event) => void handleSubmit(event)}
+      className="flex flex-col gap-4"
+    >
       <Select
         label="Curso"
         name="courseId"
+        error={fieldErrors.courseId}
         required
         value={values.courseId}
         onChange={(event) => updateField("courseId", event.target.value)}
@@ -152,7 +205,9 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
       <Input
         label="Nombre de la cohorte"
         name="nombre"
+        error={fieldErrors.nombre}
         required
+        maxLength={COHORT_LIMITS.nombreMaxLength}
         value={values.nombre}
         onChange={(event) => updateField("nombre", event.target.value)}
       />
@@ -161,9 +216,11 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
         <Input
           label="Precio"
           name="precio"
+          error={fieldErrors.precio}
           type="number"
-          min="0"
-          step="0.01"
+          min={COHORT_LIMITS.precioMin}
+          max={COHORT_LIMITS.precioMax}
+          step={COHORT_LIMITS.precioStep}
           required
           value={values.precio}
           onChange={(event) => updateField("precio", event.target.value)}
@@ -171,8 +228,10 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
         <Input
           label="Cupo máximo"
           name="cupoMaximo"
+          error={fieldErrors.cupoMaximo}
           type="number"
-          min="1"
+          min={COHORT_LIMITS.cupoMin}
+          max={COHORT_LIMITS.cupoMax}
           step="1"
           required
           value={values.cupoMaximo}
@@ -190,8 +249,10 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           <Input
             label="Inicio de matrícula"
             name="fechaInicioMatricula"
+            error={fieldErrors.fechaInicioMatricula}
             type="date"
             required
+            max={maxDate}
             value={values.fechaInicioMatricula}
             onChange={(event) => updateField("fechaInicioMatricula", event.target.value)}
           />
@@ -200,6 +261,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             name="fechaFinMatricula"
             type="date"
             required
+            max={maxDate}
             error={fieldErrors.fechaFinMatricula}
             value={values.fechaFinMatricula}
             onChange={(event) => updateField("fechaFinMatricula", event.target.value)}
@@ -217,8 +279,10 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           <Input
             label="Inicio de curso"
             name="fechaInicioCurso"
+            error={fieldErrors.fechaInicioCurso}
             type="date"
             required
+            max={maxDate}
             value={values.fechaInicioCurso}
             onChange={(event) => updateField("fechaInicioCurso", event.target.value)}
           />
@@ -227,6 +291,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             name="fechaFinCurso"
             type="date"
             required
+            max={maxDate}
             error={fieldErrors.fechaFinCurso}
             value={values.fechaFinCurso}
             onChange={(event) => updateField("fechaFinCurso", event.target.value)}
@@ -242,20 +307,26 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           <Input
             label="Tipo de modalidad"
             name="tipoModalidad"
+            error={fieldErrors.tipoModalidad}
+            maxLength={COHORT_LIMITS.tipoModalidadMaxLength}
             value={values.tipoModalidad}
             onChange={(event) => updateField("tipoModalidad", event.target.value)}
           />
           <Input
             label="Horarios de capacitación teórica"
             name="horariosCapacitacionTeoria"
+            error={fieldErrors.horariosCapacitacionTeoria}
+            maxLength={COHORT_LIMITS.horariosMaxLength}
             value={values.horariosCapacitacionTeoria}
             onChange={(event) => updateField("horariosCapacitacionTeoria", event.target.value)}
           />
           <Input
             label="Número de vehículos"
             name="numeroVehiculos"
+            error={fieldErrors.numeroVehiculos}
             type="number"
-            min="0"
+            min={COHORT_LIMITS.recursosMin}
+            max={COHORT_LIMITS.recursosMax}
             step="1"
             value={values.numeroVehiculos}
             onChange={(event) => updateField("numeroVehiculos", event.target.value)}
@@ -263,8 +334,10 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           <Input
             label="Número de aulas"
             name="numeroAulas"
+            error={fieldErrors.numeroAulas}
             type="number"
-            min="0"
+            min={COHORT_LIMITS.recursosMin}
+            max={COHORT_LIMITS.recursosMax}
             step="1"
             value={values.numeroAulas}
             onChange={(event) => updateField("numeroAulas", event.target.value)}
