@@ -122,6 +122,8 @@ export function EnrollmentWizard() {
       }
     }, 0);
     return () => clearTimeout(restore);
+    // Solo al montar: `check` (y toast) se leen una vez para restaurar el borrador.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (!result?.enrollmentId) return;
