@@ -49,6 +49,12 @@
   --color-accent-red-subtle: rgb(225 59 59 / 8%);
   --color-accent-blue-subtle: rgb(59 91 219 / 8%);
 
+  /* --- Éxito (toasts): fondo casi sólido para que se lea sobre cualquier
+     pantalla. Texto #14532d sobre #e7f6ec ~ 8:1 (AA/AAA). --- */
+  --color-success-bg: #e7f6ec;
+  --color-success-border: #2f9e5b;
+  --color-success-text: #14532d;
+
   /* --- Sombra de elevación: modo claro (sombra difusa convencional) --- */
   --shadow-elevated: 0 1px 2px rgb(15 23 42 / 5%), 0 12px 32px -8px rgb(15 23 42 / 14%);
 
@@ -99,6 +105,11 @@
   --color-accent-red-subtle: rgb(225 59 59 / 14%);
   --color-accent-blue-subtle: rgb(59 91 219 / 16%);
 
+  /* --- Éxito (toasts), modo oscuro. #bbf7d0 sobre #0f2a1b ~ 12:1. --- */
+  --color-success-bg: #0f2a1b;
+  --color-success-border: #3fb871;
+  --color-success-text: #bbf7d0;
+
   /* --- Sombra de elevación: modo oscuro (resalte superior + sombra
      difusa hacia abajo — no una sombra de "modo claro" reusada) --- */
   --shadow-elevated: 0 1px 0 0 rgb(255 255 255 / 6%) inset, 0 8px 32px -8px rgb(0 0 0 / 60%);
@@ -131,6 +142,10 @@
   --color-accent-blue-hover: var(--color-accent-blue-hover);
   --color-accent-blue-subtle: var(--color-accent-blue-subtle);
 
+  --color-success-bg: var(--color-success-bg);
+  --color-success-border: var(--color-success-border);
+  --color-success-text: var(--color-success-text);
+
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -152,4 +167,22 @@ body {
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
+}
+
+/* Entrada breve de los toasts; sin movimiento si el usuario lo reduce. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast-enter {
+    animation: toast-in 0.18s ease-out;
+  }
 }
