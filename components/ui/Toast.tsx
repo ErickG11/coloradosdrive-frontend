@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 
 import { CheckIcon, XIcon } from "./icons";
@@ -32,6 +40,8 @@ function ToastCard({ message, onClose }: { message: string; onClose: () => void 
   const startedAt = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCloseRef = useRef(onClose);
+  const hovered = useRef(false);
+  const focused = useRef(false);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -60,10 +70,24 @@ function ToastCard({ message, onClose }: { message: string; onClose: () => void 
 
   return (
     <div
-      onMouseEnter={pause}
-      onMouseLeave={resume}
-      onFocus={pause}
-      onBlur={resume}
+      onMouseEnter={() => {
+        hovered.current = true;
+        pause();
+      }}
+      onMouseLeave={() => {
+        hovered.current = false;
+        if (!focused.current) resume();
+      }}
+      onFocus={() => {
+        focused.current = true;
+        pause();
+      }}
+      onBlur={(event) => {
+        // Mover el foco entre hijos de la tarjeta no cuenta como salir.
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        focused.current = false;
+        if (!hovered.current) resume();
+      }}
       className="toast-enter pointer-events-auto flex items-start gap-3 rounded-md border border-success-border bg-success-bg px-4 py-3 text-sm text-success-text shadow-elevated"
     >
       <CheckIcon className="mt-0.5 h-5 w-5 shrink-0" />

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -73,6 +74,39 @@ describe("Toast", () => {
     expect(screen.queryByText("Cohorte creada correctamente.")).not.toBeInTheDocument();
   });
 
+  it("con hover y foco a la vez, soltar uno no reanuda mientras el otro siga activo", () => {
+    renderToasts();
+    fireEvent.click(screen.getByText("disparar"));
+    const card = screen.getByText("Cohorte creada correctamente.").parentElement!;
+    fireEvent.mouseEnter(card);
+    fireEvent.focus(card);
+    fireEvent.mouseLeave(card);
+    act(() => void vi.advanceTimersByTime(20000));
+    expect(screen.getByText("Cohorte creada correctamente.")).toBeInTheDocument();
+    fireEvent.blur(card);
+    act(() => void vi.advanceTimersByTime(5100));
+    expect(screen.queryByText("Cohorte creada correctamente.")).not.toBeInTheDocument();
+  });
+
+  it("mover el foco entre hijos de la tarjeta no reanuda el cierre", () => {
+    renderToasts();
+    fireEvent.click(screen.getByText("disparar"));
+    const card = screen.getByText("Cohorte creada correctamente.").parentElement!;
+    const close = screen.getByRole("button", { name: "Cerrar aviso" });
+    fireEvent.focus(card);
+    fireEvent.blur(card, { relatedTarget: close });
+    act(() => void vi.advanceTimersByTime(20000));
+    expect(screen.getByText("Cohorte creada correctamente.")).toBeInTheDocument();
+  });
+
+  it("al desmontar no quedan temporizadores pendientes", () => {
+    const { unmount } = renderToasts();
+    fireEvent.click(screen.getByText("disparar"));
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("se cierra con el botón de cerrar", () => {
     renderToasts();
     fireEvent.click(screen.getByText("disparar"));
@@ -88,27 +122,37 @@ describe("Toast", () => {
     expect(screen.getByText("Cuatro.")).toBeInTheDocument();
   });
 
-  it("sobrevive a una navegación: el aviso vive en el proveedor del layout", () => {
-    function Page({ name }: { name: string }) {
+  it("sobrevive a una navegación: la página que lo dispara se desmonta y el aviso sigue", () => {
+    function Saved({ go }: { go: () => void }) {
       const toast = useToast();
       return (
-        <button type="button" onClick={() => toast.success("Guardado.")}>
-          {name}
+        <button
+          type="button"
+          onClick={() => {
+            toast.success("Guardado.");
+            go();
+          }}
+        >
+          guardar
         </button>
       );
     }
-    const { rerender } = render(
-      <ToastProvider>
-        <Page name="lista" />
-      </ToastProvider>,
-    );
-    fireEvent.click(screen.getByText("lista"));
-    rerender(
-      <ToastProvider>
-        <Page name="detalle" />
-      </ToastProvider>,
-    );
+    // Hace de layout: el proveedor queda fijo y solo cambia la "página".
+    function Layout() {
+      const [page, setPage] = useState<"lista" | "detalle">("lista");
+      return (
+        <ToastProvider>
+          {page === "lista" ? <Saved go={() => setPage("detalle")} /> : <p>detalle</p>}
+        </ToastProvider>
+      );
+    }
+    render(<Layout />);
+    fireEvent.click(screen.getByText("guardar"));
+    expect(screen.queryByText("guardar")).not.toBeInTheDocument();
+    expect(screen.getByText("detalle")).toBeInTheDocument();
     expect(screen.getByText("Guardado.")).toBeInTheDocument();
+    act(() => void vi.advanceTimersByTime(5100));
+    expect(screen.queryByText("Guardado.")).not.toBeInTheDocument();
   });
 
   it("sin proveedor, success no falla", () => {
