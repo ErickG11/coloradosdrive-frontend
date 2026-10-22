@@ -207,4 +207,16 @@ describe("Input", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
+
+  it("combina un aria-describedby propio con el del error", () => {
+    const { unmount } = render(<Input label="Campo" name="campo" aria-describedby="ayuda" />);
+    expect(screen.getByLabelText("Campo")).toHaveAttribute("aria-describedby", "ayuda");
+    unmount();
+
+    render(<Input label="Campo" name="campo" aria-describedby="ayuda" error="Mal" />);
+    expect(screen.getByLabelText("Campo")).toHaveAttribute(
+      "aria-describedby",
+      `ayuda ${screen.getByRole("alert").id}`,
+    );
+  });
 });

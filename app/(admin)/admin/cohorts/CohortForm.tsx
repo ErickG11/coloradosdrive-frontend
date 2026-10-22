@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import type { Course } from "@/types";
+import type { CohortStudentCounts, Course } from "@/types";
 
 import { COHORT_LIMITS, maxCohortDate } from "./cohortLimits";
 
@@ -61,7 +61,23 @@ interface CohortFormProps {
   courses: Course[];
   /** Presente => modo edición (PATCH). Ausente => modo creación (POST). */
   cohortId?: string;
+  /**
+   * Versión de la cohorte (updatedAt de GET /cohorts/:id) para el PATCH.
+   * Se reenvía como cadena exacta: convertirla a Date pierde los
+   * microsegundos y el servidor respondería siempre 409.
+   */
+  version?: string;
   initialValues?: CohortFormValues;
+  /**
+   * Vuelve a cargar la cohorte (GET /cohorts/:id) sin salir de la página.
+   * Se ofrece en edición ante un 409 (otra persona la cambió) o si falta
+   * la versión.
+   */
+  onReload?: () => void;
+  /** Se llama cuando el usuario edita un campo o envía el formulario. */
+  onUserActivity?: () => void;
+  /** Matrículas de la cohorte (solo edición). Con alumnos no se cambia el curso. */
+  alumnos?: CohortStudentCounts;
 }
 
 function optionalText(value: string): string | null {
@@ -76,14 +92,32 @@ function optionalNumber(value: string): number | null {
   return trimmed === "" ? null : Number(trimmed);
 }
 
-export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps) {
+// «1 activo», «2 activos»: número con la palabra en singular o plural.
+function count(value: number, singular: string, plural: string): string {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+export function CohortForm({
+  courses,
+  cohortId,
+  version,
+  initialValues,
+  onReload,
+  onUserActivity,
+  alumnos,
+}: CohortFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const isEditMode = Boolean(cohortId);
+  // El servidor rechaza cambiar el curso si hay matrículas de cualquier estado
+  // (COHORT_HAS_STUDENTS); aquí se bloquea y se explica antes de enviar.
+  const courseLocked = isEditMode && (alumnos?.total ?? 0) > 0;
+  const activeStudents = isEditMode ? (alumnos?.activos ?? 0) : 0;
   const [values, setValues] = useState<CohortFormValues>(initialValues ?? EMPTY_VALUES);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [canReload, setCanReload] = useState(false);
   // Campo que debe recibir el foco cuando ya se haya pintado su error.
   const pendingFocusRef = useRef<keyof CohortFormValues | null>(null);
   // El servidor rechaza fechas posteriores a hoy + 5 años.
@@ -91,6 +125,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
 
   function updateField<K extends keyof CohortFormValues>(field: K, value: CohortFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
+    onUserActivity?.();
     const cleared = [field, ...(RELATED_ERRORS[field] ?? [])];
     setFieldErrors((current) => {
       if (!cleared.some((name) => current[name])) return current;
@@ -111,7 +146,9 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    onUserActivity?.();
     setError(null);
+    setCanReload(false);
 
     // Cada regla de fechas se muestra junto al campo que hay que corregir.
     // Solo se compara si ambas fechas existen: una fecha vacía la rechaza
@@ -159,7 +196,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
 
     try {
       if (cohortId) {
-        await api.patch(`/cohorts/${cohortId}`, body);
+        await api.patch(`/cohorts/${cohortId}`, { ...body, updatedAt: version });
       } else {
         await api.post("/cohorts", body);
       }
@@ -173,6 +210,17 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
         setFieldErrors({ [err.field]: err.message });
       } else {
         setError(err instanceof ApiError ? err.message : "No se pudo guardar la cohorte.");
+      }
+      // Cualquier 409 (versión, nombre, curso, cupo, franjas) puede deberse
+      // a datos que otra persona cambió: se invita a recargar (contrato L4b).
+      if (
+        isEditMode &&
+        onReload &&
+        err instanceof ApiError &&
+        // 404: la cohorte se eliminó; al recargar se ve «No se encontró la cohorte.».
+        (err.status === 409 || err.status === 404 || err.field === "updatedAt")
+      ) {
+        setCanReload(true);
       }
       setIsSubmitting(false);
     }
@@ -189,6 +237,8 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
         name="courseId"
         error={fieldErrors.courseId}
         required
+        disabled={courseLocked}
+        {...(courseLocked ? { "aria-describedby": "courseId-locked" } : {})}
         value={values.courseId}
         onChange={(event) => updateField("courseId", event.target.value)}
       >
@@ -201,6 +251,13 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           </option>
         ))}
       </Select>
+      {courseLocked && alumnos ? (
+        <p id="courseId-locked" className="-mt-2 text-xs text-text-secondary">
+          {`No se puede cambiar el curso porque la cohorte tiene ${count(alumnos.total, "alumno asociado", "alumnos asociados")}: ` +
+            `${count(alumnos.activos, "activo", "activos")}, ${count(alumnos.finalizados, "finalizado", "finalizados")} ` +
+            `y ${count(alumnos.retirados, "retirado", "retirados")}.`}
+        </p>
+      ) : null}
 
       <Input
         label="Nombre de la cohorte"
@@ -225,18 +282,26 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           value={values.precio}
           onChange={(event) => updateField("precio", event.target.value)}
         />
-        <Input
-          label="Cupo máximo"
-          name="cupoMaximo"
-          error={fieldErrors.cupoMaximo}
-          type="number"
-          min={COHORT_LIMITS.cupoMin}
-          max={COHORT_LIMITS.cupoMax}
-          step="1"
-          required
-          value={values.cupoMaximo}
-          onChange={(event) => updateField("cupoMaximo", event.target.value)}
-        />
+        <div className="flex flex-col gap-1">
+          <Input
+            label="Cupo máximo"
+            name="cupoMaximo"
+            error={fieldErrors.cupoMaximo}
+            type="number"
+            min={COHORT_LIMITS.cupoMin}
+            max={COHORT_LIMITS.cupoMax}
+            step="1"
+            required
+            {...(activeStudents > 0 ? { "aria-describedby": "cupoMaximo-activos" } : {})}
+            value={values.cupoMaximo}
+            onChange={(event) => updateField("cupoMaximo", event.target.value)}
+          />
+          {activeStudents > 0 ? (
+            <p id="cupoMaximo-activos" className="text-xs text-text-secondary">
+              {`Alumnos activos: ${activeStudents}. El cupo máximo no puede ser menor.`}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -346,6 +411,27 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
       </div>
 
       {error ? <FormError>{error}</FormError> : null}
+
+      {canReload ? (
+        <div className="flex flex-col items-start gap-2">
+          {error ? null : (
+            <p className="text-sm text-text-secondary">
+              Si otra persona cambió la cohorte, recarga para ver los datos actuales.
+            </p>
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            aria-describedby="cohort-reload-warning"
+            onClick={onReload}
+          >
+            Recargar
+          </Button>
+          <p id="cohort-reload-warning" className="text-xs text-text-secondary">
+            Recargar descarta los cambios que no guardaste.
+          </p>
+        </div>
+      ) : null}
 
       <Button type="submit" isLoading={isSubmitting}>
         {isEditMode ? "Guardar cambios" : "Crear cohorte"}
