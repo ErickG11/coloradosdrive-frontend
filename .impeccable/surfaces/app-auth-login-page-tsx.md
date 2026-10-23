@@ -17,7 +17,7 @@ OWN-WORLD: Vidrio claro/oscuro, rojo de marca, Inter y controles legibles; radio
 
 STORY: Correo y contraseña, mostrar/ocultar, enviar y comprender carga o error. No se implementan recordatorio, recuperación ni acceso social inexistentes.
 
-FIRST VIEWPORT: Fondo original con proporción 1672:941, anclado arriba/izquierda. Tarjeta a la izquierda entre logo y barra inferior. En ultrapanorámico, escena centrada con el mismo fondo difuminado a los lados. Móvil: foto superior recortada, tarjeta superpuesta y pilares HTML debajo.
+FIRST VIEWPORT: Fondo original sin deformación, anclado arriba/izquierda. Tarjeta a la izquierda entre logo y barra inferior. Corrección solicitada: en ultrapanorámico la fotografía cubre todo el viewport, sin franjas difuminadas; los pilares HTML permanecen visibles al pie cuando el recorte oculta la barra incrustada. Móvil: foto superior recortada, tarjeta superpuesta y pilares HTML debajo.
 
 FORM: Referencia visual fijada por el usuario; sin selección conceptual ni comp generado. El usuario confirmó verificar la autenticación y las rutas por comparación de código, sin acceso real con credenciales.
 

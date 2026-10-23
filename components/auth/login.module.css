@@ -380,7 +380,7 @@
   .stage {
     height: 100svh;
     min-height: 560px;
-    width: calc(max(100svh, 560px) * 1672 / 941);
+    width: max(100%, calc(max(100svh, 560px) * 1672 / 941));
   }
   .ambience {
     display: block;
@@ -431,8 +431,30 @@
 }
 
 @media (min-width: 1024px) and (min-aspect-ratio: 1672 / 941) {
-  .stage {
-    margin-inline: auto;
+  .card {
+    top: min(35.5vw * 941 / 1672, 46%);
+    max-height: calc(100% - min(35.5vw * 941 / 1672, 46%) - 110px);
+  }
+  .pillars {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 2;
+    display: flex;
+    gap: 32px;
+    min-height: 14%;
+    padding: 22px 4%;
+    background: #0c0c0e;
+    color: #fff;
+  }
+  .pillars > div {
+    align-items: center;
+    max-width: 320px;
+  }
+  .pillars svg {
+    color: #fff;
+  }
+  .pillars p {
+    color: #c8cbd2;
   }
 }
 
