@@ -58,7 +58,7 @@ export function LoginScreen({ children }: { children: ReactNode }) {
               src={background}
               alt="Colorados Drive. Formamos conductores para un mejor mañana."
               priority
-              sizes="(min-width: 1024px) 178vh, (min-width: 640px) 135vw, 223vw"
+              sizes="(min-width: 1024px) 100vw, (min-width: 640px) 135vw, 223vw"
               className={styles.backgroundImage}
             />
           </motion.div>
