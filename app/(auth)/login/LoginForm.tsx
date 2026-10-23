@@ -2,8 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 
-import { Button, Card, Input } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { LoginIcon } from "@/components/auth/LoginIcon";
+import styles from "@/components/auth/login.module.css";
 import { createClient } from "@/lib/supabase/client";
 import { getUserRole } from "@/lib/supabase/getUserRole";
 import { getRoleHomePath } from "@/lib/utils/roleRedirect";
@@ -14,6 +17,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,37 +52,75 @@ export function LoginForm() {
   }
 
   return (
-    <div>
-      <Card>
-        <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
-          <Input
-            label="Correo electrónico"
+    <>
+      <form
+        onSubmit={(event) => void handleSubmit(event)}
+        className={styles.form}
+        data-error={Boolean(error)}
+      >
+        <label className="sr-only" htmlFor="login-email">
+          Correo electrónico
+        </label>
+        <div className={styles.field}>
+          <LoginIcon name="user" />
+          <input
+            id="login-email"
+            placeholder="Correo electrónico"
             type="email"
             name="email"
             autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? "login-error" : undefined}
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
-          <Input
-            label="Contraseña"
-            type="password"
+        </div>
+        <label className="sr-only" htmlFor="login-password">
+          Contraseña
+        </label>
+        <div className={styles.field}>
+          <LoginIcon name="lock" />
+          <input
+            id="login-password"
+            placeholder="Contraseña"
+            type={showPassword ? "text" : "password"}
             name="password"
             autoComplete="current-password"
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? "login-error" : undefined}
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          {error ? (
-            <p role="alert" className="text-sm text-accent-red">
-              {error}
-            </p>
-          ) : null}
-          <Button type="submit" isLoading={isLoading}>
-            Iniciar sesión
-          </Button>
-        </form>
-      </Card>
-    </div>
+          <button
+            type="button"
+            className={styles.passwordToggle}
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-controls="login-password"
+            aria-pressed={showPassword}
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            <LoginIcon name={showPassword ? "eyeOff" : "eye"} />
+          </button>
+        </div>
+        {error ? (
+          <p id="login-error" role="alert" className={styles.error}>
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" isLoading={isLoading} className={styles.submit}>
+          <span>Iniciar sesión</span>
+          <LoginIcon name="arrow" />
+        </Button>
+      </form>
+      <Link href="/" className={styles.backLink}>
+        <LoginIcon name="back" />
+        Volver al inicio
+      </Link>
+    </>
   );
 }
