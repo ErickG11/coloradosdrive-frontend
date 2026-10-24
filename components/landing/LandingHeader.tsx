@@ -47,6 +47,7 @@ export function LandingHeader() {
       <div className={`${styles.container} ${styles.headerInner}`}>
         <Link href="/" className={styles.brand} aria-label="Colorados Drive, inicio">
           <Image
+            unoptimized
             {...landingImages.logo}
             alt={landingImages.logo.alt}
             loading="eager"
