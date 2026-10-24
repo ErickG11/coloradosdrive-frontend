@@ -15,6 +15,8 @@ import { EditIcon } from "@/components/ui/icons";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { useFetch } from "@/hooks/useFetch";
 import { useCohortStudentCounts } from "./useCohortStudentCounts";
+import { useActiveCohortStudentTotal } from "./useActiveCohortStudentTotal";
+import { CohortMetricValue } from "./CohortMetricValue";
 import type { Cohort, Course } from "@/types";
 import { CohortForm, type CohortFormValues } from "./CohortForm";
 import { CohortIcon, CourseIdentity } from "./CohortVisual";
@@ -89,19 +91,43 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
   } = useFetch<Course[]>("/courses");
   const studentCounts = useCohortStudentCounts(cohorts);
   function studentCount(cohort: Cohort) {
-    const count = studentCounts[cohort.id];
+    const detail = studentCounts[cohort.id];
+    const count = detail?.activos;
+    const ratio = count === undefined || cohort.cupoMaximo <= 0 ? null : count / cohort.cupoMaximo;
+    const level =
+      ratio === null ? "unknown" : ratio >= 0.8 ? "high" : ratio >= 0.5 ? "medium" : "low";
     return (
       <div
         className={styles.studentCount}
-        title={count === null ? "No se pudo consultar la cantidad de alumnos" : undefined}
+        data-occupancy={level}
+        title={
+          detail === null
+            ? "No se pudo consultar la cantidad de alumnos"
+            : "Las matrículas activas ocupan cupo"
+        }
       >
         <span className={styles.studentCountValue}>
           <CohortIcon name="students" />
-          {count === undefined ? "…" : count === null ? "—" : count}
-          <span>{count === 1 ? "alumno" : "alumnos"}</span>
+          {detail === null ? "—" : count === undefined ? "…" : count}
+          <span>{count === 1 ? "activo" : "activos"}</span>
         </span>
-        <small>Cupo máx. {cohort.cupoMaximo}</small>
-        {count === null ? <small>No disponible</small> : null}
+        {ratio !== null ? (
+          <div
+            className={styles.capacityTrack}
+            role="meter"
+            aria-label={`Ocupación de ${cohort.nombre}`}
+            aria-valuemin={0}
+            aria-valuemax={Math.max(cohort.cupoMaximo, count ?? 0)}
+            aria-valuenow={count}
+            aria-valuetext={`${count} matrículas activas de ${cohort.cupoMaximo} cupos`}
+          >
+            <span style={{ width: `${Math.min(100, ratio * 100)}%` }} />
+          </div>
+        ) : null}
+        <small>{detail === null ? "No disponible" : `de ${cohort.cupoMaximo} cupos`}</small>
+        {detail && detail.total !== detail.activos ? (
+          <small>{detail.total} en el historial</small>
+        ) : null}
       </div>
     );
   }
@@ -114,6 +140,7 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
   const [to, setTo] = useState("");
   const [panel, setPanel] = useState(initialPanel);
   const [today, setToday] = useState("");
+  const [pagination, setPagination] = useState({ page: 1, size: 5 });
   useEffect(() => {
     const update = () => setToday(schoolDay());
     update();
@@ -169,6 +196,32 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
     upcoming: (cohorts ?? []).filter((c) => period(c, today) === "upcoming").length,
     finished: (cohorts ?? []).filter((c) => period(c, today) === "finished").length,
   };
+  const activeIds =
+    cohorts && today
+      ? cohorts
+          .filter((c) => period(c, today) === "current")
+          .map((c) => c.id)
+          .sort()
+          .join(",")
+      : null;
+  const activeStudents = useActiveCohortStudentTotal(cohorts, activeIds);
+  const requestedPage = pagination.page;
+  const pages = Math.max(1, Math.ceil(filtered.length / pagination.size));
+  const page = Math.min(requestedPage, pages);
+  const offset = (page - 1) * pagination.size;
+  const visibleCohorts = filtered.slice(offset, offset + pagination.size);
+  function changePage(next: number) {
+    setPagination((current) => ({ ...current, page: next }));
+  }
+  const pageNumbers = Array.from(
+    new Set([
+      1,
+      ...Array.from({ length: 5 }, (_, i) => page + i - 2).filter((n) => n > 1 && n < pages),
+      pages,
+    ]),
+  ).sort((a, b) => a - b);
+  const typeA = (cohorts ?? []).filter((c) => coursesById.get(c.courseId)?.tipo === "A").length;
+  const typeB = (cohorts ?? []).filter((c) => coursesById.get(c.courseId)?.tipo === "B").length;
   const selected = cohorts?.find((cohort) => cohort.id === panel);
   function openPanel(event: MouseEvent<HTMLAnchorElement>, next: string) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
@@ -199,7 +252,11 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
       </span>
     );
   }
+  function resetPage() {
+    setPagination((current) => ({ ...current, page: 1 }));
+  }
   function clear() {
+    resetPage();
     setQuery("");
     setType("all");
     setStatus("all");
@@ -212,29 +269,14 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
   }
   const metrics = [
     { key: "all", label: "Total de cohortes", icon: "layers" },
-    { key: "current", label: "En curso", icon: "students" },
-    { key: "upcoming", label: "Próximas", icon: "calendar" },
+    { key: "current", label: "En curso", icon: "car" },
+    { key: "students", label: "Alumnos activos", icon: "students" },
     { key: "finished", label: "Finalizadas", icon: "graduation" },
   ] as const;
   const activeFilters = Boolean(query || type !== "all" || status !== "all" || from || to);
   return (
     <div className={`${styles.page} ${panel ? styles.panelOpen : ""}`}>
       <div className={styles.topbar}>
-        <div className={styles.topSearch}>
-          <CohortIcon name="search" />
-          <label className="sr-only" htmlFor="cohort-global-search">
-            Buscar cohortes, cursos o fechas
-          </label>
-          <input
-            id="cohort-global-search"
-            name="cohort-global-search"
-            type="search"
-            autoComplete="off"
-            placeholder="Buscar cohortes, cursos, fechas…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
         <div className={styles.identity}>
           <span aria-hidden="true">CD</span>
           <div>
@@ -250,25 +292,67 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
               <h1>Cohortes</h1>
               <p>Gestiona y organiza las cohortes de tus cursos.</p>
             </div>
-            <Link
-              href="/admin/cohorts/new"
-              onClick={(event) => openPanel(event, "new")}
-              className={buttonClassName("primary", "md", styles.primary)}
-            >
-              <CohortIcon name="plus" />
-              Nueva cohorte
-            </Link>
+            <div className={styles.headerActions}>
+              <Button
+                variant="secondary"
+                disabled={isLoading || Boolean(panel)}
+                onClick={() => {
+                  reloadCohorts();
+                  reloadCourses();
+                }}
+                aria-label="Actualizar estadísticas y cohortes"
+              >
+                <CohortIcon name="refresh" />
+                Actualizar
+              </Button>
+              <Link
+                href="/admin/cohorts/new"
+                onClick={(event) => openPanel(event, "new")}
+                className={buttonClassName("primary", "md", styles.primary)}
+              >
+                <CohortIcon name="plus" />
+                Nueva cohorte
+              </Link>
+            </div>
           </header>
           <section className={styles.summary} aria-label="Resumen de cohortes">
             {metrics.map(({ key, label, icon }) => (
-              <div key={key} className={styles.summaryItem}>
+              <div key={key} className={styles.summaryItem} data-metric={key}>
                 <span className={styles.summaryIcon}>
                   <CohortIcon name={icon} />
                 </span>
                 <div>
-                  <strong>{isLoading || error || !today ? "—" : counts[key]}</strong>
+                  <strong>
+                    <CohortMetricValue
+                      value={
+                        isLoading || !today
+                          ? undefined
+                          : error
+                            ? null
+                            : key === "students"
+                              ? activeStudents
+                              : counts[key]
+                      }
+                    />
+                  </strong>
                   <span>{label}</span>
-                  <small>{key === "all" ? "Registradas" : "Por fechas del curso"}</small>
+                  <small>
+                    {isLoading || !today
+                      ? "Actualizando…"
+                      : error
+                        ? "Sin datos"
+                        : key === "students" && activeStudents === null
+                          ? "No disponible"
+                          : key === "students" && activeStudents === undefined
+                            ? "Consultando…"
+                            : key === "all"
+                              ? `${typeA} Tipo A · ${typeB} Tipo B`
+                              : key === "students"
+                                ? "Únicos en curso"
+                                : counts.all
+                                  ? `${Math.round((counts[key] / counts.all) * 100)} % del total`
+                                  : "Sin cohortes registradas"}
+                  </small>
                 </div>
               </div>
             ))}
@@ -286,7 +370,10 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
                 type="search"
                 placeholder="Buscar por nombre, curso…"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  resetPage();
+                }}
                 disabled={isLoading || Boolean(error)}
               />
             </div>
@@ -294,7 +381,10 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
               label="Curso"
               name="course-filter"
               value={type}
-              onChange={(event) => setType(event.target.value)}
+              onChange={(event) => {
+                setType(event.target.value);
+                resetPage();
+              }}
               disabled={isLoading || Boolean(error)}
             >
               <option value="all">Todos</option>
@@ -305,7 +395,10 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
               label="Período"
               name="period-filter"
               value={status}
-              onChange={(event) => setStatus(event.target.value)}
+              onChange={(event) => {
+                setStatus(event.target.value);
+                resetPage();
+              }}
               disabled={isLoading || Boolean(error) || !today}
             >
               <option value="all">Todos</option>
@@ -329,14 +422,20 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
                     type="date"
                     id="cohort-from"
                     value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                    onChange={(event) => {
+                      setFrom(event.target.value);
+                      resetPage();
+                    }}
                   />
                   <label htmlFor="cohort-to">Hasta</label>
                   <input
                     type="date"
                     id="cohort-to"
                     value={to}
-                    onChange={(event) => setTo(event.target.value)}
+                    onChange={(event) => {
+                      setTo(event.target.value);
+                      resetPage();
+                    }}
                   />
                   <button
                     type="button"
@@ -432,7 +531,7 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map((cohort) => (
+                      {visibleCohorts.map((cohort) => (
                         <tr key={cohort.id}>
                           <th scope="row">
                             <div className={styles.cohortName}>
@@ -469,7 +568,7 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
                   </table>
                 </div>
                 <ul className={styles.mobileList}>
-                  {filtered.map((cohort) => (
+                  {visibleCohorts.map((cohort) => (
                     <li key={cohort.id}>
                       <header>
                         <h2>{cohort.nombre}</h2>
@@ -509,9 +608,58 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
             {!isLoading && !error ? (
               <footer className={styles.listFooter}>
                 <span role="status">
-                  Mostrando {filtered.length} de {counts.all} cohortes
+                  Mostrando {filtered.length ? offset + 1 : 0}–
+                  {Math.min(offset + pagination.size, filtered.length)} de {filtered.length}{" "}
+                  cohortes
                 </span>
-                <span>Períodos según fechas del curso</span>
+                <nav className={styles.pagination} aria-label="Páginas de cohortes">
+                  <button
+                    type="button"
+                    disabled={page === 1}
+                    onClick={() => changePage(page - 1)}
+                    aria-label="Página anterior"
+                  >
+                    <CohortIcon name="back" />
+                  </button>
+                  {pageNumbers.map((n, i) => (
+                    <span key={n}>
+                      {i > 0 && n > pageNumbers[i - 1] + 1 ? (
+                        <span className={styles.pageGap}>…</span>
+                      ) : null}
+                      <button
+                        type="button"
+                        aria-label={`Página ${n}`}
+                        aria-current={page === n ? "page" : undefined}
+                        onClick={() => changePage(n)}
+                      >
+                        {n}
+                      </button>
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={page === pages}
+                    onClick={() => changePage(page + 1)}
+                    aria-label="Página siguiente"
+                  >
+                    <span className={styles.nextArrow}>
+                      <CohortIcon name="back" />
+                    </span>
+                  </button>
+                </nav>
+                <label className={styles.pageSize}>
+                  Filas por página
+                  <select
+                    value={pagination.size}
+                    onChange={(event) => {
+                      setPagination({ page: 1, size: Number(event.target.value) });
+                    }}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                  </select>
+                </label>
               </footer>
             ) : null}
           </section>
