@@ -14,6 +14,7 @@ import { Button, Select, buttonClassName } from "@/components/ui";
 import { EditIcon } from "@/components/ui/icons";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { useFetch } from "@/hooks/useFetch";
+import { useCohortStudentCounts } from "./useCohortStudentCounts";
 import type { Cohort, Course } from "@/types";
 import { CohortForm, type CohortFormValues } from "./CohortForm";
 import { CohortIcon, CourseIdentity } from "./CohortVisual";
@@ -86,6 +87,24 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
     error: coursesError,
     refetch: reloadCourses,
   } = useFetch<Course[]>("/courses");
+  const studentCounts = useCohortStudentCounts(cohorts);
+  function studentCount(cohort: Cohort) {
+    const count = studentCounts[cohort.id];
+    return (
+      <div
+        className={styles.studentCount}
+        title={count === null ? "No se pudo consultar la cantidad de alumnos" : undefined}
+      >
+        <span className={styles.studentCountValue}>
+          <CohortIcon name="students" />
+          {count === undefined ? "…" : count === null ? "—" : count}
+          <span>{count === 1 ? "alumno" : "alumnos"}</span>
+        </span>
+        <small>Cupo máx. {cohort.cupoMaximo}</small>
+        {count === null ? <small>No disponible</small> : null}
+      </div>
+    );
+  }
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState("");
@@ -405,7 +424,7 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
                       <tr>
                         <th scope="col">Cohorte</th>
                         <th scope="col">Curso</th>
-                        <th scope="col">Cupo máx.</th>
+                        <th scope="col">Alumnos</th>
                         <th scope="col">Precio</th>
                         <th scope="col">Fechas</th>
                         <th scope="col">Período</th>
@@ -431,9 +450,7 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
                           <td>
                             <CourseIdentity course={coursesById.get(cohort.courseId)} />
                           </td>
-                          <td className={styles.numeric}>
-                            <span>{cohort.cupoMaximo}</span>
-                          </td>
+                          <td className={styles.numeric}>{studentCount(cohort)}</td>
                           <td className={styles.numeric}>{money.format(cohort.precio)}</td>
                           <td>
                             <div className={styles.dateCell}>
@@ -465,8 +482,8 @@ export function CohortsWorkspace({ initialPanel = null }: { initialPanel?: strin
                           <dd>{money.format(cohort.precio)}</dd>
                         </div>
                         <div>
-                          <dt>Cupo máximo</dt>
-                          <dd>{cohort.cupoMaximo}</dd>
+                          <dt>Alumnos en la cohorte</dt>
+                          <dd>{studentCount(cohort)}</dd>
                         </div>
                         <div className={styles.wide}>
                           <dt>Fechas del curso</dt>

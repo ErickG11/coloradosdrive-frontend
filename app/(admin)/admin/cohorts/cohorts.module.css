@@ -1079,3 +1079,47 @@
   content: " *";
   color: var(--cohort-accent);
 }
+.studentCount {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.studentCountValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-status-info);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.studentCountValue svg {
+  width: 17px;
+  height: 17px;
+}
+.studentCountValue > span {
+  color: var(--cohort-ink);
+  font-size: 12px;
+  font-weight: 400;
+}
+.studentCount small {
+  color: var(--cohort-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.courseIcon[data-course-type="A"] {
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning);
+  border-color: color-mix(in srgb, var(--color-status-warning) 25%, transparent);
+}
+.courseIcon[data-course-type="B"] {
+  background: var(--color-status-info-bg);
+  color: var(--color-status-info);
+  border-color: color-mix(in srgb, var(--color-status-info) 25%, transparent);
+}
+.status[data-status="current"] {
+  color: var(--color-status-success);
+  background: var(--color-status-success-bg);
+}
+.rowDot[data-status="current"] {
+  background: var(--color-status-success);
+}

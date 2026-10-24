@@ -36,7 +36,7 @@ export function CourseIdentity({ course }: { course?: Course }) {
   if (!course) return <span className={styles.muted}>Curso no disponible</span>;
   return (
     <div className={styles.courseIdentity} title={`${course.nombre} (Tipo ${course.tipo})`}>
-      <span className={styles.courseIcon}>
+      <span className={styles.courseIcon} data-course-type={course.tipo}>
         <CohortIcon name={course.tipo === "A" ? "motorcycle" : "car"} />
       </span>
       <div>
