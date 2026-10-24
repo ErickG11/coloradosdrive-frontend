@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { MouseEvent } from "react";
 import {
   Button,
   DataTable,
@@ -7,40 +8,11 @@ import {
   buttonClassName,
   type DataColumn,
 } from "@/components/ui";
-import { ChevronRightIcon } from "@/components/ui/icons";
-import type { AdminStudent, Cohort, MatchingEnrollment } from "@/types";
+import type { AdminStudent, Cohort } from "@/types";
+import { StudentAvatar, StudentIcon, studentDisplayName } from "./StudentVisual";
+import type { DocumentSummary } from "./useStudentDocuments";
+import styles from "./students.module.css";
 
-function displayName(name: string): string {
-  return (
-    name
-      .trim()
-      .toLocaleLowerCase("es")
-      .replace(/(^|\s)\S/gu, (value) => value.toLocaleUpperCase("es")) || "Nombre no informado"
-  );
-}
-function initials(name: string): string {
-  return (
-    name
-      .trim()
-      .split(/\s+/u)
-      .slice(0, 2)
-      .map((part) => part[0] ?? "")
-      .join("")
-      .toLocaleUpperCase("es") || "AL"
-  );
-}
-function avatarTone(cedula: string): number {
-  const hash = Array.from(cedula).reduce(
-    (value, character) => (Math.imul(value, 31) + character.charCodeAt(0)) >>> 0,
-    0,
-  );
-  return hash % 6;
-}
-function cohortLabel(enrollment: MatchingEnrollment, cohorts: Cohort[]): string | null {
-  if (!enrollment.cohortId) return null;
-  const name = cohorts.find((cohort) => cohort.id === enrollment.cohortId)?.nombre;
-  return name ? (/^cohorte\b/iu.test(name) ? name : `Cohorte ${name}`) : "Cohorte no disponible";
-}
 export function StudentTable({
   students,
   cohorts,
@@ -50,6 +22,8 @@ export function StudentTable({
   onRetry,
   filtered = false,
   onClear,
+  onOpen,
+  documents = {},
 }: {
   students: AdminStudent[];
   cohorts: Cohort[];
@@ -59,64 +33,69 @@ export function StudentTable({
   onRetry?: () => void;
   filtered?: boolean;
   onClear?: () => void;
+  onOpen?: (event: MouseEvent<HTMLAnchorElement>, id: string) => void;
+  documents?: Record<string, DocumentSummary | null>;
 }) {
+  const href = (student: AdminStudent) => `/admin/students/${student.id}?${filterQuery}`;
   const columns: DataColumn<AdminStudent>[] = [
     {
       key: "student",
       header: "Alumno",
-      className: "data-table__identity md:min-w-56",
+      className: "data-table__identity",
       render: (student) => (
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            aria-hidden="true"
-            className={`student-avatar--${avatarTone(student.cedula)} flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold`}
-          >
-            {initials(student.nombreCompleto)}
-          </span>
-          <div className="min-w-0">
-            <p className="break-words font-medium text-text-primary">
-              {displayName(student.nombreCompleto)}
-            </p>
-            <p className="mt-1 text-xs font-normal tabular-nums text-text-secondary">
-              {student.cedula}
-            </p>
+        <div className={styles.studentIdentity}>
+          <StudentAvatar student={student} />
+          <div>
+            <Link
+              href={href(student)}
+              onClick={(event) => onOpen?.(event, student.id)}
+              className={styles.studentLink}
+            >
+              {studentDisplayName(student.nombreCompleto)}
+            </Link>
+            <small>{student.cedula}</small>
           </div>
         </div>
       ),
     },
-    {
-      key: "phone",
-      header: "Teléfono",
-      className: "data-table__phone whitespace-nowrap tabular-nums",
-      render: (student) => student.telefono ?? "—",
-    },
+    { key: "phone", header: "Teléfono", render: (student) => student.telefono ?? "—" },
     {
       key: "course",
       header: "Curso y cohorte",
-      className: "data-table__course md:min-w-52",
+      className: "data-table__course",
       render: (student) => {
         const enrollment = student.matchingEnrollments[0];
         if (!enrollment) return <span>Sin matrículas coincidentes</span>;
-        const cohort = cohortLabel(enrollment, cohorts);
+        const name = cohorts.find((c) => c.id === enrollment.cohortId)?.nombre;
+        const label = name
+          ? /^cohorte\b/iu.test(name)
+            ? name
+            : `Cohorte ${name}`
+          : "Cohorte no disponible";
         const extra = student.matchingEnrollments.length - 1;
         return (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className={styles.courseBadges}>
             <StatusBadge
+              className={styles.courseBadge}
               status={`course_type_${enrollment.courseType}`}
               tone={enrollment.courseType === "A" ? "warning" : "info"}
             >
-              Tipo {enrollment.courseType} · {enrollment.courseType === "A" ? "Motocicletas" : "Vehículos livianos"}
+              <StudentIcon name={enrollment.courseType === "A" ? "motorcycle" : "car"} />
+              <span>{`Tipo ${enrollment.courseType} · ${enrollment.courseType === "A" ? "Motocicletas" : "Vehículos livianos"}`}</span>
             </StatusBadge>
-            {cohort ? <StatusBadge status="cohort" tone="neutral">{cohort}</StatusBadge> : null}
-            {!cohort ? <StatusBadge status="pendiente_cohorte">Sin cohorte</StatusBadge> : null}
-            {extra > 0 ? (
-              <span
-                className="rounded-sm bg-bg-sunken px-2 py-1 text-xs font-medium tabular-nums text-text-secondary"
-                aria-label={`${extra} matrícula${extra === 1 ? "" : "s"} más`}
+            <div>
+              <StatusBadge
+                status={enrollment.cohortId ? "cohort" : "pendiente_cohorte"}
+                tone={enrollment.cohortId ? "neutral" : "warning"}
               >
-                +{extra}
-              </span>
-            ) : null}
+                {enrollment.cohortId ? label : "Sin cohorte"}
+              </StatusBadge>
+              {extra > 0 && (
+                <span className={styles.extra} aria-label={`${extra} matrículas más`}>
+                  +{extra}
+                </span>
+              )}
+            </div>
           </div>
         );
       },
@@ -124,16 +103,60 @@ export function StudentTable({
     {
       key: "account",
       header: "Estado de la cuenta",
-      className: "whitespace-nowrap",
       render: (student) => <StatusBadge status={student.activo ? "activo" : "inactivo"} />,
     },
     {
+      key: "documents",
+      header: "Documentos",
+      render: (student) => {
+        const doc = documents[student.id];
+        if (doc === undefined) return <span aria-label="Cargando documentos">…</span>;
+        if (doc === null) return <span>No disponible</span>;
+        if (doc.applicable === 0)
+          return (
+            <StatusBadge status="no_aplica" tone="neutral">
+              {!student.matchingEnrollments.length
+                ? "Sin matrícula"
+                : doc.registered
+                  ? "No aplica"
+                  : "Sin documentos"}
+            </StatusBadge>
+          );
+        return (
+          <div className={styles.docSummary} data-complete={doc.pending === 0}>
+            <span>
+              {doc.delivered}/{doc.applicable}
+              <span className="sr-only"> documentos entregados</span>
+            </span>
+            <div
+              role="progressbar"
+              aria-label={`Documentos de ${student.nombreCompleto}`}
+              aria-valuemin={0}
+              aria-valuemax={doc.applicable}
+              aria-valuenow={doc.delivered}
+            >
+              <i style={{ transform: `scaleX(${doc.delivered / doc.applicable})` }} />
+            </div>
+            <small>{doc.pending ? `${doc.pending} pendientes` : "Completos"}</small>
+          </div>
+        );
+      },
+    },
+    {
       key: "open",
-      header: "Abrir ficha",
-      screenReaderHeader: true,
+      header: "Acciones",
+      className: "data-table__chevron",
       mobileLabel: false,
-      className: "data-table__chevron w-8",
-      render: () => <ChevronRightIcon className="h-4 w-4" />,
+      render: (student) => (
+        <Link
+          href={href(student)}
+          onClick={(event) => onOpen?.(event, student.id)}
+          aria-label={`Ver ficha de ${student.nombreCompleto}`}
+          className={styles.iconButton}
+        >
+          <StudentIcon name="eye" />
+        </Link>
+      ),
     },
   ];
   return (
@@ -143,8 +166,6 @@ export function StudentTable({
       getRowKey={(student) => student.id}
       caption="Listado de alumnos"
       mobileCards
-      rowHref={(student) => `/admin/students/${student.id}?${filterQuery}`}
-      rowLabel={(student) => `Ver ficha de ${student.nombreCompleto}`}
       isLoading={isLoading}
       loadingLabel="Cargando alumnos…"
       error={error}

@@ -1,11 +1,10 @@
 import { Suspense } from "react";
-import { StudentDetail } from "../StudentDetail";
+import { StudentsList } from "../page";
 
-export default async function StudentPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default function StudentPage() {
   return (
     <Suspense fallback={<p role="status">Cargando ficha…</p>}>
-      <StudentDetail id={id} />
+      <StudentsList />
     </Suspense>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import styles from "./students.module.css";
 import {
   Button,
   FilterChips,
@@ -20,7 +21,9 @@ export function StudentFilters({
   onSearch,
   onChange,
   onClear,
+  renderSearch = true,
 }: {
+  renderSearch?: boolean;
   filters: Filters;
   q: string;
   courses: Course[];
@@ -93,17 +96,19 @@ export function StudentFilters({
     else onChange({ [id]: "" });
   }
   return (
-    <section aria-label="Buscar y filtrar alumnos" className="flex min-w-0 flex-col gap-4">
-      <SearchInput
-        name="studentSearch"
-        label="Buscar por nombre, cédula o teléfono"
-        placeholder="Buscar por nombre, cédula o teléfono"
-        maxLength={80}
-        value={q}
-        shortcut
-        onChange={(e) => onSearch(e.target.value)}
-        onClear={() => onSearch("")}
-      />
+    <section aria-label="Buscar y filtrar alumnos" className={styles.filters}>
+      {renderSearch && (
+        <SearchInput
+          name="studentSearch"
+          label="Buscar por nombre, cédula o teléfono"
+          placeholder="Buscar por nombre, cédula o teléfono"
+          maxLength={80}
+          value={q}
+          shortcut
+          onChange={(e) => onSearch(e.target.value)}
+          onClear={() => onSearch("")}
+        />
+      )}
       <FilterChips items={quick} onSelect={selectQuick} />
       <Button
         type="button"

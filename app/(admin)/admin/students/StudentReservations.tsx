@@ -1,5 +1,6 @@
 "use client";
 import { Button, Card } from "@/components/ui";
+import styles from "./students.module.css";
 import { useFetch } from "@/hooks/useFetch";
 import { ApiError } from "@/lib/api/errors";
 import { studentActionError } from "@/lib/api/studentActions";
@@ -28,7 +29,7 @@ export function StudentReservations({ id }: { id: string }) {
     StudentPracticeRecovery[]
   >(`/admin/estudiantes/${id}/reservas-pendientes`);
   return (
-    <Card title="Reservas pendientes de reprogramar">
+    <Card className={styles.reservations} title="Reservas pendientes de reprogramar">
       {isLoading ? (
         <p role="status">Cargando reservas…</p>
       ) : error ? (
@@ -45,7 +46,7 @@ export function StudentReservations({ id }: { id: string }) {
           </Button>
         </div>
       ) : !data?.length ? (
-        <p>No hay reservas pendientes.</p>
+        <p>No hay reservas pendientes de reprogramación.</p>
       ) : (
         <ul className="divide-y divide-border">
           {data.map((row) => (
