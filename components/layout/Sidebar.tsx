@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -10,6 +11,7 @@ import { cn } from "@/lib/utils/cn";
 import type { Role } from "@/types/user";
 import { LogoutButton } from "./LogoutButton";
 import { NavigationIcon, type NavigationSection } from "./NavigationIcon";
+import styles from "./admin-sidebar.module.css";
 
 const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrador",
@@ -25,8 +27,7 @@ export function Sidebar({ email, role }: SidebarProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const drawer = useRef<HTMLElement>(null);
-  const isInstructorScheduleActive =
-    pathname.startsWith("/instructor/schedule");
+  const isInstructorScheduleActive = pathname.startsWith("/instructor/schedule");
   function closeDrawer() {
     setIsOpen(false);
   }
@@ -44,6 +45,14 @@ export function Sidebar({ email, role }: SidebarProps) {
     <>
       {role === "admin" ? (
         <>
+          <SidebarLink
+            href="/admin"
+            active={pathname === "/admin"}
+            section="panel"
+            onClick={closeDrawer}
+          >
+            Panel
+          </SidebarLink>
           <SidebarLink
             href="/admin/students"
             active={pathname.startsWith("/admin/students")}
@@ -146,12 +155,28 @@ export function Sidebar({ email, role }: SidebarProps) {
       </header>
       <aside
         aria-label="Barra lateral"
-        className="sticky top-0 hidden h-dvh w-[var(--sidebar-width)] min-w-0 shrink-0 flex-col border-r border-border bg-bg-surface md:flex"
+        className={cn(
+          "sticky top-0 hidden h-dvh w-[var(--sidebar-width)] min-w-0 shrink-0 flex-col border-r border-border bg-bg-surface md:flex",
+          role === "admin" && styles.admin,
+        )}
       >
         <div className="flex items-center justify-between gap-1 px-4 py-4">
-          <span className="text-base font-semibold tracking-tight text-text-primary">
-            ColoradosDrive
-          </span>
+          {role === "admin" ? (
+            <Link href="/admin" aria-label="Colorados Drive · Panel" className={styles.logoLink}>
+              <Image
+                unoptimized
+                src="/images/landing/logo.webp"
+                width={512}
+                height={256}
+                alt="Colorados Drive"
+                className={styles.logo}
+              />
+            </Link>
+          ) : (
+            <span className="text-base font-semibold tracking-tight text-text-primary">
+              ColoradosDrive
+            </span>
+          )}
           <ThemeToggle />
         </div>
         <nav
@@ -176,10 +201,31 @@ export function Sidebar({ email, role }: SidebarProps) {
             aria-modal="true"
             aria-label="Menú de navegación"
             tabIndex={-1}
-            className="absolute inset-y-0 left-0 flex w-[min(18rem,calc(100vw-2rem))] flex-col border-r border-border bg-bg-surface shadow-elevated"
+            className={cn(
+              "absolute inset-y-0 left-0 flex w-[min(18rem,calc(100vw-2rem))] flex-col border-r border-border bg-bg-surface shadow-elevated",
+              role === "admin" && styles.admin,
+            )}
           >
             <div className="flex items-center justify-between px-4 py-3">
-              <span className="font-semibold text-text-primary">ColoradosDrive</span>
+              {role === "admin" ? (
+                <Link
+                  href="/admin"
+                  onClick={closeDrawer}
+                  aria-label="Colorados Drive · Panel"
+                  className={styles.logoLink}
+                >
+                  <Image
+                    unoptimized
+                    src="/images/landing/logo.webp"
+                    width={512}
+                    height={256}
+                    alt="Colorados Drive"
+                    className={styles.logo}
+                  />
+                </Link>
+              ) : (
+                <span className="font-semibold text-text-primary">ColoradosDrive</span>
+              )}
               <button
                 type="button"
                 onClick={closeDrawer}
