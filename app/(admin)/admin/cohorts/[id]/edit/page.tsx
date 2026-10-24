@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 
-import { Card } from "@/components/ui";
+import { CohortFormShell } from "../../CohortVisual";
 import { useFetch } from "@/hooks/useFetch";
 import type { Cohort, Course } from "@/types";
 
@@ -26,11 +26,21 @@ export default function EditCohortPage() {
   const cohort = cohorts?.find((candidate) => candidate.id === params.id);
 
   return (
-    <Card title="Editar cohorte">
-      {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+    <CohortFormShell edit>
+      {isLoading ? (
+        <p role="status" className="text-sm text-text-secondary">
+          Cargando…
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-sm text-accent-red">
+          {error}
+        </p>
+      ) : null}
       {!isLoading && !error && !cohort ? (
-        <p className="text-sm text-accent-red">No se encontró la cohorte.</p>
+        <p role="alert" className="text-sm text-accent-red">
+          No se encontró la cohorte.
+        </p>
       ) : null}
       {courses && cohort ? (
         <CohortForm
@@ -52,6 +62,6 @@ export default function EditCohortPage() {
           }}
         />
       ) : null}
-    </Card>
+    </CohortFormShell>
   );
 }

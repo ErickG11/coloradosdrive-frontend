@@ -1,5 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { CohortIcon } from "./CohortVisual";
+import styles from "./cohorts.module.css";
+
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -111,63 +115,87 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
   }
 
   return (
-    <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
-      <Select
-        label="Curso"
-        name="courseId"
-        required
-        value={values.courseId}
-        onChange={(event) => updateField("courseId", event.target.value)}
-      >
-        <option value="" disabled>
-          Selecciona un curso
-        </option>
-        {courses.map((course) => (
-          <option key={course.id} value={course.id}>
-            {course.nombre} (Tipo {course.tipo})
-          </option>
-        ))}
-      </Select>
+    <form
+      onSubmit={(event) => void handleSubmit(event)}
+      className={styles.form}
+      aria-busy={isSubmitting}
+    >
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="layers" />
+          </span>
+          Información general
+        </legend>
+        <p className={styles.sectionHelp}>
+          Selecciona el curso y define las condiciones de la cohorte.
+        </p>
+        <div className={styles.formGrid}>
+          <Select
+            label="Curso"
+            name="courseId"
+            required
+            value={values.courseId}
+            onChange={(event) => updateField("courseId", event.target.value)}
+          >
+            <option value="" disabled>
+              Selecciona un curso
+            </option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.nombre} (Tipo {course.tipo})
+              </option>
+            ))}
+          </Select>
 
-      <Input
-        label="Nombre de la cohorte"
-        name="nombre"
-        required
-        value={values.nombre}
-        onChange={(event) => updateField("nombre", event.target.value)}
-      />
+          <Input
+            placeholder="Ej. Cohorte octubre 2026"
+            label="Nombre de la cohorte"
+            name="nombre"
+            required
+            value={values.nombre}
+            onChange={(event) => updateField("nombre", event.target.value)}
+          />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input
-          label="Precio"
-          name="precio"
-          type="number"
-          min="0"
-          step="0.01"
-          required
-          value={values.precio}
-          onChange={(event) => updateField("precio", event.target.value)}
-        />
-        <Input
-          label="Cupo máximo"
-          name="cupoMaximo"
-          type="number"
-          min="1"
-          step="1"
-          required
-          value={values.cupoMaximo}
-          onChange={(event) => updateField("cupoMaximo", event.target.value)}
-        />
-      </div>
+          <Input
+            placeholder="0.00 USD"
+            label="Precio"
+            name="precio"
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            value={values.precio}
+            onChange={(event) => updateField("precio", event.target.value)}
+          />
+          <Input
+            placeholder="Ej. 20"
+            label="Cupo máximo"
+            name="cupoMaximo"
+            type="number"
+            min="1"
+            step="1"
+            required
+            value={values.cupoMaximo}
+            onChange={(event) => updateField("cupoMaximo", event.target.value)}
+          />
+        </div>
+      </fieldset>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-text-primary">Ventana de matrícula</p>
-        <p className="text-xs text-text-secondary">
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="calendar" />
+          </span>
+          Ventana de matrícula
+        </legend>
+        <p id="enrollment-window-help" className={styles.sectionHelp}>
           El fin de matrícula es el plazo real que se comunica al estudiante para entregar
           documentos físicos completos.
         </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={styles.formGrid}>
           <Input
+            aria-describedby="enrollment-window-help"
             label="Inicio de matrícula"
             name="fechaInicioMatricula"
             type="date"
@@ -176,6 +204,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             onChange={(event) => updateField("fechaInicioMatricula", event.target.value)}
           />
           <Input
+            aria-describedby="enrollment-window-help"
             label="Fin de matrícula"
             name="fechaFinMatricula"
             type="date"
@@ -184,16 +213,22 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             onChange={(event) => updateField("fechaFinMatricula", event.target.value)}
           />
         </div>
-      </div>
+      </fieldset>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-text-primary">Ventana de curso</p>
-        <p className="text-xs text-text-secondary">
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="car" />
+          </span>
+          Ventana de curso
+        </legend>
+        <p id="course-window-help" className={styles.sectionHelp}>
           Todas las prácticas que elija un estudiante de esta cohorte deben caber dentro de esta
           ventana.
         </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={styles.formGrid}>
           <Input
+            aria-describedby="course-window-help"
             label="Inicio de curso"
             name="fechaInicioCurso"
             type="date"
@@ -202,6 +237,7 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             onChange={(event) => updateField("fechaInicioCurso", event.target.value)}
           />
           <Input
+            aria-describedby="course-window-help"
             label="Fin de curso"
             name="fechaFinCurso"
             type="date"
@@ -210,20 +246,29 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             onChange={(event) => updateField("fechaFinCurso", event.target.value)}
           />
         </div>
-      </div>
+      </fieldset>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-text-primary">
-          Datos informativos para el oficio a la ANT (opcional)
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="document" />
+          </span>
+          Datos informativos para el oficio a la ANT{" "}
+          <span className={styles.optional}>Opcional</span>
+        </legend>
+        <p className={styles.sectionHelp}>
+          Completa estos datos si están disponibles. Puedes dejarlos en blanco.
         </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={styles.formGrid}>
           <Input
+            placeholder="Ej. Presencial"
             label="Tipo de modalidad"
             name="tipoModalidad"
             value={values.tipoModalidad}
             onChange={(event) => updateField("tipoModalidad", event.target.value)}
           />
           <Input
+            placeholder="Ej. Lunes y miércoles, 18:00–20:00"
             label="Horarios de capacitación teórica"
             name="horariosCapacitacionTeoria"
             value={values.horariosCapacitacionTeoria}
@@ -248,13 +293,25 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             onChange={(event) => updateField("numeroAulas", event.target.value)}
           />
         </div>
-      </div>
+      </fieldset>
 
-      {error ? <p className="text-sm text-accent-red">{error}</p> : null}
+      {error ? (
+        <p role="alert" className={styles.formError}>
+          {error}
+        </p>
+      ) : null}
 
-      <Button type="submit" isLoading={isSubmitting}>
-        {isEditMode ? "Guardar cambios" : "Crear cohorte"}
-      </Button>
+      <footer className={styles.formFooter}>
+        <p>Revisa los datos antes de {isEditMode ? "guardar los cambios" : "crear la cohorte"}.</p>
+        <div>
+          <Link href="/admin/cohorts" className={styles.cancel}>
+            Volver al listado
+          </Link>
+          <Button className={styles.primary} type="submit" isLoading={isSubmitting}>
+            {isEditMode ? "Guardar cambios" : "Crear cohorte"}
+          </Button>
+        </div>
+      </footer>
     </form>
   );
 }
