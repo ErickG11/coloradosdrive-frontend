@@ -47,6 +47,8 @@ interface CohortFormProps {
   /** Presente => modo edición (PATCH). Ausente => modo creación (POST). */
   cohortId?: string;
   initialValues?: CohortFormValues;
+  onSaved?: () => void;
+  onCancel?: () => void;
 }
 
 function optionalText(value: string): string | null {
@@ -59,7 +61,13 @@ function optionalInt(value: string): number | null {
   return trimmed === "" ? null : Number(trimmed);
 }
 
-export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps) {
+export function CohortForm({
+  courses,
+  cohortId,
+  initialValues,
+  onSaved,
+  onCancel,
+}: CohortFormProps) {
   const router = useRouter();
   const isEditMode = Boolean(cohortId);
   const [values, setValues] = useState<CohortFormValues>(initialValues ?? EMPTY_VALUES);
@@ -106,7 +114,8 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
       } else {
         await api.post("/cohorts", body);
       }
-      router.push("/admin/cohorts");
+      if (onSaved) onSaved();
+      else router.push("/admin/cohorts");
       router.refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo guardar la cohorte.");
@@ -127,9 +136,6 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           </span>
           Información general
         </legend>
-        <p className={styles.sectionHelp}>
-          Selecciona el curso y define las condiciones de la cohorte.
-        </p>
         <div className={styles.formGrid}>
           <Select
             label="Curso"
@@ -156,7 +162,17 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
             value={values.nombre}
             onChange={(event) => updateField("nombre", event.target.value)}
           />
+        </div>
+      </fieldset>
 
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="money" />
+          </span>
+          Precios y capacidad
+        </legend>
+        <div className={styles.formGrid}>
           <Input
             placeholder="0.00 USD"
             label="Precio"
@@ -253,12 +269,9 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
           <span className={styles.sectionIcon}>
             <CohortIcon name="document" />
           </span>
-          Datos informativos para el oficio a la ANT{" "}
-          <span className={styles.optional}>Opcional</span>
+          Información adicional
+          <span className={styles.optional}>ANT · opcional</span>
         </legend>
-        <p className={styles.sectionHelp}>
-          Completa estos datos si están disponibles. Puedes dejarlos en blanco.
-        </p>
         <div className={styles.formGrid}>
           <Input
             placeholder="Ej. Presencial"
@@ -302,11 +315,16 @@ export function CohortForm({ courses, cohortId, initialValues }: CohortFormProps
       ) : null}
 
       <footer className={styles.formFooter}>
-        <p>Revisa los datos antes de {isEditMode ? "guardar los cambios" : "crear la cohorte"}.</p>
         <div>
-          <Link href="/admin/cohorts" className={styles.cancel}>
-            Volver al listado
-          </Link>
+          {onCancel ? (
+            <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+          ) : (
+            <Link href="/admin/cohorts" className={styles.cancel}>
+              Cancelar
+            </Link>
+          )}
           <Button className={styles.primary} type="submit" isLoading={isSubmitting}>
             {isEditMode ? "Guardar cambios" : "Crear cohorte"}
           </Button>

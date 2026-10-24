@@ -1,67 +1,7 @@
 "use client";
-
 import { useParams } from "next/navigation";
-
-import { CohortFormShell } from "../../CohortVisual";
-import { useFetch } from "@/hooks/useFetch";
-import type { Cohort, Course } from "@/types";
-
-import { CohortForm } from "../../CohortForm";
-
+import { CohortsWorkspace } from "../../CohortsWorkspace";
 export default function EditCohortPage() {
   const params = useParams<{ id: string }>();
-  const {
-    data: courses,
-    isLoading: isLoadingCourses,
-    error: coursesError,
-  } = useFetch<Course[]>("/courses");
-  const {
-    data: cohorts,
-    isLoading: isLoadingCohorts,
-    error: cohortsError,
-  } = useFetch<Cohort[]>("/cohorts");
-
-  const isLoading = isLoadingCourses || isLoadingCohorts;
-  const error = coursesError ?? cohortsError;
-  const cohort = cohorts?.find((candidate) => candidate.id === params.id);
-
-  return (
-    <CohortFormShell edit>
-      {isLoading ? (
-        <p role="status" className="text-sm text-text-secondary">
-          Cargando…
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" className="text-sm text-accent-red">
-          {error}
-        </p>
-      ) : null}
-      {!isLoading && !error && !cohort ? (
-        <p role="alert" className="text-sm text-accent-red">
-          No se encontró la cohorte.
-        </p>
-      ) : null}
-      {courses && cohort ? (
-        <CohortForm
-          courses={courses}
-          cohortId={cohort.id}
-          initialValues={{
-            courseId: cohort.courseId,
-            nombre: cohort.nombre,
-            precio: String(cohort.precio),
-            cupoMaximo: String(cohort.cupoMaximo),
-            fechaInicioMatricula: cohort.fechaInicioMatricula,
-            fechaFinMatricula: cohort.fechaFinMatricula,
-            fechaInicioCurso: cohort.fechaInicioCurso,
-            fechaFinCurso: cohort.fechaFinCurso,
-            tipoModalidad: cohort.tipoModalidad ?? "",
-            horariosCapacitacionTeoria: cohort.horariosCapacitacionTeoria ?? "",
-            numeroVehiculos: cohort.numeroVehiculos === null ? "" : String(cohort.numeroVehiculos),
-            numeroAulas: cohort.numeroAulas === null ? "" : String(cohort.numeroAulas),
-          }}
-        />
-      ) : null}
-    </CohortFormShell>
-  );
+  return <CohortsWorkspace initialPanel={params.id} />;
 }
