@@ -1123,3 +1123,151 @@
 .rowDot[data-status="current"] {
   background: var(--color-status-success);
 }
+.topbar {
+  justify-content: flex-end;
+}
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.summaryItem > div {
+  min-width: 0;
+}
+.summaryItem strong > span {
+  display: inline-block;
+}
+.summaryItem[data-metric="current"] .summaryIcon {
+  color: var(--color-status-success);
+  background: var(--color-status-success-bg);
+  border-color: color-mix(in srgb, var(--color-status-success) 25%, transparent);
+}
+.summaryItem[data-metric="students"] .summaryIcon {
+  color: var(--color-status-info);
+  background: var(--color-status-info-bg);
+  border-color: color-mix(in srgb, var(--color-status-info) 25%, transparent);
+}
+.summaryItem[data-metric="finished"] .summaryIcon {
+  color: var(--color-status-neutral);
+  background: var(--color-status-neutral-bg);
+  border-color: var(--cohort-line);
+}
+.studentCount {
+  min-width: 110px;
+  --occupancy-color: var(--color-status-neutral);
+}
+.studentCount[data-occupancy="low"] {
+  --occupancy-color: var(--color-status-success);
+}
+.studentCount[data-occupancy="medium"] {
+  --occupancy-color: var(--color-status-warning);
+}
+.studentCount[data-occupancy="high"] {
+  --occupancy-color: var(--color-status-error);
+}
+.studentCountValue {
+  color: var(--occupancy-color);
+}
+.capacityTrack {
+  width: 100%;
+  max-width: 122px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--cohort-raised);
+}
+.capacityTrack > span {
+  display: block;
+  height: 100%;
+  background: var(--occupancy-color);
+  border-radius: inherit;
+  transition:
+    width 240ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 160ms ease;
+}
+.status[data-status="finished"] {
+  color: var(--color-status-info);
+  background: var(--color-status-info-bg);
+}
+.rowDot[data-status="finished"] {
+  background: var(--color-status-info);
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.pagination > span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+.pagination button {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 36px;
+  padding: 5px 8px;
+  border: 1px solid var(--cohort-line);
+  background: var(--cohort-field);
+  border-radius: 7px;
+  color: var(--cohort-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.pagination button[aria-current="page"] {
+  background: var(--color-brand-primary);
+  color: white;
+  border-color: var(--color-brand-primary);
+}
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.pagination button svg {
+  width: 15px;
+  height: 15px;
+}
+.nextArrow {
+  transform: rotate(180deg);
+  display: flex;
+}
+.pageGap {
+  padding: 4px;
+}
+.pageSize {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.pageSize select {
+  min-height: 36px;
+  padding: 5px 8px;
+  border: 1px solid var(--cohort-input-line);
+  border-radius: 7px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pagination button:not(:disabled):not([aria-current="page"]):hover {
+    background: var(--cohort-tint);
+    color: var(--cohort-accent);
+  }
+}
+@media (max-width: 767px) {
+  .pagination {
+    flex-wrap: wrap;
+  }
+  .pagination button {
+    min-width: 38px;
+    min-height: 44px;
+  }
+  .pageSize select {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .capacityTrack > span {
+    transition: none;
+  }
+}
