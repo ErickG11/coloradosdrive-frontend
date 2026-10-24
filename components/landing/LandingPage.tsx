@@ -34,24 +34,26 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
             </div>
           </div>
           <CoursesSection courses={courses} />
+          <LearningJourney />
           <section
             id="plataforma"
             aria-labelledby="platform-title"
             className={styles.platformSection}
           >
             <div className={`${styles.container} ${styles.platformGrid}`}>
-              <ScrollReveal>
-                <Image
-                  {...landingImages.platform}
-                  alt={landingImages.platform.alt}
-                  className={styles.fullImage}
-                  sizes="(min-width: 1440px) 720px, (min-width: 900px) 55vw, 90vw"
-                />
-              </ScrollReveal>
-              <div>
-                <h2 id="platform-title">Aprende también con nuestra plataforma.</h2>
-                <p className={styles.lead}>Prepárate a tu ritmo.</p>
-                <ul className={styles.checkList}>
+              <div className={styles.platformCopy}>
+                <ScrollReveal>
+                  <h2 id="platform-title">
+                    Tu formación.
+                    <br />
+                    <span>Siempre contigo.</span>
+                  </h2>
+                </ScrollReveal>
+                <p className={styles.lead}>
+                  Aprende también con nuestra plataforma. Prepárate a tu ritmo y encuentra tu
+                  próximo paso en un solo lugar.
+                </p>
+                <ul className={styles.platformFeatures}>
                   {landingContent.platformFeatures.map((feature) => (
                     <li key={feature}>
                       <LandingIcon name="check" />
@@ -64,22 +66,37 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
                   <LandingIcon name="arrow" />
                 </Link>
               </div>
+              <ScrollReveal className={styles.platformMedia}>
+                <Image
+                  unoptimized
+                  {...landingImages.platform}
+                  alt={landingImages.platform.alt}
+                  sizes="(min-width: 900px) 1000px, 170vw"
+                />
+                <div className={styles.platformCaption}>
+                  <LandingIcon name="book" />
+                  <span>
+                    Tu aprendizaje continúa.<strong>Dentro y fuera del aula.</strong>
+                  </span>
+                </div>
+              </ScrollReveal>
             </div>
           </section>
-          <LearningJourney />
           <section
             id="practicas"
-            aria-label="Prácticas y clases"
+            aria-labelledby="practice-title"
             className={`${styles.container} ${styles.practiceSection}`}
           >
             <div className={styles.practiceRow}>
               <ParallaxMedia image={landingImages.practice} />
-              <div>
-                <h2>
-                  Aprende
-                  <br />
-                  <span>con seguridad.</span>
-                </h2>
+              <div className={styles.practiceCopy}>
+                <ScrollReveal>
+                  <h2 id="practice-title">
+                    Al volante.
+                    <br />
+                    <span>Con confianza.</span>
+                  </h2>
+                </ScrollReveal>
                 <p className={styles.lead}>Guía real con instructores calificados.</p>
                 <p>
                   Gana confianza al volante con una formación segura y práctica, acompañado en cada
@@ -98,12 +115,14 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
             </div>
             <div className={`${styles.practiceRow} ${styles.practiceRowReverse}`}>
               <ParallaxMedia image={landingImages.classes} />
-              <div>
-                <h2>
-                  Aprende
-                  <br />
-                  <span>en la práctica.</span>
-                </h2>
+              <div className={styles.practiceCopy}>
+                <ScrollReveal>
+                  <h2>
+                    Entiende lo
+                    <br />
+                    <span>que conduces.</span>
+                  </h2>
+                </ScrollReveal>
                 <p>
                   Clases teóricas y prácticas para comprender el funcionamiento del vehículo y
                   llevar tus conocimientos a la vía.
@@ -129,74 +148,80 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
           <section
             id="contacto"
             aria-labelledby="contact-title"
-            className={`${styles.container} ${styles.section}`}
+            className={`${styles.container} ${styles.contactSection}`}
           >
-            <div className={styles.sectionHeading}>
-              <h2 id="contact-title">
-                Estamos aquí
-                <br />
-                para ti.
-              </h2>
-              <p>
+            <div className={styles.contactCopy}>
+              <ScrollReveal>
+                <h2 id="contact-title">
+                  Tu camino
+                  <br />
+                  <span>empieza aquí.</span>
+                </h2>
+              </ScrollReveal>
+              <p className={styles.lead}>
                 Tu curso de auto y moto en un solo lugar. Escríbenos y encuentra tu próxima cohorte.
               </p>
-            </div>
-            <ScrollReveal>
-              <Image
-                {...landingImages.contact}
-                alt={landingImages.contact.alt}
-                className={`${styles.fullImage} ${styles.contactImage}`}
-                sizes="(min-width: 1440px) 1256px, 92vw"
-              />
-            </ScrollReveal>
-            <div className={styles.contactGrid}>
-              {landingContent.whatsapp.map((phone, index) => (
-                <a
-                  key={phone.international}
-                  href={phone.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.contactCard}
-                >
-                  <LandingIcon name="whatsapp" />
-                  <span>
-                    <span className={styles.contactLabel}>WhatsApp {index + 1}</span>
-                    <strong>{phone.display}</strong>
-                    <span className={styles.contactHint}>Conversemos sobre tu curso</span>
-                  </span>
-                  <LandingIcon name="arrow" />
-                </a>
-              ))}
-              <div className={styles.addressCard}>
+              <div className={styles.contactPhones}>
+                {landingContent.whatsapp.map((phone, index) => (
+                  <a
+                    key={phone.international}
+                    href={phone.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <LandingIcon name="whatsapp" />
+                    <span>
+                      <span>WhatsApp {index + 1}</span>
+                      <strong>{phone.display}</strong>
+                    </span>
+                    <LandingIcon name="arrow" />
+                  </a>
+                ))}
+              </div>
+              <div className={styles.address}>
                 <LandingIcon name="pin" />
                 <div>
-                  <span className={styles.contactLabel}>Visítanos en Santo Domingo</span>
                   <address>{landingContent.address}</address>
                   <a
-                    className={styles.textLink}
                     href={landingContent.mapsHref}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className={styles.textLink}
                   >
                     Abrir en Google Maps
                     <LandingIcon name="arrow" />
                   </a>
                 </div>
               </div>
+              {landingContent.hours && (
+                <p className={styles.note}>Horario: {landingContent.hours}</p>
+              )}
             </div>
-            {landingContent.hours && <p className={styles.note}>Horario: {landingContent.hours}</p>}
+            <ScrollReveal className={styles.contactMedia}>
+              <Image
+                unoptimized
+                {...landingImages.contact}
+                alt="Referencia visual de la ubicación de Colorados Drive y sus vehículos de formación."
+                sizes="(min-width: 900px) 800px, 100vw"
+              />
+            </ScrollReveal>
           </section>
-          <section
-            className={`${styles.container} ${styles.closing}`}
-            aria-label="Inscríbete en Colorados Drive"
-          >
+          <section className={styles.closing} aria-labelledby="closing-title">
             <Image
+              unoptimized
               {...landingImages.closing}
-              alt={landingImages.closing.alt}
-              className={styles.fullImage}
-              sizes="(min-width: 1440px) 1256px, 92vw"
+              alt="Vehículo de Colorados Drive frente a la escuela."
+              sizes="100vw"
+              className={styles.closingImage}
             />
-            <div className={styles.closingActions}>
+            <div className={`${styles.container} ${styles.closingInner}`}>
+              <ScrollReveal>
+                <h2 id="closing-title">
+                  Nos vemos
+                  <br />
+                  en el camino.
+                </h2>
+              </ScrollReveal>
               <p>{landingContent.slogan}.</p>
               <div className={styles.actions}>
                 <a
@@ -208,7 +233,7 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
                   ¡Inscríbete hoy!
                   <LandingIcon name="arrow" />
                 </a>
-                <Link href="/login" className={styles.secondaryButton}>
+                <Link href="/login" className={styles.heroLogin}>
                   Iniciar sesión
                   <LandingIcon name="arrow" />
                 </Link>

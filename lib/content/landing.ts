@@ -49,7 +49,7 @@ export const landingContent = {
       description: "Vehículos livianos · Manual y automático",
       price: 175,
       image: {
-        src: "/images/curso-tipo-b.png",
+        src: "/images/landing/curso-tipo-b.webp",
         width: 1773,
         height: 887,
         alt: "Banner del curso Tipo B con un vehículo liviano de Colorados Drive y sus beneficios de formación.",
@@ -65,7 +65,7 @@ export const landingContent = {
       description: "Motocicletas",
       price: 135,
       image: {
-        src: "/images/curso-tipo-a.png",
+        src: "/images/landing/curso-tipo-a.webp",
         width: 1774,
         height: 887,
         alt: "Banner del curso Tipo A con un motociclista equipado y los beneficios de la formación en vía y circuito.",
@@ -152,7 +152,7 @@ export const landingContent = {
 
 export const landingImages = {
   logo: {
-    src: "/images/logo.png",
+    src: "/images/landing/logo.webp",
     width: 1774,
     height: 887,
     alt: "Colorados Drive, escuela de conducción",
@@ -164,31 +164,31 @@ export const landingImages = {
     alt: "Detalle de un vehículo y del edificio de Colorados Drive al atardecer.",
   },
   platform: {
-    src: "/images/plataforma.png",
+    src: "/images/landing/plataforma.webp",
     width: 1774,
     height: 887,
     alt: "Ilustración promocional del aprendizaje en la plataforma de Colorados Drive desde una computadora.",
   },
   practice: {
-    src: "/images/practicas.png",
+    src: "/images/landing/practicas.webp",
     width: 1672,
     height: 941,
     alt: "Imagen promocional de una estudiante al volante con la guía de un instructor de Colorados Drive.",
   },
   classes: {
-    src: "/images/clases.png",
+    src: "/images/landing/clases.webp",
     width: 1774,
     height: 887,
     alt: "Imagen promocional de una clase sobre el funcionamiento del vehículo con un instructor y estudiantes.",
   },
   contact: {
-    src: "/images/contacto.png",
+    src: "/images/landing/contacto.webp",
     width: 1774,
     height: 887,
     alt: "Banner de contacto de Colorados Drive con sus dos números de WhatsApp y una referencia visual de su dirección.",
   },
   closing: {
-    src: "/images/hero-conduce-tu-futuro.png",
+    src: "/images/landing/hero-conduce-tu-futuro.webp",
     width: 1672,
     height: 941,
     alt: "Banner Conduce tu futuro con Colorados Drive: formación para carro y moto e invitación a inscribirse.",

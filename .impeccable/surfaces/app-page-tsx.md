@@ -11,15 +11,15 @@ Modo: Persuade. Ruta: `/`. Audiencia: personas que buscan formación para carro 
 
 ## Direction contract
 
-THESIS: Las diagonales rojas de los banners de Colorados Drive guían del primer vistazo a la matrícula; el contenido se lee fuera de las imágenes con texto incrustado.
+THESIS: «Tu futuro. En marcha.» La persona elige carro o moto y recorre visualmente su formación hasta el certificado. La fotografía de marca, la tipografía y el movimiento hacen visible ese camino.
 
-OWN-WORLD: Blanco/rojo y negro/rojo, Inter existente, superficies sólidas, radios del sistema y acentos contenidos. Imágenes originales completas, excepto el recorte fotográfico del hero solicitado.
+OWN-WORLD: Blanco/rojo y negro/rojo, Inter existente, superficies sólidas y radios del sistema. Portada, recorrido y cierre usan negro fotográfico en ambos temas como material de campaña. Cursos conservan los banners completos; los otros encuadres destacan la parte fotográfica. Ningún raster se edita.
 
 STORY: Elegir A o B, entender la formación y la plataforma, conocer el recorrido y contactar a la escuela con información real.
 
-FIRST VIEWPORT: Header fijo con logo blanco, anclas, tema y acciones; hero dividido, título y CTAs a la izquierda, recorte de la zona derecha de login-fondo a la derecha con corte diagonal rojo. En móvil, imagen primero. Entrada escalonada inferior a 300 ms y parallax máximo de 20 px.
+FIRST VIEWPORT: Portada fotográfica de borde a borde, titular HTML grande en dos líneas, acciones existentes y ubicación. Selector Carro/Tipo B y Moto/Tipo A cambia la fotografía y el ancla de exploración. Entrada del titular por máscara y revelado fotográfico; parallax ligado al scroll. Móvil: titular y acciones primero, fotografía y selector debajo. Transiciones individuales de 120–280 ms y alternativa reduced-motion.
 
-FORM: Estructura e identidad fijadas por el brief del usuario, dentro del sistema existente. Referencia de composición One motif aplicada solo donde coincide con el brief. seed: no aplica (estructura e identidad fijadas por el usuario); no hubo selección abierta ni comp, conforme a la ruta code-first solicitada.
+FORM: El usuario pidió un rediseño integral más ambicioso con motion y una sola entrega («prosigue, hazlo bien»), delegando la dirección. Se conserva identidad y contenido confirmado; la propuesta del recorrido guía la nueva estructura. Code-first, sin comp ni rondas de aprobación. seed:bca0695a8eae1b4f (superficie Persuade); la dirección y ejecución delegadas por el usuario prevalecen sobre la selección interactiva.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
@@ -27,4 +27,6 @@ Decisiones pendientes: dominio público definitivo; horario, correo y redes perm
 
 ## Procedencia de imágenes
 
-Las nueve imágenes PNG de `public/images/` fueron proporcionadas por el usuario y revisadas individualmente antes de diseñar. Se conservan sus archivos originales y dimensiones; el recorte del hero se realiza solo con CSS. `public/opengraph-image.png` es una copia exacta de `hero-conduce-tu-futuro.png` (SHA-256 idéntico). No se utilizaron imágenes de terceros ni se generaron imágenes nuevas.
+Las nueve imágenes PNG de `public/images/` fueron proporcionadas por el usuario y revisadas individualmente antes de diseñar. Se conservan sus archivos originales y dimensiones; los encuadres fotográficos y velos de lectura se realizan solo con CSS. `public/opengraph-image.png` es una copia exacta de `hero-conduce-tu-futuro.png` (SHA-256 idéntico). No se utilizaron imágenes de terceros ni se generaron imágenes nuevas.
+
+Ocho derivados WebP locales en `public/images/landing/` evitan la optimización de imágenes durante la petición: calidad 82 y dimensiones originales; logo a 512 px y calidad 90. Conversión con sharp ya instalado por Next, sin nuevas dependencias. Los ocho PNG suman 16.146.475 bytes y sus derivados 1.241.306 bytes. `provenance.json` registra origen, transformación y SHA-256 de cada original. Los PNG de origen y la imagen del login permanecen intactos.

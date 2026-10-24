@@ -5,49 +5,103 @@ import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "fr
 import { useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 
-import { landingContent } from "@/lib/content/landing";
+import { landingContent, landingImages } from "@/lib/content/landing";
 import type { LandingImage } from "@/lib/content/landing";
 import { LandingIcon } from "./LandingIcon";
 import styles from "./landing.module.css";
 
 export function LearningJourney() {
   const section = useRef<HTMLElement>(null);
+  const [active, setActive] = useState(0);
   const reducedMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: section, offset: ["start 0.9", "end 0.6"] });
+  const { scrollYProgress } = useScroll({ target: section, offset: ["start 0.6", "end 0.8"] });
   const progress = useSpring(scrollYProgress, { stiffness: 160, damping: 30 });
+  const images = [landingContent.courses[0].image, landingImages.classes, landingImages.practice];
   return (
-    <section
-      ref={section}
-      className={`${styles.container} ${styles.section}`}
-      aria-labelledby="journey-title"
-    >
-      <div className={styles.sectionHeading}>
-        <h2 id="journey-title">
-          Del primer paso
-          <br />a tu certificado.
-        </h2>
-        <p>Un recorrido conectado para que te concentres en lo importante: aprender a conducir.</p>
-      </div>
-      <div className={styles.journey}>
-        <div className={styles.journeyTrack} aria-hidden="true">
-          <motion.span style={{ scaleX: reducedMotion ? 1 : progress }} />
-        </div>
-        <div className={styles.journeyTrackMobile} aria-hidden="true">
-          <motion.span style={{ scaleY: reducedMotion ? 1 : progress }} />
-        </div>
-        <ol className={styles.journeySteps}>
-          {landingContent.steps.map((step, index) => (
-            <li key={step.title}>
-              <span className={styles.stepNumber} aria-hidden="true">
-                {index + 1}
-              </span>
+    <section ref={section} className={styles.journeySection} aria-labelledby="journey-title">
+      <div className={`${styles.container} ${styles.journey}`}>
+        <div className={styles.journeySticky}>
+          <h2 id="journey-title">
+            De tu primer paso
+            <br />
+            <span>a tu certificado.</span>
+          </h2>
+          <p>
+            Un recorrido conectado para que te concentres en lo importante: aprender a conducir.
+          </p>
+          <div className={styles.journeyMedia}>
+            {images.map((image, index) => (
+              <Image
+                unoptimized
+                key={image.src}
+                {...image}
+                alt={image.alt}
+                sizes="(min-width: 900px) 800px, 160vw"
+                data-active={active === index}
+                aria-hidden={active !== index}
+              />
+            ))}
+            <div
+              className={styles.journeyCertificate}
+              data-ui
+              data-active={active === 3}
+              aria-hidden={active !== 3}
+            >
               <div>
-                <h3>{step.title}</h3>
-                <p>{step.description}</p>
+                <Image unoptimized {...landingImages.logo} alt="" sizes="160px" />
+                <span>Vista ilustrativa</span>
               </div>
-            </li>
-          ))}
-        </ol>
+              <h3>
+                Certificado
+                <br />
+                digital.
+              </h3>
+              <p>
+                <LandingIcon name="certificate" />
+                Tu formación, con verificación QR.
+              </p>
+            </div>
+            <div className={styles.journeyCaption} data-ui aria-hidden="true">
+              <span>
+                {active + 1} <span>/ 4</span>
+              </span>
+              <strong>{landingContent.steps[active].title}</strong>
+            </div>
+          </div>
+        </div>
+        <div className={styles.journeyRoad}>
+          <div className={styles.journeyRail} aria-hidden="true">
+            <motion.span style={{ scaleY: reducedMotion ? 1 : progress }} />
+          </div>
+          <ol className={styles.journeySteps}>
+            {landingContent.steps.map((step, index) => (
+              <motion.li
+                key={step.title}
+                data-active={active === index}
+                onViewportEnter={() => setActive(index)}
+                viewport={{ margin: "-35% 0px -35% 0px" }}
+              >
+                <span className={styles.stepNumber} aria-hidden="true">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3>
+                    <button
+                      type="button"
+                      onClick={() => setActive(index)}
+                      aria-label={`Ver etapa ${index + 1}: ${step.title}`}
+                      aria-pressed={active === index}
+                    >
+                      {step.title}
+                      <LandingIcon name="arrow" />
+                    </button>
+                  </h3>
+                  <p>{step.description}</p>
+                </div>
+              </motion.li>
+            ))}
+          </ol>
+        </div>
       </div>
     </section>
   );
@@ -57,7 +111,7 @@ export function ParallaxMedia({ image }: { image: LandingImage }) {
   const element = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: element, offset: ["start end", "end start"] });
-  const offset = useTransform(scrollYProgress, [0, 1], [8, -8]);
+  const offset = useTransform(scrollYProgress, [0, 1], [24, -24]);
   return (
     <motion.div
       ref={element}
@@ -65,9 +119,10 @@ export function ParallaxMedia({ image }: { image: LandingImage }) {
       className={styles.parallaxMedia}
     >
       <Image
+        unoptimized
         {...image}
         alt={image.alt}
-        className={styles.fullImage}
+        className={styles.practicePhoto}
         sizes="(min-width: 1440px) 700px, (min-width: 900px) 55vw, 90vw"
       />
     </motion.div>
@@ -98,11 +153,14 @@ export function RoleViews() {
   return (
     <section className={styles.rolesSection} aria-labelledby="roles-title">
       <div className={styles.container}>
-        <h2 id="roles-title">
-          Una plataforma,
-          <br />
-          tres vistas.
-        </h2>
+        <div className={styles.sectionHeading}>
+          <h2 id="roles-title">
+            Cada persona.
+            <br />
+            <span>Su propio espacio.</span>
+          </h2>
+          <p>Una escuela conectada, con una vista para cada parte del camino.</p>
+        </div>
         <div className={styles.tabList} role="tablist" aria-label="Vistas de la plataforma">
           {landingContent.roles.map((item, index) => (
             <button

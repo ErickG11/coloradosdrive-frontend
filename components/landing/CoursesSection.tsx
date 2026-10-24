@@ -1,5 +1,4 @@
 import Image from "next/image";
-
 import { landingContent } from "@/lib/content/landing";
 import type { PublicCourse } from "@/types/publicCourse";
 import { LandingIcon } from "./LandingIcon";
@@ -14,29 +13,37 @@ export function CoursesSection({ courses }: { courses: PublicCourse[] }) {
       className={`${styles.container} ${styles.section}`}
     >
       <div className={styles.sectionHeading}>
-        <h2 id="courses-title">
-          Tu camino.
-          <br />
-          Tu próxima licencia.
-        </h2>
-        <p>Carro o moto. Elige cómo quieres moverte y empieza a prepararte con nosotros.</p>
+        <ScrollReveal>
+          <h2 id="courses-title">
+            Elige cómo
+            <br />
+            <span>quieres moverte.</span>
+          </h2>
+        </ScrollReveal>
+        <p>Carro o moto. Tu primera gran decisión empieza con la formación correcta.</p>
       </div>
       <div className={styles.courseGrid}>
         {landingContent.courses.map((course, index) => {
           const publicCourse = courses.find((item) => item.tipo === course.type);
           return (
-            <ScrollReveal key={course.type} delay={index * 0.05}>
-              <article className={styles.course} aria-labelledby={`course-${course.type}`}>
-                <Image
-                  {...course.image}
-                  alt={course.image.alt}
-                  sizes="(min-width: 1440px) 620px, (min-width: 768px) 46vw, 90vw"
-                  className={styles.fullImage}
-                />
+            <ScrollReveal key={course.type} delay={index * 0.06}>
+              <article
+                id={`course-${course.type}`}
+                className={styles.course}
+                aria-labelledby={`course-title-${course.type}`}
+              >
+                <div className={styles.courseImage}>
+                  <Image
+                    unoptimized
+                    {...course.image}
+                    alt={course.image.alt}
+                    sizes="(min-width: 1440px) 650px, (min-width: 768px) 50vw, 100vw"
+                  />
+                </div>
                 <div className={styles.courseBody}>
                   <div className={styles.courseHeading}>
                     <div>
-                      <h3 id={`course-${course.type}`}>{course.name}</h3>
+                      <h3 id={`course-title-${course.type}`}>{course.name}</h3>
                       <p>{course.description}</p>
                     </div>
                     <p className={styles.price}>
@@ -52,21 +59,23 @@ export function CoursesSection({ courses }: { courses: PublicCourse[] }) {
                       </li>
                     ))}
                   </ul>
-                  {publicCourse?.horasRequeridas != null && (
+                  <div className={styles.courseBottom}>
                     <p className={styles.courseHours}>
-                      {publicCourse.horasRequeridas} horas requeridas
+                      {publicCourse?.horasRequeridas != null
+                        ? `${publicCourse.horasRequeridas} horas requeridas`
+                        : "Consulta la próxima cohorte"}
                     </p>
-                  )}
-                  <a
-                    href={course.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.button}
-                    aria-label={`Inscribirme en ${course.name}`}
-                  >
-                    Inscribirme
-                    <LandingIcon name="arrow" />
-                  </a>
+                    <a
+                      href={course.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.courseAction}
+                      aria-label={`Inscribirme en ${course.name}`}
+                    >
+                      Inscribirme
+                      <LandingIcon name="arrow" />
+                    </a>
+                  </div>
                 </div>
               </article>
             </ScrollReveal>

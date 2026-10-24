@@ -15,7 +15,12 @@ export function LandingFooter() {
               className={`${styles.brand} ${styles.footerBrand}`}
               aria-label="Colorados Drive, inicio"
             >
-              <Image {...landingImages.logo} alt={landingImages.logo.alt} sizes="196px" />
+              <Image
+                unoptimized
+                {...landingImages.logo}
+                alt={landingImages.logo.alt}
+                sizes="196px"
+              />
             </Link>
             <p className={styles.footerSlogan}>{landingContent.slogan}.</p>
           </div>
