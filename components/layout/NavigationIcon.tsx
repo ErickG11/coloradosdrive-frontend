@@ -1,8 +1,9 @@
 import type { IconProps } from "@/components/ui/icons";
 
 export type NavigationSection =
-  "students" | "cohorts" | "instructors" | "enroll" | "exams" | "schedule" | "menu";
+  "panel" | "students" | "cohorts" | "instructors" | "enroll" | "exams" | "schedule" | "menu";
 const paths: Record<NavigationSection, string> = {
+  panel: "M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7Z",
   students:
     "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m18 0v-2a4 4 0 0 0-3-3.87M15 3.13a4 4 0 0 1 0 7.75M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z",
   cohorts: "m12 3 10 5-10 5L2 8l10-5Zm-9 9 9 5 9-5M3 16l9 5 9-5",
