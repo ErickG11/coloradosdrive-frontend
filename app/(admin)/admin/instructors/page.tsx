@@ -2,13 +2,28 @@
 
 import { useState } from "react";
 
-import { Button, Input, Modal, PageHeader, Select, StatusBadge } from "@/components/ui";
+import {
+  Button,
+  DataTable,
+  EmptyState,
+  Modal,
+  PageHeader,
+  SearchInput,
+  Select,
+  StatusBadge,
+  type DataColumn,
+} from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import type { InstructorDetail, InstructorList } from "@/types";
+import type { InstructorDetail, InstructorList, InstructorSummary } from "@/types";
 
 import { InstructorForm } from "./InstructorForm";
+import { InstructorMetrics } from "./InstructorMetrics";
+import { InstructorProfile } from "./InstructorProfile";
+import { InstructorAvatar, InstructorIcon } from "./InstructorVisual";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
+import styles from "./instructors.module.css";
 
 type Action = "desactivar" | "reactivar" | "restablecer-password";
 type Dialog = "closed" | "create" | "detail" | "edit" | "confirm";
@@ -24,6 +39,7 @@ export default function InstructorsPage() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [metricsVersion, setMetricsVersion] = useState(0);
   const pageSize = 10;
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -55,6 +71,7 @@ export default function InstructorsPage() {
     setDialog("closed");
     setSelected(null);
     refetch();
+    setMetricsVersion((version) => version + 1);
   }
 
   function ask(actionToConfirm: Action) {
@@ -76,6 +93,7 @@ export default function InstructorsPage() {
       setDialog("closed");
       setSelected(null);
       refetch();
+      setMetricsVersion((version) => version + 1);
     } catch (cause) {
       setActionError(cause instanceof ApiError ? cause.message : "No se pudo completar la acción.");
     } finally {
@@ -83,148 +101,180 @@ export default function InstructorsPage() {
     }
   }
 
+  function createInstructor() {
+    setActionError(null);
+    setDialog("create");
+  }
+  function clearFilters() {
+    setSearchDraft("");
+    setQuery("");
+    setActiveFilter("");
+    setPage(1);
+  }
+  const filtered = Boolean(query || activeFilter);
+  const columns: DataColumn<InstructorSummary>[] = [
+    {
+      key: "name",
+      header: "Nombre",
+      className: "data-table__identity",
+      render: (instructor) => (
+        <div className={styles.identity}>
+          <InstructorAvatar instructor={instructor} />
+          <strong>{instructor.nombreCompleto}</strong>
+        </div>
+      ),
+    },
+    {
+      key: "cedula",
+      header: "Cédula",
+      render: (instructor) => <span className={styles.numeric}>{instructor.cedula}</span>,
+    },
+    {
+      key: "phone",
+      header: "Teléfono",
+      render: (instructor) => <span className={styles.numeric}>{instructor.telefono ?? "—"}</span>,
+    },
+    {
+      key: "state",
+      header: "Estado",
+      render: (instructor) => <StatusBadge status={instructor.activo ? "activo" : "inactivo"} />,
+    },
+    {
+      key: "actions",
+      header: "Acciones",
+      className: styles.tableActions,
+      render: (instructor) => (
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy}
+          onClick={() => void openDetail(instructor.id)}
+        >
+          <InstructorIcon name="eye" />
+          Ver y gestionar
+        </Button>
+      ),
+    },
+  ];
   return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <PageHeader
-        title="Instructores"
-        count={data?.total}
-        actions={
-          <Button
-            onClick={() => {
-              setActionError(null);
-              setDialog("create");
+    <div className={styles.page}>
+      <div className={styles.main}>
+        <PageHeader
+          title="Instructores"
+          count={data?.total}
+          description="Gestiona los instructores de tu escuela de conducción."
+          actions={
+            <Button onClick={createInstructor}>
+              <InstructorIcon name="plus" />
+              Nuevo instructor
+            </Button>
+          }
+        />
+        <InstructorMetrics version={metricsVersion} />
+        <section className={styles.filters} aria-label="Buscar y filtrar instructores">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              setPage(1);
+              setQuery(searchDraft.trim());
+            }}
+            className={styles.searchForm}
+          >
+            <SearchInput
+              name="instructorSearch"
+              label="Buscar por nombre o cédula"
+              placeholder="Buscar por nombre o cédula…"
+              maxLength={80}
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              onClear={() => {
+                setSearchDraft("");
+                setQuery("");
+                setPage(1);
+              }}
+            />
+            <Button type="submit" variant="secondary">
+              Buscar
+            </Button>
+          </form>
+          <Select
+            name="instructorActive"
+            label="Estado"
+            value={activeFilter}
+            onChange={(event) => {
+              setPage(1);
+              setActiveFilter(event.target.value);
             }}
           >
-            Nuevo instructor
-          </Button>
-        }
-      />
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <form
-          className="flex flex-1 flex-wrap items-end gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setPage(1);
-            setQuery(searchDraft.trim());
-          }}
-        >
-          <Input
-            name="instructorSearch"
-            label="Buscar por nombre o cédula"
-            maxLength={80}
-            value={searchDraft}
-            className="min-w-56"
-            onChange={(event) => setSearchDraft(event.target.value)}
-          />
-          <Button type="submit" variant="secondary">
-            Buscar
-          </Button>
-        </form>
-        <Select
-          name="instructorActive"
-          label="Estado"
-          value={activeFilter}
-          onChange={(event) => {
-            setPage(1);
-            setActiveFilter(event.target.value);
-          }}
-        >
-          <option value="">Todos</option>
-          <option value="true">Activos</option>
-          <option value="false">Inactivos</option>
-        </Select>
-      </div>
-
-      {isLoading ? (
-        <p role="status" className="text-sm text-text-secondary">
-          Cargando…
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" className="text-sm text-accent-red">
-          {error}
-        </p>
-      ) : null}
-      {actionError && dialog === "closed" ? (
-        <p role="alert" className="text-sm text-accent-red">
-          {actionError}
-        </p>
-      ) : null}
-      {actionSuccess ? (
-        <p role="status" className="text-sm text-accent-blue">
-          {actionSuccess}
-        </p>
-      ) : null}
-      {!isLoading && !error ? (
-        <>
-          <div className="relative min-w-0 max-w-full overflow-x-auto rounded-md border border-border bg-bg-surface">
-            <table className="w-full min-w-[36rem] divide-y divide-border text-sm">
-              <caption className="sr-only">Listado de instructores</caption>
-              <thead className="bg-bg-sunken">
-                <tr>
-                  <th scope="col" className="px-4 py-2 text-left font-medium text-text-secondary">
-                    Nombre
-                  </th>
-                  <th scope="col" className="px-4 py-2 text-left font-medium text-text-secondary">
-                    Cédula
-                  </th>
-                  <th scope="col" className="px-4 py-2 text-left font-medium text-text-secondary">
-                    Teléfono
-                  </th>
-                  <th scope="col" className="px-4 py-2 text-left font-medium text-text-secondary">
-                    Estado
-                  </th>
-                  <th scope="col" className="px-4 py-2 text-right font-medium text-text-secondary">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {(data?.items ?? []).length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-text-secondary">
-                      No hay instructores para estos filtros.
-                    </td>
-                  </tr>
-                ) : (
-                  data?.items.map((instructor) => (
-                    <tr key={instructor.id}>
-                      <td className="px-4 py-3 text-text-primary">{instructor.nombreCompleto}</td>
-                      <td className="px-4 py-3 text-text-secondary">{instructor.cedula}</td>
-                      <td className="px-4 py-3 text-text-secondary">
-                        {instructor.telefono ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary">
-                        <StatusBadge status={instructor.activo ? "activo" : "inactivo"} />
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={busy}
-                          onClick={() => void openDetail(instructor.id)}
-                        >
-                          Ver y gestionar
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-text-secondary">
+            <option value="">Todos</option>
+            <option value="true">Activos</option>
+            <option value="false">Inactivos</option>
+          </Select>
+          {filtered && (
+            <Button variant="ghost" onClick={clearFilters}>
+              Limpiar filtros
+            </Button>
+          )}
+        </section>
+        {actionError && dialog === "closed" && (
+          <p role="alert" className={styles.error}>
+            {actionError}
+          </p>
+        )}
+        {actionSuccess && (
+          <p role="status" className={styles.success}>
+            {actionSuccess}
+          </p>
+        )}
+        {busy && dialog === "closed" && (
+          <p role="status" className={styles.loadingDetail}>
+            Consultando ficha…
+          </p>
+        )}
+        <DataTable
+          columns={columns}
+          rows={data?.items ?? []}
+          getRowKey={(instructor) => instructor.id}
+          caption="Listado de instructores"
+          mobileCards
+          isLoading={isLoading}
+          loadingLabel="Cargando instructores…"
+          error={error}
+          onRetry={refetch}
+          empty={
+            <EmptyState
+              title={
+                filtered ? "No hay instructores para estos filtros." : "Todavía no hay instructores"
+              }
+              description={
+                filtered
+                  ? "Prueba con otro nombre, cédula o estado."
+                  : "Crea el primer instructor para comenzar a gestionar tu equipo."
+              }
+              action={
+                <Button
+                  variant={filtered ? "secondary" : "primary"}
+                  onClick={filtered ? clearFilters : createInstructor}
+                >
+                  {filtered ? "Limpiar filtros" : "Nuevo instructor"}
+                </Button>
+              }
+            />
+          }
+        />
+        {!isLoading && !error && (
+          <nav aria-label="Paginación de instructores" className={styles.pagination}>
             <span>
               {data?.total ?? 0} instructores · Página {page} de {totalPages}
             </span>
-            <div className="flex gap-2">
+            <div>
               <Button
                 size="sm"
                 variant="secondary"
                 disabled={page <= 1}
                 onClick={() => setPage((current) => current - 1)}
               >
+                <ChevronLeftIcon className="h-4 w-4" />
                 Anterior
               </Button>
               <Button
@@ -234,16 +284,17 @@ export default function InstructorsPage() {
                 onClick={() => setPage((current) => current + 1)}
               >
                 Siguiente
+                <ChevronRightIcon className="h-4 w-4" />
               </Button>
             </div>
-          </div>
-        </>
-      ) : null}
-
+          </nav>
+        )}
+      </div>
       <Modal
         isOpen={dialog === "create"}
         onClose={() => setDialog("closed")}
         title="Nuevo instructor"
+        className={styles.modal}
       >
         <InstructorForm onSaved={saved} onCancel={() => setDialog("closed")} />
       </Modal>
@@ -251,77 +302,49 @@ export default function InstructorsPage() {
         isOpen={dialog === "edit"}
         onClose={() => setDialog("detail")}
         title="Editar instructor"
+        className={styles.modal}
       >
-        {selected ? (
+        {selected && (
           <InstructorForm
             key={selected.id}
             instructor={selected}
             onSaved={saved}
             onCancel={() => setDialog("detail")}
           />
-        ) : null}
+        )}
       </Modal>
-      <Modal isOpen={dialog === "detail"} onClose={() => setDialog("closed")} title="Instructor">
-        {selected ? (
-          <div className="flex flex-col gap-4 text-sm">
-            <dl className="grid gap-2 sm:grid-cols-2">
-              <div>
-                <dt className="text-text-secondary">Nombre</dt>
-                <dd>{selected.nombreCompleto}</dd>
-              </div>
-              <div>
-                <dt className="text-text-secondary">Cédula</dt>
-                <dd>{selected.cedula}</dd>
-              </div>
-              <div>
-                <dt className="text-text-secondary">Correo</dt>
-                <dd className="break-all">{selected.correo}</dd>
-              </div>
-              <div>
-                <dt className="text-text-secondary">Teléfono</dt>
-                <dd>{selected.telefono ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-text-secondary">Estado</dt>
-                <dd>{selected.activo ? "Activo" : "Inactivo"}</dd>
-              </div>
-            </dl>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => setDialog("edit")}>
-                Editar
-              </Button>
-              <Button
-                variant={selected.activo ? "danger" : "secondary"}
-                onClick={() => ask(selected.activo ? "desactivar" : "reactivar")}
-              >
-                {selected.activo ? "Desactivar" : "Reactivar"}
-              </Button>
-              {selected.activo ? (
-                <Button variant="secondary" onClick={() => ask("restablecer-password")}>
-                  Restablecer contraseña
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
+      <Modal
+        isOpen={dialog === "detail"}
+        onClose={() => setDialog("closed")}
+        title="Ver y gestionar"
+        className={styles.modal}
+      >
+        {selected && (
+          <InstructorProfile instructor={selected} onEdit={() => setDialog("edit")} onAsk={ask} />
+        )}
       </Modal>
       <Modal
         isOpen={dialog === "confirm"}
         onClose={() => setDialog("detail")}
         title="Confirmar acción"
+        className={styles.confirmModal}
       >
-        <div className="flex flex-col gap-4">
+        <div className={styles.confirmContent}>
           <p>
             {action === "restablecer-password"
               ? "Se enviará una contraseña temporal al correo del instructor y deberá cambiarla al entrar"
-              : `¿Confirmas ${action.replaceAll("-", " ")} para ${selected?.nombreCompleto}?`}
+              : "¿Confirmas " +
+                action.replaceAll("-", " ") +
+                " para " +
+                selected?.nombreCompleto +
+                "?"}
           </p>
-          {actionError ? (
-            <p role="alert" className="text-sm text-accent-red">
+          {actionError && (
+            <p role="alert" className={styles.error}>
               {actionError}
             </p>
-          ) : null}
-          <div className="flex flex-wrap justify-end gap-2">
+          )}
+          <div className={styles.confirmButtons}>
             <Button variant="secondary" onClick={() => setDialog("detail")}>
               Cancelar
             </Button>
