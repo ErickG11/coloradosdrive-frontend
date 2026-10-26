@@ -27,9 +27,9 @@ export function cancellationConsequence(outcome: CancellationOutcome): string {
     case "reprogramable":
       return "Podrás elegir otra hora disponible.";
     case "hora_perdida":
-      return "No hay horarios libres antes del cierre de tus prácticas: si cancelas, esta hora se pierde.";
+      return "No hay horarios libres antes del cierre de tus prácticas: si avisas que no asistirás, esta hora se pierde.";
     case "falta":
-      return "Ya usaste tus 2 reprogramaciones: si cancelas, quedará registrada como falta.";
+      return "Ya usaste tus 2 reprogramaciones: si avisas que no asistirás, quedará registrada como falta.";
   }
 }
 
@@ -44,6 +44,7 @@ export function CancelPracticeModal({ slotId, preview, onClose, onCancelled }: C
   const [category, setCategory] = useState<CancellationCategory | "">("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ category?: string; reason?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const trimmedReason = reason.trim();
   const isValid = category !== "" && trimmedReason.length >= 10;
@@ -52,23 +53,37 @@ export function CancelPracticeModal({ slotId, preview, onClose, onCancelled }: C
     event.preventDefault();
     if (!isValid || isSubmitting) return;
     setError(null);
+    setFieldErrors({});
     setIsSubmitting(true);
     try {
       const payload: CancelPracticeSlotInput = { motivoCategoria: category, motivoTexto: trimmedReason };
       const result = await api.post<CancelPracticeSlotResult>(`/practice-slots/${slotId}/cancel`, payload);
       onCancelled(result);
     } catch (err) {
-      setError(err instanceof ApiError && (err.status === 400 || err.status === 409)
-        ? err.message
-        : "No se pudo cancelar la práctica. Intenta de nuevo.");
+      if (err instanceof ApiError && err.status === 400) {
+        if (err.field === "motivoCategoria") {
+          setFieldErrors({ category: "Selecciona una categoría de inasistencia válida." });
+        } else if (err.field === "motivoTexto") {
+          setFieldErrors({ reason: "Escribe un motivo de al menos 10 caracteres." });
+        } else {
+          setError("Revisa el motivo e inténtalo de nuevo.");
+        }
+      } else if (err instanceof ApiError && err.status === 409) {
+        setError(err.message);
+      } else {
+        setError("No se pudo enviar el aviso de inasistencia. Intenta de nuevo.");
+      }
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <Modal isOpen onClose={() => { if (!isSubmitting) onClose(); }} title="Cancelar práctica">
+    <Modal isOpen onClose={() => { if (!isSubmitting) onClose(); }} title="Avisar que no asistirás">
       <form onSubmit={(event) => { void submit(event); }} className="flex flex-col gap-4">
+        <p className="text-sm text-text-secondary">
+          Al confirmar, la hora quedará liberada para otros alumnos de tu cohorte.
+        </p>
         <p className="text-sm text-text-secondary">
           Te quedan {preview.reprogramacionesRestantes} de 2 reprogramaciones.
         </p>
@@ -77,9 +92,14 @@ export function CancelPracticeModal({ slotId, preview, onClose, onCancelled }: C
         </p>
         <Select
           id="cancel-category"
-          label="Motivo de cancelación"
+          label="Motivo de inasistencia"
+          error={fieldErrors.category}
           value={category}
-          onChange={(event) => { setCategory(event.target.value as CancellationCategory | ""); setError(null); }}
+          onChange={(event) => {
+            setCategory(event.target.value as CancellationCategory | "");
+            setError(null);
+            setFieldErrors((current) => ({ ...current, category: undefined }));
+          }}
           autoFocus
           required
         >
@@ -91,9 +111,14 @@ export function CancelPracticeModal({ slotId, preview, onClose, onCancelled }: C
         <div>
           <Textarea
             id="cancel-reason"
-            label="Explica el motivo"
+            label="Explica el motivo de inasistencia"
+            error={fieldErrors.reason}
             value={reason}
-            onChange={(event) => { setReason(event.target.value); setError(null); }}
+            onChange={(event) => {
+              setReason(event.target.value);
+              setError(null);
+              setFieldErrors((current) => ({ ...current, reason: undefined }));
+            }}
             aria-describedby="cancel-reason-count"
             minLength={10}
             required
@@ -108,7 +133,7 @@ export function CancelPracticeModal({ slotId, preview, onClose, onCancelled }: C
             Volver
           </Button>
           <Button type="submit" variant="danger" disabled={!isValid} isLoading={isSubmitting}>
-            Confirmar cancelación
+            Confirmar que no asistiré
           </Button>
         </div>
       </form>
