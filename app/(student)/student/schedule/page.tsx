@@ -45,12 +45,24 @@ export default function StudentSchedulePage() {
   const [noPracticeNotice, setNoPracticeNotice] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<{ slotId: string; preview: CancellationPreview } | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [successDetail, setSuccessDetail] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
   const cancelTrigger = useRef<HTMLButtonElement | null>(null);
   const successRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (successNotice) successRef.current?.focus();
   }, [successNotice]);
+
+  useEffect(() => {
+    const refreshTime = () => setCurrentTime(Date.now());
+    const initialRefresh = window.setTimeout(refreshTime, 0);
+    const refreshInterval = window.setInterval(refreshTime, 30_000);
+    return () => {
+      window.clearTimeout(initialRefresh);
+      window.clearInterval(refreshInterval);
+    };
+  }, []);
 
   const userId = useCurrentUserId();
   // Ambas cohortes propias, incluso si todavía no tienen franjas visibles.
@@ -127,12 +139,13 @@ export default function StudentSchedulePage() {
     cancelTrigger.current = trigger;
     setActionError(null);
     setSuccessNotice(null);
+    setSuccessDetail(null);
     setPendingSlotId(slotId);
     try {
       const preview = await api.get<CancellationPreview>(`/practice-slots/${slotId}/cancel-preview`);
       setCancelTarget({ slotId, preview });
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "No se pudo consultar la cancelación.");
+      setActionError(err instanceof ApiError ? err.message : "No se pudo revisar el aviso de inasistencia.");
       refetchSlots();
     } finally {
       setPendingSlotId(null);
@@ -147,7 +160,8 @@ export default function StudentSchedulePage() {
   function handleCancelled(result: CancelPracticeSlotResult) {
     setCancelTarget(null);
     setActionError(null);
-    setSuccessNotice(`Práctica cancelada. ${cancellationConsequence(result.cancelacion.resultado)} Te quedan ${result.cancelacion.reprogramacionesRestantes} de 2 reprogramaciones.`);
+    setSuccessNotice("Listo, avisamos que no asistirás a esta práctica");
+    setSuccessDetail(`${cancellationConsequence(result.cancelacion.resultado)} Te quedan ${result.cancelacion.reprogramacionesRestantes} de 2 reprogramaciones.`);
     refetchSlots();
   }
 
@@ -169,7 +183,10 @@ export default function StudentSchedulePage() {
       {successNotice ? (
         <div ref={successRef} role="status" tabIndex={-1} className="fixed bottom-4 right-4 z-40 max-w-sm rounded-md border border-green-600 bg-green-50 px-4 py-3 text-sm text-green-900 shadow-elevated outline-none dark:border-green-500 dark:bg-green-950 dark:text-green-100">
           <div className="flex items-start gap-3">
-            <span>{successNotice}</span>
+            <div className="flex flex-col gap-1">
+              <span>{successNotice}</span>
+              {successDetail ? <span className="text-xs">{successDetail}</span> : null}
+            </div>
             <button type="button" aria-label="Cerrar aviso" onClick={() => setSuccessNotice(null)} className="font-medium hover:underline">Cerrar</button>
           </div>
         </div>
@@ -201,6 +218,8 @@ export default function StudentSchedulePage() {
             ) : (
               ownSlots.map((slot) => {
                 const isConfirmationDue = confirmationDue && slot.status === "asignado";
+                const canNotifyAbsence = currentTime !== null
+                  && new Date(slot.scheduledAt).getTime() > currentTime;
                 return (
                   <Card
                     key={slot.id}
@@ -235,15 +254,17 @@ export default function StudentSchedulePage() {
                           Confirmar asistencia (opcional)
                         </Button>
                       ) : null}
-                      <Button
-                        variant="danger"
-                        icon={<XIcon className="h-4 w-4" />}
-                        isLoading={pendingSlotId === slot.id}
-                        disabled={pendingSlotId !== null}
-                        onClick={(event) => { void handleCancelPreview(slot.id, event.currentTarget); }}
-                      >
-                        Cancelar
-                      </Button>
+                      {canNotifyAbsence ? (
+                        <Button
+                          variant="danger"
+                          icon={<XIcon className="h-4 w-4" />}
+                          isLoading={pendingSlotId === slot.id}
+                          disabled={pendingSlotId !== null}
+                          onClick={(event) => { void handleCancelPreview(slot.id, event.currentTarget); }}
+                        >
+                          No podré asistir
+                        </Button>
+                      ) : null}
                     </div>
                   </Card>
                 );

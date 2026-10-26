@@ -86,7 +86,7 @@ function buildSlot(overrides: Partial<PracticeSlotWithNames> = {}): PracticeSlot
     cohortId: "cohort-1",
     instructorId: "instructor-1",
     studentId: null,
-    scheduledAt: "2026-03-10T15:00:00.000Z",
+    scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     durationMinutes: 40,
     status: "disponible",
     confirmationNotifiedAt: null,
@@ -195,13 +195,13 @@ describe("StudentSchedulePage", () => {
     expect(refetchSlots).toHaveBeenCalled();
   });
 
-  it("una franja propia 'asignado' muestra Confirmar y Cancelar", () => {
+  it("una franja propia 'asignado' muestra Confirmar y No podré asistir", async () => {
     mockFetch([buildSlot({ status: "asignado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
 
     expect(screen.getByRole("button", { name: "Confirmar asistencia (opcional)" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "No podré asistir" })).toBeInTheDocument();
   });
 
   it("confirma la franja propia: llama a POST .../confirm", async () => {
@@ -215,13 +215,19 @@ describe("StudentSchedulePage", () => {
     expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/confirm");
   });
 
-  it("una franja propia 'confirmado' solo muestra Cancelar (no Confirmar)", () => {
+  it("una franja propia 'confirmado' solo muestra No podré asistir (no Confirmar)", async () => {
     mockFetch([buildSlot({ status: "confirmado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
 
     expect(screen.queryByRole("button", { name: "Confirmar asistencia (opcional)" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "No podré asistir" })).toBeInTheDocument();
+  });
+
+  it.each(["asignado", "confirmado"] as const)("oculta No podré asistir si la práctica %s ya pasó", (status) => {
+    mockFetch([buildSlot({ status, scheduledAt: "2020-03-10T15:00:00.000Z", studentId: "student-1" })]);
+    render(<StudentSchedulePage />);
+    expect(screen.queryByRole("button", { name: "No podré asistir" })).not.toBeInTheDocument();
   });
 
   it("consulta la vista previa antes de abrir el formulario de cancelación", async () => {
@@ -230,10 +236,10 @@ describe("StudentSchedulePage", () => {
     mockFetch([buildSlot({ status: "confirmado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await user.click(await screen.findByRole("button", { name: "No podré asistir" }));
 
     expect(mockedGet).toHaveBeenCalledWith("/practice-slots/slot-1/cancel-preview");
-    expect(await screen.findByRole("dialog", { name: "Cancelar práctica" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Avisar que no asistirás" })).toBeInTheDocument();
     expect(screen.getByText("Te quedan 1 de 2 reprogramaciones.")).toBeInTheDocument();
     expect(mockedPost).not.toHaveBeenCalled();
   });
@@ -244,7 +250,7 @@ describe("StudentSchedulePage", () => {
     mockFetch([buildSlot({ status: "asignado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await user.click(await screen.findByRole("button", { name: "No podré asistir" }));
 
     expect(await screen.findByText("La matrícula requiere revisión")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -256,9 +262,9 @@ describe("StudentSchedulePage", () => {
     mockFetch([buildSlot({ status: "asignado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
-    const trigger = screen.getByRole("button", { name: "Cancelar" });
+    const trigger = await screen.findByRole("button", { name: "No podré asistir" });
     await user.click(trigger);
-    await screen.findByRole("dialog", { name: "Cancelar práctica" });
+    await screen.findByRole("dialog", { name: "Avisar que no asistirás" });
     await user.keyboard("{Escape}");
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -275,16 +281,17 @@ describe("StudentSchedulePage", () => {
     mockFetch([buildSlot({ status: "confirmado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
-    await screen.findByRole("dialog", { name: "Cancelar práctica" });
-    await user.selectOptions(screen.getByLabelText("Motivo de cancelación"), "salud");
-    await user.type(screen.getByLabelText("Explica el motivo"), "Cita médica programada");
-    await user.click(screen.getByRole("button", { name: "Confirmar cancelación" }));
+    await user.click(await screen.findByRole("button", { name: "No podré asistir" }));
+    await screen.findByRole("dialog", { name: "Avisar que no asistirás" });
+    await user.selectOptions(screen.getByLabelText("Motivo de inasistencia"), "salud");
+    await user.type(screen.getByLabelText("Explica el motivo de inasistencia"), "Cita médica programada");
+    await user.click(screen.getByRole("button", { name: "Confirmar que no asistiré" }));
 
     expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/cancel", {
       motivoCategoria: "salud", motivoTexto: "Cita médica programada",
     });
-    expect(await screen.findByRole("status")).toHaveTextContent("esta hora se pierde");
+    expect(await screen.findByText("Listo, avisamos que no asistirás a esta práctica")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("esta hora se pierde");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(refetchSlots).toHaveBeenCalled();
   });
@@ -298,6 +305,7 @@ describe("StudentSchedulePage", () => {
     render(<StudentSchedulePage />);
 
     expect(screen.getByText("No tienes ninguna franja reclamada todavía.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "No podré asistir" })).not.toBeInTheDocument();
   });
 
   describe("Realtime", () => {
@@ -348,7 +356,7 @@ describe("StudentSchedulePage", () => {
       // Los botones ya estaban ahí (no dependen del evento para existir),
       // pero siguen presentes junto al aviso.
       expect(screen.getByRole("button", { name: "Confirmar asistencia (opcional)" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: "No podré asistir" })).toBeInTheDocument();
     });
 
     it("al recibir 'no-practice', muestra un aviso descartable", async () => {

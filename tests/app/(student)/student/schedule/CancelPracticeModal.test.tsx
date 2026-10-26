@@ -29,20 +29,22 @@ describe("CancelPracticeModal", () => {
   it("muestra las seis categorías exactas, enfoca el selector y exige 10 caracteres tras recortar", async () => {
     const user = userEvent.setup();
     open();
-    const category = screen.getByLabelText("Motivo de cancelación");
-    const confirm = screen.getByRole("button", { name: "Confirmar cancelación" });
+    const category = screen.getByLabelText("Motivo de inasistencia");
+    const confirm = screen.getByRole("button", { name: "Confirmar que no asistiré" });
     expect(category).toHaveFocus();
     expect(screen.getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual([
       "", "salud", "trabajo", "estudios", "familiar", "transporte", "otro",
     ]);
     expect(screen.getByText("Podrás elegir otra hora disponible.")).toBeInTheDocument();
+    expect(screen.getByText("Al confirmar, la hora quedará liberada para otros alumnos de tu cohorte.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Volver" })).toBeInTheDocument();
     expect(confirm).toBeDisabled();
     await user.selectOptions(category, "trabajo");
-    await user.type(screen.getByLabelText("Explica el motivo"), "  corto  ");
+    await user.type(screen.getByLabelText("Explica el motivo de inasistencia"), "  corto  ");
     expect(screen.getByText("5 caracteres · mínimo 10")).toBeInTheDocument();
     expect(confirm).toBeDisabled();
-    await user.clear(screen.getByLabelText("Explica el motivo"));
-    await user.type(screen.getByLabelText("Explica el motivo"), "  Tengo que trabajar  ");
+    await user.clear(screen.getByLabelText("Explica el motivo de inasistencia"));
+    await user.type(screen.getByLabelText("Explica el motivo de inasistencia"), "  Tengo que trabajar  ");
     expect(confirm).toBeEnabled();
     await user.click(confirm);
     expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/cancel", {
@@ -62,12 +64,29 @@ describe("CancelPracticeModal", () => {
     const user = userEvent.setup();
     mockedPost.mockRejectedValue(new ApiError("Revisa el motivo o la matrícula", status));
     const { onClose } = open();
-    await user.selectOptions(screen.getByLabelText("Motivo de cancelación"), "salud");
-    await user.type(screen.getByLabelText("Explica el motivo"), "Cita médica confirmada");
-    await user.click(screen.getByRole("button", { name: "Confirmar cancelación" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Revisa el motivo o la matrícula");
-    expect(screen.getByRole("button", { name: "Confirmar cancelación" })).toBeEnabled();
+    await user.selectOptions(screen.getByLabelText("Motivo de inasistencia"), "salud");
+    await user.type(screen.getByLabelText("Explica el motivo de inasistencia"), "Cita médica confirmada");
+    await user.click(screen.getByRole("button", { name: "Confirmar que no asistiré" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(status === 400
+      ? "Revisa el motivo e inténtalo de nuevo."
+      : "Revisa el motivo o la matrícula");
+    expect(screen.getByRole("button", { name: "Confirmar que no asistiré" })).toBeEnabled();
     await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["motivoCategoria", "Selecciona una categoría de inasistencia válida."],
+    ["motivoTexto", "Escribe un motivo de al menos 10 caracteres."],
+  ])("muestra un error localizado para el campo %s, sin enseñar 'Invalid value'", async (field, message) => {
+    const user = userEvent.setup();
+    mockedPost.mockRejectedValue(new ApiError("Invalid value", 400, { field }));
+    open();
+    await user.selectOptions(screen.getByLabelText("Motivo de inasistencia"), "salud");
+    await user.type(screen.getByLabelText("Explica el motivo de inasistencia"), "Cita médica confirmada");
+    await user.click(screen.getByRole("button", { name: "Confirmar que no asistiré" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(screen.queryByText("Invalid value")).not.toBeInTheDocument();
   });
 });
