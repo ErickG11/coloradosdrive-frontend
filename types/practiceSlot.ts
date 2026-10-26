@@ -103,3 +103,31 @@ export interface CancelPracticeSlotResult extends PracticeSlot {
     reprogramacionesRestantes: number;
   };
 }
+
+// GET /practice-slots/released-for-me omite la identidad del instructor.
+export interface ReleasedPracticeSlot {
+  id: string;
+  cohortId: string;
+  enrollmentId: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  status: "disponible" | "liberado";
+  caso: "A" | "B";
+  via: "reposicion" | "cambio";
+  practicasASoltarIds: string[];
+  reprogramacionesRestantes: number;
+}
+
+export interface PendingPracticeSlot {
+  slot: PracticeSlot;
+  enrollmentId: string;
+}
+
+export interface SwapPracticeResult {
+  slot: PracticeSlot;
+  caso: "A" | "B";
+  practicaSoltadaId: string | null;
+  cancellationId: string;
+  enrollmentId: string;
+  reprogramacionesRestantes: number;
+}
