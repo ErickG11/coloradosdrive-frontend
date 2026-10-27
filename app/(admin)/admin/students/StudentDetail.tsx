@@ -48,6 +48,8 @@ export function StudentProfile({
   actions,
   section = "all",
   hideHeading = false,
+  onEdit,
+  editDisabled = false,
 }: {
   student: Detail;
   onAssignCohort?: (enrollment: StudentEnrollment) => void;
@@ -56,6 +58,9 @@ export function StudentProfile({
   /** «all» muestra la ficha completa; el panel lateral la muestra por pestañas. */
   section?: "all" | Section;
   hideHeading?: boolean;
+  /** En el panel lateral, «Editar» también va en la cabecera de los datos personales. */
+  onEdit?: () => void;
+  editDisabled?: boolean;
 }) {
   const show = (name: Section) => section === "all" || section === name;
   return (
@@ -127,7 +132,21 @@ export function StudentProfile({
       )}
       {show("practices") && <StudentSchedule schedule={student.practiceSchedule} />}
       {show("information") && (
-        <Card className={styles.personalCard} title="Datos personales">
+        <Card
+          className={styles.personalCard}
+          title={
+            onEdit ? (
+              <span className={styles.sectionTitle}>
+                Datos personales
+                <Button variant="secondary" size="sm" onClick={onEdit} disabled={editDisabled}>
+                  Editar datos
+                </Button>
+              </span>
+            ) : (
+              "Datos personales"
+            )
+          }
+        >
           <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
             {[
               ["Fecha de nacimiento", date(student.fechaNacimiento)],
@@ -190,7 +209,9 @@ export function StudentProfile({
                 </Card>
               )}
               {show("documents") && (
-                <Card title={`Documentos · ${enrollment.documentosPendientes} pendientes`}>
+                <Card
+                  title={`Documentos requeridos · ${enrollment.documentosPendientes} pendientes`}
+                >
                   {section === "documents" && (
                     <p className="mb-3 text-text-secondary">
                       {enrollment.curso?.nombre ?? "Curso no disponible"} · Tipo{" "}
@@ -352,6 +373,15 @@ export function StudentDetail({
             student={data}
             hideHeading={embedded}
             section={embedded ? section : "all"}
+            onEdit={
+              embedded
+                ? () => {
+                    setSuccess(false);
+                    setEditing(true);
+                  }
+                : undefined
+            }
+            editDisabled={actionBusy || deletionPending || assigning !== null}
             onAssignCohort={setAssigning}
             assignmentDisabled={
               editing || saving || actionBusy || deletionPending || assigning !== null

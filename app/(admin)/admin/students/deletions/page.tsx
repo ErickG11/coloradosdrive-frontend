@@ -163,7 +163,7 @@ function StudentDeletionsList() {
                         <StatusBadge
                           status={op.status === "fallido" ? "error" : "pendiente_eliminacion"}
                         >
-                          {op.status === "fallido" ? "Fallida" : "Pendiente"}
+                          {op.status === "fallido" ? "Fallida" : "Eliminación pendiente"}
                         </StatusBadge>
                       </td>
                       <td className="px-3 py-3">
