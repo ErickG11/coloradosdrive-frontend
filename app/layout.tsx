@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
@@ -30,8 +29,8 @@ export const metadata: Metadata = {
   description: "Plataforma de gestión de la escuela de conducción ColoradosDrive.",
 };
 
-// Se ejecuta antes de la hidratación (next/script beforeInteractive) para
-// que <html> ya tenga la clase `dark` correcta en el primer pintado — sin
+// El navegador ejecuta este script inline en <head>, antes de leer el body
+// y de hidratar React. Así <html> tiene la clase `dark` en el primer pintado; sin
 // esto habría un parpadeo (flash del tema por defecto antes de que React
 // aplique la preferencia guardada). Sin localStorage guardado, no agrega
 // la clase: el default es claro (los valores de :root ya son claros, no
@@ -53,10 +52,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${spaceGrotesk.variable} ${inter.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script
+          id="theme-init"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
-        <Script id="theme-init" strategy="beforeInteractive">
-          {THEME_INIT_SCRIPT}
-        </Script>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

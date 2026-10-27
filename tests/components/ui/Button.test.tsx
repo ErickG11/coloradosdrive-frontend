@@ -2,9 +2,22 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClassName as legacyStyles } from "@/components/ui/Button";
+import { buttonClassName } from "@/components/ui/buttonStyles";
+import { buttonClassName as publicStyles } from "@/components/ui";
 
 describe("Button", () => {
+  it("conserva el helper publico y los estilos compartidos sin frontera cliente", () => {
+    expect(legacyStyles).toBe(buttonClassName);
+    expect(publicStyles).toBe(buttonClassName);
+    const classes = buttonClassName("secondary", "sm", "extra");
+    const { container } = render(
+      <Button variant="secondary" size="sm" className="extra">
+        Guardar
+      </Button>,
+    );
+    expect(container.querySelector("button")?.className).toBe(classes);
+  });
   it("renders its children", () => {
     render(<Button>Guardar</Button>);
 

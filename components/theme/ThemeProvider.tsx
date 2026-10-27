@@ -26,8 +26,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    // Lee el estado que ya dejó el script anti-flash (beforeInteractive en
-    // layout.tsx) para que React sepa qué tema se está mostrando de verdad.
+    // Lee el estado que ya dejó el script inline del head en layout.tsx
+    // para que React sepa qué tema se está mostrando de verdad.
     const isDark = document.documentElement.classList.contains("dark");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(isDark ? "dark" : "light");
