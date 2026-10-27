@@ -1,42 +1,35 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { Card } from "@/components/ui";
+import { AdminDashboard } from "@/components/admin-dashboard/AdminDashboard";
 
 export const metadata: Metadata = { title: "Panel de administrador" };
 
-// Panel raíz simple a propósito: sin KPIs ni gráficas (RF-08 es Sprint 7,
-// se construye ahí con datos reales). Los enlaces duplican los del Sidebar
-// a propósito, como bienvenida — no son la navegación principal.
-export default function AdminPage() {
-  return (
-    <div className="relative overflow-hidden">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-16 -left-16 h-72 w-72 rounded-full bg-accent-blue/20 blur-3xl"
-      />
-      <Card title="Panel de administrador" titleAs="h1" className="relative z-10">
-        <nav className="flex flex-col gap-2 text-sm">
-          <Link
-            href="/admin/cohorts"
-            className="text-accent-blue underline underline-offset-2 hover:text-accent-blue-hover"
-          >
-            Cohortes
-          </Link>
-          <Link
-            href="/admin/instructors"
-            className="text-accent-blue underline underline-offset-2 hover:text-accent-blue-hover"
-          >
-            Instructores
-          </Link>
-          <Link
-            href="/admin/enrollments"
-            className="text-accent-blue underline underline-offset-2 hover:text-accent-blue-hover"
-          >
-            Matricular estudiante
-          </Link>
-        </nav>
-      </Card>
-    </div>
-  );
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string; day?: string }>;
+}) {
+  const params = await searchParams;
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Guayaquil",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const month =
+    typeof params.month === "string" &&
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) &&
+    params.month >= "2000-01" &&
+    params.month <= today.slice(0, 7)
+      ? params.month
+      : today.slice(0, 7);
+  const validDay =
+    typeof params.day === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(params.day) &&
+    params.day.startsWith(`${month}-`) &&
+    !Number.isNaN(Date.parse(`${params.day}T12:00:00Z`)) &&
+    new Date(`${params.day}T12:00:00Z`).toISOString().slice(0, 10) === params.day;
+  const day =
+    validDay && params.day ? params.day : month === today.slice(0, 7) ? today : `${month}-01`;
+  return <AdminDashboard month={month} day={day} today={today} />;
 }
