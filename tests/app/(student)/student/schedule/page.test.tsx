@@ -15,6 +15,7 @@ vi.mock("@/hooks/useFetch", () => ({
 
 vi.mock("@/lib/api/client", () => ({
   api: {
+    get: vi.fn(),
     post: vi.fn(),
   },
 }));
@@ -29,6 +30,7 @@ vi.mock("@/lib/supabase/client", () => ({
 
 const mockedUseFetch = vi.mocked(useFetch);
 const mockedPost = vi.mocked(api.post);
+const mockedGet = vi.mocked(api.get);
 const mockedCreateClient = vi.mocked(createClient);
 
 interface MockChannel {
@@ -84,7 +86,7 @@ function buildSlot(overrides: Partial<PracticeSlotWithNames> = {}): PracticeSlot
     cohortId: "cohort-1",
     instructorId: "instructor-1",
     studentId: null,
-    scheduledAt: "2026-03-10T15:00:00.000Z",
+    scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     durationMinutes: 40,
     status: "disponible",
     confirmationNotifiedAt: null,
@@ -193,13 +195,13 @@ describe("StudentSchedulePage", () => {
     expect(refetchSlots).toHaveBeenCalled();
   });
 
-  it("una franja propia 'asignado' muestra Confirmar y Cancelar", () => {
+  it("una franja propia 'asignado' muestra Confirmar y No podré asistir", async () => {
     mockFetch([buildSlot({ status: "asignado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
 
-    expect(screen.getByRole("button", { name: "Confirmar" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirmar asistencia (opcional)" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "No podré asistir" })).toBeInTheDocument();
   });
 
   it("confirma la franja propia: llama a POST .../confirm", async () => {
@@ -208,29 +210,90 @@ describe("StudentSchedulePage", () => {
     mockFetch([buildSlot({ status: "asignado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
-    await user.click(screen.getByRole("button", { name: "Confirmar" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar asistencia (opcional)" }));
 
     expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/confirm");
   });
 
-  it("una franja propia 'confirmado' solo muestra Cancelar (no Confirmar)", () => {
+  it("una franja propia 'confirmado' solo muestra No podré asistir (no Confirmar)", async () => {
     mockFetch([buildSlot({ status: "confirmado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
 
-    expect(screen.queryByRole("button", { name: "Confirmar" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmar asistencia (opcional)" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "No podré asistir" })).toBeInTheDocument();
   });
 
-  it("cancela la franja propia incluso ya confirmada: llama a POST .../cancel", async () => {
+  it.each(["asignado", "confirmado"] as const)("oculta No podré asistir si la práctica %s ya pasó", (status) => {
+    mockFetch([buildSlot({ status, scheduledAt: "2020-03-10T15:00:00.000Z", studentId: "student-1" })]);
+    render(<StudentSchedulePage />);
+    expect(screen.queryByRole("button", { name: "No podré asistir" })).not.toBeInTheDocument();
+  });
+
+  it("consulta la vista previa antes de abrir el formulario de cancelación", async () => {
     const user = userEvent.setup();
-    mockedPost.mockResolvedValue(buildSlot({ status: "liberado", studentId: null }));
+    mockedGet.mockResolvedValue({ reprogramacionesRestantes: 1, hayFranjasLibres: false, resultadoSiCancela: "hora_perdida" });
     mockFetch([buildSlot({ status: "confirmado", studentId: "student-1" })]);
 
     render(<StudentSchedulePage />);
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await user.click(await screen.findByRole("button", { name: "No podré asistir" }));
 
-    expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/cancel");
+    expect(mockedGet).toHaveBeenCalledWith("/practice-slots/slot-1/cancel-preview");
+    expect(await screen.findByRole("dialog", { name: "Avisar que no asistirás" })).toBeInTheDocument();
+    expect(screen.getByText("Te quedan 1 de 2 reprogramaciones.")).toBeInTheDocument();
+    expect(mockedPost).not.toHaveBeenCalled();
+  });
+
+  it("muestra el error de la vista previa sin abrir un modal", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockRejectedValue(new ApiError("La matrícula requiere revisión", 409));
+    mockFetch([buildSlot({ status: "asignado", studentId: "student-1" })]);
+
+    render(<StudentSchedulePage />);
+    await user.click(await screen.findByRole("button", { name: "No podré asistir" }));
+
+    expect(await screen.findByText("La matrícula requiere revisión")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("al cerrar con Escape devuelve el foco al botón Cancelar", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue({ reprogramacionesRestantes: 2, hayFranjasLibres: true, resultadoSiCancela: "reprogramable" });
+    mockFetch([buildSlot({ status: "asignado", studentId: "student-1" })]);
+
+    render(<StudentSchedulePage />);
+    const trigger = await screen.findByRole("button", { name: "No podré asistir" });
+    await user.click(trigger);
+    await screen.findByRole("dialog", { name: "Avisar que no asistirás" });
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it("al cancelar refresca y muestra el resultado final de la respuesta, aunque cambie desde la vista previa", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue({ reprogramacionesRestantes: 1, hayFranjasLibres: true, resultadoSiCancela: "reprogramable" });
+    mockedPost.mockResolvedValue({
+      ...buildSlot({ status: "liberado", studentId: null }),
+      cancelacion: { cancellationId: "c1", enrollmentId: "e1", cancelledAt: "2026-03-01T10:00:00Z", resultado: "hora_perdida", consumioReprogramacion: false, reprogramacionNumero: null, reprogramacionesRestantes: 1 },
+    });
+    mockFetch([buildSlot({ status: "confirmado", studentId: "student-1" })]);
+
+    render(<StudentSchedulePage />);
+    await user.click(await screen.findByRole("button", { name: "No podré asistir" }));
+    await screen.findByRole("dialog", { name: "Avisar que no asistirás" });
+    await user.selectOptions(screen.getByLabelText("Motivo de inasistencia"), "salud");
+    await user.type(screen.getByLabelText("Explica el motivo de inasistencia"), "Cita médica programada");
+    await user.click(screen.getByRole("button", { name: "Confirmar que no asistiré" }));
+
+    expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/cancel", {
+      motivoCategoria: "salud", motivoTexto: "Cita médica programada",
+    });
+    expect(await screen.findByText("Listo, avisamos que no asistirás a esta práctica")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("esta hora se pierde");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(refetchSlots).toHaveBeenCalled();
   });
 
   it("no muestra como propias las franjas completado/sin_practica (historial fuera de alcance)", () => {
@@ -242,6 +305,7 @@ describe("StudentSchedulePage", () => {
     render(<StudentSchedulePage />);
 
     expect(screen.getByText("No tienes ninguna franja reclamada todavía.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "No podré asistir" })).not.toBeInTheDocument();
   });
 
   describe("Realtime", () => {
@@ -291,8 +355,8 @@ describe("StudentSchedulePage", () => {
       expect(screen.getByText(/Tu práctica está por empezar/)).toBeInTheDocument();
       // Los botones ya estaban ahí (no dependen del evento para existir),
       // pero siguen presentes junto al aviso.
-      expect(screen.getByRole("button", { name: "Confirmar" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Confirmar asistencia (opcional)" })).toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: "No podré asistir" })).toBeInTheDocument();
     });
 
     it("al recibir 'no-practice', muestra un aviso descartable", async () => {
@@ -309,14 +373,14 @@ describe("StudentSchedulePage", () => {
       });
 
       expect(
-        screen.getByText('Tu franja pasó a "sin práctica" porque no se confirmó a tiempo.'),
+        screen.getByText("Esta práctica ya no se realizará. Consulta tus horarios actualizados."),
       ).toBeInTheDocument();
 
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Entendido" }));
 
       expect(
-        screen.queryByText('Tu franja pasó a "sin práctica" porque no se confirmó a tiempo.'),
+        screen.queryByText("Esta práctica ya no se realizará. Consulta tus horarios actualizados."),
       ).not.toBeInTheDocument();
     });
 

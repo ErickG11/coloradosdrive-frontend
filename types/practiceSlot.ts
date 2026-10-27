@@ -29,8 +29,8 @@ export interface PracticeSlot {
 // Forma que devuelve GET /practice-slots (admin/estudiante/instructor):
 // el backend embebe estos 2 nombres vía PostgREST en vez de que cada rol
 // tenga que resolverlos por su cuenta contra /users (ver docs/adr/008 en
-// el backend). Las acciones (crear/editar/reclamar/confirmar/cancelar/
-// marcar asistencia) siguen devolviendo PracticeSlot, sin nombres.
+// el backend). Las acciones devuelven PracticeSlot sin nombres; cancelar
+// añade los datos de auditoría y el resultado calculado por el backend.
 export interface PracticeSlotWithNames extends PracticeSlot {
   instructorName: string;
   studentName: string | null;
@@ -73,4 +73,33 @@ export interface ConfirmationRequestedPayload {
 
 export interface NoPracticePayload {
   scheduledAt: string;
+}
+
+export const CANCELLATION_CATEGORIES = [
+  "salud", "trabajo", "estudios", "familiar", "transporte", "otro",
+] as const;
+export type CancellationCategory = (typeof CANCELLATION_CATEGORIES)[number];
+export type CancellationOutcome = "reprogramable" | "hora_perdida" | "falta";
+
+export interface CancellationPreview {
+  reprogramacionesRestantes: number;
+  hayFranjasLibres: boolean;
+  resultadoSiCancela: CancellationOutcome;
+}
+
+export interface CancelPracticeSlotInput {
+  motivoCategoria: CancellationCategory;
+  motivoTexto: string;
+}
+
+export interface CancelPracticeSlotResult extends PracticeSlot {
+  cancelacion: {
+    cancellationId: string;
+    enrollmentId: string;
+    cancelledAt: string;
+    resultado: CancellationOutcome;
+    consumioReprogramacion: boolean;
+    reprogramacionNumero: number | null;
+    reprogramacionesRestantes: number;
+  };
 }
