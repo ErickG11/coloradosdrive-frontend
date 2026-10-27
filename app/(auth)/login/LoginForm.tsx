@@ -1,10 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 
-import { Button, Card, FormError, Input } from "@/components/ui";
+import { Button, FormError } from "@/components/ui";
+import { LoginIcon } from "@/components/auth/LoginIcon";
+import styles from "@/components/auth/login.module.css";
+import { useValidationMessages } from "@/hooks/useValidationMessages";
 import { createClient } from "@/lib/supabase/client";
 import { getUserRole } from "@/lib/supabase/getUserRole";
 import { getRoleHomePath } from "@/lib/utils/roleRedirect";
@@ -18,7 +21,12 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
+  // Los campos son <input> propios del diseño del login (no el Input
+  // compartido), así que conectan aquí los mensajes de validación en español.
+  const emailValidation = useValidationMessages<HTMLInputElement>({});
+  const passwordValidation = useValidationMessages<HTMLInputElement>({});
   // Solo las credenciales incorrectas son culpa de los campos; cuenta
   // inactiva o sin rol no se corrige reescribiéndolos.
   const fieldsInvalid = error === INVALID_CREDENTIALS;
@@ -64,46 +72,79 @@ export function LoginForm() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Card>
-        <form
-          method="post"
-          onSubmit={(event) => void handleSubmit(event)}
-          className="flex flex-col gap-4"
-        >
-          <Input
+    <>
+      <form
+        method="post"
+        onSubmit={(event) => void handleSubmit(event)}
+        className={styles.form}
+        data-error={Boolean(error)}
+      >
+        <label className="sr-only" htmlFor="login-email">
+          Correo electrónico
+        </label>
+        <div className={styles.field}>
+          <LoginIcon name="user" />
+          <input
             ref={emailRef}
-            label="Correo electrónico"
-            aria-invalid={fieldsInvalid}
-            aria-describedby={error ? ERROR_ID : undefined}
+            id="login-email"
+            placeholder="Correo electrónico"
             type="email"
             name="email"
             autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-invalid={fieldsInvalid}
+            aria-describedby={error ? ERROR_ID : undefined}
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            onInvalid={emailValidation.onInvalid}
+            onInput={emailValidation.onInput}
           />
-          <Input
-            label="Contraseña"
-            aria-invalid={fieldsInvalid}
-            aria-describedby={error ? ERROR_ID : undefined}
-            type="password"
+        </div>
+        <label className="sr-only" htmlFor="login-password">
+          Contraseña
+        </label>
+        <div className={styles.field}>
+          <LoginIcon name="lock" />
+          <input
+            id="login-password"
+            placeholder="Contraseña"
+            type={showPassword ? "text" : "password"}
             name="password"
             autoComplete="current-password"
+            aria-invalid={fieldsInvalid}
+            aria-describedby={error ? ERROR_ID : undefined}
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            onInvalid={passwordValidation.onInvalid}
+            onInput={passwordValidation.onInput}
           />
-          <FormError id={ERROR_ID}>{error}</FormError>
-          <Button type="submit" isLoading={isLoading}>
-            Iniciar sesión
-          </Button>
-        </form>
-      </Card>
-    </motion.div>
+          <button
+            type="button"
+            className={styles.passwordToggle}
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-controls="login-password"
+            aria-pressed={showPassword}
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            <LoginIcon name={showPassword ? "eyeOff" : "eye"} />
+          </button>
+        </div>
+        <FormError id={ERROR_ID} className={styles.error}>
+          {error}
+        </FormError>
+        <Button type="submit" isLoading={isLoading} className={styles.submit}>
+          <span>Iniciar sesión</span>
+          <LoginIcon name="arrow" />
+        </Button>
+      </form>
+      <Link href="/" className={styles.backLink}>
+        <LoginIcon name="back" />
+        Volver al inicio
+      </Link>
+    </>
   );
 }

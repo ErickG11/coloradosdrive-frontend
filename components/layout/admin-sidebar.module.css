@@ -1,0 +1,38 @@
+.admin {
+  --color-bg-surface: #15171c;
+  --color-bg-sunken: #24272f;
+  --color-border: #30343d;
+  --color-text-primary: #f2f3f5;
+  --color-text-secondary: #b6bfcc;
+  --color-accent-red-subtle: #b32129;
+  --color-brand-ink: #ffffff;
+  --color-focus: #ffb4b4;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+.admin nav a {
+  min-height: 46px;
+  font-size: 13px;
+}
+.admin nav a[aria-current="page"] {
+  background: #b32129;
+  color: #fff;
+}
+.admin nav a[aria-current="page"]::before {
+  background: #ffb4b4;
+}
+.admin nav a:hover:not([aria-current="page"]) {
+  background: #24272f;
+  color: #fff;
+}
+.logoLink {
+  display: block;
+  min-width: 0;
+}
+.logo {
+  width: 150px;
+  height: 75px;
+  object-fit: contain;
+  filter: invert(1) hue-rotate(180deg);
+  mix-blend-mode: screen;
+}

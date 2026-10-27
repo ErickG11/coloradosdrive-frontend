@@ -24,7 +24,7 @@ describe("Button", () => {
   it("shows a loading label and disables the button when isLoading is true", () => {
     render(<Button isLoading>Guardar</Button>);
 
-    const button = screen.getByRole("button", { name: "Cargando..." });
+    const button = screen.getByRole("button", { name: "Cargando…" });
     expect(button).toBeDisabled();
   });
 
@@ -48,7 +48,7 @@ describe("Button", () => {
       </Button>,
     );
 
-    const button = screen.getByRole("button", { name: "Cargando..." });
+    const button = screen.getByRole("button", { name: "Cargando…" });
     expect(button.querySelector('[data-testid="icon"]')).not.toBeInTheDocument();
   });
 });

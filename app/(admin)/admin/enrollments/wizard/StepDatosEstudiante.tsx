@@ -1,4 +1,6 @@
 "use client";
+import styles from "./enrollment.module.css";
+import { WizardIcon } from "./WizardVisual";
 
 import { useState, type FormEvent } from "react";
 
@@ -48,21 +50,23 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
   const cedulaValida = CEDULA_PATTERN.test(values.cedula);
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex gap-3">
+    <form onSubmit={handleSubmit} className={styles.studentStep} data-mode={values.mode}>
+      <div className={styles.segmented} role="group" aria-label="Tipo de estudiante">
         <Button
           type="button"
+          aria-pressed={values.mode === "new"}
           variant={values.mode === "new" ? "primary" : "secondary"}
           onClick={() => setValues({ ...values, mode: "new", id: undefined })}
         >
-          Estudiante nuevo
+          <WizardIcon name="student" /> Estudiante nuevo
         </Button>
         <Button
           type="button"
+          aria-pressed={values.mode === "existing"}
           variant={values.mode === "existing" ? "primary" : "secondary"}
           onClick={() => setValues({ ...values, mode: "existing", id: undefined })}
         >
-          Estudiante existente
+          <WizardIcon name="existing" /> Estudiante existente
         </Button>
       </div>
       {values.mode === "existing" ? (
@@ -70,6 +74,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
           <Input
             name="studentSearch"
             label="Buscar por cédula o correo"
+            placeholder="Cédula o correo del estudiante"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -92,7 +97,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
               type="button"
               key={s.id}
               aria-pressed={values.id === s.id}
-              className="rounded-md border border-border p-3 text-left"
+              className={styles.studentResult}
               onClick={() => setValues({ ...s, mode: "existing", telefono: "" })}
             >
               <strong>{s.nombreCompleto}</strong>
@@ -116,6 +121,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
         <>
           <Input
             label="Cédula"
+            placeholder="10 dígitos numéricos"
             name="cedula"
             required
             pattern="[0-9]{10}"
@@ -125,6 +131,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
           />
           <Input
             label="Nombres completos"
+            placeholder="Nombres y apellidos"
             name="nombreCompleto"
             required
             value={values.nombreCompleto}
@@ -132,6 +139,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
           />
           <Input
             label="Correo electrónico"
+            placeholder="nombre@correo.com"
             name="correo"
             type="email"
             required
@@ -140,6 +148,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
           />
           <Input
             label="Teléfono"
+            placeholder="Número de contacto"
             name="telefono"
             value={values.telefono}
             onChange={(event) => updateField("telefono", event.target.value)}
@@ -152,7 +161,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
             onChange={(event) => updateField("fechaNacimiento", event.target.value)}
           />
 
-          <div className="mt-2 flex justify-end">
+          <div className={styles.footer}>
             <Button
               type="submit"
               disabled={!cedulaValida || !values.nombreCompleto || !values.correo}

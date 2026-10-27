@@ -1,0 +1,877 @@
+:global(body):has(.page) {
+  --sidebar-width: 218px;
+}
+:global(#main-content):has(.page) {
+  padding: 0;
+}
+:global(#main-content):has(.page) > div {
+  max-width: none;
+}
+.page {
+  --enroll-ground: var(--color-bg-canvas);
+  --enroll-surface: var(--color-bg-surface);
+  --enroll-field: var(--color-bg-field);
+  --enroll-raised: var(--color-bg-sunken);
+  --enroll-line: var(--color-border);
+  --enroll-muted: var(--color-text-secondary);
+  --enroll-ink: var(--color-text-primary);
+  --enroll-accent: var(--color-brand-ink);
+  --color-brand-primary: #df001c;
+  --color-brand-hover: #bd0018;
+  --color-brand-pressed: #a00015;
+  min-width: 0;
+  min-height: 100dvh;
+  background: var(--enroll-ground);
+  color: var(--enroll-ink);
+}
+:global(.dark) .page {
+  --enroll-ground: #0c1117;
+  --enroll-surface: #111820;
+  --enroll-field: #0e151d;
+  --enroll-raised: #1a222d;
+  --enroll-line: #26313e;
+  --enroll-muted: #bbc6d5;
+  --enroll-ink: #f5f6fa;
+  --enroll-accent: #ffb0b9;
+  --color-bg-surface: #111820;
+  --color-bg-field: #0e151d;
+  --color-bg-sunken: #1a222d;
+  --color-border: #26313e;
+  --color-border-strong: #4c5969;
+  --color-text-primary: #f5f6fa;
+  --color-text-secondary: #bbc6d5;
+}
+.page svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.page ::selection {
+  background: var(--color-brand-tint);
+  color: var(--enroll-accent);
+}
+.page :is(button, a, input, select) {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease,
+    transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.page :is(button, a, input, select):focus-visible {
+  outline: 2px solid var(--enroll-accent);
+  outline-offset: 3px;
+}
+.page :is(input, select) {
+  color: var(--enroll-ink);
+  background: var(--enroll-field);
+  caret-color: var(--enroll-accent);
+  min-height: 44px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.page input::placeholder {
+  color: var(--enroll-muted);
+  opacity: 1;
+}
+.page button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.page button {
+  font-size: 13px;
+  gap: 8px;
+}
+.page label {
+  color: var(--enroll-muted);
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+.page p {
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.page [role="alert"] {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--color-status-error-bg);
+  color: var(--color-status-error);
+}
+.page :is(input, select):disabled {
+  cursor: not-allowed;
+}
+.main {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  min-width: 0;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.main > header h1 {
+  font-size: 34px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+.main > header p {
+  margin-top: 8px;
+  font-size: 14px;
+}
+.wizard {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.progress {
+  border: 1px solid var(--enroll-line);
+  border-radius: 14px;
+  padding: 22px 26px;
+  background: var(--enroll-surface);
+}
+.progressSummary {
+  display: none;
+}
+.progress ol {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+.progress li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  min-width: 0;
+}
+.stepNumber {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  background: var(--enroll-field);
+  color: var(--enroll-muted);
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+.stepLabel {
+  color: var(--enroll-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.shortStepLabel {
+  display: none;
+}
+.progress li[aria-current] .stepNumber {
+  background: var(--color-brand-primary);
+  border-color: var(--color-brand-primary);
+  color: white;
+}
+.progress li[aria-current] .stepLabel {
+  color: var(--enroll-ink);
+  font-weight: 650;
+}
+.progress li[data-done="true"] .stepNumber {
+  background: var(--color-status-success-bg);
+  color: var(--color-status-success);
+  border-color: var(--color-status-success);
+}
+.connector {
+  position: absolute;
+  top: 18px;
+  left: calc(50% + 29px);
+  width: calc(100% - 42px);
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--enroll-line);
+}
+.connector i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--color-status-success);
+  transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.progress li[data-done="true"] .connector i {
+  transform: scaleX(1);
+}
+.workspace {
+  min-width: 0;
+  border: 1px solid var(--enroll-line);
+  border-radius: 14px;
+  background: var(--enroll-surface);
+  padding: 28px;
+}
+.stepHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--enroll-line);
+}
+.stepHeader > span {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: var(--enroll-accent);
+  background: var(--color-brand-tint);
+  flex-shrink: 0;
+}
+.stepHeader h2 {
+  font-size: 21px;
+  line-height: 1.4;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.stepHeader p {
+  color: var(--enroll-muted);
+  margin-top: 4px;
+  font-size: 12px;
+}
+.stepBody {
+  min-width: 0;
+  animation: stepEnter 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.studentStep {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.studentStep[data-mode="existing"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.studentStep > p {
+  grid-column: 1 / -1;
+  color: var(--enroll-muted);
+}
+.studentStep > button[type="submit"] {
+  justify-self: end;
+}
+.studentStep > div:has(input[name="fechaNacimiento"]) {
+  max-width: 340px;
+}
+.segmented {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  background: var(--enroll-field);
+  border: 1px solid var(--enroll-line);
+  border-radius: 11px;
+  width: fit-content;
+  margin-bottom: 4px;
+}
+.segmented button {
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--enroll-muted);
+  box-shadow: none;
+}
+.segmented button[aria-pressed="true"] {
+  background: var(--color-brand-tint);
+  color: var(--enroll-accent);
+  border-color: var(--enroll-accent);
+}
+.studentResult {
+  border: 1px solid var(--enroll-line);
+  border-radius: 10px;
+  padding: 16px;
+  background: var(--enroll-field);
+  text-align: left;
+}
+.studentResult strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.studentResult p {
+  color: var(--enroll-muted);
+  font-size: 12px;
+}
+.studentResult[aria-pressed="true"] {
+  border-color: var(--enroll-accent);
+  background: var(--color-brand-tint);
+}
+.footer {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 22px;
+  margin-top: 6px;
+  border-top: 1px solid var(--enroll-line);
+}
+.footer button:only-child {
+  margin-left: auto;
+}
+.footer button {
+  min-height: 42px;
+}
+.courseStep {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.courseStep > p {
+  color: var(--enroll-muted);
+}
+.courseOptions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.courseOption {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  column-gap: 14px;
+  row-gap: 4px;
+  align-items: center;
+  text-align: left;
+  padding: 20px;
+  border: 1px solid var(--enroll-line);
+  border-radius: 12px;
+  background: var(--enroll-field);
+}
+.courseIcon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  color: var(--color-status-info);
+  background: var(--color-status-info-bg);
+}
+.courseOption[data-course-type="A"] .courseIcon {
+  color: var(--color-status-warning);
+  background: var(--color-status-warning-bg);
+}
+.courseIcon svg {
+  width: 28px;
+  height: 28px;
+}
+.courseOption strong {
+  font-size: 18px;
+  font-weight: 650;
+}
+.courseOption p {
+  font-size: 12px;
+  color: var(--enroll-muted);
+}
+.courseOption[aria-pressed="true"] {
+  border-color: var(--enroll-accent);
+  background: var(--color-brand-tint);
+}
+.courseOption:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.cohortPreview,
+.planPreview,
+.suggestionPreview {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--enroll-line);
+  border-radius: 10px;
+  background: var(--enroll-field);
+}
+.cohortPreview h3,
+.suggestionPreview h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.cohortPreview p + p {
+  margin-top: 6px;
+}
+.cohortPreview > button {
+  margin-top: 14px;
+}
+.cohortPreview > div {
+  margin-top: 14px;
+}
+.cohortPreview[data-pending="true"] {
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning);
+}
+.practiceStep {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.practiceStep > :is(p, button),
+.practiceStep > .planPreview,
+.practiceStep > .suggestionPreview {
+  grid-column: 1 / -1;
+}
+.practiceStep > p {
+  color: var(--enroll-muted);
+  font-size: 12px;
+}
+.practiceStep > button {
+  justify-self: start;
+}
+.planPreview p {
+  font-variant-numeric: tabular-nums;
+}
+.suggestionPreview > p {
+  margin: 0 0 10px;
+}
+.suggestionPreview > div {
+  max-width: 520px;
+}
+.documentsPayment {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.documentSection,
+.paymentSection {
+  padding: 20px;
+  border: 1px solid var(--enroll-line);
+  border-radius: 12px;
+  min-width: 0;
+}
+.documentsPayment h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.documentsPayment h3 svg {
+  color: var(--enroll-accent);
+}
+.documentSection > p {
+  font-size: 12px;
+  color: var(--enroll-muted);
+}
+.documentFields {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.documentFields > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 145px;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--enroll-line);
+}
+.documentFields > div:last-child {
+  border-bottom: 0;
+}
+.documentFields label {
+  color: var(--enroll-ink);
+  margin-bottom: 0;
+}
+.documentFields select {
+  font-size: 12px;
+}
+.paymentFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+.paymentFields > div:last-child {
+  grid-column: 1 / -1;
+}
+.moneySummary {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--enroll-field);
+  font-variant-numeric: tabular-nums;
+}
+.moneySummary p {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  font-size: 13px;
+  padding: 7px 0;
+}
+.moneySummary p span {
+  color: var(--enroll-muted);
+}
+.moneySummary p strong {
+  text-align: right;
+  font-weight: 600;
+  max-width: 65%;
+}
+.moneySummary p:last-child {
+  border-top: 1px solid var(--enroll-line);
+  padding-top: 14px;
+  margin-top: 6px;
+  color: var(--enroll-ink);
+  font-size: 16px;
+}
+.confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.confirmTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.confirmTitle svg {
+  width: 28px;
+  height: 28px;
+  color: var(--enroll-accent);
+}
+.confirmation[data-complete="true"] .confirmTitle svg {
+  color: var(--color-status-success);
+}
+.reviewContent {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.reviewIdentity,
+.reviewCourse,
+.reviewDocuments,
+.reviewPayment {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--enroll-line);
+  border-radius: 12px;
+}
+.reviewContent h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.reviewContent h3 svg {
+  color: var(--enroll-accent);
+  width: 18px;
+  height: 18px;
+}
+.reviewIdentity p:first-of-type {
+  font-weight: 600;
+  font-size: 15px;
+}
+.reviewIdentity p + p {
+  margin-top: 8px;
+}
+.reviewIdentity p:last-child {
+  color: var(--enroll-muted);
+  font-size: 12px;
+}
+.reviewCourse p + p {
+  margin-top: 8px;
+}
+.reviewCourse p {
+  font-size: 12px;
+}
+.reviewDocuments ul {
+  list-style: none;
+}
+.reviewDocuments li {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--enroll-line);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.reviewDocuments > p {
+  margin-top: 12px;
+  color: var(--enroll-muted);
+  font-size: 12px;
+}
+.reviewPayment > p {
+  font-size: 12px;
+  color: var(--enroll-muted);
+}
+.reviewPayment .moneySummary {
+  margin-top: 12px;
+}
+.reviewContent > p {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--enroll-muted);
+}
+.confirmation > p {
+  color: var(--enroll-muted);
+  font-size: 12px;
+}
+.confirmation > button {
+  align-self: start;
+}
+.confirmation > div:has(input[type="checkbox"]) {
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning);
+}
+.confirmation input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--color-brand-primary);
+  margin-top: 3px;
+}
+@keyframes stepEnter {
+  from {
+    opacity: 0.5;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .segmented button:hover {
+    background: var(--enroll-raised);
+    color: var(--enroll-ink);
+  }
+  .studentResult:hover,
+  .courseOption:not(:disabled):hover {
+    border-color: var(--enroll-muted);
+  }
+  .studentResult[aria-pressed="true"]:hover,
+  .courseOption[aria-pressed="true"]:hover {
+    border-color: var(--enroll-accent);
+  }
+}
+@media (max-width: 1099px) {
+  .main {
+    padding: 28px 24px;
+  }
+  .workspace {
+    padding: 24px;
+  }
+  .practiceStep {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .documentsPayment {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .documentFields > div {
+    grid-template-columns: minmax(0, 1fr) 180px;
+  }
+  .reviewContent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .progress {
+    padding: 20px 16px;
+  }
+  .progress ol {
+    gap: 10px;
+  }
+}
+@media (max-width: 767px) {
+  .page {
+    min-height: calc(100dvh - 64px);
+  }
+  .main {
+    padding: 22px 16px;
+    gap: 20px;
+  }
+  .main > header h1 {
+    font-size: 28px;
+  }
+  .main > header p {
+    font-size: 13px;
+  }
+  .wizard {
+    gap: 16px;
+  }
+  .progress {
+    padding: 16px 10px;
+  }
+  .progressSummary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--enroll-muted);
+    font-size: 12px !important;
+    margin: 0 6px 16px;
+  }
+  .progressSummary span {
+    color: var(--enroll-ink);
+    font-weight: 600;
+  }
+  .progress ol {
+    gap: 6px;
+  }
+  .stepNumber {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+  .stepLabel {
+    font-size: 12px;
+  }
+  .shortStepLabel {
+    display: inline;
+  }
+  .longStepLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .connector {
+    top: 15px;
+    left: calc(50% + 20px);
+    width: calc(100% - 34px);
+  }
+  .workspace {
+    padding: 18px 16px;
+  }
+  .stepHeader {
+    gap: 10px;
+    padding-bottom: 18px;
+    margin-bottom: 20px;
+  }
+  .stepHeader > span {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+  .stepHeader h2 {
+    font-size: 19px;
+  }
+  .stepHeader p {
+    font-size: 12px;
+  }
+  .studentStep,
+  .practiceStep {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .studentStep > div:has(input[name="fechaNacimiento"]) {
+    max-width: none;
+  }
+  .segmented {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    padding: 4px;
+    gap: 4px;
+  }
+  .segmented button {
+    font-size: 12px;
+    padding: 8px 6px;
+    min-height: 52px;
+    gap: 5px;
+    line-height: 1.5;
+  }
+  .segmented svg {
+    display: none;
+  }
+  .footer {
+    padding-top: 18px;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .footer button {
+    min-height: 44px;
+  }
+  .courseOptions {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .courseOption {
+    padding: 16px;
+  }
+  .cohortPreview,
+  .planPreview,
+  .suggestionPreview {
+    padding: 14px;
+  }
+  .documentSection,
+  .paymentSection,
+  .reviewIdentity,
+  .reviewCourse,
+  .reviewDocuments,
+  .reviewPayment {
+    padding: 16px;
+  }
+  .documentFields > div {
+    grid-template-columns: minmax(0, 1fr) 125px;
+    gap: 10px;
+  }
+  .paymentFields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .documentsPayment {
+    gap: 16px;
+  }
+  .moneySummary {
+    padding: 12px;
+  }
+  .moneySummary p {
+    font-size: 12px;
+  }
+  .confirmTitle {
+    font-size: 21px;
+    align-items: start;
+  }
+  .confirmation .footer {
+    flex-wrap: wrap;
+  }
+  .confirmation .footer button:last-child {
+    flex: 1;
+  }
+  .reviewContent {
+    gap: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

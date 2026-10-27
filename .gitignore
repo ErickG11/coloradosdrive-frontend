@@ -37,3 +37,17 @@ next-env.d.ts
 # se excluyen igual por si se regeneran)
 AGENTS.md
 CLAUDE.md
+# Local browser authentication state
+.local-auth/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+# Herramientas de diseño locales (no se versionan)
+.agents/
+.codex/
+skills-lock.json
+.impeccable/
+.github/skills/
+.github/agents/
+.github/hooks/
+.taste-skill/
+docs/design-references/

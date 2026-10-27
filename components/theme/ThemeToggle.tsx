@@ -1,7 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 import { useTheme } from "./ThemeProvider";
 
 interface ThemeToggleProps {
@@ -17,19 +15,18 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   const isDark = theme === "dark";
 
   return (
-    <motion.button
+    <button
       type="button"
       onClick={toggleTheme}
-      whileTap={{ scale: 0.9 }}
       aria-label={isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
       title={isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
       className={
         className ??
-        "flex h-9 w-9 items-center justify-center rounded-sm text-text-secondary transition-colors hover:bg-bg-sunken hover:text-text-primary"
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-text-secondary transition-colors hover:bg-bg-sunken hover:text-text-primary"
       }
     >
       {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-    </motion.button>
+    </button>
   );
 }
 

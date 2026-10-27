@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useId } from "react";
 import type { TextareaHTMLAttributes } from "react";
 
 import { useValidationMessages } from "@/hooks/useValidationMessages";
@@ -31,13 +31,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   ref,
 ) {
   const validation = useValidationMessages<HTMLTextAreaElement>({ onInvalid, onInput });
-  const textareaId = id ?? name;
+  const generatedId = useId();
+  const textareaId = id ?? name ?? generatedId;
   const errorId = error && textareaId ? `${textareaId}-error` : undefined;
   // Una descripción propia (p. ej. una ayuda) se combina con la del error.
   const describedByIds = [describedBy, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       {label ? (
         <label htmlFor={textareaId} className="text-sm font-medium text-text-secondary">
           {label}
@@ -51,8 +52,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         aria-invalid={Boolean(error)}
         aria-describedby={describedByIds}
         className={cn(
-          "resize-y rounded-sm border border-border bg-bg-field px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled transition-colors focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue",
-          error && "border-accent-red focus:border-accent-red focus:ring-accent-red",
+          "min-h-24 min-w-0 w-full resize-y rounded-sm border border-border-strong bg-bg-field px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled transition-colors focus-visible:border-focus",
+          error && "border-accent-red",
           className,
         )}
         {...props}
