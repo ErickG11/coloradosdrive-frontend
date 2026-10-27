@@ -1,4 +1,5 @@
 export * from "./Button";
+export { buttonClassName } from "./buttonStyles";
 export * from "./IconButton";
 export * from "./Input";
 export * from "./Select";
