@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { Button, Card, Modal, StatusBadge } from "@/components/ui";
+import { Button, Card, StatusBadge } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { addWeeks, dayKey, formatWeekRangeLabel, getWeekDays } from "@/lib/utils/calendar";
 import { formatSchoolTime, schoolCalendarDate, schoolWeekRange } from "@/lib/utils/schoolTime";
 import type { PracticeSlot, PracticeSlotStatus, PracticeSlotWithNames } from "@/types";
+
+import { SlotAttendance } from "./SlotAttendance";
 
 const DAY_INITIALS = ["L", "M", "X", "J", "V", "S", "D"];
 const INSTRUCTOR_STATUS_LABELS: Record<PracticeSlotStatus, string> = {
@@ -24,151 +26,6 @@ function formatDayLabel(day: Date): string {
   const weekday = day.toLocaleDateString("es-EC", { weekday: "long" });
   const month = day.toLocaleDateString("es-EC", { month: "long" });
   return `${weekday[0].toUpperCase()}${weekday.slice(1)} ${day.getDate()} de ${month}`;
-}
-
-function SlotAttendance({
-  slot,
-  onSaved,
-}: {
-  slot: PracticeSlotWithNames;
-  onSaved: (slot: PracticeSlot) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [pendingCorrection, setPendingCorrection] = useState<boolean | null>(null);
-
-  async function save(attended: boolean) {
-    setSaving(true);
-    setError(null);
-    setSaved(false);
-    try {
-      const updated = await api.patch<PracticeSlot>(`/practice-slots/${slot.id}/attendance`, {
-        attended,
-      });
-      onSaved(updated);
-      setEditing(false);
-      setPendingCorrection(null);
-      setSaved(true);
-    } catch (cause) {
-      setError(
-        cause instanceof ApiError
-          ? cause.message
-          : "No se pudo guardar la asistencia. Intenta de nuevo.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function choose(attended: boolean) {
-    if (slot.attended !== null) {
-      if (slot.attended === attended) {
-        setEditing(false);
-      } else {
-        setPendingCorrection(attended);
-      }
-      return;
-    }
-    void save(attended);
-  }
-
-  const attendanceLabel = (attended: boolean) => (attended ? "Asistió" : "No asistió");
-
-  return (
-    <div className="flex flex-col gap-2">
-      <p role={saved ? "status" : undefined} className="text-sm text-text-secondary">
-        {saved ? "Asistencia guardada: " : "Asistencia: "}
-        {slot.attended === null ? "Sin registrar" : slot.attended ? "Asistió" : "No asistió"}
-      </p>
-      {slot.attended === null || editing ? (
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" disabled={saving} onClick={() => choose(true)}>
-            Asistió
-          </Button>
-          <Button size="sm" variant="secondary" disabled={saving} onClick={() => choose(false)}>
-            No asistió
-          </Button>
-          {editing ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={saving}
-              onClick={() => {
-                setEditing(false);
-                setError(null);
-              }}
-            >
-              Cancelar
-            </Button>
-          ) : null}
-        </div>
-      ) : (
-        <Button
-          size="sm"
-          variant="secondary"
-          className="self-start"
-          onClick={() => {
-            setEditing(true);
-            setSaved(false);
-          }}
-        >
-          Cambiar asistencia
-        </Button>
-      )}
-      {saving ? (
-        <p role="status" className="text-sm text-text-secondary">
-          Guardando asistencia…
-        </p>
-      ) : null}
-      {error && pendingCorrection === null ? (
-        <p role="alert" className="text-sm text-accent-red">
-          {error}
-        </p>
-      ) : null}
-      <Modal
-        isOpen={pendingCorrection !== null}
-        onClose={() => {
-          if (!saving) {
-            setPendingCorrection(null);
-            setError(null);
-          }
-        }}
-        title="Confirmar cambio de asistencia"
-      >
-        <p className="text-sm text-text-secondary">
-          Valor actual: {slot.attended === null ? "Sin registrar" : attendanceLabel(slot.attended)}.{" "}
-          Nuevo valor: {pendingCorrection === null ? "" : attendanceLabel(pendingCorrection)}.
-        </p>
-        {error ? (
-          <p role="alert" className="mt-3 text-sm text-accent-red">
-            {error}
-          </p>
-        ) : null}
-        <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <Button
-            variant="secondary"
-            disabled={saving}
-            onClick={() => {
-              setPendingCorrection(null);
-              setError(null);
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            disabled={saving}
-            onClick={() => {
-              if (pendingCorrection !== null) void save(pendingCorrection);
-            }}
-          >
-            Confirmar cambio
-          </Button>
-        </div>
-      </Modal>
-    </div>
-  );
 }
 
 export default function InstructorPage() {
