@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "coverage/**",
+    // Herramientas locales y artefactos del navegador: no son código de la app.
+    ".agents/**",
+    ".playwright-cli/**",
+    ".local-auth/**",
   ]),
   // Debe ir al final: desactiva reglas de estilo de ESLint que
   // compiten con Prettier.
