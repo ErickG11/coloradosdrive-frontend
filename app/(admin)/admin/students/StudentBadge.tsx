@@ -1,3 +1,5 @@
+import { StatusBadge } from "@/components/ui/StatusBadge";
+
 const labels: Record<string, string> = {
   activo: "Activo",
   finalizado: "Finalizado",
@@ -13,18 +15,12 @@ const labels: Record<string, string> = {
   no_aplica: "No aplica",
 };
 export function StudentBadge({ status }: { status: string }) {
-  return (
-    <span className="inline-flex rounded-full bg-bg-sunken px-2.5 py-0.5 text-xs font-medium text-text-secondary">
-      {labels[status] ?? status}
-    </span>
-  );
+  return <StatusBadge status={status}>{labels[status] ?? status}</StatusBadge>;
 }
 export function ActiveBadge({ active }: { active: boolean }) {
   return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${active ? "bg-accent-blue-subtle text-accent-blue" : "bg-accent-red-subtle text-accent-red"}`}
-    >
+    <StatusBadge status={active ? "activo" : "inactivo"}>
       {active ? "Activo" : "Desactivado"}
-    </span>
+    </StatusBadge>
   );
 }
