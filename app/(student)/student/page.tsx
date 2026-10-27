@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Card } from "@/components/ui";
+import Link from "next/link";
+import { Card, buttonClassName } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Panel de estudiante" };
 
@@ -13,7 +14,18 @@ export default function StudentPage() {
         className="pointer-events-none absolute -top-16 -left-16 h-72 w-72 rounded-full bg-accent-blue/20 blur-3xl"
       />
       <Card title="Panel de estudiante" titleAs="h1" className="relative z-10">
-        <p className="text-sm text-text-secondary">Próximamente.</p>
+        <p className="text-sm text-text-secondary">
+          Consulta tus prácticas y las horas que has asistido. Son las que cuentan para
+          certificarte.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link href="/student/history" className={buttonClassName()}>
+            Ver mi historial de asistencia
+          </Link>
+          <Link href="/student/schedule" className={buttonClassName("secondary")}>
+            Ver mis horarios
+          </Link>
+        </div>
       </Card>
     </div>
   );

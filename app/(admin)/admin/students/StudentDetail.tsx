@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Card, Modal, buttonClassName } from "@/components/ui";
 import { StudentEditForm } from "./StudentEditForm";
@@ -50,6 +50,8 @@ export function StudentProfile({
   hideHeading = false,
   onEdit,
   editDisabled = false,
+  onAttendanceChanged,
+  onAttendanceBusyChange,
 }: {
   student: Detail;
   onAssignCohort?: (enrollment: StudentEnrollment) => void;
@@ -61,6 +63,8 @@ export function StudentProfile({
   /** En el panel lateral, «Editar» también va en la cabecera de los datos personales. */
   onEdit?: () => void;
   editDisabled?: boolean;
+  onAttendanceChanged?: (slotId: string) => void;
+  onAttendanceBusyChange?: (busy: boolean) => void;
 }) {
   const show = (name: Section) => section === "all" || section === name;
   return (
@@ -130,7 +134,14 @@ export function StudentProfile({
           <StudentGraduation graduation={student.graduation} />
         </>
       )}
-      {show("practices") && <StudentSchedule schedule={student.practiceSchedule} />}
+      {show("practices") && (
+        <StudentSchedule
+          key={student.id}
+          schedule={student.practiceSchedule}
+          onAttendanceChanged={onAttendanceChanged}
+          onBusyChange={onAttendanceBusyChange}
+        />
+      )}
       {show("information") && (
         <Card
           className={styles.personalCard}
@@ -262,18 +273,26 @@ export function StudentDetail({
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
+  const attendanceFocus = useRef<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [deletionPending, setDeletionPending] = useState(false);
   const [assigning, setAssigning] = useState<StudentEnrollment | null>(null);
   // El panel no se cierra con Escape mientras hay una operación en curso.
   useEffect(() => {
-    onBusyChange?.(editing || saving || actionBusy || assigning !== null);
+    onBusyChange?.(editing || saving || actionBusy || assigning !== null || attendanceBusy);
     return () => onBusyChange?.(false);
-  }, [editing, saving, actionBusy, assigning, onBusyChange]);
+  }, [editing, saving, actionBusy, assigning, attendanceBusy, onBusyChange]);
   const params = useSearchParams();
   const { data, isLoading, error, errorStatus, errorCode, refetch } = useFetch<Detail>(
     `/admin/estudiantes/${id}`,
   );
+  useEffect(() => {
+    if (!isLoading && !error && attendanceFocus.current) {
+      document.getElementById(`attendance-correct-${attendanceFocus.current}`)?.focus();
+      attendanceFocus.current = null;
+    }
+  }, [data, isLoading, error]);
   const actions = data ? (
     <>
       <StudentActions
@@ -371,6 +390,13 @@ export function StudentDetail({
           <StudentProfile
             actions={embedded ? undefined : actions}
             student={data}
+            onAttendanceBusyChange={setAttendanceBusy}
+            onAttendanceChanged={(slotId) => {
+              attendanceFocus.current = slotId;
+              setActionNotice("La asistencia se guardó correctamente.");
+              refetch();
+              onChanged?.();
+            }}
             hideHeading={embedded}
             section={embedded ? section : "all"}
             onEdit={
