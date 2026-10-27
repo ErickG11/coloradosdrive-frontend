@@ -1,6 +1,6 @@
 "use client";
 
-import { MotionConfig } from "motion/react";
+import { MotionConfig } from "framer-motion";
 import type { ReactNode } from "react";
 
 // reducedMotion="user": toda animación de la landing (ScrollReveal, hover de
