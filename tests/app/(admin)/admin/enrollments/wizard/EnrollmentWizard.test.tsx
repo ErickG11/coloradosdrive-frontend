@@ -239,7 +239,8 @@ describe("Wizard sin escrituras prematuras", () => {
     });
     fireEvent.change(screen.getByLabelText("Descuento (USD)"), { target: { value: "0.01" } });
     fireEvent.change(screen.getByLabelText("Modalidad de pago"), { target: { value: "completo" } });
-    expect(screen.getByText(/Neto:.*399/)).toBeInTheDocument();
+    // El resumen separa la etiqueta y el monto en elementos distintos.
+    expect(screen.getByText("Neto:").closest("p")).toHaveTextContent(/399/);
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     await user.click(screen.getByRole("button", { name: "Confirmar matrícula y prácticas" }));
     const payload = post.mock.calls.find(([path]) => path === `${BASE}/confirm`)?.[1] as {
@@ -306,7 +307,9 @@ describe("Documentos y pago sin cohorte", () => {
       />,
     );
     expect(screen.getByText(/backend lo determinará/)).toBeInTheDocument();
-    expect(screen.getByText(/Saldo: Se calculará al asignar cohorte/)).toBeInTheDocument();
+    expect(screen.getByText("Saldo:").closest("p")).toHaveTextContent(
+      "Se calculará al asignar cohorte",
+    );
     fireEvent.change(screen.getByLabelText("Monto abonado (USD)"), {
       target: { value: "1000.01" },
     });
