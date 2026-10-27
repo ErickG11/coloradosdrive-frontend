@@ -3,9 +3,11 @@ export type NotificationType =
   | "resultado_cancelacion"
   | "cupo_disponible"
   | "sin_practica_instructor"
-  | "cambio_realizado";
+  | "cambio_realizado"
+  | "asistencia_corregida";
 
 export interface Notification {
+  attendanceEventId?: string | null;
   id: string;
   tipo: NotificationType;
   titulo: string;
