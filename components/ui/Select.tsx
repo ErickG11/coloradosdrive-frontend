@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useId } from "react";
 import type { SelectHTMLAttributes } from "react";
 
 import { useValidationMessages } from "@/hooks/useValidationMessages";
@@ -30,13 +30,14 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   ref,
 ) {
   const validation = useValidationMessages<HTMLSelectElement>({ onInvalid, onInput });
-  const selectId = id ?? name;
+  const generatedId = useId();
+  const selectId = id ?? name ?? generatedId;
   const errorId = error && selectId ? `${selectId}-error` : undefined;
   // Una descripción propia (p. ej. una ayuda) se combina con la del error.
   const describedByIds = [describedBy, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       {label ? (
         <label htmlFor={selectId} className="text-sm font-medium text-text-secondary">
           {label}
@@ -50,8 +51,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           aria-invalid={Boolean(error)}
           aria-describedby={describedByIds}
           className={cn(
-            "h-10 w-full appearance-none rounded-sm border border-border bg-bg-field px-3 pr-9 text-sm text-text-primary transition-colors focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue",
-            error && "border-accent-red focus:border-accent-red focus:ring-accent-red",
+            "h-11 min-w-0 w-full appearance-none rounded-sm border border-border-strong bg-bg-field px-3 pr-9 text-sm text-text-primary transition-colors focus-visible:border-focus md:h-10",
+            error && "border-accent-red",
             className,
           )}
           {...props}
