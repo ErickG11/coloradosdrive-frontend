@@ -1,4 +1,4 @@
-import { act, render, screen, waitForElementToBeRemoved, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -243,7 +243,9 @@ describe("agenda diaria del instructor", () => {
       expect(dialog).toHaveTextContent(`Nuevo valor: ${attended ? "No asistió" : "Asistió"}.`);
       expect(patch).not.toHaveBeenCalled();
       await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
-      await waitForElementToBeRemoved(() => screen.queryByRole("dialog"));
+      // La salida del diálogo es asíncrona: se espera su ausencia sin suponer
+      // que todavía está montado cuando termina el clic.
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
       await user.click(screen.getByRole("button", { name: attended ? "No asistió" : "Asistió" }));
       dialog = screen.getByRole("dialog");
       await user.click(within(dialog).getByRole("button", { name: "Confirmar cambio" }));

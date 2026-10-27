@@ -1271,3 +1271,21 @@
     transition: none;
   }
 }
+/* La primera celda es un <td> (el listado lo lee así); toma el estilo de la
+   cabecera de fila del diseño. */
+.table tbody td.nameCell {
+  font-weight: 550;
+  max-width: 155px;
+  min-width: 100px;
+  overflow-wrap: anywhere;
+}
+/* Fecha de creación bajo el nombre, sin sumarla al texto de la celda. */
+.created::before {
+  content: attr(data-created);
+}
+@media (hover: hover) and (pointer: fine) {
+  .delete:hover {
+    color: var(--color-status-error);
+    background: var(--color-status-error-bg);
+  }
+}
