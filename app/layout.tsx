@@ -49,7 +49,7 @@ const THEME_INIT_SCRIPT = `
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="es"
+      lang="es-EC"
       className={`${spaceGrotesk.variable} ${inter.variable} h-full antialiased`}
       suppressHydrationWarning
     >

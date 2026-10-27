@@ -1,4 +1,6 @@
 "use client";
+import styles from "./enrollment.module.css";
+import { WizardIcon } from "./WizardVisual";
 import { useEffect, useRef, useState } from "react";
 import { Button, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
@@ -98,7 +100,7 @@ export function StepPracticas({
     }
   }
   return (
-    <div className="flex flex-col gap-4">
+    <div className={styles.practiceStep}>
       <p>Planificación civil: America/Guayaquil. Cada bloque dura 60 minutos.</p>
       <Select
         name="semanas"
@@ -170,7 +172,7 @@ export function StepPracticas({
         </Button>
       )}
       {plan && (
-        <div aria-live="polite" className="rounded-md border border-border p-3">
+        <div aria-live="polite" className={styles.planPreview}>
           {plan.primerDiaEfectivo !== form.fechaInicio && (
             <p>
               El inicio elegido no corresponde a la modalidad. Primer día efectivo:{" "}
@@ -206,7 +208,11 @@ export function StepPracticas({
         </Button>
       )}
       {suggestion && (
-        <div className="rounded-md border border-border p-3">
+        <div className={styles.suggestionPreview}>
+          <h3>
+            <WizardIcon name="calendar" />
+            Sugerencia de prácticas
+          </h3>
           <p>
             {suggestion.horaAjustada ? "Hora ajustada por disponibilidad" : "Hora sugerida"}:{" "}
             {suggestion.horaResuelta}
@@ -238,7 +244,7 @@ export function StepPracticas({
           </Select>
         </div>
       )}
-      <div className="flex justify-between">
+      <div className={styles.footer}>
         <Button variant="secondary" onClick={onBack}>
           Atrás
         </Button>

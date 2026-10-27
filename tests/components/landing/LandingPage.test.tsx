@@ -39,28 +39,31 @@ function buildCourse(overrides: Partial<PublicCourse> = {}): PublicCourse {
 }
 
 describe("LandingPage", () => {
-  it("muestra el header con el nombre de la escuela y un enlace a /login", () => {
+  it("muestra el nombre de la escuela y enlaces a /login", () => {
     renderLanding([]);
 
-    expect(screen.getAllByText("ColoradosDrive").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Iniciar sesión" })).toHaveAttribute("href", "/login");
+    expect(screen.getAllByText(/Colorados ?Drive/).length).toBeGreaterThan(0);
+    const loginLinks = screen.getAllByRole("link", { name: /Iniciar sesión/ });
+    expect(loginLinks.length).toBeGreaterThan(0);
+    for (const link of loginLinks) {
+      expect(link).toHaveAttribute("href", "/login");
+    }
   });
 
-  it("muestra el hero con un CTA a la sección de cursos", () => {
+  it("muestra el hero con el CTA de inscripción por WhatsApp", () => {
     renderLanding([]);
 
-    expect(
-      screen.getByRole("heading", {
-        name: "Conviértete en conductor certificado, con acompañamiento real en cada clase.",
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver cursos disponibles" })).toHaveAttribute(
-      "href",
-      "#cursos",
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /Tu futuro\.\s*En marcha\./,
     );
+    const enrollLinks = screen.getAllByRole("link", { name: /Inscríbete hoy/ });
+    expect(enrollLinks.length).toBeGreaterThan(0);
+    for (const link of enrollLinks) {
+      expect(link.getAttribute("href")).toMatch(/^https:\/\/wa\.me\//);
+    }
   });
 
-  it("renderiza una tarjeta por curso público, con el botón de inscripción deshabilitado", () => {
+  it("muestra los dos cursos con las horas requeridas que entrega el backend", () => {
     renderLanding([
       buildCourse({ id: "course-a", tipo: "A", nombre: "Motocicletas", horasRequeridas: 40 }),
       buildCourse({
@@ -71,25 +74,16 @@ describe("LandingPage", () => {
       }),
     ]);
 
-    expect(screen.getByText("Motocicletas")).toBeInTheDocument();
-    expect(screen.getByText("Vehículos livianos")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Licencia Tipo A" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Licencia Tipo B" })).toBeInTheDocument();
     expect(screen.getByText("40 horas requeridas")).toBeInTheDocument();
-
-    const enrollButtons = screen.getAllByRole("button", { name: /Solicitar inscripción/ });
-    expect(enrollButtons).toHaveLength(2);
-    for (const button of enrollButtons) {
-      expect(button).toBeDisabled();
-    }
+    expect(screen.getByText("60 horas requeridas")).toBeInTheDocument();
   });
 
-  it("muestra un mensaje si no hay cursos disponibles (p.ej. el backend no respondió)", () => {
+  it("si el backend no entrega cursos, invita a consultar la próxima cohorte", () => {
     renderLanding([]);
 
-    expect(
-      screen.getByText(
-        "No pudimos cargar los cursos disponibles en este momento. Intenta de nuevo más tarde.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText("Consulta la próxima cohorte")).toHaveLength(2);
   });
 
   it("muestra los 4 requisitos de inscripción fijos", () => {
