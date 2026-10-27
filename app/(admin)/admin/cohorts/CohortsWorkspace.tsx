@@ -12,7 +12,7 @@ import {
   type MouseEvent,
 } from "react";
 
-import { Button, FormError, IconButton, Select, buttonClassName } from "@/components/ui";
+import { Button, FormError, Select, buttonClassName } from "@/components/ui";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { useFetch } from "@/hooks/useFetch";
@@ -70,6 +70,10 @@ const dateFormat = new Intl.DateTimeFormat("es-EC", {
   month: "short",
   year: "numeric",
 });
+function createdDate(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "—" : dateFormat.format(parsed);
+}
 function courseDate(value: string) {
   const parsed = new Date(`${value}T12:00:00`);
   return Number.isNaN(parsed.getTime()) ? "—" : dateFormat.format(parsed);
@@ -167,7 +171,7 @@ export function CohortsWorkspace() {
   const [status, setStatus] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [pagination, setPagination] = useState({ page: 1, size: 10 });
+  const [pagination, setPagination] = useState({ page: 1, size: 5 });
   const rangeRef = useRef<HTMLDetailsElement>(null);
   const normalize = (text: string) =>
     text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase("es");
@@ -292,24 +296,32 @@ export function CohortsWorkspace() {
   }
   function deleteButton(cohort: Cohort) {
     return (
-      <IconButton
-        variant="danger"
-        icon={<TrashIcon className="h-4 w-4" />}
+      <button
+        type="button"
+        className={`${styles.edit} ${styles.delete}`}
         aria-label={`Eliminar ${cohort.nombre}`}
+        title={`Eliminar ${cohort.nombre}`}
         onClick={() => askDelete(cohort)}
-      />
+      >
+        <TrashIcon className="h-4 w-4" />
+      </button>
     );
   }
+  // Misma identidad visual que el rediseño (nombre y tipo en dos líneas); el
+  // texto accesible es la etiqueta completa «Curso (Tipo X)».
   function courseCell(cohort: Cohort) {
     const course = coursesById.get(cohort.courseId);
+    if (!course) return <span className={styles.muted}>{courseLabel(course)}</span>;
     return (
       <div className={styles.courseIdentity}>
-        {course ? (
-          <span className={styles.courseIcon} data-course-type={course.tipo}>
-            <CohortIcon name={course.tipo === "A" ? "motorcycle" : "car"} />
-          </span>
-        ) : null}
-        <span>{courseLabel(course)}</span>
+        <span className={styles.courseIcon} data-course-type={course.tipo}>
+          <CohortIcon name={course.tipo === "A" ? "motorcycle" : "car"} />
+        </span>
+        <div>
+          <span className="sr-only">{courseLabel(course)}</span>
+          <strong aria-hidden="true">{course.nombre}</strong>
+          <small aria-hidden="true">(Tipo {course.tipo})</small>
+        </div>
       </div>
     );
   }
@@ -329,7 +341,15 @@ export function CohortsWorkspace() {
     const level =
       ratio === null ? "unknown" : ratio >= 0.8 ? "high" : ratio >= 0.5 ? "medium" : "low";
     return (
-      <div className={styles.studentCount} data-occupancy={level}>
+      <div
+        className={styles.studentCount}
+        data-occupancy={level}
+        title={
+          detail === null
+            ? "No se pudo consultar la cantidad de alumnos"
+            : "Las matrículas activas ocupan cupo"
+        }
+      >
         <span className={styles.studentCountValue}>
           <CohortIcon name="students" />
           {detail === null ? "—" : count === undefined ? "…" : count}
@@ -348,7 +368,7 @@ export function CohortsWorkspace() {
             <span style={{ width: `${Math.min(100, ratio * 100)}%` }} />
           </div>
         ) : null}
-        <small>{detail === null ? "Sin conteo de alumnos" : `de ${cohort.cupoMaximo} cupos`}</small>
+        <small>{detail === null ? "No disponible" : `de ${cohort.cupoMaximo} cupos`}</small>
         {detail && detail.total !== detail.activos ? (
           <small>{detail.total} en el historial</small>
         ) : null}
@@ -358,6 +378,15 @@ export function CohortsWorkspace() {
 
   return (
     <div className={`${styles.page} ${panel ? styles.panelOpen : ""}`}>
+      <div className={styles.topbar}>
+        <div className={styles.identity}>
+          <span aria-hidden="true">CD</span>
+          <div>
+            <strong>Administrador</strong>
+            <small>Colorados Drive</small>
+          </div>
+        </div>
+      </div>
       <div className={styles.workspace}>
         <div className={styles.mainRegion}>
           <header className={styles.pageHeader}>
@@ -368,7 +397,7 @@ export function CohortsWorkspace() {
             <div className={styles.headerActions}>
               <Button
                 variant="secondary"
-                disabled={isLoading}
+                disabled={isLoading || Boolean(panel)}
                 onClick={() => {
                   refetchCohorts();
                   refetchCourses();
@@ -598,7 +627,7 @@ export function CohortsWorkspace() {
                   <li key={cohort.id}>
                     <header>
                       <h2>{cohort.nombre}</h2>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         {editLink(cohort)}
                         {deleteButton(cohort)}
                       </div>
@@ -621,7 +650,7 @@ export function CohortsWorkspace() {
                       </div>
                       <div>
                         <dt>Creada</dt>
-                        <dd>{new Date(cohort.createdAt).toLocaleDateString("es-EC")}</dd>
+                        <dd>{createdDate(cohort.createdAt)}</dd>
                       </div>
                       <div>
                         <dt>Período</dt>
@@ -651,23 +680,27 @@ export function CohortsWorkspace() {
                       <th scope="col">Precio</th>
                       <th scope="col">Fechas</th>
                       <th scope="col">Período</th>
-                      <th scope="col">Creada</th>
-                      <th scope="col">
-                        <span className="sr-only">Acciones</span>
-                      </th>
+                      <th scope="col">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pageCohorts.map((cohort) => (
                       <tr key={cohort.id}>
-                        <td>
+                        <td className={styles.nameCell}>
                           <div className={styles.cohortName}>
                             <span
                               className={styles.rowDot}
                               data-status={period(cohort, today)}
                               aria-hidden="true"
                             />
-                            <strong>{cohort.nombre}</strong>
+                            <div>
+                              <strong>{cohort.nombre}</strong>
+                              {/* La fecha se pinta por CSS: el texto de la celda es solo el nombre. */}
+                              <small
+                                className={styles.created}
+                                data-created={`Creada ${createdDate(cohort.createdAt)}`}
+                              />
+                            </div>
                           </div>
                         </td>
                         <td>{courseCell(cohort)}</td>
@@ -683,9 +716,8 @@ export function CohortsWorkspace() {
                           </div>
                         </td>
                         <td>{statusBadge(cohort)}</td>
-                        <td>{new Date(cohort.createdAt).toLocaleDateString("es-EC")}</td>
                         <td>
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center gap-1.5">
                             {editLink(cohort)}
                             {deleteButton(cohort)}
                           </div>
