@@ -120,7 +120,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
           <PageHeader
             title="Alumnos"
             count={list.data?.total}
-            description="Consulta sus cuentas, cursos, cohortes y requisitos."
+            description="Consulta sus cuentas, cursos y cohortes."
             actions={
               <>
                 <Link className={buttonClassName("secondary")} href="/admin/students/deletions">
