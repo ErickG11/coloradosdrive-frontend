@@ -149,10 +149,16 @@ export function Sidebar({ email, role }: SidebarProps) {
         >
           <NavigationIcon section="menu" className="h-5 w-5" />
         </button>
-        <span className="text-base font-semibold tracking-tight text-text-primary">
+        <span className="mx-2 min-w-0 truncate text-base font-semibold tracking-tight text-text-primary">
           ColoradosDrive
         </span>
-        <ThemeToggle />
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Reserva el lugar de la unica campana que monta DashboardShell. */}
+          {role === "estudiante" || role === "instructor" ? (
+            <span aria-hidden="true" className="h-11 w-11" />
+          ) : null}
+          <ThemeToggle />
+        </div>
       </header>
       <aside
         aria-label="Barra lateral"
