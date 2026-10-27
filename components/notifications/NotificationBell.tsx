@@ -33,7 +33,13 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
     const saved = await notifications.markRead(notification);
     if (saved && notification.practiceSlotId) {
       close();
-      router.push(role === "estudiante" ? "/student/schedule" : "/instructor");
+      router.push(
+        role === "estudiante"
+          ? notification.tipo === "asistencia_corregida"
+            ? "/student/history"
+            : "/student/schedule"
+          : "/instructor",
+      );
     }
   }
 
