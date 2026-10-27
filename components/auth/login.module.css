@@ -1,0 +1,507 @@
+.screen {
+  --login-button-top: #df101a;
+  --login-button-bottom: #b60913;
+  --login-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --login-glass: rgb(255 255 255 / 88%);
+  --login-field: rgb(255 255 255 / 76%);
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 100svh;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  overflow-x: clip;
+}
+
+:global(.dark) .screen {
+  --login-glass: rgb(16 17 20 / 88%);
+  --login-field: rgb(24 26 31 / 94%);
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+}
+.ambience {
+  display: none;
+}
+.backdrop {
+  position: relative;
+  height: 35svh;
+  min-height: 240px;
+  overflow: hidden;
+}
+.backgroundMotion {
+  position: absolute;
+  inset: 0;
+}
+.backgroundImage {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 222.222%;
+  max-width: none;
+  height: auto;
+  object-position: left top;
+}
+.backdrop::after {
+  position: absolute;
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    rgb(20 5 9 / 20%),
+    rgb(10 10 15 / 48%) 70%,
+    rgb(15 0 5 / 64%)
+  );
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+:global(.dark) .backdrop::after {
+  opacity: 1;
+}
+.themeControl {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 5;
+}
+.themeToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-text-primary);
+  background: var(--login-glass);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    transform 120ms var(--login-ease);
+}
+.themeToggle svg {
+  width: 20px;
+  height: 20px;
+}
+.themeToggle:hover {
+  background: var(--color-bg-surface);
+}
+.themeToggle:active {
+  transform: scale(0.95);
+}
+
+.card {
+  position: relative;
+  z-index: 2;
+  margin-top: -30px;
+  width: 100%;
+  padding: 30px 24px 24px;
+  border: 1px solid rgb(255 255 255 / 48%);
+  border-radius: 32px 32px 24px 24px;
+  background: var(--login-glass);
+  box-shadow: 0 20px 52px -22px rgb(24 9 13 / 28%);
+  backdrop-filter: blur(18px);
+  animation: cardArrive 280ms var(--login-ease) both;
+}
+:global(.dark) .card {
+  border-color: rgb(255 255 255 / 10%);
+  box-shadow: 0 20px 52px -20px rgb(0 0 0 / 48%);
+}
+.cardHeader {
+  margin-bottom: 22px;
+}
+.redMark {
+  display: block;
+  width: 48px;
+  height: 3px;
+  margin-bottom: 14px;
+  background: var(--color-brand-primary);
+}
+.cardHeader h1 {
+  margin: 0;
+  font-size: clamp(1.875rem, 2.6vw, 2.5rem);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+}
+.cardHeader p {
+  margin-top: 4px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.form[data-error="true"] {
+  animation: formShake 180ms ease-out;
+}
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 52px;
+  min-width: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 14px;
+  background: var(--login-field);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.field:focus-within {
+  border-color: var(--color-brand-ink);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-brand-primary) 16%, transparent);
+}
+.field > svg {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  margin-left: 16px;
+  color: var(--color-text-primary);
+}
+.field input {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: none;
+  padding: 12px 14px;
+  color: var(--color-text-primary);
+  caret-color: var(--color-brand-ink);
+  background: transparent;
+  border-radius: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.field input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 1;
+}
+.field input:focus-visible {
+  outline: none;
+}
+.field input:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-text-primary);
+  box-shadow: 0 0 0 1000px var(--color-bg-field) inset;
+}
+.field input[type="password"]::-ms-reveal {
+  display: none;
+}
+.passwordToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 44px;
+  width: 44px;
+  margin-right: 4px;
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+.passwordToggle svg {
+  width: 21px;
+  height: 21px;
+}
+.passwordToggle:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-sunken);
+}
+.passwordToggle:focus-visible,
+.themeToggle:focus-visible,
+.backLink:focus-visible {
+  outline: 2px solid var(--color-brand-ink);
+  outline-offset: 3px;
+}
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  background: var(--color-status-error-bg);
+  color: var(--color-status-error);
+}
+.form .submit {
+  position: relative;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 46px;
+  border: 0;
+  border-radius: 24px;
+  margin-top: 4px;
+  background: linear-gradient(180deg, var(--login-button-top), var(--login-button-bottom));
+  color: white;
+  box-shadow: 0 8px 18px -8px rgb(182 9 19 / 65%);
+  font-size: 1rem;
+  font-weight: 600;
+  transition:
+    transform 120ms var(--login-ease),
+    filter 160ms ease,
+    box-shadow 160ms ease;
+}
+.submit > svg:last-child {
+  position: absolute;
+  right: 20px;
+  width: 22px;
+  height: 22px;
+  transition: transform 180ms var(--login-ease);
+}
+.submit:hover:not(:disabled) {
+  filter: brightness(0.95);
+  box-shadow: 0 10px 22px -8px rgb(182 9 19 / 65%);
+}
+.submit:hover:not(:disabled) > svg:last-child {
+  transform: translateX(4px);
+}
+.submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.submit:focus-visible {
+  outline: 2px solid var(--color-brand-ink);
+  outline-offset: 4px;
+}
+.submit[aria-busy="true"] {
+  opacity: 1;
+}
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  margin-top: 12px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-underline-offset: 4px;
+}
+.backLink svg {
+  width: 16px;
+  height: 16px;
+}
+.backLink:hover {
+  color: var(--color-brand-ink);
+  text-decoration: underline;
+}
+.pillars {
+  display: grid;
+  gap: 24px;
+  padding: 32px 28px 36px;
+}
+.pillars > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.pillars svg {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  color: var(--color-brand-ink);
+}
+.pillars h2 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0 0 3px;
+}
+.pillars p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+@keyframes cardArrive {
+  from {
+    opacity: 0.5;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes formShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .backgroundImage {
+    width: 135%;
+  }
+  .card {
+    width: 480px;
+    margin-inline: auto;
+    padding: 32px;
+    border-radius: 32px;
+  }
+  .pillars {
+    max-width: 480px;
+    margin-inline: auto;
+    padding-inline: 20px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .backdrop {
+    height: 42svh;
+    max-height: 380px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .screen {
+    height: 100svh;
+    min-height: 560px;
+    background: #160b0d;
+  }
+  .stage {
+    height: 100svh;
+    min-height: 560px;
+    width: max(100%, calc(max(100svh, 560px) * 1672 / 941));
+  }
+  .ambience {
+    display: block;
+    position: fixed;
+    inset: -24px;
+    z-index: -1;
+    overflow: hidden;
+  }
+  .ambience img {
+    object-fit: cover;
+    filter: blur(22px) brightness(0.75);
+  }
+  :global(.dark) .ambience img {
+    filter: blur(22px) brightness(0.4);
+  }
+  .backdrop {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+  }
+  .backgroundImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .themeControl {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+  }
+  .card {
+    position: absolute;
+    top: 35.5%;
+    left: 7%;
+    width: 34.5%;
+    max-width: 560px;
+    max-height: 51.5%;
+    margin: 0;
+    border-radius: 32px;
+    padding: 30px 32px 22px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+  .pillars {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) and (min-aspect-ratio: 1672 / 941) {
+  .card {
+    top: min(35.5vw * 941 / 1672, 46%);
+    max-height: calc(100% - min(35.5vw * 941 / 1672, 46%) - 110px);
+  }
+  .pillars {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 2;
+    display: flex;
+    gap: 32px;
+    min-height: 14%;
+    padding: 22px 4%;
+    background: #0c0c0e;
+    color: #fff;
+  }
+  .pillars > div {
+    align-items: center;
+    max-width: 320px;
+  }
+  .pillars svg {
+    color: #fff;
+  }
+  .pillars p {
+    color: #c8cbd2;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 740px) {
+  .card {
+    padding: 22px 26px 16px;
+  }
+  .cardHeader {
+    margin-bottom: 16px;
+  }
+  .cardHeader h1 {
+    font-size: 1.875rem;
+  }
+  .cardHeader p {
+    font-size: 0.875rem;
+  }
+  .redMark {
+    margin-bottom: 10px;
+  }
+  .field {
+    height: 46px;
+  }
+  .form {
+    gap: 12px;
+  }
+  .form .submit {
+    min-height: 46px;
+    padding-block: 10px;
+  }
+  .backLink {
+    margin-top: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen *,
+  .screen *::before,
+  .screen *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+  .backgroundMotion {
+    transform: none !important;
+  }
+  .submit:hover:not(:disabled) > svg:last-child,
+  .submit:active:not(:disabled),
+  .themeToggle:active {
+    transform: none;
+  }
+}

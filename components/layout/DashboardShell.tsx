@@ -22,9 +22,14 @@ export async function DashboardShell({ children }: DashboardShellProps) {
   } = await supabase.auth.getUser();
 
   return (
-    <div className="flex min-h-full flex-1 flex-col md:flex-row">
+    <div className="flex min-h-full min-w-0 flex-1 flex-col md:flex-row">
+      <a href="#main-content" className="skip-link">
+        Saltar al contenido
+      </a>
       <Sidebar email={user?.email ?? null} role={getUserRole(user)} />
-      <main className="flex-1 p-6 md:p-10">{children}</main>
+      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 md:p-6 xl:p-8">
+        <div className="mx-auto w-full min-w-0 max-w-[var(--content-max)]">{children}</div>
+      </main>
     </div>
   );
 }
