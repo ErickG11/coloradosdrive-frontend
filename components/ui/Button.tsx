@@ -1,63 +1,39 @@
 "use client";
 
-import { forwardRef } from "react";
-import { motion } from "framer-motion";
-import type { ButtonHTMLAttributes, ReactElement } from "react";
-
+import { forwardRef, type ButtonHTMLAttributes, type ReactElement } from "react";
 import { cn } from "@/lib/utils/cn";
 
 export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
-
-type NativeButtonProps = Omit<
-  ButtonHTMLAttributes<HTMLButtonElement>,
-  "onDrag" | "onDragStart" | "onDragEnd" | "onAnimationStart" | "onAnimationEnd"
->;
-
-export interface ButtonProps extends NativeButtonProps {
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
-  /** Ícono opcional antes del texto - refuerzo visual, nunca reemplaza el
-   * texto (RNF-04: un ícono sin texto es ambiguo la primera vez que
-   * alguien lo ve). Se oculta mientras isLoading (el texto ya cambia a
-   * "Cargando..."). */
   icon?: ReactElement;
 }
-
-// danger reutiliza el rojo de acento (no un rojo aparte): la paleta se
-// mantiene cerrada a 4 colores, así que la intención "destructiva" se
-// distingue por el tono más oscuro (accent-red-hover como relleno base) y,
-// sobre todo, por el texto del botón — no por un color nuevo.
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: "bg-accent-red text-white hover:bg-accent-red-hover disabled:opacity-50",
-  secondary:
-    "bg-bg-field text-text-primary border border-border hover:border-border-strong disabled:opacity-50",
-  danger: "bg-accent-red-hover text-white hover:brightness-90 disabled:opacity-50",
-  ghost: "bg-transparent text-text-primary hover:bg-bg-sunken disabled:opacity-40",
+  primary: "bg-brand-primary text-white hover:bg-brand-hover active:bg-brand-pressed",
+  secondary: "border border-border-strong bg-bg-surface text-text-primary hover:bg-bg-sunken",
+  danger: "bg-brand-pressed text-white hover:bg-brand-hover",
+  ghost: "bg-transparent text-text-secondary hover:bg-bg-sunken hover:text-text-primary",
 };
-
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-sm",
-  md: "h-10 px-4 text-sm",
-  lg: "h-12 px-6 text-base",
+  sm: "min-h-11 px-3 text-sm md:min-h-10",
+  md: "min-h-11 px-4 text-sm md:min-h-10",
+  lg: "min-h-12 px-6 text-base",
 };
-
-// Exportado para estilizar elementos que se ven como Button pero no pueden
-// serlo (p. ej. un <Link> de navegación no debe anidar un <button>).
 export function buttonClassName(
   variant: ButtonVariant = "primary",
   size: ButtonSize = "md",
   className?: string,
 ): string {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-canvas disabled:cursor-not-allowed",
+    "inline-flex items-center justify-center gap-2 rounded-sm py-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-55",
     VARIANT_CLASSES[variant],
     SIZE_CLASSES[size],
     className,
   );
 }
-
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
     className,
@@ -72,23 +48,38 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ref,
 ) {
   return (
-    <motion.button
+    <button
       ref={ref}
       disabled={disabled || isLoading}
-      whileHover={disabled || isLoading ? undefined : { scale: 1.02 }}
-      whileTap={disabled || isLoading ? undefined : { scale: 0.97 }}
-      transition={{ duration: 0.12 }}
+      aria-busy={isLoading || undefined}
       className={buttonClassName(variant, size, className)}
       {...props}
     >
       {isLoading ? (
-        "Cargando..."
+        <>
+          <svg
+            aria-hidden="true"
+            className="h-4 w-4 motion-safe:animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="9"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeDasharray="40 56"
+            />
+          </svg>
+          <span role="status">Cargando…</span>
+        </>
       ) : (
         <>
           {icon}
           {children}
         </>
       )}
-    </motion.button>
+    </button>
   );
 });
