@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api/errors";
 import { useFetch } from "@/hooks/useFetch";
 import { createClient } from "@/lib/supabase/client";
 import type { PracticeSlotWithNames, StudentPracticeSlot } from "@/types";
+import type { PendingPracticeSlot, ReleasedPracticeSlot } from "@/types/practiceSlot";
 
 vi.mock("@/hooks/useFetch", () => ({
   useFetch: vi.fn(),
@@ -102,14 +103,40 @@ function buildSlot(overrides: Partial<PracticeSlotWithNames> = {}): PracticeSlot
 }
 
 const refetchSlots = vi.fn();
+const refetchReleased = vi.fn();
+const refetchPending = vi.fn();
+
+function releasedSlot(overrides: Partial<ReleasedPracticeSlot> = {}): ReleasedPracticeSlot {
+  return {
+    id: "slot-2",
+    cohortId: "cohort-1",
+    enrollmentId: "enrollment-1",
+    scheduledAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+    durationMinutes: 60,
+    status: "liberado",
+    caso: "A",
+    via: "reposicion",
+    practicasASoltarIds: [],
+    reprogramacionesRestantes: 1,
+    ...overrides,
+  };
+}
 
 function mockFetch(
   slots: StudentPracticeSlot[],
   scopes = { A: slots[0]?.cohortId ?? null, B: null as string | null },
+  released: ReleasedPracticeSlot[] = [],
+  pending: PendingPracticeSlot[] = [],
 ) {
   mockedUseFetch.mockImplementation((path: unknown) => {
     if (path === "/practice-slots") {
       return { data: slots, isLoading: false, error: null, refetch: refetchSlots };
+    }
+    if (path === "/practice-slots/released-for-me") {
+      return { data: released, isLoading: false, error: null, refetch: refetchReleased };
+    }
+    if (path === "/practice-slots/my-pending") {
+      return { data: pending, isLoading: false, error: null, refetch: refetchPending };
     }
     if (path === "/estudiantes/enrollments")
       return {
@@ -127,6 +154,8 @@ function mockFetch(
 describe("StudentSchedulePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedGet.mockReset();
+    mockedGet.mockResolvedValue(undefined);
     // Valor por defecto inerte para los tests que no le importa Realtime;
     // los tests de Realtime llaman a mockSupabaseClient() de nuevo con el
     // id que necesiten, capturando el mapa de canales devuelto.
@@ -138,22 +167,23 @@ describe("StudentSchedulePage", () => {
 
     render(<StudentSchedulePage />);
 
-    expect(screen.getByText("No tienes ninguna franja reclamada todavía.")).toBeInTheDocument();
+    expect(screen.getByText("No tienes prácticas asignadas por ahora.")).toBeInTheDocument();
     expect(
-      screen.getByText("No hay franjas disponibles en tus cohortes por ahora."),
+      screen.getByText("No hay cupos liberados por ahora."),
     ).toBeInTheDocument();
   });
 
-  it("lista franjas disponibles sin depender de la identidad del instructor", () => {
+  it("lista únicamente cupos elegibles sin mostrar la identidad del instructor", () => {
     const available = { ...buildSlot({ status: "disponible" }) };
     Reflect.deleteProperty(available, "instructorId");
     Reflect.deleteProperty(available, "instructorName");
-    mockFetch([available]);
+    mockFetch([available], undefined, [releasedSlot()]);
 
     render(<StudentSchedulePage />);
 
     expect(screen.queryByText(/Bruno Salas/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reclamar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tomar este horario" })).toBeInTheDocument();
+    expect(screen.getByText("Reprogramaciones disponibles: 1 de 2")).toBeInTheDocument();
   });
 
   it("muestra el instructor en una franja propia ya asignada", () => {
@@ -162,37 +192,48 @@ describe("StudentSchedulePage", () => {
     expect(screen.getByText(/Bruno Salas/)).toBeInTheDocument();
   });
 
-  it("una franja 'liberado' (sin dueño) aparece como disponible para reclamar", () => {
+  it("muestra el contador desde la vista previa cuando no hay cupos ofrecidos", async () => {
+    mockedGet.mockResolvedValue({ reprogramacionesRestantes: 2, hayFranjasLibres: false, resultadoSiCancela: "hora_perdida" });
+    mockFetch([buildSlot({ status: "asignado", studentId: "student-1" })]);
+    render(<StudentSchedulePage />);
+    expect(await screen.findByText("Reprogramaciones disponibles: 2 de 2")).toBeInTheDocument();
+  });
+
+  it("no ofrece una franja libre si el backend no la considera elegible", () => {
     mockFetch([buildSlot({ status: "liberado", studentId: null })]);
 
     render(<StudentSchedulePage />);
 
-    expect(screen.getByRole("button", { name: "Reclamar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tomar este horario" })).not.toBeInTheDocument();
   });
 
-  it("reclama una franja: llama a POST .../claim y refresca la lista", async () => {
+  it("repone una hora pendiente con swap sin práctica a soltar y refresca las listas", async () => {
     const user = userEvent.setup();
-    mockedPost.mockResolvedValue(buildSlot({ status: "asignado", studentId: "student-1" }));
-    mockFetch([buildSlot({ status: "disponible" })]);
+    mockedPost.mockResolvedValue({ slot: buildSlot({ status: "asignado", studentId: "student-1" }), caso: "A", practicaSoltadaId: null, cancellationId: "c1", enrollmentId: "enrollment-1", reprogramacionesRestantes: 1 });
+    mockFetch([], undefined, [releasedSlot()]);
 
     render(<StudentSchedulePage />);
-    await user.click(screen.getByRole("button", { name: "Reclamar" }));
+    await user.click(screen.getByRole("button", { name: "Tomar este horario" }));
+    expect(screen.getByText(/Vas a reponer tu hora pendiente/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Confirmar cambio" }));
 
-    expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-1/claim");
+    expect(mockedPost).toHaveBeenCalledWith("/practice-slots/slot-2/swap", undefined);
+    expect(await screen.findByText("Listo, cambiaste tu horario")).toBeInTheDocument();
     expect(refetchSlots).toHaveBeenCalled();
+    expect(refetchReleased).toHaveBeenCalled();
   });
 
-  it("muestra el error legible del backend si otro estudiante ya reclamó la franja (409)", async () => {
+  it("refresca los cupos si otro alumno tomó el horario", async () => {
     const user = userEvent.setup();
-    mockedPost.mockRejectedValue(new ApiError("Esta franja ya no está disponible", 409));
-    mockFetch([buildSlot({ status: "disponible" })]);
+    mockedPost.mockRejectedValue(new ApiError("Otro alumno tomó este cupo o ya no está disponible", 409));
+    mockFetch([], undefined, [releasedSlot()]);
 
     render(<StudentSchedulePage />);
-    await user.click(screen.getByRole("button", { name: "Reclamar" }));
+    await user.click(screen.getByRole("button", { name: "Tomar este horario" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar cambio" }));
 
-    expect(await screen.findByText("Esta franja ya no está disponible")).toBeInTheDocument();
-    // Se refresca igual: la lista quedó desactualizada tras la carrera.
-    expect(refetchSlots).toHaveBeenCalled();
+    expect(await screen.findByText(/Otro alumno tomó este horario/)).toBeInTheDocument();
+    expect(refetchReleased).toHaveBeenCalled();
   });
 
   it("una franja propia 'asignado' muestra Confirmar y No podré asistir", async () => {
@@ -304,7 +345,7 @@ describe("StudentSchedulePage", () => {
 
     render(<StudentSchedulePage />);
 
-    expect(screen.getByText("No tienes ninguna franja reclamada todavía.")).toBeInTheDocument();
+    expect(screen.getByText("No tienes prácticas asignadas por ahora.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "No podré asistir" })).not.toBeInTheDocument();
   });
 
@@ -316,8 +357,10 @@ describe("StudentSchedulePage", () => {
       await waitFor(() => expect(channels.has("cohort-cohort-b-practice-slots")).toBe(true));
       expect(channels.has("cohort-cohort-a-practice-slots")).toBe(true);
       refetchSlots.mockClear();
+      refetchReleased.mockClear();
       act(() => channels.get("cohort-cohort-b-practice-slots")?.emit("slot-released", {}));
       expect(refetchSlots).toHaveBeenCalled();
+      expect(refetchReleased).toHaveBeenCalled();
     });
     it("al liberarse un cupo en el canal de cohorte, refresca la lista", async () => {
       const channels = mockSupabaseClient("student-1");
@@ -335,6 +378,18 @@ describe("StudentSchedulePage", () => {
       });
 
       expect(refetchSlots).toHaveBeenCalled();
+      expect(refetchReleased).toHaveBeenCalled();
+    });
+
+    it("al recibir slots-updated refresca las prácticas y los cupos", async () => {
+      const channels = mockSupabaseClient("student-1");
+      mockFetch([]);
+      render(<StudentSchedulePage />);
+      await waitFor(() => expect(channels.has("user-student-1-practice-slots")).toBe(true));
+      act(() => channels.get("user-student-1-practice-slots")?.emit("slots-updated", {}));
+      expect(refetchSlots).toHaveBeenCalled();
+      expect(refetchPending).toHaveBeenCalled();
+      expect(refetchReleased).toHaveBeenCalled();
     });
 
     it("al recibir 'confirmation-requested', resalta la franja con Confirmar/Cancelar directamente ahí", async () => {
