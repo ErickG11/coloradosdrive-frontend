@@ -120,6 +120,25 @@ describe("NotificationBell", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("lleva la corrección de asistencia del alumno a su historial después de leerla", async () => {
+    const correction = notice({
+      tipo: "asistencia_corregida",
+      titulo: "Se corrigió tu asistencia",
+      attendanceEventId: "event",
+      emailStatus: null,
+    });
+    get.mockResolvedValue(page([correction, second]));
+    patch.mockResolvedValue({ ...correction, readAt: "2026-10-27T19:45:00Z" });
+    const { user } = await open();
+    await user.click(screen.getByRole("button", { name: /Se corrigió tu asistencia/ }));
+    expect(patch).toHaveBeenCalledWith(
+      "/notifications/notice-1/read",
+      undefined,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(push).toHaveBeenCalledWith("/student/history");
+  });
+
   it("un aviso sin franja se puede leer sin navegar ni cerrar la bandeja", async () => {
     get.mockResolvedValue(page([notice({ practiceSlotId: null }), second]));
     patch.mockResolvedValue({ ...first, practiceSlotId: null, readAt: "2026-10-27T19:45:00Z" });
