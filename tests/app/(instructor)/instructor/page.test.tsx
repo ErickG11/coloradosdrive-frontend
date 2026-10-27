@@ -248,9 +248,14 @@ describe("agenda diaria del instructor", () => {
       await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
       await user.click(screen.getByRole("button", { name: attended ? "No asistió" : "Asistió" }));
       dialog = screen.getByRole("dialog");
+      await user.type(
+        within(dialog).getByLabelText("Motivo de la corrección"),
+        "  Verifiqué el registro original  ",
+      );
       await user.click(within(dialog).getByRole("button", { name: "Confirmar cambio" }));
       expect(patch).toHaveBeenCalledExactlyOnceWith("/practice-slots/slot-1/attendance", {
         attended: !attended,
+        motivo: "Verifiqué el registro original",
       });
       expect(
         await screen.findByText(`Asistencia guardada: ${attended ? "No asistió" : "Asistió"}`),
@@ -283,6 +288,10 @@ describe("agenda diaria del instructor", () => {
     await screen.findByText("Ana Torres");
     await user.click(screen.getByRole("button", { name: "Cambiar asistencia" }));
     await user.click(screen.getByRole("button", { name: "No asistió" }));
+    await user.type(
+      screen.getByLabelText("Motivo de la corrección"),
+      "Verifiqué el registro original",
+    );
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Confirmar cambio" }),
     );

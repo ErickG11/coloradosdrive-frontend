@@ -4,6 +4,18 @@ import { addWeeks, startOfWeek } from "@/lib/utils/calendar";
 // coloradosdrive-backend-git/src/utils/schoolTimezone.ts.
 export const SCHOOL_TIME_ZONE = "America/Guayaquil";
 
+export function formatPracticeDateTime(iso: string, includeYear = false): string {
+  return new Date(iso).toLocaleString("es-EC", {
+    timeZone: SCHOOL_TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    ...(includeYear ? { year: "numeric" as const, hour12: false } : {}),
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 const calendarDateFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: SCHOOL_TIME_ZONE,
   year: "numeric",
