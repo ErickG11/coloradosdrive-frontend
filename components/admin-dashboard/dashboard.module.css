@@ -1,0 +1,892 @@
+.dashboard {
+  --dashboard-bar-muted: #b36b6b;
+  --dashboard-course-a: #a56b1e;
+  --dashboard-course-both: #768295;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+:global(.dark) .dashboard {
+  --dashboard-bar-muted: #92545e;
+  --dashboard-course-a: #edbb69;
+  --dashboard-course-both: #8e9fb8;
+}
+.dashboard svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.header h1 {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+.header p {
+  margin-top: 8px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+.enrollButton {
+  white-space: nowrap;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+.monthFilter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.monthFilter > svg {
+  color: var(--color-text-secondary);
+  width: 18px;
+}
+.monthFilter label {
+  font-weight: 550;
+}
+.monthFilter input {
+  min-width: 148px;
+  max-width: 185px;
+  min-height: 40px;
+  background: var(--color-bg-field);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+}
+.freshness {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.freshness button,
+.calendarMonth button {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 8px;
+  transition: background 150ms ease;
+}
+.freshness button:hover,
+.calendarMonth button:hover {
+  background: var(--color-bg-sunken);
+}
+.freshness button:disabled,
+.calendarMonth button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.statusLine {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: -10px;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.metric,
+.panel {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  border-radius: 12px;
+}
+.metric {
+  padding: 20px;
+}
+.metricTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.metricTop svg {
+  color: var(--color-brand-ink);
+}
+.metricValue {
+  display: block;
+  font-size: 32px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  margin: 18px 0 12px;
+  white-space: nowrap;
+}
+.metricFoot {
+  min-height: 32px;
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.trend {
+  color: var(--color-text-primary);
+  font-weight: 650;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  align-items: start;
+}
+.mainColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.analytics {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(220px, 1fr);
+  gap: 20px;
+}
+.panel {
+  padding: 20px;
+}
+.panelHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.panelHeading h2 {
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.panelHeading p {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 5px;
+}
+.panelHeading > svg {
+  width: 18px;
+  color: var(--color-text-secondary);
+}
+.textLink {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  min-height: 24px;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--color-brand-ink);
+  white-space: nowrap;
+  text-underline-offset: 4px;
+}
+.textLink svg {
+  width: 15px;
+}
+.textLink:hover {
+  text-decoration: underline;
+}
+.chartTabs {
+  display: flex;
+  width: fit-content;
+  border-radius: 8px;
+  gap: 3px;
+  padding: 3px;
+  background: var(--color-bg-sunken);
+  margin-bottom: 14px;
+}
+.chartTabs button {
+  min-height: 32px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  transition:
+    color 150ms ease,
+    background 150ms ease;
+}
+.chartTabs button[aria-pressed="true"] {
+  background: var(--color-bg-surface);
+  color: var(--color-brand-ink);
+  font-weight: 600;
+}
+.chart {
+  height: 210px;
+  width: 100%;
+  min-width: 0;
+}
+.chartValues {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+.chartValues table {
+  width: 100%;
+  table-layout: fixed;
+  text-align: center;
+  font-size: 12px;
+}
+.chartValues th {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+.chartValues td {
+  font-weight: 650;
+  padding-top: 4px;
+}
+.donut {
+  position: relative;
+  width: 162px;
+  height: 162px;
+  margin: 2px auto 16px;
+}
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.donutCenter strong {
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+.donutCenter span {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.distribution li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.distribution li > div {
+  flex: 1;
+  min-width: 0;
+}
+.distribution strong {
+  display: block;
+  font-weight: 550;
+}
+.distribution li div span {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.distribution b {
+  font-weight: 600;
+}
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-brand-primary);
+}
+.swatch[data-tone="1"] {
+  background: var(--dashboard-course-a);
+}
+.swatch[data-tone="2"] {
+  background: var(--dashboard-course-both);
+}
+.academicStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.academicStats > div {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-right: 6px;
+}
+.academicStats svg {
+  display: none;
+}
+.academicStats strong {
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.academicStats span {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.note {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin-top: 18px;
+}
+.tableWrap {
+  overflow-x: auto;
+  margin: 0 -20px -12px;
+  padding: 0 20px 12px;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+.table th {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  padding: 10px 12px;
+  background: var(--color-table-heading);
+  white-space: nowrap;
+}
+.table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table tbody tr {
+  transition: background 150ms ease;
+}
+.table tbody tr:hover {
+  background: var(--color-table-hover);
+}
+.studentLink {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 130px;
+  font-weight: 550;
+}
+.studentLink > span:nth-child(2) {
+  max-width: 180px;
+  overflow-wrap: anywhere;
+}
+.studentLink small {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+.studentLink svg {
+  width: 14px;
+  margin-left: auto;
+  opacity: 0;
+}
+.studentLink:hover {
+  color: var(--color-brand-ink);
+}
+.studentLink:hover svg,
+.studentLink:focus-visible svg {
+  opacity: 1;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 50%;
+  background: var(--color-status-info-bg);
+  color: var(--color-status-info);
+  font-size: 12px;
+}
+.courseBadge {
+  display: inline-flex;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: var(--color-status-info-bg);
+  color: var(--color-status-info);
+  font-weight: 550;
+  white-space: nowrap;
+}
+.courseBadge[data-type="A"] {
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning);
+}
+.calendarMonth {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -7px -6px 9px;
+}
+.calendarMonth strong {
+  font-size: 13px;
+  font-weight: 550;
+  text-transform: capitalize;
+}
+.calendarMonth button:first-child svg {
+  transform: rotate(180deg);
+}
+.calendarMonth svg {
+  width: 16px;
+}
+.weekdays,
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  text-align: center;
+}
+.weekdays {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  padding-bottom: 5px;
+}
+.calendarGrid button {
+  position: relative;
+  min-height: 35px;
+  border-radius: 50%;
+  font-size: 12px;
+  transition:
+    color 150ms ease,
+    background 150ms ease;
+}
+.calendarGrid button:hover {
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+}
+.calendarGrid button[data-today="true"] {
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.calendarGrid button[data-selected="true"] {
+  background: var(--color-brand-primary);
+  color: white;
+}
+.dayDot {
+  position: absolute;
+  bottom: 3px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-brand-ink);
+}
+.calendarGrid button[data-selected="true"] .dayDot {
+  background: white;
+}
+.calendarLegend {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 12px;
+}
+.calendarLegend > span {
+  flex: 0 0 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-brand-ink);
+}
+.agendaList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.agendaList li {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+.agendaList time {
+  flex: 0 0 42px;
+  font-size: 13px;
+  font-weight: 550;
+}
+.agendaList time span {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+.agendaList li > div {
+  min-width: 0;
+}
+.agendaList a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.agendaList a:hover {
+  color: var(--color-brand-ink);
+}
+.agendaList a svg {
+  width: 12px;
+}
+.agendaList p,
+.agendaList small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 3px;
+}
+.agendaList li > div > span {
+  margin-top: 7px;
+  padding: 3px 8px;
+}
+.pendingPanel {
+  background: var(--color-bg-surface);
+}
+.pendingLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 0;
+  font-size: 13px;
+}
+.pendingLink + .pendingLink {
+  border-top: 1px solid var(--color-border);
+}
+.pendingLink span {
+  flex: 1;
+}
+.pendingLink strong {
+  color: var(--color-status-warning);
+  font-weight: 650;
+}
+.pendingLink svg {
+  width: 15px;
+  color: var(--color-text-secondary);
+  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.pendingLink:hover svg {
+  transform: translateX(3px);
+  color: var(--color-brand-ink);
+}
+.feedback {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 14px;
+  min-height: 140px;
+  padding: 12px 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.feedback > svg {
+  width: 28px;
+  height: 28px;
+  color: var(--color-text-secondary);
+}
+.errorBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning);
+  font-size: 13px;
+}
+.errorBanner p {
+  flex: 1;
+  min-width: 180px;
+}
+.errorBanner a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.chartSkeleton,
+.donutSkeleton,
+.lineSkeleton,
+.tableSkeleton,
+.calendarSkeleton {
+  background: var(--color-bg-sunken);
+  border-radius: 8px;
+}
+.chartSkeleton {
+  height: 300px;
+}
+.donutSkeleton {
+  height: 310px;
+}
+.lineSkeleton {
+  height: 100px;
+}
+.tableSkeleton {
+  height: 285px;
+}
+.calendarSkeleton {
+  height: 250px;
+}
+.loading .metricValue,
+.loading .metricFoot {
+  color: transparent;
+  background: var(--color-bg-sunken);
+  border-radius: 5px;
+}
+.loading .metricValue {
+  max-width: 110px;
+}
+.loading .metricFoot {
+  max-width: 145px;
+}
+.loading .metricFoot span {
+  visibility: hidden;
+}
+@media (min-width: 1600px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) 330px;
+  }
+  .panel {
+    padding: 24px;
+  }
+  .chart {
+    height: 225px;
+  }
+}
+@media (max-width: 1199px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sideColumn {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+  .metric {
+    padding: 16px;
+  }
+  .metricValue {
+    font-size: 28px;
+  }
+  .metricTop {
+    font-size: 12px;
+  }
+  .metricTop svg {
+    width: 17px;
+  }
+  .sideColumn .panel {
+    padding: 16px;
+  }
+}
+@media (max-width: 999px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sideColumn {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pendingPanel {
+    grid-column: 1 / -1;
+  }
+  .header {
+    align-items: flex-start;
+  }
+  .header h1 {
+    font-size: 24px;
+  }
+  .analytics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .analytics > section:last-child {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 0 20px;
+  }
+  .analytics > section:last-child .panelHeading {
+    grid-column: 1 / -1;
+  }
+  .distribution {
+    align-self: center;
+  }
+  .donut {
+    margin-bottom: 0;
+  }
+}
+@media (max-width: 767px) {
+  .dashboard {
+    gap: 16px;
+  }
+  .header {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .header h1 {
+    font-size: 25px;
+  }
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .freshness {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .monthFilter {
+    flex: 1;
+    gap: 8px;
+  }
+  .monthFilter input {
+    min-width: 0;
+    flex: 1;
+    max-width: none;
+    min-height: 44px;
+  }
+  .monthFilter > svg {
+    display: none;
+  }
+  .statusLine {
+    line-height: 1.6;
+  }
+  .metricValue {
+    font-size: 28px;
+  }
+  .metric {
+    padding: 16px;
+  }
+  .metrics {
+    gap: 12px;
+  }
+  .metricTop svg {
+    display: none;
+  }
+  .metricTop {
+    font-size: 12px;
+  }
+  .metricFoot {
+    font-size: 12px;
+    min-height: 34px;
+  }
+  .workspace {
+    gap: 16px;
+  }
+  .mainColumn,
+  .sideColumn,
+  .analytics {
+    gap: 16px;
+  }
+  .panel {
+    padding: 18px;
+  }
+  .sideColumn {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pendingPanel {
+    grid-column: auto;
+  }
+  .sideColumn .panel {
+    padding: 18px;
+  }
+  .academicStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .analytics > section:last-child {
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 0 14px;
+  }
+  .donut {
+    width: 136px;
+    height: 136px;
+  }
+  .distribution li {
+    gap: 6px;
+  }
+  .distribution strong {
+    font-size: 12px;
+  }
+  .distribution b {
+    font-size: 12px;
+  }
+  .tableWrap {
+    margin-left: -18px;
+    margin-right: -18px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .table th,
+  .table td {
+    padding: 10px 8px;
+  }
+  .table th:nth-child(3),
+  .table td:nth-child(3) {
+    display: none;
+  }
+  .table td:last-child > span {
+    padding: 4px 6px;
+    gap: 4px;
+    font-size: 12px;
+  }
+  .studentLink {
+    min-width: 0;
+    gap: 7px;
+  }
+  .studentLink .avatar {
+    display: none;
+  }
+  .studentLink svg {
+    display: none;
+  }
+  .studentLink > span:nth-child(2) {
+    max-width: 135px;
+  }
+  .calendarGrid button {
+    min-height: 42px;
+    border-radius: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard *,
+  .dashboard *::before,
+  .dashboard *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dashboard button:active:not(:disabled),
+  .enrollButton:active {
+    transform: scale(0.98);
+  }
+  .chartTabs button {
+    transition:
+      color 150ms ease,
+      background 150ms ease,
+      transform 120ms ease;
+  }
+}
