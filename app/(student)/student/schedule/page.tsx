@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button, Card, FormError, StatusBadge } from "@/components/ui";
 import { CheckIcon, ClaimIcon, XIcon } from "@/components/ui/icons";
@@ -11,6 +11,9 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
 import type { PracticeSlotStatus, StudentPracticeSlot } from "@/types";
+import type { CancellationPreview, CancelPracticeSlotResult } from "@/types/practiceSlot";
+
+import { CancelPracticeModal, cancellationConsequence } from "./CancelPracticeModal";
 
 const ACTIVE_OWN_STATUSES: PracticeSlotStatus[] = ["asignado", "confirmado"];
 const AVAILABLE_STATUSES: PracticeSlotStatus[] = ["disponible", "liberado"];
@@ -40,6 +43,26 @@ export default function StudentSchedulePage() {
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
   const [confirmationDue, setConfirmationDue] = useState(false);
   const [noPracticeNotice, setNoPracticeNotice] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<{ slotId: string; preview: CancellationPreview } | null>(null);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [successDetail, setSuccessDetail] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
+  const cancelTrigger = useRef<HTMLButtonElement | null>(null);
+  const successRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (successNotice) successRef.current?.focus();
+  }, [successNotice]);
+
+  useEffect(() => {
+    const refreshTime = () => setCurrentTime(Date.now());
+    const initialRefresh = window.setTimeout(refreshTime, 0);
+    const refreshInterval = window.setInterval(refreshTime, 30_000);
+    return () => {
+      window.clearTimeout(initialRefresh);
+      window.clearInterval(refreshInterval);
+    };
+  }, []);
 
   const userId = useCurrentUserId();
   // Ambas cohortes propias, incluso si todavía no tienen franjas visibles.
@@ -112,12 +135,34 @@ export default function StudentSchedulePage() {
     );
   }
 
-  function handleCancel(slotId: string) {
-    void performAction(
-      slotId,
-      () => api.post(`/practice-slots/${slotId}/cancel`),
-      "No se pudo cancelar la franja.",
-    );
+  async function handleCancelPreview(slotId: string, trigger: HTMLButtonElement) {
+    cancelTrigger.current = trigger;
+    setActionError(null);
+    setSuccessNotice(null);
+    setSuccessDetail(null);
+    setPendingSlotId(slotId);
+    try {
+      const preview = await api.get<CancellationPreview>(`/practice-slots/${slotId}/cancel-preview`);
+      setCancelTarget({ slotId, preview });
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "No se pudo revisar el aviso de inasistencia.");
+      refetchSlots();
+    } finally {
+      setPendingSlotId(null);
+    }
+  }
+
+  function closeCancelModal() {
+    setCancelTarget(null);
+    cancelTrigger.current?.focus();
+  }
+
+  function handleCancelled(result: CancelPracticeSlotResult) {
+    setCancelTarget(null);
+    setActionError(null);
+    setSuccessNotice("Listo, avisamos que no asistirás a esta práctica");
+    setSuccessDetail(`${cancellationConsequence(result.cancelacion.resultado)} Te quedan ${result.cancelacion.reprogramacionesRestantes} de 2 reprogramaciones.`);
+    refetchSlots();
   }
 
   return (
@@ -135,9 +180,21 @@ export default function StudentSchedulePage() {
       ) : null}
       {actionError ? <FormError>{actionError}</FormError> : null}
 
+      {successNotice ? (
+        <div ref={successRef} role="status" tabIndex={-1} className="fixed bottom-4 right-4 z-40 max-w-sm rounded-md border border-green-600 bg-green-50 px-4 py-3 text-sm text-green-900 shadow-elevated outline-none dark:border-green-500 dark:bg-green-950 dark:text-green-100">
+          <div className="flex items-start gap-3">
+            <div className="flex flex-col gap-1">
+              <span>{successNotice}</span>
+              {successDetail ? <span className="text-xs">{successDetail}</span> : null}
+            </div>
+            <button type="button" aria-label="Cerrar aviso" onClick={() => setSuccessNotice(null)} className="font-medium hover:underline">Cerrar</button>
+          </div>
+        </div>
+      ) : null}
+
       {noPracticeNotice ? (
         <div className="flex items-center justify-between gap-4 rounded-md border border-accent-red bg-accent-red-subtle px-4 py-3 text-sm text-accent-red">
-          <span>Tu franja pasó a &quot;sin práctica&quot; porque no se confirmó a tiempo.</span>
+          <span>Esta práctica ya no se realizará. Consulta tus horarios actualizados.</span>
           <button
             type="button"
             onClick={() => setNoPracticeNotice(false)}
@@ -161,15 +218,17 @@ export default function StudentSchedulePage() {
             ) : (
               ownSlots.map((slot) => {
                 const isConfirmationDue = confirmationDue && slot.status === "asignado";
+                const canNotifyAbsence = currentTime !== null
+                  && new Date(slot.scheduledAt).getTime() > currentTime;
                 return (
                   <Card
                     key={slot.id}
-                    className={cn("flex flex-col gap-3", isConfirmationDue && "border-accent-red")}
+                    className={cn("flex flex-col gap-3", isConfirmationDue && "border-accent-blue")}
                   >
                     {isConfirmationDue ? (
-                      <p className="text-sm font-medium text-accent-red">
-                        Tu práctica está por empezar. Confirma tu asistencia o cancela para liberar
-                        el cupo.
+                      <p className="text-sm font-medium text-accent-blue">
+                        Tu práctica está por empezar. Puedes confirmar tu asistencia si deseas;
+                        si no respondes, se asume que asistirás.
                       </p>
                     ) : null}
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -189,19 +248,23 @@ export default function StudentSchedulePage() {
                           variant="secondary"
                           icon={<CheckIcon className="h-4 w-4" />}
                           isLoading={pendingSlotId === slot.id}
+                          disabled={pendingSlotId !== null}
                           onClick={() => handleConfirm(slot.id)}
                         >
-                          Confirmar
+                          Confirmar asistencia (opcional)
                         </Button>
                       ) : null}
-                      <Button
-                        variant="danger"
-                        icon={<XIcon className="h-4 w-4" />}
-                        isLoading={pendingSlotId === slot.id}
-                        onClick={() => handleCancel(slot.id)}
-                      >
-                        Cancelar
-                      </Button>
+                      {canNotifyAbsence ? (
+                        <Button
+                          variant="danger"
+                          icon={<XIcon className="h-4 w-4" />}
+                          isLoading={pendingSlotId === slot.id}
+                          disabled={pendingSlotId !== null}
+                          onClick={(event) => { void handleCancelPreview(slot.id, event.currentTarget); }}
+                        >
+                          No podré asistir
+                        </Button>
+                      ) : null}
                     </div>
                   </Card>
                 );
@@ -244,6 +307,15 @@ export default function StudentSchedulePage() {
             )}
           </section>
         </>
+      ) : null}
+      {cancelTarget ? (
+        <CancelPracticeModal
+          key={cancelTarget.slotId}
+          slotId={cancelTarget.slotId}
+          preview={cancelTarget.preview}
+          onClose={closeCancelModal}
+          onCancelled={handleCancelled}
+        />
       ) : null}
     </div>
   );
