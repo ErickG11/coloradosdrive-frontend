@@ -1,13 +1,7 @@
 import Link from "next/link";
 import type { MouseEvent } from "react";
-import {
-  Button,
-  DataTable,
-  EmptyState,
-  StatusBadge,
-  buttonClassName,
-  type DataColumn,
-} from "@/components/ui";
+import { Button, DataTable, EmptyState, StatusBadge, type DataColumn } from "@/components/ui";
+import { buttonClassName } from "@/components/ui/buttonStyles";
 import type { AdminStudent, Cohort } from "@/types";
 import { ActiveBadge, StudentBadge } from "./StudentBadge";
 import { StudentAvatar, StudentIcon } from "./StudentVisual";

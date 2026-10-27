@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card, buttonClassName } from "@/components/ui";
+import { Card } from "@/components/ui";
+import { buttonClassName } from "@/components/ui/buttonStyles";
 
 export const metadata: Metadata = { title: "Panel de estudiante" };
 
