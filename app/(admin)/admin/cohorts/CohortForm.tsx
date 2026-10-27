@@ -81,7 +81,16 @@ interface CohortFormProps {
   onUserActivity?: () => void;
   /** Matrículas de la cohorte (solo edición). Con alumnos no se cambia el curso. */
   alumnos?: CohortStudentCounts;
+  /**
+   * Dentro del panel lateral del listado: en vez de navegar al listado con
+   * ?aviso=..., avisa al panel para que se cierre y muestre el mensaje.
+   */
+  onSaved?: (notice: CohortSavedNotice) => void;
+  /** Dentro del panel lateral: «Cancelar» cierra el panel en vez de navegar. */
+  onCancel?: () => void;
 }
+
+export type CohortSavedNotice = "cohorte-creada" | "cohorte-guardada";
 
 function optionalText(value: string): string | null {
   const trimmed = value.trim();
@@ -134,6 +143,8 @@ export function CohortForm({
   onReload,
   onUserActivity,
   alumnos,
+  onSaved,
+  onCancel,
 }: CohortFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -229,8 +240,14 @@ export function CohortForm({
       } else {
         await api.post("/cohorts", body);
       }
+      const notice: CohortSavedNotice = isEditMode ? "cohorte-guardada" : "cohorte-creada";
+      if (onSaved) {
+        setIsSubmitting(false);
+        onSaved(notice);
+        return;
+      }
       // El listado muestra el aviso de éxito y limpia el parámetro de la URL.
-      router.push(`/admin/cohorts?aviso=${isEditMode ? "cohorte-guardada" : "cohorte-creada"}`);
+      router.push(`/admin/cohorts?aviso=${notice}`);
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError && isFormField(err.field)) {
@@ -511,9 +528,15 @@ export function CohortForm({
       <footer className={styles.formFooter}>
         <div>
           {/* Volver sin guardar: por simpleza no se pregunta si hay cambios. */}
-          <Link href="/admin/cohorts" className={styles.cancel}>
-            Cancelar
-          </Link>
+          {onCancel ? (
+            <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+          ) : (
+            <Link href="/admin/cohorts" className={styles.cancel}>
+              Cancelar
+            </Link>
+          )}
           <Button className={styles.primary} type="submit" isLoading={isSubmitting}>
             {isEditMode ? "Guardar cambios" : "Crear cohorte"}
           </Button>
