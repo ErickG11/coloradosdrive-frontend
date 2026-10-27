@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button, buttonClassName, FormError, Input, Select } from "@/components/ui";
+import { Button, FormError, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { CohortStudentCounts, Course } from "@/types";
 
 import { COHORT_LIMITS, maxCohortDate } from "./cohortLimits";
+import { CohortIcon } from "./CohortVisual";
+import styles from "./cohorts.module.css";
 
 export interface CohortFormValues {
   courseId: string;
@@ -258,87 +260,116 @@ export function CohortForm({
     <form
       ref={formRef}
       onSubmit={(event) => void handleSubmit(event)}
-      className="flex flex-col gap-4"
+      className={styles.form}
+      aria-busy={isSubmitting}
     >
-      <Select
-        label="Curso"
-        name="courseId"
-        error={fieldErrors.courseId}
-        required
-        disabled={courseLocked}
-        {...(courseLocked ? { "aria-describedby": "courseId-locked" } : {})}
-        value={values.courseId}
-        onChange={(event) => updateField("courseId", event.target.value)}
-      >
-        <option value="" disabled>
-          Selecciona un curso
-        </option>
-        {courses.map((course) => (
-          <option key={course.id} value={course.id}>
-            {course.nombre} (Tipo {course.tipo})
-          </option>
-        ))}
-      </Select>
-      {courseLocked && alumnos ? (
-        <p id="courseId-locked" className="-mt-2 text-xs text-text-secondary">
-          {`No se puede cambiar el curso porque la cohorte tiene ${count(alumnos.total, "alumno asociado", "alumnos asociados")}: ` +
-            `${count(alumnos.activos, "activo", "activos")}, ${count(alumnos.finalizados, "finalizado", "finalizados")} ` +
-            `y ${count(alumnos.retirados, "retirado", "retirados")}.`}
-        </p>
-      ) : null}
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="layers" />
+          </span>
+          Información general
+        </legend>
+        <div className={styles.formGrid}>
+          <div className="flex min-w-0 flex-col gap-1">
+            <Select
+              label="Curso"
+              name="courseId"
+              error={fieldErrors.courseId}
+              required
+              disabled={courseLocked}
+              {...(courseLocked ? { "aria-describedby": "courseId-locked" } : {})}
+              value={values.courseId}
+              onChange={(event) => updateField("courseId", event.target.value)}
+            >
+              <option value="" disabled>
+                Selecciona un curso
+              </option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.nombre} (Tipo {course.tipo})
+                </option>
+              ))}
+            </Select>
+            {courseLocked && alumnos ? (
+              <p id="courseId-locked" className="text-xs text-text-secondary">
+                {`No se puede cambiar el curso porque la cohorte tiene ${count(alumnos.total, "alumno asociado", "alumnos asociados")}: ` +
+                  `${count(alumnos.activos, "activo", "activos")}, ${count(alumnos.finalizados, "finalizado", "finalizados")} ` +
+                  `y ${count(alumnos.retirados, "retirado", "retirados")}.`}
+              </p>
+            ) : null}
+          </div>
 
-      <Input
-        label="Nombre de la cohorte"
-        name="nombre"
-        error={fieldErrors.nombre}
-        required
-        maxLength={COHORT_LIMITS.nombreMaxLength}
-        value={values.nombre}
-        onChange={(event) => updateField("nombre", event.target.value)}
-      />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input
-          label="Precio"
-          name="precio"
-          error={fieldErrors.precio}
-          type="number"
-          min={COHORT_LIMITS.precioMin}
-          max={COHORT_LIMITS.precioMax}
-          step={COHORT_LIMITS.precioStep}
-          required
-          value={values.precio}
-          onChange={(event) => updateField("precio", event.target.value)}
-        />
-        <div className="flex flex-col gap-1">
           <Input
-            label="Cupo máximo"
-            name="cupoMaximo"
-            error={fieldErrors.cupoMaximo}
-            type="number"
-            min={COHORT_LIMITS.cupoMin}
-            max={COHORT_LIMITS.cupoMax}
-            step="1"
+            placeholder="Ej. Cohorte octubre 2026"
+            label="Nombre de la cohorte"
+            name="nombre"
+            error={fieldErrors.nombre}
             required
-            {...(activeStudents > 0 ? { "aria-describedby": "cupoMaximo-activos" } : {})}
-            value={values.cupoMaximo}
-            onChange={(event) => updateField("cupoMaximo", event.target.value)}
+            maxLength={COHORT_LIMITS.nombreMaxLength}
+            value={values.nombre}
+            onChange={(event) => updateField("nombre", event.target.value)}
           />
-          {activeStudents > 0 ? (
-            <p id="cupoMaximo-activos" className="text-xs text-text-secondary">
-              {`Alumnos activos: ${activeStudents}. El cupo máximo no puede ser menor.`}
-            </p>
-          ) : null}
         </div>
-      </div>
+      </fieldset>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-text-primary">Ventana de matrícula</p>
-        <p className="text-xs text-text-secondary">
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="money" />
+          </span>
+          Precios y capacidad
+        </legend>
+        <div className={styles.formGrid}>
+          <Input
+            placeholder="0.00 USD"
+            label="Precio"
+            name="precio"
+            error={fieldErrors.precio}
+            type="number"
+            min={COHORT_LIMITS.precioMin}
+            max={COHORT_LIMITS.precioMax}
+            step={COHORT_LIMITS.precioStep}
+            required
+            value={values.precio}
+            onChange={(event) => updateField("precio", event.target.value)}
+          />
+          <div className="flex min-w-0 flex-col gap-1">
+            <Input
+              placeholder="Ej. 20"
+              label="Cupo máximo"
+              name="cupoMaximo"
+              error={fieldErrors.cupoMaximo}
+              type="number"
+              min={COHORT_LIMITS.cupoMin}
+              max={COHORT_LIMITS.cupoMax}
+              step="1"
+              required
+              {...(activeStudents > 0 ? { "aria-describedby": "cupoMaximo-activos" } : {})}
+              value={values.cupoMaximo}
+              onChange={(event) => updateField("cupoMaximo", event.target.value)}
+            />
+            {activeStudents > 0 ? (
+              <p id="cupoMaximo-activos" className="text-xs text-text-secondary">
+                {`Alumnos activos: ${activeStudents}. El cupo máximo no puede ser menor.`}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="calendar" />
+          </span>
+          Ventana de matrícula
+        </legend>
+        <p id="enrollment-window-help" className={styles.sectionHelp}>
           El fin de matrícula es el plazo real que se comunica al estudiante para entregar
           documentos físicos completos.
         </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={styles.formGrid}>
           <Input
             label="Inicio de matrícula"
             name="fechaInicioMatricula"
@@ -360,15 +391,20 @@ export function CohortForm({
             onChange={(event) => updateField("fechaFinMatricula", event.target.value)}
           />
         </div>
-      </div>
+      </fieldset>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-text-primary">Ventana de curso</p>
-        <p className="text-xs text-text-secondary">
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="car" />
+          </span>
+          Ventana de curso
+        </legend>
+        <p id="course-window-help" className={styles.sectionHelp}>
           Todas las prácticas que elija un estudiante de esta cohorte deben caber dentro de esta
           ventana.
         </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={styles.formGrid}>
           <Input
             label="Inicio de curso"
             name="fechaInicioCurso"
@@ -390,14 +426,19 @@ export function CohortForm({
             onChange={(event) => updateField("fechaFinCurso", event.target.value)}
           />
         </div>
-      </div>
+      </fieldset>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-text-primary">
-          Datos informativos para el oficio a la ANT (opcional)
-        </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <fieldset className={styles.section}>
+        <legend>
+          <span className={styles.sectionIcon}>
+            <CohortIcon name="document" />
+          </span>
+          Información adicional
+          <span className={styles.optional}>ANT · opcional</span>
+        </legend>
+        <div className={styles.formGrid}>
           <Input
+            placeholder="Ej. Presencial"
             label="Tipo de modalidad"
             name="tipoModalidad"
             error={fieldErrors.tipoModalidad}
@@ -406,6 +447,7 @@ export function CohortForm({
             onChange={(event) => updateField("tipoModalidad", event.target.value)}
           />
           <Input
+            placeholder="Ej. Lunes y miércoles, 18:00–20:00"
             label="Horarios de capacitación teórica"
             name="horariosCapacitacionTeoria"
             error={fieldErrors.horariosCapacitacionTeoria}
@@ -436,9 +478,9 @@ export function CohortForm({
             onChange={(event) => updateField("numeroAulas", event.target.value)}
           />
         </div>
-      </div>
+      </fieldset>
 
-      {error ? <FormError>{error}</FormError> : null}
+      {error ? <FormError className={styles.formError}>{error}</FormError> : null}
 
       {canReload ? (
         <div className="flex flex-col items-start gap-2">
@@ -466,15 +508,17 @@ export function CohortForm({
         {noChanges ? <span key={noChangesCount}>No hay cambios que guardar.</span> : null}
       </p>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {/* Volver sin guardar: por simpleza no se pregunta si hay cambios. */}
-        <Link href="/admin/cohorts" className={buttonClassName("secondary")}>
-          Cancelar
-        </Link>
-        <Button type="submit" isLoading={isSubmitting}>
-          {isEditMode ? "Guardar cambios" : "Crear cohorte"}
-        </Button>
-      </div>
+      <footer className={styles.formFooter}>
+        <div>
+          {/* Volver sin guardar: por simpleza no se pregunta si hay cambios. */}
+          <Link href="/admin/cohorts" className={styles.cancel}>
+            Cancelar
+          </Link>
+          <Button className={styles.primary} type="submit" isLoading={isSubmitting}>
+            {isEditMode ? "Guardar cambios" : "Crear cohorte"}
+          </Button>
+        </div>
+      </footer>
     </form>
   );
 }
