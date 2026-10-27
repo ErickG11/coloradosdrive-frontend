@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Button, Modal, Textarea } from "@/components/ui";
+import { Button, Modal, Select, Textarea } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -23,7 +23,7 @@ export function AttendanceCorrectionDialog({
   onBusyChange,
 }: {
   current: boolean | null;
-  next: boolean;
+  next: boolean | null;
   endpoint: string;
   onClose: () => void;
   onSaved: (slot: PracticeSlot) => void;
@@ -33,6 +33,9 @@ export function AttendanceCorrectionDialog({
   onBusyChange?: (busy: boolean) => void;
 }) {
   const [motivo, setMotivo] = useState("");
+  const [selected, setSelected] = useState(next);
+  const [valueError, setValueError] = useState<string | null>(null);
+  const valueInput = useRef<HTMLSelectElement>(null);
   const [saving, setSaving] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,13 +60,18 @@ export function AttendanceCorrectionDialog({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (busy.current || disabledReason) return;
+    if (selected === null) {
+      setValueError("Selecciona si el alumno asistió.");
+      valueInput.current?.focus();
+      return;
+    }
     const invalid = attendanceReasonError(motivo);
     setFieldError(invalid);
     if (invalid) {
       reason.current?.focus();
       return;
     }
-    if (current === next) {
+    if (current === selected) {
       setError("La corrección debe cambiar el valor actual.");
       return;
     }
@@ -72,7 +80,7 @@ export function AttendanceCorrectionDialog({
     setError(null);
     try {
       const result = await api.patch<PracticeSlot>(endpoint, {
-        attended: next,
+        attended: selected,
         motivo: motivo.trim(),
       });
       if (mounted.current) onSaved(result);
@@ -101,8 +109,27 @@ export function AttendanceCorrectionDialog({
     >
       <form noValidate onSubmit={submit} className="flex flex-col gap-4">
         <p className="text-sm text-text-secondary">
-          Valor actual: {attendanceLabel(current)}. Nuevo valor: {attendanceLabel(next)}.
+          Valor actual: {attendanceLabel(current)}. Nuevo valor:{" "}
+          {selected === null ? "Por seleccionar" : attendanceLabel(selected)}.
         </p>
+        {next === null ? (
+          <Select
+            ref={valueInput}
+            label="Asistencia a registrar"
+            value={selected === null ? "" : String(selected)}
+            error={valueError ?? undefined}
+            disabled={saving}
+            required
+            onChange={(event) => {
+              setSelected(event.target.value === "" ? null : event.target.value === "true");
+              setValueError(null);
+            }}
+          >
+            <option value="">Selecciona la asistencia</option>
+            <option value="true">Asistió</option>
+            <option value="false">No asistió</option>
+          </Select>
+        ) : null}
         <Textarea
           ref={reason}
           label="Motivo de la corrección"
