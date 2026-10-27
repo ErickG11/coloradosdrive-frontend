@@ -1,4 +1,6 @@
 "use client";
+import styles from "./enrollment.module.css";
+import { WizardIcon } from "./WizardVisual";
 
 import { useState } from "react";
 import { Button, Input, Select } from "@/components/ui";
@@ -37,11 +39,14 @@ export function StepDocumentosPago({
     setChoice((current) => ({ ...current, pago: { ...current.pago, ...patch } }));
   }
   return (
-    <div className="flex flex-col gap-5">
-      <section className="rounded-md border border-border p-4">
-        <h2 className="font-bold">Documentos</h2>
+    <div className={styles.documentsPayment}>
+      <section className={styles.documentSection}>
+        <h3>
+          <WizardIcon name="document" />
+          Documentos
+        </h3>
         <p>Este checklist es informativo y no impide matricular.</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className={styles.documentFields}>
           {DOCUMENTS.map((document) => (
             <Select
               key={document.tipo}
@@ -62,9 +67,12 @@ export function StepDocumentosPago({
             : "Si el estudiante tiene 65 años o más, el backend marcará la papeleta como no aplica según la fecha de nacimiento."}
         </p>
       </section>
-      <section className="rounded-md border border-border p-4">
-        <h2 className="font-bold">Pago inicial</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+      <section className={styles.paymentSection}>
+        <h3>
+          <WizardIcon name="money" />
+          Pago inicial
+        </h3>
+        <div className={styles.paymentFields}>
           <Select
             name="modalidadPago"
             label="Modalidad de pago"
@@ -105,26 +113,38 @@ export function StepDocumentosPago({
             />
           )}
         </div>
-        <div className="mt-4" aria-live="polite">
+        <div className={styles.moneySummary} aria-live="polite">
           <p>
-            Precio:{" "}
-            {summary.grossCents === null
-              ? "Se calculará al asignar cohorte"
-              : formatCents(summary.grossCents)}
+            <span>Precio:</span>
+            <strong>
+              {summary.grossCents === null
+                ? "Se calculará al asignar cohorte"
+                : formatCents(summary.grossCents)}
+            </strong>
           </p>
-          <p>Descuento: {formatCents(summary.discountCents)}</p>
           <p>
-            Neto:{" "}
-            {summary.netCents === null
-              ? "Se calculará al asignar cohorte"
-              : formatCents(summary.netCents)}
+            <span>Descuento:</span>
+            <strong>{formatCents(summary.discountCents)}</strong>
           </p>
-          <p>Abonado: {formatCents(summary.paidCents)}</p>
           <p>
-            Saldo:{" "}
-            {summary.balanceCents === null
-              ? "Se calculará al asignar cohorte"
-              : formatCents(summary.balanceCents)}
+            <span>Neto:</span>
+            <strong>
+              {summary.netCents === null
+                ? "Se calculará al asignar cohorte"
+                : formatCents(summary.netCents)}
+            </strong>
+          </p>
+          <p>
+            <span>Abonado:</span>
+            <strong>{formatCents(summary.paidCents)}</strong>
+          </p>
+          <p>
+            <span>Saldo:</span>
+            <strong>
+              {summary.balanceCents === null
+                ? "Se calculará al asignar cohorte"
+                : formatCents(summary.balanceCents)}
+            </strong>
           </p>
         </div>
         {summary.error && (
@@ -133,7 +153,7 @@ export function StepDocumentosPago({
           </p>
         )}
       </section>
-      <div className="flex justify-between gap-3">
+      <div className={styles.footer}>
         <Button variant="secondary" onClick={onBack}>
           Atrás
         </Button>

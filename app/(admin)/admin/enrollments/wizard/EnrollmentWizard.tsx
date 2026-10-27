@@ -9,6 +9,8 @@ import { StepConfirmar } from "./StepConfirmar";
 import { StepDocumentosPago } from "./StepDocumentosPago";
 import { summarizePayment } from "./payment";
 import { WizardProgress } from "./WizardProgress";
+import { WizardIcon } from "./WizardVisual";
+import styles from "./enrollment.module.css";
 import {
   BASE,
   EMPTY_STUDENT,
@@ -232,107 +234,146 @@ export function EnrollmentWizard() {
     setUncertain(false);
   }
   return (
-    <div>
+    <div className={styles.wizard}>
       <WizardProgress currentStep={step} />
-      {step === 1 && (
-        <StepDatosEstudiante
-          value={student}
-          onNext={(s) => {
-            edit();
-            setStudent(s);
-            setStep(2);
-          }}
-        />
-      )}
-      {step === 2 && (
-        <StepCurso
-          catalog={catalog}
-          value={course}
-          onBack={() => setStep(1)}
-          onNext={(c) => {
-            edit();
-            setCourse(c);
-            setDetailsChoice(null);
-            setStep(3);
-          }}
-        />
-      )}
-      {step === 3 && course && (
-        <StepPracticas
-          course={course}
-          value={practice}
-          onBack={() => setStep(2)}
-          onNext={(p) => {
-            edit();
-            setPractice(p);
-            setStep(4);
-          }}
-        />
-      )}
-      {step === 4 && course && practice && (
-        <StepDocumentosPago
-          student={student}
-          course={course}
-          value={detailsChoice}
-          onBack={() => setStep(3)}
-          onNext={(value) => {
-            edit();
-            setDetailsChoice(value);
-            setStep(5);
-          }}
-        />
-      )}
-      {step === 5 && course && practice && detailsChoice && (
-        <StepConfirmar
-          student={student}
-          course={course}
-          practice={practice}
-          choice={detailsChoice}
-          details={detailsResult}
-          detailsLoading={detailsLoading}
-          detailsError={detailsError}
-          result={result}
-          busy={busy}
-          error={error}
-          uncertain={uncertain}
-          onConfirm={() => void confirm()}
-          onBack={() => {
-            edit();
-            setStep(4);
-          }}
-          onReset={reset}
-          onCheck={() => {
-            if (pending.current)
-              void check(pending.current).catch(() => setError("No se pudo consultar el estado."));
-          }}
-          onResend={async (regenerate) => {
-            if (!result) return;
-            setBusy(true);
-            setError(null);
-            try {
-              setResult(
-                await api.post<ManualResult>(
-                  `${BASE}/operations/${result.operationId}/resend-email`,
-                  { regenerateTemporaryPassword: regenerate },
-                ),
-              );
-            } catch (e) {
-              setError(
-                e instanceof ApiError
-                  ? e.message
-                  : "No se pudo reenviar. Consulta el estado de envío.",
-              );
-            } finally {
-              setBusy(false);
-            }
-          }}
-        />
-      )}
-      {error && step !== 5 && (
-        <p role="alert" className="text-accent-red">
-          {error}
-        </p>
-      )}
+      <section className={styles.workspace} aria-label="Formulario de matrícula">
+        {step !== 5 && (
+          <header className={styles.stepHeader}>
+            <span>
+              <WizardIcon
+                name={
+                  step === 1 ? "student" : step === 2 ? "car" : step === 3 ? "calendar" : "document"
+                }
+              />
+            </span>
+            <div>
+              <h2>
+                {
+                  [
+                    "Datos del estudiante",
+                    "Curso y cohorte",
+                    "Plan de prácticas",
+                    "Documentos y pago",
+                  ][step - 1]
+                }
+              </h2>
+              <p>
+                {
+                  [
+                    "Completa el perfil o selecciona una cuenta existente.",
+                    "Consulta el curso y la disponibilidad de su cohorte.",
+                    "Configura el calendario y revisa la sugerencia disponible.",
+                    "Revisa el checklist y registra el pago inicial.",
+                  ][step - 1]
+                }
+              </p>
+            </div>
+          </header>
+        )}
+        <div className={styles.stepBody} key={step}>
+          {step === 1 && (
+            <StepDatosEstudiante
+              value={student}
+              onNext={(s) => {
+                edit();
+                setStudent(s);
+                setStep(2);
+              }}
+            />
+          )}
+          {step === 2 && (
+            <StepCurso
+              catalog={catalog}
+              value={course}
+              onBack={() => setStep(1)}
+              onNext={(c) => {
+                edit();
+                setCourse(c);
+                setDetailsChoice(null);
+                setStep(3);
+              }}
+            />
+          )}
+          {step === 3 && course && (
+            <StepPracticas
+              course={course}
+              value={practice}
+              onBack={() => setStep(2)}
+              onNext={(p) => {
+                edit();
+                setPractice(p);
+                setStep(4);
+              }}
+            />
+          )}
+          {step === 4 && course && practice && (
+            <StepDocumentosPago
+              student={student}
+              course={course}
+              value={detailsChoice}
+              onBack={() => setStep(3)}
+              onNext={(value) => {
+                edit();
+                setDetailsChoice(value);
+                setStep(5);
+              }}
+            />
+          )}
+          {step === 5 && course && practice && detailsChoice && (
+            <StepConfirmar
+              student={student}
+              course={course}
+              practice={practice}
+              choice={detailsChoice}
+              details={detailsResult}
+              detailsLoading={detailsLoading}
+              detailsError={detailsError}
+              result={result}
+              busy={busy}
+              error={error}
+              uncertain={uncertain}
+              onConfirm={() => void confirm()}
+              onBack={() => {
+                edit();
+                setStep(4);
+              }}
+              onReset={reset}
+              onCheck={() => {
+                if (pending.current)
+                  void check(pending.current).catch(() =>
+                    setError("No se pudo consultar el estado."),
+                  );
+              }}
+              onResend={async (regenerate) => {
+                if (!result) return;
+                setBusy(true);
+                setError(null);
+                try {
+                  setResult(
+                    await api.post<ManualResult>(
+                      `${BASE}/operations/${result.operationId}/resend-email`,
+                      { regenerateTemporaryPassword: regenerate },
+                    ),
+                  );
+                } catch (e) {
+                  setError(
+                    e instanceof ApiError
+                      ? e.message
+                      : "No se pudo reenviar. Consulta el estado de envío.",
+                  );
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
+          )}
+          {error && step !== 5 && (
+            <p role="alert" className="text-accent-red">
+              {error}
+            </p>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

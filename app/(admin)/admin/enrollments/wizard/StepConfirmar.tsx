@@ -1,4 +1,6 @@
 "use client";
+import styles from "./enrollment.module.css";
+import { WizardIcon } from "./WizardVisual";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { formatMoney } from "@/lib/utils/money";
@@ -77,44 +79,59 @@ export function StepConfirmar({
       ? null
       : payment.balanceCents / 100;
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="font-bold">{result ? "Matrícula confirmada" : "Revisar y confirmar"}</h2>
-      <div className="rounded-md border border-border p-4">
-        <p>
-          {student.nombreCompleto} · {student.cedula}
-        </p>
-        <p>{student.correo}</p>
-        <p>
-          {student.mode === "existing"
-            ? "Cuenta existente: conserva sus credenciales."
-            : "Cuenta nueva: recibirá una contraseña temporal y deberá cambiarla."}
-        </p>
-        <p>
-          Tipo {course.courseTipo}: {course.courseNombre}
-        </p>
-        <p>Cohorte: {course.cohort?.nombre ?? "Pendiente de cohorte"}</p>
-        <p>
-          Inicio elegido: {practice.form.fechaInicio} · primer día efectivo:{" "}
-          {practice.plan.primerDiaEfectivo} · fecha final: {practice.plan.fechaFinElegida}
-        </p>
-        <p>
-          {practice.plan.dias} días · {practice.plan.bloques} bloques de 60 minutos ·{" "}
-          {practice.plan.horas} horas ·{" "}
-          {practice.form.manual ? "ajuste manual" : "cálculo automático"}
-        </p>
-        {practice.suggestion && (
+    <div className={styles.confirmation} data-complete={Boolean(result)}>
+      <h2 className={styles.confirmTitle}>
+        <WizardIcon name={result ? "check" : "document"} />
+        {result ? "Matrícula confirmada" : "Revisar y confirmar"}
+      </h2>
+      <div className={styles.reviewContent}>
+        <section className={styles.reviewIdentity}>
+          <h3>
+            <WizardIcon name="student" />
+            Estudiante
+          </h3>
           <p>
-            Hora: {practice.suggestion.horaResuelta} · Instructor:{" "}
-            {practice.instructor?.nombreCompleto}
+            {student.nombreCompleto} · {student.cedula}
           </p>
-        )}
-        {!course.cohortId && (
+          <p>{student.correo}</p>
           <p>
-            Se conserva el plan; no se generan franjas hasta asignar cohorte. Esa gestión posterior
-            está pendiente.
+            {student.mode === "existing"
+              ? "Cuenta existente: conserva sus credenciales."
+              : "Cuenta nueva: recibirá una contraseña temporal y deberá cambiarla."}
           </p>
-        )}
-        <div className="mt-4 border-t border-border pt-3">
+        </section>
+        <section className={styles.reviewCourse}>
+          <h3>
+            <WizardIcon name="car" />
+            Curso y prácticas
+          </h3>
+          <p>
+            Tipo {course.courseTipo}: {course.courseNombre}
+          </p>
+          <p>Cohorte: {course.cohort?.nombre ?? "Pendiente de cohorte"}</p>
+          <p>
+            Inicio elegido: {practice.form.fechaInicio} · primer día efectivo:{" "}
+            {practice.plan.primerDiaEfectivo} · fecha final: {practice.plan.fechaFinElegida}
+          </p>
+          <p>
+            {practice.plan.dias} días · {practice.plan.bloques} bloques de 60 minutos ·{" "}
+            {practice.plan.horas} horas ·{" "}
+            {practice.form.manual ? "ajuste manual" : "cálculo automático"}
+          </p>
+          {practice.suggestion && (
+            <p>
+              Hora: {practice.suggestion.horaResuelta} · Instructor:{" "}
+              {practice.instructor?.nombreCompleto}
+            </p>
+          )}
+          {!course.cohortId && (
+            <p>
+              Se conserva el plan; no se generan franjas hasta asignar cohorte. Esa gestión
+              posterior está pendiente.
+            </p>
+          )}
+        </section>
+        <div className={styles.reviewDocuments}>
           <h3 className="font-semibold">Documentos</h3>
           <ul className="list-inside list-disc">
             {DOCUMENTS.map((document) => (
@@ -140,14 +157,31 @@ export function StepConfirmar({
             </p>
           )}
         </div>
-        <div className="mt-4 border-t border-border pt-3">
+        <div className={styles.reviewPayment}>
           <h3 className="font-semibold">Pago inicial</h3>
           <p>Modalidad: {choice.pago.modalidad === "completo" ? "Pago completo" : "Abono"}</p>
-          <p>Precio: {displayAmount(gross)}</p>
-          <p>Descuento: {displayAmount(discount)}</p>
-          <p>Neto: {displayAmount(net)}</p>
-          <p>Abonado: {displayAmount(paid)}</p>
-          <p>Saldo: {displayAmount(balance)}</p>
+          <div className={styles.moneySummary}>
+            <p>
+              <span>Precio:</span>
+              <strong>{displayAmount(gross)}</strong>
+            </p>
+            <p>
+              <span>Descuento:</span>
+              <strong>{displayAmount(discount)}</strong>
+            </p>
+            <p>
+              <span>Neto:</span>
+              <strong>{displayAmount(net)}</strong>
+            </p>
+            <p>
+              <span>Abonado:</span>
+              <strong>{displayAmount(paid)}</strong>
+            </p>
+            <p>
+              <span>Saldo:</span>
+              <strong>{displayAmount(balance)}</strong>
+            </p>
+          </div>
         </div>
         {result && (
           <>
@@ -216,7 +250,7 @@ export function StepConfirmar({
       {result ? (
         <Button onClick={onReset}>Matricular otro estudiante</Button>
       ) : (
-        <div className="flex justify-between">
+        <div className={styles.footer}>
           <Button variant="secondary" disabled={busy || uncertain} onClick={onBack}>
             Atrás
           </Button>

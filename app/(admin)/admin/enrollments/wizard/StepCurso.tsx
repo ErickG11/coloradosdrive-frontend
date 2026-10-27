@@ -1,4 +1,6 @@
 "use client";
+import styles from "./enrollment.module.css";
+import { WizardIcon } from "./WizardVisual";
 import { useRef, useState } from "react";
 import { Button, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
@@ -55,9 +57,9 @@ export function StepCurso({
     }
   }
   return (
-    <div className="flex flex-col gap-5">
+    <div className={styles.courseStep}>
       <p>Elige el tipo de curso. El cupo y la cohorte se vuelven a validar al confirmar.</p>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={styles.courseOptions}>
         {(["A", "B"] as const).map((tipo) => {
           const c = catalog.find((c) => c.tipo === tipo);
           return (
@@ -66,9 +68,13 @@ export function StepCurso({
               type="button"
               aria-pressed={selection?.courseTipo === tipo}
               disabled={!c?.courseId}
-              className={`rounded-md border p-4 text-left ${selection?.courseTipo === tipo ? "border-accent-blue bg-accent-blue-subtle" : "border-border"}`}
+              className={styles.courseOption}
+              data-course-type={tipo}
               onClick={() => c && void select(c)}
             >
+              <span className={styles.courseIcon}>
+                <WizardIcon name={tipo === "A" ? "motorcycle" : "car"} />
+              </span>
               <strong>Tipo {tipo}</strong>
               <p>{tipo === "A" ? "Motocicletas" : "Vehículos livianos"}</p>
               {!c?.courseId && <p>Catálogo sin configurar</p>}
@@ -76,14 +82,15 @@ export function StepCurso({
           );
         })}
       </div>
-      {busy && <p>Buscando cohorte disponible…</p>}
+      {busy && <p role="status">Buscando cohorte disponible…</p>}
       {error && (
         <p role="alert" className="text-accent-red">
           {error}
         </p>
       )}
       {selection && preview && (
-        <div className="rounded-md border border-border p-4">
+        <div className={styles.cohortPreview} data-pending={!selection.cohort}>
+          <h3>Cohorte y disponibilidad</h3>
           {selection.cohort ? (
             <>
               <p>
@@ -143,7 +150,7 @@ export function StepCurso({
           )}
         </div>
       )}
-      <div className="flex justify-between">
+      <div className={styles.footer}>
         <Button variant="secondary" onClick={onBack}>
           Atrás
         </Button>
