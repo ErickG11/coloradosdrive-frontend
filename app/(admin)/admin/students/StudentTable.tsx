@@ -35,6 +35,12 @@ export function StudentTable({
   onOpen?: (event: MouseEvent<HTMLAnchorElement>, id: string) => void;
 }) {
   const href = (student: AdminStudent) => `/admin/students/${student.id}?${filterQuery}`;
+  // Como en el diseño: «Cohorte X» salvo que el nombre ya lo diga.
+  function cohortLabel(cohortId: string) {
+    const name = cohorts.find((cohort) => cohort.id === cohortId)?.nombre;
+    if (!name) return "Cohorte no disponible";
+    return /^cohorte\b/iu.test(name) ? name : `Cohorte ${name}`;
+  }
   const columns: DataColumn<AdminStudent>[] = [
     {
       key: "name",
@@ -43,13 +49,15 @@ export function StudentTable({
       render: (student) => (
         <div className={styles.studentIdentity}>
           <StudentAvatar student={student} />
-          <Link
-            href={href(student)}
-            onClick={(event) => onOpen?.(event, student.id)}
-            className={styles.studentLink}
-          >
-            {student.nombreCompleto}
-          </Link>
+          <div>
+            <Link
+              href={href(student)}
+              onClick={(event) => onOpen?.(event, student.id)}
+              className={styles.studentLink}
+            >
+              {student.nombreCompleto}
+            </Link>
+          </div>
         </div>
       ),
     },
@@ -62,7 +70,7 @@ export function StudentTable({
     },
     {
       key: "account",
-      header: "Estado",
+      header: "Estado de la cuenta",
       render: (student) => <ActiveBadge active={student.activo} />,
     },
     {
@@ -73,7 +81,7 @@ export function StudentTable({
         student.matchingEnrollments.length === 0 ? (
           <span>Sin matrículas coincidentes</span>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-3">
             {student.matchingEnrollments.map((enrollment) => (
               <li key={enrollment.id} className={styles.courseBadges}>
                 <StatusBadge
@@ -83,17 +91,20 @@ export function StudentTable({
                 >
                   <StudentIcon name={enrollment.courseType === "A" ? "motorcycle" : "car"} />
                   <span>Tipo {enrollment.courseType}</span>
+                  <span>
+                    {" · "}
+                    {enrollment.courseType === "A" ? "Motocicletas" : "Vehículos livianos"}
+                  </span>
                 </StatusBadge>
-                <StudentBadge status={enrollment.status} />
-                <StatusBadge
-                  status={enrollment.cohortId ? "cohort" : "pendiente_cohorte"}
-                  tone={enrollment.cohortId ? "neutral" : "warning"}
-                >
-                  {enrollment.cohortId
-                    ? (cohorts.find((cohort) => cohort.id === enrollment.cohortId)?.nombre ??
-                      "Cohorte no disponible")
-                    : "Sin cohorte"}
-                </StatusBadge>
+                <div>
+                  <StatusBadge
+                    status={enrollment.cohortId ? "cohort" : "pendiente_cohorte"}
+                    tone={enrollment.cohortId ? "neutral" : "warning"}
+                  >
+                    {enrollment.cohortId ? cohortLabel(enrollment.cohortId) : "Sin cohorte"}
+                  </StatusBadge>
+                  <StudentBadge status={enrollment.status} />
+                </div>
               </li>
             ))}
           </ul>
