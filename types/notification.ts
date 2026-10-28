@@ -4,7 +4,8 @@ export type NotificationType =
   | "cupo_disponible"
   | "sin_practica_instructor"
   | "cambio_realizado"
-  | "asistencia_corregida";
+  | "asistencia_corregida"
+  | "encuesta_practica";
 
 export interface Notification {
   attendanceEventId?: string | null;
