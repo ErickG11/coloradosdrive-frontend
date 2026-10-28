@@ -139,6 +139,28 @@ describe("NotificationBell", () => {
     expect(push).toHaveBeenCalledWith("/student/history");
   });
 
+  it("lleva el aviso de encuesta al panel del alumno sin autorizar por sí solo el envío", async () => {
+    const survey = notice({
+      tipo: "encuesta_practica",
+      titulo: "Califica tu práctica",
+      mensaje: "Tu encuesta está disponible",
+      emailStatus: null,
+    });
+    get.mockResolvedValue(page([survey, second]));
+    patch.mockResolvedValue({ ...survey, readAt: "2026-10-27T19:45:00Z" });
+    const { user } = await open();
+    const button = screen.getByRole("button", { name: /Califica tu práctica/ });
+    expect(button).toHaveTextContent("Ver encuesta de práctica");
+    await user.click(button);
+    expect(push).toHaveBeenCalledWith("/student?calificar=slot-1");
+    expect(patch).toHaveBeenCalledWith(
+      "/notifications/notice-1/read",
+      undefined,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(post).not.toHaveBeenCalled();
+  });
+
   it("un aviso sin franja se puede leer sin navegar ni cerrar la bandeja", async () => {
     get.mockResolvedValue(page([notice({ practiceSlotId: null }), second]));
     patch.mockResolvedValue({ ...first, practiceSlotId: null, readAt: "2026-10-27T19:45:00Z" });
