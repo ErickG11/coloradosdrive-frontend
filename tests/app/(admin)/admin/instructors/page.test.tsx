@@ -29,7 +29,14 @@ const list: InstructorList = { items: [instructor], total: 1, page: 1, pageSize:
 describe("InstructorsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedUseFetch.mockReturnValue({ data: list, isLoading: false, error: null, refetch });
+    mockedUseFetch.mockImplementation((path) => ({
+      data: path.startsWith("/admin/instructor-ratings")
+        ? { items: [], total: 0, page: 1, pageSize: 10 }
+        : list,
+      isLoading: false,
+      error: null,
+      refetch,
+    }));
   });
 
   it("lista, busca y filtra con los parámetros del backend", async () => {
