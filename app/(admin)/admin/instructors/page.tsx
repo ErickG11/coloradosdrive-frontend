@@ -20,6 +20,7 @@ import type { InstructorDetail, InstructorList, InstructorSummary } from "@/type
 
 import { InstructorForm } from "./InstructorForm";
 import { InstructorMetrics } from "./InstructorMetrics";
+import { InstructorRatings } from "./InstructorRatings";
 import { InstructorProfile } from "./InstructorProfile";
 import { InstructorAvatar, InstructorIcon } from "./InstructorVisual";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
@@ -171,6 +172,7 @@ export default function InstructorsPage() {
           }
         />
         <InstructorMetrics version={metricsVersion} />
+        <InstructorRatings />
         <section className={styles.filters} aria-label="Buscar y filtrar instructores">
           <form
             onSubmit={(event) => {
