@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button, Card, EmptyState, Pagination, Select, StatusBadge } from "@/components/ui";
+import { PracticeRatingModal } from "@/components/practice-ratings/PracticeRatingModal";
 import { useFetch } from "@/hooks/useFetch";
+import { usePendingPracticeRatings } from "@/hooks/usePendingPracticeRatings";
 import { formatPracticeDateTime } from "@/lib/utils/schoolTime";
+import type { PendingPracticeRating } from "@/types/practiceRating";
 import type {
   PracticeHistoryEnrollment,
   PracticeHistoryItem,
@@ -99,7 +102,15 @@ function HoursSummary({ summary }: { summary: PracticeHistoryPage["summary"] }) 
   );
 }
 
-function EnrollmentHistory({ enrollmentId }: { enrollmentId: string }) {
+function EnrollmentHistory({
+  enrollmentId,
+  pendingItems,
+  onRate,
+}: {
+  enrollmentId: string;
+  pendingItems: PendingPracticeRating[];
+  onRate: (practice: PendingPracticeRating) => void;
+}) {
   const [page, setPage] = useState(1);
   const result = useFetch<PracticeHistoryPage>(
     `/estudiantes/practice-history?enrollmentId=${encodeURIComponent(enrollmentId)}&page=${page}&pageSize=20`,
@@ -185,6 +196,22 @@ function EnrollmentHistory({ enrollmentId }: { enrollmentId: string }) {
                       Motivo: {item.motivo}
                     </p>
                   ) : null}
+                  {pendingItems.find(
+                    (pending) => pending.practiceSlotId === item.practiceSlotId,
+                  ) ? (
+                    <Button
+                      size="sm"
+                      className="self-start"
+                      onClick={() => {
+                        const practice = pendingItems.find(
+                          (pending) => pending.practiceSlotId === item.practiceSlotId,
+                        );
+                        if (practice) onRate(practice);
+                      }}
+                    >
+                      Calificar
+                    </Button>
+                  ) : null}
                 </li>
               ))}
             </ol>
@@ -204,6 +231,9 @@ function EnrollmentHistory({ enrollmentId }: { enrollmentId: string }) {
 }
 
 export default function StudentHistoryPage() {
+  const pending = usePendingPracticeRatings();
+  const [selectedRating, setSelectedRating] = useState<PendingPracticeRating | null>(null);
+  const [ratingSuccess, setRatingSuccess] = useState(false);
   const enrollments = useFetch<PracticeHistoryEnrollment[]>(
     "/estudiantes/practice-history/enrollments",
   );
@@ -220,6 +250,19 @@ export default function StudentHistoryPage() {
           Tus prácticas y horas asistidas. Hora de Ecuador (America/Guayaquil).
         </p>
       </header>
+      {ratingSuccess ? (
+        <p role="status" className="text-sm text-status-success">
+          Gracias, tu calificación se envió correctamente.
+        </p>
+      ) : null}
+      {pending.error ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-text-secondary">
+          <span>No pudimos consultar tus encuestas pendientes.</span>
+          <Button variant="secondary" size="sm" onClick={pending.refetch}>
+            Reintentar encuestas
+          </Button>
+        </div>
+      ) : null}
       {enrollments.isLoading ? (
         <p role="status" className="text-sm text-text-secondary">
           Cargando matrículas…
@@ -259,9 +302,27 @@ export default function StudentHistoryPage() {
               Curso tipo {enrollment.courseType} · {enrollmentLabels[enrollment.status]}
             </p>
           )}
-          <EnrollmentHistory key={enrollment.enrollmentId} enrollmentId={enrollment.enrollmentId} />
+          <EnrollmentHistory
+            key={enrollment.enrollmentId}
+            enrollmentId={enrollment.enrollmentId}
+            pendingItems={pending.items}
+            onRate={(practice) => {
+              setRatingSuccess(false);
+              setSelectedRating(practice);
+            }}
+          />
         </>
       )}
+      <PracticeRatingModal
+        practice={selectedRating}
+        onClose={() => setSelectedRating(null)}
+        onSubmitted={() => {
+          setSelectedRating(null);
+          setRatingSuccess(true);
+          pending.refetch();
+        }}
+        onStale={pending.refetch}
+      />
     </div>
   );
 }

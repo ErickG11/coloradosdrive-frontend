@@ -35,9 +35,11 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
       close();
       router.push(
         role === "estudiante"
-          ? notification.tipo === "asistencia_corregida"
-            ? "/student/history"
-            : "/student/schedule"
+          ? notification.tipo === "encuesta_practica"
+            ? `/student?calificar=${encodeURIComponent(notification.practiceSlotId)}`
+            : notification.tipo === "asistencia_corregida"
+              ? "/student/history"
+              : "/student/schedule"
           : "/instructor",
       );
     }
@@ -173,6 +175,11 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
                       >
                         <span className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
                           <span className="min-w-0 break-words text-sm font-semibold text-text-primary">
+                            {notification.tipo === "encuesta_practica" ? (
+                              <span aria-hidden="true" className="mr-2 text-brand-primary">
+                                ★
+                              </span>
+                            ) : null}
                             {notification.titulo}
                           </span>
                           {!notification.readAt ? (
@@ -184,6 +191,11 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
                         <span className="break-words text-sm leading-6 text-text-secondary">
                           {notification.mensaje}
                         </span>
+                        {notification.tipo === "encuesta_practica" ? (
+                          <span className="text-xs font-medium text-brand-primary">
+                            Ver encuesta de práctica
+                          </span>
+                        ) : null}
                         {notification.scheduledAt ? (
                           <span className="text-xs leading-5 text-text-secondary">
                             Práctica:{" "}

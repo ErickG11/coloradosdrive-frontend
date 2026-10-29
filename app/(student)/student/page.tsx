@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Card } from "@/components/ui";
 import { buttonClassName } from "@/components/ui/buttonStyles";
+import { StudentPendingRatings } from "@/components/practice-ratings/StudentPendingRatings";
 
 export const metadata: Metadata = { title: "Panel de estudiante" };
 
@@ -28,6 +30,15 @@ export default function StudentPage() {
           </Link>
         </div>
       </Card>
+      <Suspense
+        fallback={
+          <Card title="Encuestas pendientes" className="relative z-10 mt-5">
+            <p className="text-sm text-text-secondary">Cargando encuestas…</p>
+          </Card>
+        }
+      >
+        <StudentPendingRatings />
+      </Suspense>
     </div>
   );
 }

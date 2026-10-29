@@ -14,6 +14,7 @@ import { useFetch } from "@/hooks/useFetch";
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "x" }),
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: ReactNode }) => (
@@ -52,7 +53,13 @@ describe("encabezado principal de cada pantalla", () => {
     const headings = screen.getAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
     expect(headings[0]).toHaveTextContent(title);
-    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+    if (title === "Panel de estudiante") {
+      expect(
+        screen.getByRole("heading", { level: 2, name: "Encuestas pendientes" }),
+      ).toBeInTheDocument();
+    } else {
+      expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+    }
   });
 
   // El panel de administración tiene varias secciones (h2), pero un solo h1.

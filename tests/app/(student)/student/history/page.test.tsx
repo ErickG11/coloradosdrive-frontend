@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import StudentHistoryPage from "@/app/(student)/student/history/page";
 import StudentPage from "@/app/(student)/student/page";
+import { usePendingPracticeRatings } from "@/hooks/usePendingPracticeRatings";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type {
@@ -12,6 +13,10 @@ import type {
 } from "@/types/practiceAttendance";
 
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn() } }));
+vi.mock("@/hooks/usePendingPracticeRatings", () => ({ usePendingPracticeRatings: vi.fn() }));
+vi.mock("@/components/practice-ratings/StudentPendingRatings", () => ({
+  StudentPendingRatings: () => null,
+}));
 const get = vi.mocked(api.get);
 const enrollment: PracticeHistoryEnrollment = {
   enrollmentId: "e1",
@@ -51,6 +56,12 @@ function history(overrides: Partial<PracticeHistoryPage> = {}): PracticeHistoryP
   };
 }
 beforeEach(() => {
+  vi.mocked(usePendingPracticeRatings).mockReturnValue({
+    items: [],
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  });
   get.mockReset();
   get.mockImplementation(async (url) => (url === enrollmentsPath ? [enrollment] : history()));
 });
@@ -243,6 +254,33 @@ describe("historial de asistencia del alumno E4", () => {
     expect(screen.getByText(/Objetivo de horas sin registrar/)).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Siguiente" })).toBeDisabled();
+  });
+  it("ofrece Calificar solo si la lista de pendientes confirma la práctica", async () => {
+    vi.mocked(usePendingPracticeRatings).mockReturnValue({
+      items: [
+        {
+          practiceSlotId: "slot",
+          instructorName: "Ana Torres",
+          scheduledAt: "2026-10-26T20:00:00Z",
+          opensAt: "2026-10-26T21:05:00Z",
+          closesAt: "2026-10-27T21:05:00Z",
+        },
+      ],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    get.mockImplementation(async (url) =>
+      url === enrollmentsPath
+        ? [enrollment]
+        : history({ items: [item(), item({ id: "other", practiceSlotId: "other" })], total: 2 }),
+    );
+    const user = userEvent.setup();
+    render(<StudentHistoryPage />);
+    const rate = await screen.findByRole("button", { name: "Calificar" });
+    expect(screen.getAllByRole("button", { name: "Calificar" })).toHaveLength(1);
+    await user.click(rate);
+    expect(screen.getByRole("dialog", { name: "Calificar práctica" })).toBeInTheDocument();
   });
   it("limita la barra al objetivo sin ocultar horas adicionales", async () => {
     get.mockImplementation(async (url) =>
