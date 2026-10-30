@@ -4,6 +4,7 @@ import {Card} from '@/components/ui/Card';
 import {useFetch} from '@/hooks/useFetch';
 import type {PublicCourse} from '@/types/publicCourse';
 import {DOCUMENTOS,type SolicitudAdmin} from '@/types/solicitud';
+import {DocumentViewer} from './DocumentViewer';
 import styles from './solicitudes.module.css';
 export function SolicitudDetail({solicitud,onClose}:{solicitud:SolicitudAdmin;onClose:()=>void}){
  const {data:courses}=useFetch<PublicCourse[]>('/public/courses');
@@ -24,7 +25,7 @@ export function SolicitudDetail({solicitud,onClose}:{solicitud:SolicitudAdmin;on
     </div>:<p>No hay consentimiento registrado.</p>}
    </Card>
    <h3 className="font-semibold">Documentos digitales</h3>
-   {DOCUMENTOS.map(({tipo,label})=>{const doc=solicitud.documentos.find(d=>d.tipoDocumento===tipo);return <Card key={tipo}><div className={styles.detail}><h4 className="font-medium">{label}</h4><p>{status[doc?.estado??'faltante']??doc?.estado}</p>{doc?.motivoRechazo?<p>Motivo: {doc.motivoRechazo}</p>:null}</div></Card>;})}
+   {DOCUMENTOS.map(({tipo,label})=>{const doc=solicitud.documentos.find(d=>d.tipoDocumento===tipo);return <Card key={tipo}><div className={styles.detail}><h4 className="font-medium">{label}</h4><p>{status[doc?.estado??'faltante']??doc?.estado}</p>{doc?.motivoRechazo?<p>Motivo: {doc.motivoRechazo}</p>:null}{doc?.documentoId?<DocumentViewer solicitudId={solicitud.id} documentoId={doc.documentoId}/>:null}</div></Card>;})}
    <p className="text-sm text-text-secondary">Los faltantes no bloquean la decisión. El checklist físico se gestiona desde la matrícula del alumno.</p>
   </div>
  </Modal>;
