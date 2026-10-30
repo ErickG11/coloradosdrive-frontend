@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 
 import { LandingPage } from "@/components/landing/LandingPage";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { getPublicCourses } from "@/lib/api/publicCourses";
 import type { PublicCourse } from "@/types/publicCourse";
 
 // jsdom no implementa IntersectionObserver: lo necesita `whileInView` de
@@ -18,6 +20,12 @@ class IntersectionObserverStub {
 
 beforeAll(() => {
   vi.stubGlobal("IntersectionObserver", IntersectionObserverStub);
+  vi.stubGlobal("matchMedia", (media: string) => ({
+    media,
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
 });
 
 function renderLanding(courses: PublicCourse[]) {
@@ -50,16 +58,16 @@ describe("LandingPage", () => {
     }
   });
 
-  it("muestra el hero con el CTA de inscripción por WhatsApp", () => {
+  it("muestra el hero y el bloque final con inscripción en línea", () => {
     renderLanding([]);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       /Tu futuro\.\s*En marcha\./,
     );
     const enrollLinks = screen.getAllByRole("link", { name: /Inscríbete hoy/ });
-    expect(enrollLinks.length).toBeGreaterThan(0);
+    expect(enrollLinks).toHaveLength(2);
     for (const link of enrollLinks) {
-      expect(link.getAttribute("href")).toMatch(/^https:\/\/wa\.me\//);
+      expect(link).toHaveAttribute("href", "/inscripcion");
     }
   });
 
@@ -101,5 +109,159 @@ describe("LandingPage", () => {
     renderLanding([]);
 
     expect(screen.getByText("Todos los días, de 06:00 a 22:00.")).toBeInTheDocument();
+  });
+});
+
+const courseAId = "11111111-1111-4111-8111-111111111111";
+const courseBId = "22222222-2222-4222-8222-222222222222";
+const courseA = buildCourse({ id: courseAId, tipo: "A" });
+const courseB = buildCourse({ id: courseBId, tipo: "B" });
+const otherA = buildCourse({ id: "33333333-3333-4333-8333-333333333333", tipo: "A" });
+const otherB = buildCourse({ id: "44444444-4444-4444-8444-444444444444", tipo: "B" });
+
+function expectCourseLinks(hrefA: string, hrefB: string) {
+  expect(screen.getByRole("link", { name: "Inscribirme en Licencia Tipo A" })).toHaveAttribute(
+    "href",
+    hrefA,
+  );
+  expect(screen.getByRole("link", { name: "Inscribirme en Licencia Tipo B" })).toHaveAttribute(
+    "href",
+    hrefB,
+  );
+}
+
+describe("enlaces de inscripción de la landing real", () => {
+  it("cubre menú desktop, menú móvil, hero, tarjetas, prácticas y bloque final", async () => {
+    renderLanding([courseB, courseA]);
+    // jsdom conserva el CSS móvil: inspeccionar también el CTA desktop oculto.
+    const menuEnrollmentLinks = within(screen.getByRole("banner"))
+      .getAllByRole("link", { hidden: true })
+      .filter((link) => link.textContent?.trim() === "Inscríbete");
+    expect(menuEnrollmentLinks).toHaveLength(2);
+    const [desktopLink] = menuEnrollmentLinks;
+    expect(desktopLink).toHaveAttribute("href", "/inscripcion");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Abrir menú" }));
+    const mobileLink = within(
+      screen.getByRole("navigation", { name: "Navegación móvil" }),
+    ).getByRole("link", { name: "Inscríbete" });
+    expect(mobileLink).toHaveAttribute("href", "/inscripcion");
+    expect(mobileLink.querySelector("svg")?.outerHTML).toBe(
+      desktopLink.querySelector("svg")?.outerHTML,
+    );
+    expect(screen.queryByText("Inscríbete por WhatsApp")).not.toBeInTheDocument();
+    expectCourseLinks(`/inscripcion?courseId=${courseAId}`, `/inscripcion?courseId=${courseBId}`);
+    expect(screen.getByRole("link", { name: "Consulta por tus prácticas" })).toHaveAttribute(
+      "href",
+      "/inscripcion",
+    );
+    const enrollmentLinks = screen
+      .getAllByRole("link", { hidden: true })
+      .filter((link) =>
+        /Inscríbete|Inscribirme|Consulta por tus prácticas/.test(
+          link.getAttribute("aria-label") ?? link.textContent ?? "",
+        ),
+      );
+    expect(enrollmentLinks).toHaveLength(7);
+    for (const link of enrollmentLinks) {
+      expect(link.getAttribute("href")).toMatch(/^\/inscripcion(?:\?courseId=[a-f0-9-]+)?$/);
+      expect(link.getAttribute("href")).not.toContain("wa.me");
+      expect(link).not.toHaveAttribute("target", "_blank");
+    }
+  });
+
+  it.each([
+    {
+      name: "un curso único por tipo, independientemente del orden",
+      courses: [courseB, courseA],
+      hrefA: `/inscripcion?courseId=${courseAId}`,
+      hrefB: `/inscripcion?courseId=${courseBId}`,
+    },
+    { name: "lista vacía", courses: [], hrefA: "/inscripcion", hrefB: "/inscripcion" },
+    {
+      name: "falta Tipo B",
+      courses: [courseA],
+      hrefA: `/inscripcion?courseId=${courseAId}`,
+      hrefB: "/inscripcion",
+    },
+    {
+      name: "Tipo A ambiguo",
+      courses: [courseA, otherA, courseB],
+      hrefA: "/inscripcion",
+      hrefB: `/inscripcion?courseId=${courseBId}`,
+    },
+    {
+      name: "Tipo B ambiguo",
+      courses: [courseA, courseB, otherB],
+      hrefA: `/inscripcion?courseId=${courseAId}`,
+      hrefB: "/inscripcion",
+    },
+    {
+      name: "ambos tipos ambiguos",
+      courses: [courseA, otherA, courseB, otherB],
+      hrefA: "/inscripcion",
+      hrefB: "/inscripcion",
+    },
+  ])("resuelve las tarjetas con $name", ({ courses, hrefA, hrefB }) => {
+    renderLanding(courses);
+    expectCourseLinks(hrefA, hrefB);
+  });
+
+  it.each(["error HTTP", "backend caído"])(
+    "mantiene la inscripción disponible ante %s",
+    async (failure) => {
+      const fetcher = vi.spyOn(globalThis, "fetch");
+      try {
+        if (failure === "backend caído") fetcher.mockRejectedValueOnce(new Error("network error"));
+        else fetcher.mockResolvedValueOnce(new Response("{}", { status: 503 }));
+        renderLanding(await getPublicCourses());
+        expectCourseLinks("/inscripcion", "/inscripcion");
+        for (const link of screen.getAllByRole("link", {
+          name: /Inscríbete|Inscribirme|Consulta por tus prácticas/,
+        })) {
+          expect(link).toHaveAttribute("href", "/inscripcion");
+        }
+      } finally {
+        fetcher.mockRestore();
+      }
+    },
+  );
+
+  it("conserva los cuatro enlaces de contacto de WhatsApp con sus teléfonos y mensajes", () => {
+    renderLanding([courseA, courseB]);
+    const contact = screen.getByRole("region", { name: /Tu camino.*empieza aquí/ });
+    const footer = screen.getByRole("contentinfo");
+    const message = encodeURIComponent(
+      "Hola, Colorados Drive. Quiero información para inscribirme en un curso de conducción.",
+    );
+    for (const phone of [
+      { display: "0992042546", international: "593992042546" },
+      { display: "0997913888", international: "593997913888" },
+    ]) {
+      const href = `https://wa.me/${phone.international}?text=${message}`;
+      for (const link of [
+        within(contact).getByRole("link", { name: new RegExp(phone.display) }),
+        within(footer).getByRole("link", { name: `WhatsApp · ${phone.display}` }),
+      ]) {
+        expect(link).toHaveAttribute("href", href);
+        expect(link).toHaveAttribute("target", "_blank");
+        expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      }
+    }
+    expect(
+      screen
+        .getAllByRole("link")
+        .filter((link) => link.getAttribute("href")?.startsWith("https://wa.me/")),
+    ).toHaveLength(4);
+  });
+
+  it("conserva las dos notas informativas sobre WhatsApp", () => {
+    renderLanding([]);
+    expect(
+      screen.getByText("Valores sin IVA. Consulta fechas y cohortes por WhatsApp."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Elige tu curso y consulta la próxima cohorte por WhatsApp."),
+    ).toBeInTheDocument();
   });
 });
