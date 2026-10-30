@@ -3,10 +3,11 @@ import {Modal} from '@/components/ui/Modal';
 import {Card} from '@/components/ui/Card';
 import {useFetch} from '@/hooks/useFetch';
 import type {PublicCourse} from '@/types/publicCourse';
-import {DOCUMENTOS,type SolicitudAdmin} from '@/types/solicitud';
+import {DOCUMENTOS,type SolicitudAdmin,type SolicitudDecision} from '@/types/solicitud';
+import {ReviewActions} from './ReviewActions';
 import {DocumentViewer} from './DocumentViewer';
 import styles from './solicitudes.module.css';
-export function SolicitudDetail({solicitud,onClose}:{solicitud:SolicitudAdmin;onClose:()=>void}){
+export function SolicitudDetail({solicitud,onClose,onDone}:{solicitud:SolicitudAdmin;onClose:()=>void;onDone:(message:string,decision?:SolicitudDecision)=>void}){
  const {data:courses}=useFetch<PublicCourse[]>('/public/courses');
  const consent=solicitud.consentimiento;
  const status:Record<string,string>={recibido:'Recibido',aprobado:'Aprobado',rechazado:'Rechazado',faltante:'Faltante',no_aplica:'No aplica'};
@@ -25,7 +26,8 @@ export function SolicitudDetail({solicitud,onClose}:{solicitud:SolicitudAdmin;on
     </div>:<p>No hay consentimiento registrado.</p>}
    </Card>
    <h3 className="font-semibold">Documentos digitales</h3>
-   {DOCUMENTOS.map(({tipo,label})=>{const doc=solicitud.documentos.find(d=>d.tipoDocumento===tipo);return <Card key={tipo}><div className={styles.detail}><h4 className="font-medium">{label}</h4><p>{status[doc?.estado??'faltante']??doc?.estado}</p>{doc?.motivoRechazo?<p>Motivo: {doc.motivoRechazo}</p>:null}{doc?.documentoId?<DocumentViewer solicitudId={solicitud.id} documentoId={doc.documentoId}/>:null}</div></Card>;})}
+   {DOCUMENTOS.map(({tipo,label})=>{const doc=solicitud.documentos.find(d=>d.tipoDocumento===tipo);return <Card key={tipo}><div className={styles.detail}><h4 className="font-medium">{label}</h4><p>{status[doc?.estado??'faltante']??doc?.estado}</p>{doc?.motivoRechazo?<p>Motivo: {doc.motivoRechazo}</p>:null}{doc?.documentoId?<><DocumentViewer solicitudId={solicitud.id} documentoId={doc.documentoId}/>{solicitud.estado==='pendiente_revision'?<ReviewActions id={solicitud.id} documentoId={doc.documentoId} onDone={onDone}/>:null}</>:null}</div></Card>;})}
+   {solicitud.estado==='pendiente_revision'?<ReviewActions id={solicitud.id} onDone={onDone}/>:null}
    <p className="text-sm text-text-secondary">Los faltantes no bloquean la decisión. El checklist físico se gestiona desde la matrícula del alumno.</p>
   </div>
  </Modal>;
