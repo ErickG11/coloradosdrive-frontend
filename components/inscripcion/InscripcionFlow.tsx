@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { solicitudes, solicitudMessage } from '@/lib/api/solicitudes';
 import type { PublicCourse } from '@/types/publicCourse';
 import type { SolicitudSession } from '@/types/solicitud';
+import { DataStep } from './DataStep';
 import { ConsentStep } from './ConsentStep';
 import { CodeStep } from './CodeStep';
 import { Toast } from './Toast';
@@ -19,7 +20,7 @@ export function InscripcionFlow({ initialCourseId = '' }: { initialCourseId?: st
  const [courses,setCourses]=useState<PublicCourse[]>([]);
  const [courseId,setCourseId]=useState(initialCourseId);
  const [correo,setCorreo]=useState('');
- const [step,setStep]=useState<'correo'|'codigo'|'consentimiento'|'datos'>('correo');
+ const [step,setStep]=useState<'correo'|'codigo'|'consentimiento'|'datos'|'documentos'>('correo');
  const [session,setSession]=useState<SolicitudSession|null>(null);
  const [loading,setLoading]=useState(true), [busy,setBusy]=useState(false);
  const [error,setError]=useState(''),[message,setMessage]=useState(''),[retry,setRetry]=useState(0);
@@ -44,7 +45,7 @@ export function InscripcionFlow({ initialCourseId = '' }: { initialCourseId?: st
   <Toast message={message} onDismiss={() => setMessage('')}/>
   <FormError>{error}</FormError>
   {loading ? <p role="status">Cargando cursos…</p> : courses.length===0 ? <Card><p>No pudimos cargar los cursos.</p><Button onClick={() => {setLoading(true);setError('');setRetry(retry+1);}}>Reintentar</Button></Card> :
-   <Card title={step==='correo'?'1. Curso y correo':step==='codigo'?'2. Verifica tu correo':step==='consentimiento'?'3. Consentimiento':'4. Datos personales'}>
+   <Card title={step==='correo'?'1. Curso y correo':step==='codigo'?'2. Verifica tu correo':step==='consentimiento'?'3. Consentimiento':step==='datos'?'4. Datos personales':'5. Documentos'}>
    {step==='correo' ? <form onSubmit={send} className={styles.form}>
     <Select label="Curso" value={courseId} onChange={e => setCourseId(e.target.value)} required>
      <option value="">Selecciona un curso</option>{courses.map(c => <option key={c.id} value={c.id}>Tipo {c.tipo} — {c.nombre}</option>)}
@@ -52,7 +53,7 @@ export function InscripcionFlow({ initialCourseId = '' }: { initialCourseId?: st
     <Input label="Correo electrónico" type="email" autoComplete="email" value={correo} onChange={e => setCorreo(e.target.value)} required/>
     <p className="text-sm text-text-secondary">Usaremos este correo para verificar tu solicitud y enviarte la respuesta.</p>
     <Button type="submit" isLoading={busy}>Enviar código</Button>
-   </form> : step==='codigo' ? <CodeStep correo={correo} courseId={courseId} onNotice={setMessage} onBack={()=>{setStep('correo');setError('');}} onVerified={s=>{setSession(s);setStep('consentimiento');setMessage('Correo verificado.');}}/> : session && step==='consentimiento' ? <ConsentStep session={session} onAccepted={()=>{setStep('datos');setMessage('Consentimiento registrado.');}}/> : <p>Completa tus datos personales en el siguiente paso.</p>}
+   </form> : step==='codigo' ? <CodeStep correo={correo} courseId={courseId} onNotice={setMessage} onBack={()=>{setStep('correo');setError('');}} onVerified={s=>{setSession(s);setStep('consentimiento');setMessage('Correo verificado.');}}/> : session && step==='consentimiento' ? <ConsentStep session={session} onAccepted={()=>{setStep('datos');setMessage('Consentimiento registrado.');}}/> : session && step==='datos' ? <DataStep session={session} onSaved={s=>{setSession(s);setStep('documentos');setMessage('Datos guardados.');}}/> : <p>Puedes subir los documentos que tengas.</p>}
    </Card>}
   <Link href="/login">Iniciar sesión</Link>
  </div></main>;
