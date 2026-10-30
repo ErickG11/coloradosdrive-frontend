@@ -79,6 +79,14 @@ export function Sidebar({ email, role }: SidebarProps) {
             Instructores
           </SidebarLink>
           <SidebarLink
+            href="/admin/solicitudes"
+            active={pathname.startsWith("/admin/solicitudes")}
+            section="enroll"
+            onClick={closeDrawer}
+          >
+            Solicitudes de inscripción
+          </SidebarLink>
+          <SidebarLink
             href="/admin/enrollments"
             active={pathname.startsWith("/admin/enrollments")}
             section="enroll"

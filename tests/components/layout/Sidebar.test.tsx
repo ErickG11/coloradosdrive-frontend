@@ -79,3 +79,8 @@ describe("Sidebar", () => {
     }
   });
 });
+
+it("muestra solicitudes solo al administrador", () => {
+  renderSidebar("admin");
+  expect(screen.getByRole("link", { name: "Solicitudes de inscripción" })).toHaveAttribute("href", "/admin/solicitudes");
+});
