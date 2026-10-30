@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Card } from "@/components/ui";
 import { buttonClassName } from "@/components/ui/buttonStyles";
+import { StudentPendingDocuments } from "@/components/inscripcion/StudentPendingDocuments";
 import { StudentPendingRatings } from "@/components/practice-ratings/StudentPendingRatings";
 
 export const metadata: Metadata = { title: "Panel de estudiante" };
@@ -30,6 +31,7 @@ export default function StudentPage() {
           </Link>
         </div>
       </Card>
+      <StudentPendingDocuments />
       <Suspense
         fallback={
           <Card title="Encuestas pendientes" className="relative z-10 mt-5">
