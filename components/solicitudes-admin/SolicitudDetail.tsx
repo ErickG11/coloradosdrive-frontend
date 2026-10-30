@@ -4,6 +4,7 @@ import {Card} from '@/components/ui/Card';
 import {useFetch} from '@/hooks/useFetch';
 import type {PublicCourse} from '@/types/publicCourse';
 import {DOCUMENTOS,type SolicitudAdmin,type SolicitudDecision} from '@/types/solicitud';
+import {DeleteSolicitud} from './DeleteSolicitud';
 import {ReviewActions} from './ReviewActions';
 import {DocumentViewer} from './DocumentViewer';
 import styles from './solicitudes.module.css';
@@ -28,6 +29,7 @@ export function SolicitudDetail({solicitud,onClose,onDone}:{solicitud:SolicitudA
    <h3 className="font-semibold">Documentos digitales</h3>
    {DOCUMENTOS.map(({tipo,label})=>{const doc=solicitud.documentos.find(d=>d.tipoDocumento===tipo);return <Card key={tipo}><div className={styles.detail}><h4 className="font-medium">{label}</h4><p>{status[doc?.estado??'faltante']??doc?.estado}</p>{doc?.motivoRechazo?<p>Motivo: {doc.motivoRechazo}</p>:null}{doc?.documentoId?<><DocumentViewer solicitudId={solicitud.id} documentoId={doc.documentoId}/>{solicitud.estado==='pendiente_revision'?<ReviewActions id={solicitud.id} documentoId={doc.documentoId} onDone={onDone}/>:null}</>:null}</div></Card>;})}
    {solicitud.estado==='pendiente_revision'?<ReviewActions id={solicitud.id} onDone={onDone}/>:null}
+   {solicitud.estado!=='aprobada'?<DeleteSolicitud id={solicitud.id} cedula={solicitud.cedula} onDeleted={()=>{onDone('Solicitud eliminada.');onClose();}}/>:null}
    <p className="text-sm text-text-secondary">Los faltantes no bloquean la decisión. El checklist físico se gestiona desde la matrícula del alumno.</p>
   </div>
  </Modal>;
