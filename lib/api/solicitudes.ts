@@ -14,6 +14,8 @@ import type {
 } from "@/types/solicitud";
 const path = (s: SolicitudSession) => `/solicitudes/${s.solicitudId}`;
 export const solicitudes = {
+  submit: (s:SolicitudSession)=>api.post<{id:string;estado:string;enviadaAt:string}>(`${path(s)}/enviar`,{}, {token:s.token}),
+  summary:()=>api.get<{pendientes:number;documentosPorRevisar:number}>('/admin/solicitudes/resumen'),
   courses: () => api.get<PublicCourse[]>("/public/courses", { token: null }),
   notice: () => api.get<PrivacyNotice>("/public/aviso-privacidad", { token: null }),
   sendCode: (correo: string, courseId: string) =>
@@ -73,6 +75,10 @@ export async function uploadSolicitudDocument(
   return response.json() as Promise<DocumentoResult>;
 }
 const MESSAGES: Record<string, string> = {
+  SOLICITUD_ENVIADA: 'Tu solicitud ya fue enviada. Sus datos no se pueden modificar.',
+  CEDULA_YA_REGISTRADA: 'La cédula ya está registrada. Revisa el número o contacta a la escuela.',
+  DOCUMENTO_YA_APROBADO: 'Este documento ya fue aprobado y no se puede reemplazar.',
+  EXPEDIENTE_NO_DISPONIBLE: 'No hay una solicitud vinculada a tu cuenta. Contacta a la escuela.',
   DOCUMENTO_YA_REVISADO: "Este documento ya fue revisado. Actualizamos el estado de la solicitud.",
   SOLICITUD_CERRADA:
     "La solicitud está cerrada o en revisión por otro administrador. Actualizamos su estado.",

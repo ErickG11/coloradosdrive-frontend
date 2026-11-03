@@ -13,7 +13,7 @@ export function SentStep({ onDocuments }: { onDocuments: () => void }) {
         temporal al ingresar.
       </p>
       <p>
-        Los documentos faltantes se entregan físicamente en la escuela y no bloquean la solicitud,
+        La papeleta de votación y el tipo de sangre pendientes se entregan físicamente en la escuela,
         incluso con el curso iniciado.
       </p>
       <p>

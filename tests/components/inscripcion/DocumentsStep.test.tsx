@@ -76,10 +76,10 @@ it("acepta soltar archivos y bloquea finalizar durante la subida", async () => {
     dataTransfer: { files: [new File(["pdf"], "foto.pdf", { type: "application/pdf" })] },
   });
   expect(within(slot).getByText("Subiendo")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Finalizar solicitud" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Revisar y enviar" })).toBeDisabled();
   resolve({ id: "d", tipoDocumento: "cedula", estado: "recibido", uploadedAt: "2026-11-03" });
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Finalizar solicitud" })).toBeEnabled(),
+    expect(screen.getByRole("button", { name: "Revisar y enviar" })).toBeEnabled(),
   );
 });
 it.each([
@@ -122,7 +122,7 @@ it("muestra todos los estados y conserva el motivo de rechazo y la exención", (
   expect(screen.getByText("Pendiente de entrega")).toBeInTheDocument();
   expect(screen.getByText("No se exige desde los 65 años cumplidos.")).toBeInTheDocument();
 });
-it("permite finalizar sin documentos y muestra el nombre de décimo", async () => {
+it("permite revisar antes de enviar aunque falten documentos y muestra el nombre de décimo", async () => {
   const finish = vi.fn();
   render(
     <DocumentsStep
@@ -134,6 +134,6 @@ it("permite finalizar sin documentos y muestra el nombre de décimo", async () =
   expect(
     screen.getByLabelText("Título de bachiller o certificado de décimo", { selector: "input" }),
   ).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Finalizar solicitud" }));
+  await userEvent.click(screen.getByRole("button", { name: "Revisar y enviar" }));
   expect(finish).toHaveBeenCalledOnce();
 });

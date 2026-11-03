@@ -25,10 +25,11 @@ async function extractError(response: Response): Promise<ApiError> {
       "message" in data &&
       typeof (data as { message: unknown }).message === "string"
     ) {
-      const body = data as { message: string; code?: unknown; field?: unknown };
+      const body = data as { message: string; code?: unknown; field?: unknown; detalles?:{faltantes?:string[]}; faltantes?:string[] };
       return new ApiError(body.message, response.status, {
         code: typeof body.code === "string" ? body.code : undefined,
         field: typeof body.field === "string" ? body.field : undefined,
+        detalles: body.detalles ?? (Array.isArray(body.faltantes)?{faltantes:body.faltantes}:undefined),
       });
     }
   } catch {
