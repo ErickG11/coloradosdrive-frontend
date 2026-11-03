@@ -37,6 +37,8 @@ export function ReviewOutcome({ decision }: { decision: SolicitudDecision }) {
           La decisión se guardó, pero el correo no se pudo enviar. Contacta al postulante y gestiona
           el reenvío.
         </p>
+      ) : decision.correoEnviado === true ? (
+        <p className="text-sm text-status-success">Correo enviado correctamente.</p>
       ) : null}
     </Card>
   );
