@@ -36,7 +36,9 @@ export function StudentPendingDocuments() {
   return (
     <Card title="Documentos pendientes" className="relative z-10 mt-5">
       <p className="text-sm text-text-secondary">Entrega estos documentos físicos en la escuela:</p>
-      <Link href="/student/documents" className="inline-flex min-h-11 items-center underline">Ver mis documentos</Link>
+      <Link href="/student/documents" className="inline-flex min-h-11 items-center underline">
+        Ver mis documentos
+      </Link>
       <ul className="mt-3 list-inside list-disc text-sm">
         {data.documentosPendientes.map((tipo) => (
           <li key={tipo}>{DOCUMENTOS.find((d) => d.tipo === tipo)?.label ?? tipo}</li>
