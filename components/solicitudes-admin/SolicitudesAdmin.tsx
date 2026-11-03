@@ -14,7 +14,7 @@ import { SolicitudDetail } from "./SolicitudDetail";
 import { SolicitudStatus } from "./SolicitudStatus";
 import styles from "./solicitudes.module.css";
 export function SolicitudesAdmin() {
-  const [estado, setEstado] = useState("pendiente_revision"),
+  const [estado, setEstado] = useState(""),
     [draft, setDraft] = useState(""),
     [q, setQ] = useState(""),
     [page, setPage] = useState(1);
@@ -63,10 +63,10 @@ export function SolicitudesAdmin() {
             setPage(1);
           }}
         >
-          <option value="">Todos</option>
+          <option value="">Todas</option>
           <option value="pendiente_revision">Pendientes</option>
           <option value="aprobada">Aprobadas</option>
-          <option value="rechazada">Rechazadas</option>
+          <option value="rechazada">Rechazadas</option><option value="con_documentos_por_revisar">Con documentos por revisar</option>
         </Select>
         <form
           className={styles.controls}
@@ -96,6 +96,7 @@ export function SolicitudesAdmin() {
           onRetry={refetch}
           mobileCards
           columns={[
+            {key:"enviada",header:"Fecha de envío",render:item=>item.enviadaAt?new Date(item.enviadaAt).toLocaleString("es-EC",{timeZone:"America/Guayaquil"}):"—"},
             { key: "nombre", header: "Postulante", render: (item) => item.nombreCompleto },
             { key: "cedula", header: "Cédula", render: (item) => item.cedula },
             { key: "correo", header: "Correo", render: (item) => item.correo },
@@ -121,7 +122,7 @@ export function SolicitudesAdmin() {
             {
               key: "estado",
               header: "Estado",
-              render: (item) => <SolicitudStatus estado={item.estado} />,
+              render: (item) => <><SolicitudStatus estado={item.estado}/>{Boolean(item.documentosPorRevisar)?<span className="mt-2 block text-xs text-status-info">Documentos por revisar ({item.documentosPorRevisar})</span>:null}</>,
             },
           ]}
         />
@@ -133,6 +134,7 @@ export function SolicitudesAdmin() {
           onClose={close}
           onRefresh={refreshSelected}
           onDone={(notice, result) => {
+            window.dispatchEvent(new Event("solicitudes-actualizadas"));
             setMessage(notice);
             if (result)
               setSelected((current) => (current ? { ...current, estado: result.estado } : null));
