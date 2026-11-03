@@ -24,6 +24,7 @@ export function DocumentUpload({
   reason,
   onFile,
   obligatorio,
+  displayStatus,
 }: {
   tipo: DocumentoTipo;
   label: string;
@@ -33,6 +34,7 @@ export function DocumentUpload({
   reason?: string;
   onFile: (file: File) => void;
   obligatorio?: boolean;
+  displayStatus?: string;
 }) {
   const id = useId(),
     input = useRef<HTMLInputElement>(null);
@@ -54,7 +56,7 @@ export function DocumentUpload({
       </h3>
       {obligatorio!==undefined?<p className="text-xs font-semibold text-text-secondary">{obligatorio?"Obligatorio":"Opcional por ahora, se entrega en la escuela"}</p>:null}
       <div role="status">
-        <StatusBadge status={estado ?? "faltante"} label={status.label} tone={status.tone} />
+        <StatusBadge status={estado ?? "faltante"} label={busy?status.label:displayStatus??status.label} tone={status.tone} />
       </div>
       <div
         className={styles.uploadZone}
