@@ -181,7 +181,7 @@ it.each(["aprobada", "rechazada"])(
   },
 );
 it.each(["aprobada", "rechazada"])(
-  "solicitud %s deja documentos y decisiones en solo lectura",
+  "solicitud %s bloquea solo su decisión y respeta la revisión documental",
   (estado) => {
     render(
       <SolicitudDetail
@@ -197,7 +197,12 @@ it.each(["aprobada", "rechazada"])(
       />,
     );
     expect(screen.getByRole("button", { name: "Ver" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^(Aprobar|Rechazar)/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^(Aprobar|Rechazar) solicitud/ }),
+    ).not.toBeInTheDocument();
+    expect(Boolean(screen.queryByRole("button", { name: "Aprobar documento" }))).toBe(
+      estado === "aprobada",
+    );
     expect(Boolean(screen.queryByRole("button", { name: "Eliminar solicitud" }))).toBe(
       estado === "rechazada",
     );

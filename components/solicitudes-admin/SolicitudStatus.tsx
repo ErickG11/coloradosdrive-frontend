@@ -4,8 +4,8 @@ const STATES: Record<
   string,
   { label: string; tone: "warning" | "success" | "error" | "info" | "neutral" }
 > = {
-  obligatorios_presentes:{label:"Documentos obligatorios presentes",tone:"success"},
-  obligatorios_incompletos:{label:"Documentos obligatorios incompletos",tone:"warning"},
+  obligatorios_presentes: { label: "Documentos obligatorios presentes", tone: "success" },
+  obligatorios_incompletos: { label: "Documentos obligatorios incompletos", tone: "warning" },
   pendiente_revision: { label: "Pendiente de revisión", tone: "warning" },
   aprobada: { label: "Aprobada", tone: "success" },
   rechazada: { label: "Rechazada", tone: "error" },
