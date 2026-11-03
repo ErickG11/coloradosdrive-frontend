@@ -30,7 +30,7 @@ export const ENROLLMENT_STEPS = [
   {
     key: "revision",
     label: "Revisar y enviar",
-    help: "Tu solicitud ya está disponible para revisión.",
+    help: "Comprueba los documentos obligatorios antes de enviar a la escuela.",
   },
 ] as const;
 

@@ -13,8 +13,8 @@ export function SentStep({ onDocuments }: { onDocuments: () => void }) {
         temporal al ingresar.
       </p>
       <p>
-        La papeleta de votación y el tipo de sangre pendientes se entregan físicamente en la escuela,
-        incluso con el curso iniciado.
+        La papeleta de votación y el tipo de sangre pendientes se entregan físicamente en la
+        escuela, incluso con el curso iniciado.
       </p>
       <p>
         Si cierras o recargas esta página, verifica nuevamente tu correo para recuperar el progreso.

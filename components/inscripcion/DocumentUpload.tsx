@@ -50,13 +50,25 @@ export function DocumentUpload({
     onFile(file);
   }
   return (
-    <section className={styles.documentSlot} data-invalid={Boolean(error)} aria-labelledby={`${id}-title`}>
+    <section
+      className={styles.documentSlot}
+      data-invalid={Boolean(error)}
+      aria-labelledby={`${id}-title`}
+    >
       <h3 id={`${id}-title`}>
         <label htmlFor={id}>{label}</label>
       </h3>
-      {obligatorio!==undefined?<p className="text-xs font-semibold text-text-secondary">{obligatorio?"Obligatorio":"Opcional por ahora, se entrega en la escuela"}</p>:null}
+      {obligatorio !== undefined ? (
+        <p className="text-xs font-semibold text-text-secondary">
+          {obligatorio ? "Obligatorio" : "Opcional por ahora, se entrega en la escuela"}
+        </p>
+      ) : null}
       <div role="status">
-        <StatusBadge status={estado ?? "faltante"} label={busy?status.label:displayStatus??status.label} tone={status.tone} />
+        <StatusBadge
+          status={estado ?? "faltante"}
+          label={busy ? status.label : (displayStatus ?? status.label)}
+          tone={status.tone}
+        />
       </div>
       <div
         className={styles.uploadZone}
