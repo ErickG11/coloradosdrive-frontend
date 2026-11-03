@@ -1,8 +1,351 @@
-.page { width: min(calc(100% - 2rem), 70rem); margin-inline: auto; padding-block: 2rem; }
-.flow { display: grid; gap: 1rem; width: 100%; max-width: 36rem; margin-inline: auto; }
-.form { display: grid; gap: 1rem; min-width: 0; }
-.form input, .form select, .form button { min-height: 44px; }
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
-.checkbox { display: flex; align-items: center; gap: 0.75rem; min-height: 44px; }
-.checkbox input { flex: 0 0 1.25rem; }
-@media (min-width: 768px) { .page { padding-block: 3rem; } }
+.page {
+  width: min(calc(100% - 2rem), 70rem);
+  margin-inline: auto;
+  padding-block: 2rem;
+}
+.flow {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  max-width: 36rem;
+  margin-inline: auto;
+}
+.enrollmentPage {
+  width: min(calc(100% - 2rem), 74rem);
+  padding-block: 1.5rem 3rem;
+}
+.enrollmentFlow {
+  min-width: 0;
+  max-width: none;
+  gap: 1.5rem;
+}
+.pageHeading h1,
+.summary h2,
+.stepPanel h2 {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--color-text-primary);
+}
+.pageHeading h1 {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  margin-top: 0.35rem;
+}
+.eyebrow {
+  color: var(--color-brand-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.workspace {
+  display: grid;
+  align-items: start;
+  gap: 1.5rem;
+  min-width: 0;
+}
+.currentStep {
+  min-width: 0;
+}
+.summary {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+.summaryHeading,
+.summaryData,
+.steps {
+  display: none;
+}
+.summary h2 {
+  font-size: 1.5rem;
+}
+.summaryData {
+  gap: 1.25rem;
+  margin-block: 1.75rem;
+  overflow-wrap: anywhere;
+}
+.summaryData dt {
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+.summaryData dd {
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+}
+.progressSummary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.progressSummary span {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+.progressBar {
+  height: 0.3rem;
+  overflow: hidden;
+  margin-top: 0.75rem;
+  border-radius: 1rem;
+  background: var(--color-bg-sunken);
+}
+.progressBar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-brand-primary);
+  transition: width 0.2s ease;
+}
+.steps {
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+.stepNumber {
+  display: grid;
+  place-items: center;
+  flex: 0 0 2rem;
+  height: 2rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  font-weight: 600;
+}
+.steps [aria-current="step"] {
+  color: var(--color-brand-ink);
+  font-weight: 600;
+}
+.steps [aria-current="step"] .stepNumber {
+  color: white;
+  background: var(--color-brand-primary);
+  border-color: var(--color-brand-primary);
+}
+.steps [data-done="true"] .stepNumber {
+  color: var(--color-status-success);
+  background: var(--color-status-success-bg);
+  border-color: transparent;
+}
+.stepPanel {
+  min-height: 30rem;
+}
+.stepHelp {
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin-block: -0.25rem 1.75rem;
+}
+.originalCourse {
+  padding: 0.75rem;
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+.form {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.enrollmentPage .form {
+  gap: 1.25rem;
+}
+.form input,
+.form select,
+.form button,
+.enrollmentFlow > a {
+  min-height: 44px;
+}
+.form fieldset {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.form legend {
+  padding-inline: 0.5rem;
+}
+.fieldGrid,
+.documentsGrid {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.fieldHelp,
+.fileSize {
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+.fieldHelp {
+  margin-top: -0.75rem;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+.checkbox input {
+  flex: 0 0 1.25rem;
+  accent-color: var(--color-brand-primary);
+}
+.stepActions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-block: 1rem;
+  margin-top: 0.5rem;
+  background: var(--color-bg-surface);
+  border-top: 1px solid var(--color-border);
+}
+.stepActions button {
+  width: 100%;
+}
+.stepEntry {
+  animation: step-in 0.2s ease-out;
+}
+.documentSlot {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.documentSlot h3 {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  min-height: 2.75rem;
+}
+.uploadZone {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.65rem;
+  padding: 1.25rem 0.75rem;
+  min-height: 13rem;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-sunken);
+  text-align: center;
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.uploadZone svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--color-text-secondary);
+}
+.uploadZone p {
+  max-width: 100%;
+}
+.uploadZone[data-dragging="true"] {
+  border-color: var(--color-brand-ink);
+  background: var(--color-brand-tint);
+}
+.uploadZone:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@keyframes step-in {
+  from {
+    opacity: 0.5;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (min-width: 768px) {
+  .page {
+    padding-block: 3rem;
+  }
+  .enrollmentPage {
+    padding-block: 2rem 4rem;
+  }
+  .fieldGrid,
+  .documentsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stepPanel {
+    padding: 2rem;
+  }
+  .stepActions button {
+    width: auto;
+  }
+}
+@media (min-width: 1024px) {
+  .workspace {
+    grid-template-columns: 18rem minmax(0, 1fr);
+    gap: 2rem;
+  }
+  .summary {
+    position: sticky;
+    top: 2rem;
+    padding: 1.5rem;
+  }
+  .summaryHeading,
+  .summaryData,
+  .steps {
+    display: grid;
+  }
+  .progressSummary {
+    display: block;
+  }
+  .progressSummary span {
+    display: block;
+    margin-top: 0.35rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stepEntry {
+    animation: none;
+  }
+  .progressBar span,
+  .uploadZone {
+    transition: none;
+  }
+}

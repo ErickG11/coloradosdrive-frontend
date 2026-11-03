@@ -29,22 +29,36 @@ it("envía correo y curso, y muestra el paso de código", async () => {
   await waitFor(() => expect(solicitudes.sendCode).toHaveBeenCalledWith("ana@example.com", "a"));
   expect(await screen.findByText("2. Verifica tu correo")).toBeInTheDocument();
 });
+it("avanza por teclado y lleva el foco al encabezado del paso", async () => {
+  render(<InscripcionFlow />);
+  const user = userEvent.setup();
+  const course = await screen.findByLabelText("Curso");
+  course.focus();
+  await user.selectOptions(course, "a");
+  await user.tab();
+  expect(screen.getByLabelText("Correo electrónico")).toHaveFocus();
+  await user.keyboard("ana@example.com");
+  await user.tab();
+  expect(screen.getByRole("button", { name: "Enviar código" })).toHaveFocus();
+  await user.keyboard("{Enter}");
+  await waitFor(() => expect(screen.getByText("2. Verifica tu correo")).toHaveFocus());
+  expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "2");
+  expect(screen.getByText(/Paso 2 de 6/)).toBeInTheDocument();
+});
 
 it("recupera el curso original y reintenta progreso sin consumir otro código", async () => {
   vi.mocked(solicitudes.confirmCode).mockResolvedValue({ solicitudId: "s", token: "temporal" });
-  vi.mocked(solicitudes.progress)
-    .mockRejectedValueOnce(new Error("red"))
-    .mockResolvedValue({
-      courseId: "b",
-      estado: "pendiente_revision",
-      correoVerificado: true,
-      consentimientoVigente: true,
-      datosGuardados: true,
-      solicitadaAt: "2026-10-01",
-      requiereRepresentante: false,
-      representanteCompleto: false,
-      documentos: [],
-    });
+  vi.mocked(solicitudes.progress).mockRejectedValueOnce(new Error("red")).mockResolvedValue({
+    courseId: "b",
+    estado: "pendiente_revision",
+    correoVerificado: true,
+    consentimientoVigente: true,
+    datosGuardados: true,
+    solicitadaAt: "2026-10-01",
+    requiereRepresentante: false,
+    representanteCompleto: false,
+    documentos: [],
+  });
   const storage = vi.spyOn(Storage.prototype, "setItem");
   render(<InscripcionFlow initialCourseId="a" />);
   const user = userEvent.setup();
