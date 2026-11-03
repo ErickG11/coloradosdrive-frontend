@@ -1,5 +1,44 @@
-import {expect,it} from 'vitest';
-import {emailError,nameError,normalizeApplicantPhone,validateApplicantValues} from '@/components/inscripcion/validation';
-it('correo y nombres siguen los límites del servidor',()=>{expect(emailError(' ANA@example.com ')).toBe('');expect(emailError('a'.repeat(250)+'@x.com')).not.toBe('');expect(nameError('Ana')).not.toBe('');expect(nameError('Ana María Pérez')).toBe('');expect(nameError('Ana 123')).not.toBe('');});
-it('teléfono local y +593 se normalizan',()=>{expect(normalizeApplicantPhone('+593991234567')).toBe('0991234567');const errors=validateApplicantValues({cedula:'1710034065',nombreCompleto:'Ana Torres',telefono:'123',fechaNacimiento:'1990-01-01',representanteNombre:'',representanteCedula:''},false);expect(errors.telefono).toContain('10 dígitos');});
-it('representante diferente y dos palabras',()=>{const errors=validateApplicantValues({cedula:'1710034065',nombreCompleto:'Ana Torres',telefono:'',fechaNacimiento:'2010-01-01',representanteNombre:'Madre',representanteCedula:'1710034065'},true);expect(errors.representanteNombre).toBeTruthy();expect(errors.representanteCedula).toContain('distinta');});
+import { expect, it } from "vitest";
+import {
+  emailError,
+  nameError,
+  normalizeApplicantPhone,
+  validateApplicantValues,
+} from "@/components/inscripcion/validation";
+it("correo y nombres siguen los límites del servidor", () => {
+  expect(emailError(" ANA@example.com ")).toBe("");
+  expect(emailError("a".repeat(250) + "@x.com")).not.toBe("");
+  expect(nameError("Ana")).not.toBe("");
+  expect(nameError("Ana María Pérez")).toBe("");
+  expect(nameError("Ana 123")).not.toBe("");
+});
+it("teléfono local y +593 se normalizan", () => {
+  expect(normalizeApplicantPhone("+593991234567")).toBe("0991234567");
+  const errors = validateApplicantValues(
+    {
+      cedula: "1710034065",
+      nombreCompleto: "Ana Torres",
+      telefono: "123",
+      fechaNacimiento: "1990-01-01",
+      representanteNombre: "",
+      representanteCedula: "",
+    },
+    false,
+  );
+  expect(errors.telefono).toContain("10 dígitos");
+});
+it("representante diferente y dos palabras", () => {
+  const errors = validateApplicantValues(
+    {
+      cedula: "1710034065",
+      nombreCompleto: "Ana Torres",
+      telefono: "",
+      fechaNacimiento: "2010-01-01",
+      representanteNombre: "Madre",
+      representanteCedula: "1710034065",
+    },
+    true,
+  );
+  expect(errors.representanteNombre).toBeTruthy();
+  expect(errors.representanteCedula).toContain("distinta");
+});

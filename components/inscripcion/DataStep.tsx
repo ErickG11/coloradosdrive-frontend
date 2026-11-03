@@ -3,7 +3,11 @@ import { useRef, useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/FormError";
-import {normalizeApplicantName,normalizeApplicantPhone,validateApplicantValues} from "./validation";
+import {
+  normalizeApplicantName,
+  normalizeApplicantPhone,
+  validateApplicantValues,
+} from "./validation";
 import { ApiError } from "@/lib/api/errors";
 import { solicitudes, solicitudMessage } from "@/lib/api/solicitudes";
 import type { SolicitudSession } from "@/types/solicitud";
@@ -32,7 +36,9 @@ export function DataStep({
     form = useRef<HTMLFormElement>(null);
   const age = applicantAge(values.fechaNacimiento),
     minor = age >= 15 && age < 18;
-  const birthError=values.fechaNacimiento?validateApplicantValues(values,accept).fechaNacimiento:errors.fechaNacimiento;
+  const birthError = values.fechaNacimiento
+    ? validateApplicantValues(values, accept).fechaNacimiento
+    : errors.fechaNacimiento;
   function field(name: keyof typeof values, label: string, type = "text") {
     return (
       <Input
@@ -40,8 +46,21 @@ export function DataStep({
         label={label}
         type={type}
         value={values[name]}
-        onChange={(e) => {const next={...values,[name]:e.target.value};setValues(next);if(name.toLowerCase().includes('cedula'))setErrors(old=>({...old,[name]:validateApplicantValues(next,accept)[name]??''}));}}
-        onBlur={()=>setErrors(old=>({...old,[name]:validateApplicantValues(values,accept)[name]??''}))}
+        onChange={(e) => {
+          const next = { ...values, [name]: e.target.value };
+          setValues(next);
+          if (name.toLowerCase().includes("cedula"))
+            setErrors((old) => ({
+              ...old,
+              [name]: validateApplicantValues(next, accept)[name] ?? "",
+            }));
+        }}
+        onBlur={() =>
+          setErrors((old) => ({
+            ...old,
+            [name]: validateApplicantValues(values, accept)[name] ?? "",
+          }))
+        }
         error={name === "fechaNacimiento" ? birthError || undefined : errors[name]}
         autoComplete={
           name === "nombreCompleto"
@@ -53,7 +72,7 @@ export function DataStep({
                 : "off"
         }
         maxLength={name.toLowerCase().includes("cedula") ? 10 : name === "telefono" ? 14 : 100}
-        aria-describedby={name==="telefono"?"phone-help":undefined}
+        aria-describedby={name === "telefono" ? "phone-help" : undefined}
         inputMode={name.toLowerCase().includes("cedula") ? "numeric" : undefined}
       />
     );
@@ -61,7 +80,7 @@ export function DataStep({
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (lock.current) return;
-    const next=validateApplicantValues(values,accept);
+    const next = validateApplicantValues(values, accept);
     setErrors(next);
     setError("");
     if (Object.keys(next).length) {
@@ -89,10 +108,22 @@ export function DataStep({
       });
       onSaved(result);
     } catch (e) {
-      if(e instanceof ApiError){
-        const field=e.field ?? (['EDAD_MINIMA','EDAD_MAXIMA','FECHA_INVALIDA'].includes(e.code??'')?'fechaNacimiento':e.code==='CEDULA_YA_REGISTRADA'?'cedula':e.code==='REPRESENTANTE_REQUERIDO'?'representanteCedula':undefined);
-        if(field){setErrors({[field]:e.message});const control=form.current?.elements.namedItem(field);if(control instanceof HTMLElement)control.focus();}else setError(solicitudMessage(e));
-      }else setError(solicitudMessage(e));
+      if (e instanceof ApiError) {
+        const field =
+          e.field ??
+          (["EDAD_MINIMA", "EDAD_MAXIMA", "FECHA_INVALIDA"].includes(e.code ?? "")
+            ? "fechaNacimiento"
+            : e.code === "CEDULA_YA_REGISTRADA"
+              ? "cedula"
+              : e.code === "REPRESENTANTE_REQUERIDO"
+                ? "representanteCedula"
+                : undefined);
+        if (field) {
+          setErrors({ [field]: e.message });
+          const control = form.current?.elements.namedItem(field);
+          if (control instanceof HTMLElement) control.focus();
+        } else setError(solicitudMessage(e));
+      } else setError(solicitudMessage(e));
     } finally {
       lock.current = false;
       setBusy(false);
@@ -107,7 +138,9 @@ export function DataStep({
         {field("telefono", "Teléfono (opcional)", "tel")}
         {field("fechaNacimiento", "Fecha de nacimiento", "date")}
       </div>
-      <p id="phone-help" className="text-sm text-text-secondary">Teléfono: 0991234567, 022345678 o +593991234567.</p>
+      <p id="phone-help" className="text-sm text-text-secondary">
+        Teléfono: 0991234567, 022345678 o +593991234567.
+      </p>
       {minor ? (
         <fieldset className={styles.form}>
           <legend className="font-semibold">Representante legal</legend>
