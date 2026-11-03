@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { solicitudes, solicitudMessage } from "@/lib/api/solicitudes";
 import type { PublicCourse } from "@/types/publicCourse";
 import type { SolicitudProgress, SolicitudSession } from "@/types/solicitud";
+import { ExistingApplicationStatus } from "./ExistingApplicationStatus";
 import { SentStep } from "./SentStep";
 import { firstIncompleteStep, type InscripcionStep } from "./flowProgress";
 import { DocumentsStep } from "./DocumentsStep";
@@ -111,7 +112,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
         <Toast message={message} onDismiss={() => setMessage("")} />
         <div className={styles.workspace}>
           <ProgressSummary
-            step={step === "reanudando" ? recoveryStep : step}
+            step={step === "reanudando" ? recoveryStep : step === "estado" ? "enviado" : step}
             course={courses.find((c) => c.id === courseId)?.nombre}
             correo={correo}
             verified={Boolean(session)}
@@ -148,8 +149,10 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
                             ? "4. Datos personales"
                             : step === "documentos"
                               ? "5. Documentos"
-                              : step === "enviado"
-                                ? "6. Solicitud enviada"
+                              : step === "estado"
+                                ? "Estado de tu solicitud"
+                                : step === "enviado"
+                                ? "Solicitud enviada"
                                 : "Recuperando tu solicitud"}
                   </span>
                 }
@@ -167,7 +170,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
                 ) : null}
                 {step !== "correo" ? <FormError>{error}</FormError> : null}
                 <div key={step} className={styles.stepEntry}>
-                  {step === "correo" ? (
+                  {step === "estado" && progress ? <ExistingApplicationStatus progress={progress} course={courses.find(c=>c.id===courseId)?.nombre} onDocuments={()=>setStep("documentos")}/> : step === "correo" ? (
                     <form onSubmit={send} className={styles.form}>
                       <Select
                         label="Curso"
