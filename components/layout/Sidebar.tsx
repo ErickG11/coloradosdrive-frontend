@@ -131,6 +131,12 @@ export function Sidebar({ email, role }: SidebarProps) {
             Horarios de práctica
           </SidebarLink>
           <SidebarLink
+            href="/student/documents"
+            active={pathname.startsWith("/student/documents")}
+            section="enroll"
+            onClick={closeDrawer}
+          >Mis documentos</SidebarLink>
+          <SidebarLink
             href="/student/history"
             active={pathname.startsWith("/student/history")}
             section="history"
