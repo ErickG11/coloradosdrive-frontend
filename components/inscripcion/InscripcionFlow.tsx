@@ -17,6 +17,7 @@ import { DataStep } from "./DataStep";
 import { ConsentStep } from "./ConsentStep";
 import { CodeStep } from "./CodeStep";
 import { Toast } from "./Toast";
+import { ENROLLMENT_STEPS, ProgressSummary } from "./ProgressSummary";
 import styles from "./inscripcion.module.css";
 
 export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: string }) {
@@ -24,6 +25,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
   const [courseId, setCourseId] = useState(initialCourseId);
   const [correo, setCorreo] = useState("");
   const [step, setStep] = useState<InscripcionStep>("correo");
+  const [recoveryStep, setRecoveryStep] = useState<InscripcionStep>("codigo");
   const [progress, setProgress] = useState<SolicitudProgress | null>(null);
   const [session, setSession] = useState<SolicitudSession | null>(null);
   const [loading, setLoading] = useState(true),
@@ -55,7 +57,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
   }, [retry]);
   useEffect(() => {
     heading.current?.focus();
-  }, [step]);
+  }, [step, loading]);
   async function send(event: React.FormEvent) {
     event.preventDefault();
     if (sending.current) return;
@@ -79,6 +81,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
   }
   async function resume(s: SolicitudSession) {
     setSession(s);
+    if (step !== "reanudando") setRecoveryStep(step);
     setStep("reanudando");
     setError("");
     setBusy(true);
@@ -95,151 +98,195 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
     }
   }
   return (
-    <main className={styles.page}>
-      <div className={styles.flow}>
+    <main className={`${styles.page} ${styles.enrollmentPage}`}>
+      <div className={`${styles.flow} ${styles.enrollmentFlow}`}>
         <div className={styles.actions}>
           <Link href="/">Volver al inicio</Link>
           <ThemeToggle />
         </div>
-        <h1 className="text-2xl font-bold text-text-primary">Solicitar inscripción</h1>
+        <header className={styles.pageHeading}>
+          <span className={styles.eyebrow}>Colorados Drive</span>
+          <h1>Solicitar inscripción</h1>
+        </header>
         <Toast message={message} onDismiss={() => setMessage("")} />
-        <FormError>{error}</FormError>
-        {session && progress ? (
-          <p className="text-sm text-text-secondary">
-            Curso solicitado:{" "}
-            {courses.find((c) => c.id === progress.courseId)?.nombre ?? "Curso original conservado"}
-          </p>
-        ) : null}
-        {loading ? (
-          <p role="status">Cargando cursos…</p>
-        ) : courses.length === 0 ? (
-          <Card>
-            <p>No pudimos cargar los cursos.</p>
-            <Button
-              onClick={() => {
-                setLoading(true);
-                setError("");
-                setRetry(retry + 1);
-              }}
-            >
-              Reintentar
-            </Button>
-          </Card>
-        ) : (
-          <Card
-            title={
-              <span ref={heading} tabIndex={-1}>
-                {step === "correo"
-                  ? "1. Curso y correo"
-                  : step === "codigo"
-                    ? "2. Verifica tu correo"
-                    : step === "consentimiento"
-                      ? "3. Consentimiento"
-                      : step === "datos"
-                        ? "4. Datos personales"
-                        : step === "documentos"
-                          ? "5. Documentos"
-                          : step === "enviado"
-                            ? "6. Solicitud enviada"
-                            : "Recuperando tu solicitud"}
-              </span>
-            }
-          >
-            {step === "correo" ? (
-              <form onSubmit={send} className={styles.form}>
-                <Select
-                  label="Curso"
-                  value={courseId}
-                  onChange={(e) => setCourseId(e.target.value)}
-                  required
-                >
-                  <option value="">Selecciona un curso</option>
-                  {courses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      Tipo {c.tipo} — {c.nombre}
-                    </option>
-                  ))}
-                </Select>
-                <Input
-                  label="Correo electrónico"
-                  type="email"
-                  autoComplete="email"
-                  value={correo}
-                  onChange={(e) => setCorreo(e.target.value)}
-                  required
-                />
-                <p className="text-sm text-text-secondary">
-                  Usaremos este correo para verificar tu solicitud y enviarte la respuesta.
-                </p>
-                <Button type="submit" isLoading={busy}>
-                  Enviar código
-                </Button>
-              </form>
-            ) : step === "codigo" ? (
-              <CodeStep
-                correo={correo}
-                courseId={courseId}
-                onNotice={setMessage}
-                onBack={() => {
-                  setStep("correo");
-                  setError("");
-                }}
-                onVerified={(s) => {
-                  void resume(s);
-                }}
-              />
-            ) : session && step === "consentimiento" ? (
-              <ConsentStep
-                session={session}
-                onAccepted={() => {
-                  void resume(session);
-                }}
-              />
-            ) : session && step === "datos" ? (
-              <DataStep
-                session={session}
-                onSaved={(s) => {
-                  void resume(s);
-                }}
-              />
-            ) : session && step === "documentos" ? (
-              <DocumentsStep
-                session={session}
-                initialDocuments={progress?.documentos}
-                onNotice={setMessage}
-                onFinish={() => {
-                  setStep("enviado");
-                  setMessage("Solicitud enviada para revisión.");
-                }}
-              />
-            ) : step === "enviado" ? (
-              <SentStep onDocuments={() => setStep("documentos")} />
-            ) : (
-              <div className={styles.form}>
-                <p role="status">
-                  {busy ? "Recuperando progreso…" : "Puedes volver a consultar tu progreso."}
-                </p>
-                {session ? (
-                  <Button disabled={busy} onClick={() => void resume(session)}>
-                    Reintentar recuperación
-                  </Button>
-                ) : null}
+        <div className={styles.workspace}>
+          <ProgressSummary
+            step={step === "reanudando" ? recoveryStep : step}
+            course={courses.find((c) => c.id === courseId)?.nombre}
+            correo={correo}
+            verified={Boolean(session)}
+          />
+          <div className={styles.currentStep}>
+            {loading || courses.length === 0 ? <FormError>{error}</FormError> : null}
+            {loading ? (
+              <p role="status">Cargando cursos…</p>
+            ) : courses.length === 0 ? (
+              <Card>
+                <p>No pudimos cargar los cursos.</p>
                 <Button
-                  variant="ghost"
-                  disabled={busy}
                   onClick={() => {
-                    setSession(null);
-                    setProgress(null);
-                    setStep("correo");
+                    setLoading(true);
                     setError("");
+                    setRetry(retry + 1);
                   }}
                 >
-                  Volver a verificar correo
+                  Reintentar
                 </Button>
-              </div>
+              </Card>
+            ) : (
+              <Card
+                className={styles.stepPanel}
+                title={
+                  <span ref={heading} tabIndex={-1}>
+                    {step === "correo"
+                      ? "1. Curso y correo"
+                      : step === "codigo"
+                        ? "2. Verifica tu correo"
+                        : step === "consentimiento"
+                          ? "3. Consentimiento"
+                          : step === "datos"
+                            ? "4. Datos personales"
+                            : step === "documentos"
+                              ? "5. Documentos"
+                              : step === "enviado"
+                                ? "6. Solicitud enviada"
+                                : "Recuperando tu solicitud"}
+                  </span>
+                }
+              >
+                <p className={styles.stepHelp}>
+                  {ENROLLMENT_STEPS.find((item) => item.key === step)?.help ??
+                    "Espera mientras recuperamos tu progreso."}
+                </p>
+                {session && progress ? (
+                  <p className={styles.originalCourse}>
+                    Curso solicitado:{" "}
+                    {courses.find((c) => c.id === progress.courseId)?.nombre ??
+                      "Curso original conservado"}
+                  </p>
+                ) : null}
+                {step !== "correo" ? <FormError>{error}</FormError> : null}
+                <div key={step} className={styles.stepEntry}>
+                  {step === "correo" ? (
+                    <form onSubmit={send} className={styles.form}>
+                      <Select
+                        label="Curso"
+                        value={courseId}
+                        onChange={(e) => setCourseId(e.target.value)}
+                        required
+                        error={error.includes("curso") ? error : undefined}
+                        aria-describedby="course-help"
+                      >
+                        <option value="">Selecciona un curso</option>
+                        {courses.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            Tipo {c.tipo} — {c.nombre}
+                          </option>
+                        ))}
+                      </Select>
+                      <p id="course-help" className={styles.fieldHelp}>
+                        El curso se conserva después de guardar tus datos.
+                      </p>
+                      <Input
+                        label="Correo electrónico"
+                        type="email"
+                        autoComplete="email"
+                        value={correo}
+                        onChange={(e) => setCorreo(e.target.value)}
+                        required
+                        error={error && !error.includes("curso") ? error : undefined}
+                        aria-describedby="email-help"
+                      />
+                      <p id="email-help" className="text-sm text-text-secondary">
+                        Usaremos este correo para verificar tu solicitud y enviarte la respuesta.
+                      </p>
+                      <div className={styles.stepActions}>
+                        <Button type="submit" isLoading={busy}>
+                          Enviar código
+                        </Button>
+                      </div>
+                    </form>
+                  ) : step === "codigo" ? (
+                    <CodeStep
+                      correo={correo}
+                      courseId={courseId}
+                      onNotice={setMessage}
+                      onBack={() => {
+                        setStep("correo");
+                        setError("");
+                      }}
+                      onVerified={(s) => {
+                        void resume(s);
+                      }}
+                    />
+                  ) : session && step === "consentimiento" ? (
+                    <ConsentStep
+                      session={session}
+                      onAccepted={() => {
+                        void resume(session);
+                      }}
+                    />
+                  ) : session && step === "datos" ? (
+                    <DataStep
+                      session={session}
+                      onSaved={(s) => {
+                        void resume(s);
+                      }}
+                    />
+                  ) : session && step === "documentos" ? (
+                    <DocumentsStep
+                      session={session}
+                      initialDocuments={progress?.documentos}
+                      onUploaded={(tipo, estado) =>
+                        setProgress((previous) =>
+                          previous
+                            ? {
+                                ...previous,
+                                documentos: [
+                                  ...previous.documentos.filter((doc) => doc.tipo !== tipo),
+                                  { tipo, estado },
+                                ],
+                              }
+                            : previous,
+                        )
+                      }
+                      onNotice={setMessage}
+                      onFinish={() => {
+                        setStep("enviado");
+                        setMessage("Solicitud enviada para revisión.");
+                      }}
+                    />
+                  ) : step === "enviado" ? (
+                    <SentStep onDocuments={() => setStep("documentos")} />
+                  ) : (
+                    <div className={styles.form}>
+                      <p role="status">
+                        {busy ? "Recuperando progreso…" : "Puedes volver a consultar tu progreso."}
+                      </p>
+                      {session ? (
+                        <Button disabled={busy} onClick={() => void resume(session)}>
+                          Reintentar recuperación
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => {
+                          setSession(null);
+                          setProgress(null);
+                          setStep("correo");
+                          setError("");
+                        }}
+                      >
+                        Volver a verificar correo
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </Card>
             )}
-          </Card>
-        )}
+          </div>
+        </div>
         <Link href="/login">Iniciar sesión</Link>
       </div>
     </main>
