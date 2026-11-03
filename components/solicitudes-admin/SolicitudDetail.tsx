@@ -34,7 +34,7 @@ export function SolicitudDetail({
   const consent = solicitud.consentimiento;
   const estado = decision?.estado ?? solicitud.estado;
   const pending = estado === "pendiente_revision";
-  const documentsReviewable=["pendiente_revision","aprobada"].includes(estado);
+  const documentsReviewable = ["pendiente_revision", "aprobada"].includes(estado);
   const documents =
     changed?.source === solicitud.documentos ? changed.documents : solicitud.documentos;
   const course = Array.isArray(courses)
@@ -78,6 +78,14 @@ export function SolicitudDetail({
               ["Teléfono", solicitud.telefono ?? "No indicado"],
               ["Nacimiento", solicitud.fechaNacimiento ?? "No indicado"],
               [
+                "Fecha de envío",
+                solicitud.enviadaAt
+                  ? new Date(solicitud.enviadaAt).toLocaleString("es-EC", {
+                      timeZone: "America/Guayaquil",
+                    })
+                  : "No registrada",
+              ],
+              [
                 "Fecha de solicitud",
                 solicitud.solicitadaAt
                   ? new Date(solicitud.solicitadaAt).toLocaleString("es-EC", {
@@ -120,7 +128,17 @@ export function SolicitudDetail({
         </section>
         <section className={styles.section} aria-labelledby="documents-title">
           <h3 id="documents-title">Documentos digitales</h3>
-          <p className="mb-4"><SolicitudStatus estado={["cedula","titulo_bachiller"].every(tipo=>documents.some(doc=>doc.tipoDocumento===tipo&&doc.documentoId))?"obligatorios_presentes":"obligatorios_incompletos"}/></p>
+          <p className="mb-4">
+            <SolicitudStatus
+              estado={
+                ["cedula", "titulo_bachiller"].every((tipo) =>
+                  documents.some((doc) => doc.tipoDocumento === tipo && doc.documentoId),
+                )
+                  ? "obligatorios_presentes"
+                  : "obligatorios_incompletos"
+              }
+            />
+          </p>
           <div className={styles.documentList}>
             {DOCUMENTOS.map(({ tipo, label }) => {
               const doc = documents.find((d) => d.tipoDocumento === tipo),
@@ -168,7 +186,8 @@ export function SolicitudDetail({
             />
           ) : (
             <p className="text-sm text-text-secondary">
-              La decisión de esta solicitud es definitiva. Los documentos pendientes siguen disponibles para revisión si fue aprobada.
+              La decisión de esta solicitud es definitiva. Los documentos pendientes siguen
+              disponibles para revisión si fue aprobada.
             </p>
           )}
           {solicitud.motivoRechazo ? <p>Motivo: {solicitud.motivoRechazo}</p> : null}
