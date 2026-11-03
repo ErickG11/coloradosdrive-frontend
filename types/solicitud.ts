@@ -8,7 +8,7 @@ export interface PrivacyNotice { version: string; contactoDerechos: string; rete
 export interface SolicitudProgress {
   courseId: string; estado: string; correoVerificado: boolean; consentimientoVigente: boolean;
   datosGuardados: boolean; solicitadaAt: string | null; requiereRepresentante: boolean; representanteCompleto: boolean;
-  documentos: { tipo: DocumentoTipo; estado: string }[];
+  documentos: { tipo: DocumentoTipo; estado: string; motivoRechazo?: string | null }[];
 }
 export interface SolicitudDatos {
   cedula: string; nombreCompleto: string; telefono?: string; fechaNacimiento: string;
