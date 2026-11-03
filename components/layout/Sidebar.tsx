@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils/cn";
 import type { Role } from "@/types/user";
 import { LogoutButton } from "./LogoutButton";
 import { NavigationIcon, type NavigationSection } from "./NavigationIcon";
-import {useSolicitudSummary} from "@/components/solicitudes-admin/useSolicitudSummary";
-import {PendingSolicitudesBadge} from "@/components/solicitudes-admin/PendingSolicitudesBadge";
-import {Toast} from "@/components/inscripcion/Toast";
+import { useSolicitudSummary } from "@/components/solicitudes-admin/useSolicitudSummary";
+import { PendingSolicitudesBadge } from "@/components/solicitudes-admin/PendingSolicitudesBadge";
+import { Toast } from "@/components/inscripcion/Toast";
 import styles from "./admin-sidebar.module.css";
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -28,7 +28,7 @@ interface SidebarProps {
 
 export function Sidebar({ email, role }: SidebarProps) {
   const pathname = usePathname();
-  const summary=useSolicitudSummary(role==="admin");
+  const summary = useSolicitudSummary(role === "admin");
   const [isOpen, setIsOpen] = useState(false);
   const drawer = useRef<HTMLElement>(null);
   const isInstructorScheduleActive =
@@ -83,7 +83,7 @@ export function Sidebar({ email, role }: SidebarProps) {
             Instructores
           </SidebarLink>
           <SidebarLink
-            indicator={<PendingSolicitudesBadge count={summary.pending}/>}
+            indicator={<PendingSolicitudesBadge count={summary.pending} />}
             href="/admin/solicitudes"
             active={pathname.startsWith("/admin/solicitudes")}
             section="enroll"
@@ -140,7 +140,9 @@ export function Sidebar({ email, role }: SidebarProps) {
             active={pathname.startsWith("/student/documents")}
             section="enroll"
             onClick={closeDrawer}
-          >Mis documentos</SidebarLink>
+          >
+            Mis documentos
+          </SidebarLink>
           <SidebarLink
             href="/student/history"
             active={pathname.startsWith("/student/history")}
@@ -165,7 +167,15 @@ export function Sidebar({ email, role }: SidebarProps) {
   );
   return (
     <>
-      {role==="admin"&&summary.notice>0?<div className="fixed bottom-4 right-4 z-50 max-w-[calc(100vw-2rem)]"><Toast message="Nueva solicitud de inscripción" onDismiss={summary.dismiss} action={{href:"/admin/solicitudes",label:"Ver"}}/></div>:null}
+      {role === "admin" && summary.notice > 0 ? (
+        <div className="fixed bottom-4 right-4 z-50 max-w-[calc(100vw-2rem)]">
+          <Toast
+            message="Nueva solicitud de inscripción"
+            onDismiss={summary.dismiss}
+            action={{ href: "/admin/solicitudes", label: "Ver" }}
+          />
+        </div>
+      ) : null}
       <header className="flex h-16 min-w-0 shrink-0 items-center justify-between border-b border-border bg-bg-surface px-4 md:hidden">
         <button
           type="button"
@@ -296,7 +306,7 @@ function SidebarLink({
   section: NavigationSection;
   onClick: () => void;
   children: ReactNode;
-  indicator?:ReactNode;
+  indicator?: ReactNode;
 }) {
   return (
     <Link
@@ -311,7 +321,8 @@ function SidebarLink({
       )}
     >
       <NavigationIcon section={section} className="h-5 w-5 shrink-0" />
-      <span className="min-w-0">{children}</span>{indicator}
+      <span className="min-w-0">{children}</span>
+      {indicator}
     </Link>
   );
 }

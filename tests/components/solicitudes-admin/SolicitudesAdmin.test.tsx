@@ -107,3 +107,37 @@ it("refresca el panel ante una decisión de documento hecha en otra pestaña", a
   expect(solicitudes.list).toHaveBeenCalledOnce();
   expect(screen.getByRole("alert")).toHaveTextContent("Este documento ya fue revisado");
 });
+
+it("carga Todas y conserva el orden recibido, mostrando documentos por revisar", async () => {
+  vi.mocked(useFetch).mockReturnValue({
+    data: {
+      items: [
+        {
+          ...row,
+          id: "first",
+          nombreCompleto: "Primera Persona",
+          documentosPorRevisar: 2,
+          enviadaAt: "2026-11-03",
+        },
+        { ...row, id: "second", nombreCompleto: "Segunda Persona", estado: "aprobada" },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 20,
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  });
+  render(<SolicitudesAdmin />);
+  expect(screen.getByLabelText("Estado")).toHaveValue("");
+  expect(screen.getAllByRole("rowheader").map((node) => node.textContent)).toEqual([
+    "Primera Persona",
+    "Segunda Persona",
+  ]);
+  expect(screen.getByText("Documentos por revisar (2)")).toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByLabelText("Estado"), "con_documentos_por_revisar");
+  expect(useFetch).toHaveBeenLastCalledWith(
+    "/admin/solicitudes?page=1&pageSize=20&estado=con_documentos_por_revisar",
+  );
+});
