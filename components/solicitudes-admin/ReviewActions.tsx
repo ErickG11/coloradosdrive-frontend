@@ -4,16 +4,19 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormError } from "@/components/ui/FormError";
 import { solicitudes, solicitudMessage } from "@/lib/api/solicitudes";
+import { ApiError } from "@/lib/api/errors";
 import type { SolicitudDecision } from "@/types/solicitud";
 import styles from "./solicitudes.module.css";
 export function ReviewActions({
   id,
   documentoId,
   onDone,
+  onStale,
 }: {
   id: string;
   documentoId?: string;
   onDone: (message: string, decision?: SolicitudDecision) => void;
+  onStale?: () => void;
 }) {
   const [choice, setChoice] = useState<"approve" | "reject" | null>(null),
     [reason, setReason] = useState(""),
@@ -51,6 +54,12 @@ export function ReviewActions({
       setReason("");
     } catch (e) {
       setError(solicitudMessage(e));
+      if (
+        e instanceof ApiError &&
+        ["DOCUMENTO_YA_REVISADO", "SOLICITUD_CERRADA"].includes(e.code ?? "")
+      ) {
+        onStale?.();
+      }
     } finally {
       lock.current = false;
       setBusy(false);
