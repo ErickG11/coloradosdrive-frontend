@@ -350,4 +350,6 @@
   }
 }
 
-.documentSlot[data-invalid="true"]{border-color:var(--color-status-error);}
+.documentSlot[data-invalid="true"] {
+  border-color: var(--color-status-error);
+}

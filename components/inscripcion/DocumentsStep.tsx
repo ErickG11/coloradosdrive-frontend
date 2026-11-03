@@ -24,8 +24,8 @@ export function DocumentsStep({
   onFinish,
   onNotice,
   onUploaded,
-  sent=false,
-  missing=[],
+  sent = false,
+  missing = [],
 }: {
   session: SolicitudSession;
   initialDocuments?: SolicitudProgress["documentos"];
@@ -62,7 +62,8 @@ export function DocumentsStep({
   return (
     <div className={styles.form}>
       <p>
-        Sube la cédula y el título de bachiller o certificado de décimo para enviar tu solicitud. La papeleta de votación y el tipo de sangre pueden quedar pendientes.
+        Sube la cédula y el título de bachiller o certificado de décimo para enviar tu solicitud. La
+        papeleta de votación y el tipo de sangre pueden quedar pendientes.
       </p>
       <p id="files-help" className="text-sm text-text-secondary">
         JPG, PNG o PDF. Máximo 5 MiB por archivo. Elegir otro archivo reemplaza el anterior si aún
@@ -76,8 +77,13 @@ export function DocumentsStep({
             label={label}
             estado={states[tipo]}
             busy={busy[tipo]}
-            obligatorio={tipo==="cedula"||tipo==="titulo_bachiller"}
-            error={errors[tipo] || (missing.includes(tipo)&&!states[tipo]?"Este documento es obligatorio para enviar.":undefined)}
+            obligatorio={tipo === "cedula" || tipo === "titulo_bachiller"}
+            error={
+              errors[tipo] ||
+              (missing.includes(tipo) && !states[tipo]
+                ? "Este documento es obligatorio para enviar."
+                : undefined)
+            }
             reason={
               states[tipo] === "rechazado"
                 ? (initialDocuments.find((doc) => doc.tipo === tipo)?.motivoRechazo ?? undefined)
@@ -87,10 +93,13 @@ export function DocumentsStep({
           />
         ))}
       </div>
-      <p>La cédula y el título son obligatorios para enviar; los otros dos documentos se pueden entregar después.</p>
+      <p>
+        La cédula y el título son obligatorios para enviar; los otros dos documentos se pueden
+        entregar después.
+      </p>
       <div className={styles.stepActions}>
         <Button disabled={Object.values(busy).some(Boolean)} onClick={onFinish}>
-          {sent?"Volver al estado de mi solicitud":"Revisar y enviar"}
+          {sent ? "Volver al estado de mi solicitud" : "Revisar y enviar"}
         </Button>
       </div>
     </div>

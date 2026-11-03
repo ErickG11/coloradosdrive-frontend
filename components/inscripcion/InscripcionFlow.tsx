@@ -30,7 +30,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
   const [correo, setCorreo] = useState("");
   const [step, setStep] = useState<InscripcionStep>("correo");
   const [recoveryStep, setRecoveryStep] = useState<InscripcionStep>("codigo");
-  const [missingDocuments,setMissingDocuments]=useState<DocumentoTipo[]>([]);
+  const [missingDocuments, setMissingDocuments] = useState<DocumentoTipo[]>([]);
   const [progress, setProgress] = useState<SolicitudProgress | null>(null);
   const [session, setSession] = useState<SolicitudSession | null>(null);
   const [loading, setLoading] = useState(true),
@@ -70,8 +70,12 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
       setError("Selecciona un curso disponible para continuar.");
       return;
     }
-    const invalidEmail=emailError(correo);
-    if(invalidEmail){setError(invalidEmail);document.getElementById('applicant-email')?.focus();return;}
+    const invalidEmail = emailError(correo);
+    if (invalidEmail) {
+      setError(invalidEmail);
+      document.getElementById("applicant-email")?.focus();
+      return;
+    }
     sending.current = true;
     setBusy(true);
     setError("");
@@ -118,7 +122,13 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
         <Toast message={message} onDismiss={() => setMessage("")} />
         <div className={styles.workspace}>
           <ProgressSummary
-            step={step === "reanudando" ? recoveryStep : ["estado","enviado"].includes(step) ? "revision" : step}
+            step={
+              step === "reanudando"
+                ? recoveryStep
+                : ["estado", "enviado"].includes(step)
+                  ? "revision"
+                  : step
+            }
             course={courses.find((c) => c.id === courseId)?.nombre}
             correo={correo}
             verified={Boolean(session)}
@@ -155,11 +165,13 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
                             ? "4. Datos personales"
                             : step === "documentos"
                               ? "5. Documentos"
-                              : step === "revision" ? "6. Revisar y enviar" : step === "estado"
-                                ? "Estado de tu solicitud"
-                                : step === "enviado"
-                                ? "Solicitud enviada"
-                                : "Recuperando tu solicitud"}
+                              : step === "revision"
+                                ? "6. Revisar y enviar"
+                                : step === "estado"
+                                  ? "Estado de tu solicitud"
+                                  : step === "enviado"
+                                    ? "Solicitud enviada"
+                                    : "Recuperando tu solicitud"}
                   </span>
                 }
               >
@@ -176,7 +188,13 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
                 ) : null}
                 {step !== "correo" ? <FormError>{error}</FormError> : null}
                 <div key={step} className={styles.stepEntry}>
-                  {step === "estado" && progress ? <ExistingApplicationStatus progress={progress} course={courses.find(c=>c.id===courseId)?.nombre} onDocuments={()=>setStep("documentos")}/> : step === "correo" ? (
+                  {step === "estado" && progress ? (
+                    <ExistingApplicationStatus
+                      progress={progress}
+                      course={courses.find((c) => c.id === courseId)?.nombre}
+                      onDocuments={() => setStep("documentos")}
+                    />
+                  ) : step === "correo" ? (
                     <form onSubmit={send} className={styles.form} noValidate>
                       <Select
                         label="Curso"
@@ -199,7 +217,10 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
                       <Input
                         id="applicant-email"
                         maxLength={254}
-                        onBlur={()=>{const error=emailError(correo);if(error)setError(error);}}
+                        onBlur={() => {
+                          const error = emailError(correo);
+                          if (error) setError(error);
+                        }}
                         label="Correo electrónico"
                         type="email"
                         autoComplete="email"
@@ -266,10 +287,28 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
                       }
                       onNotice={setMessage}
                       onFinish={() => {
-                        setStep(progress?.enviadaAt?"estado":"revision");
+                        setStep(progress?.enviadaAt ? "estado" : "revision");
                       }}
                     />
-                  ) : step === "revision" && session ? <ReviewAndSend session={session} documents={progress?.documentos??[]} onBack={missing=>{setMissingDocuments(missing);setStep("documentos");}} onSubmitted={result=>{setProgress(previous=>previous?{...previous,estado:result.estado,enviadaAt:result.enviadaAt}:previous);setStep("enviado");setMessage("Solicitud enviada para revisión.");}}/> : step === "enviado" ? (
+                  ) : step === "revision" && session ? (
+                    <ReviewAndSend
+                      session={session}
+                      documents={progress?.documentos ?? []}
+                      onBack={(missing) => {
+                        setMissingDocuments(missing);
+                        setStep("documentos");
+                      }}
+                      onSubmitted={(result) => {
+                        setProgress((previous) =>
+                          previous
+                            ? { ...previous, estado: result.estado, enviadaAt: result.enviadaAt }
+                            : previous,
+                        );
+                        setStep("enviado");
+                        setMessage("Solicitud enviada para revisión.");
+                      }}
+                    />
+                  ) : step === "enviado" ? (
                     <SentStep onDocuments={() => setStep("documentos")} />
                   ) : (
                     <div className={styles.form}>
