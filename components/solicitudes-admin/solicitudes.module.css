@@ -1,6 +1,258 @@
-.workspace { display: grid; gap: 1.25rem; min-width: 0; }
-.filters { display: grid; gap: 1rem; align-items: end; }
-.controls { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-.workspace input, .workspace select, .workspace button { min-height: 44px; }
-.detail { display: grid; gap: 1rem; overflow-wrap: anywhere; }
-@media (min-width: 768px) { .filters { grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 2fr); } }
+.workspace {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.workspace h1 {
+  font:
+    700 clamp(1.5rem, 2.5vw, 2rem)/1.2 var(--font-space-grotesk),
+    sans-serif;
+  letter-spacing: -0.035em;
+  color: var(--color-text-primary);
+}
+.filters {
+  display: grid;
+  gap: 1rem;
+  align-items: end;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+}
+.controls > div {
+  flex: 1 1 12rem;
+}
+.workspace input,
+.workspace select,
+.workspace button,
+.drawer button,
+.drawer input,
+.drawer textarea {
+  min-height: 44px;
+}
+.detail {
+  display: grid;
+  gap: 1rem;
+  overflow-wrap: anywhere;
+}
+.tableArea {
+  min-width: 0;
+}
+.tableArea :global(tbody tr):has(button[data-selected="true"]) {
+  background: var(--color-brand-tint);
+  box-shadow: inset 3px 0 var(--color-brand-primary);
+}
+.drawerLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.28);
+  animation: fade-in 0.18s ease-out;
+}
+.drawer {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-elevated);
+  animation: drawer-in 0.22s ease-out;
+}
+.drawer:focus {
+  outline: none;
+}
+.drawerHeader {
+  display: flex;
+  align-items: start;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  flex: 0 0 auto;
+  background: var(--color-bg-surface);
+}
+.drawerTitle {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+.drawerTitle h2 {
+  font:
+    700 1.5rem/1.25 var(--font-space-grotesk),
+    sans-serif;
+  letter-spacing: -0.035em;
+}
+.drawerTitle p {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-brand-ink);
+}
+.courseLabel {
+  max-width: 100%;
+}
+.closeButton {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+.closeButton:hover {
+  background: var(--color-bg-sunken);
+  color: var(--color-text-primary);
+}
+.drawerBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.25rem;
+}
+.section {
+  padding-block: 0.5rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.section > h3,
+.decisionZone > h3 {
+  font:
+    700 1.125rem/1.5 var(--font-space-grotesk),
+    sans-serif;
+  margin-bottom: 1rem;
+}
+.dataGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  font-size: 0.875rem;
+}
+.dataGrid dt {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  margin-bottom: 0.375rem;
+}
+.dataGrid dd {
+  overflow-wrap: anywhere;
+}
+.representative {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+.representative h4 {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.documentList {
+  display: grid;
+  gap: 1rem;
+}
+.documentCard {
+  display: grid;
+  justify-items: start;
+  gap: 0.875rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+.documentCard h4 {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+.documentCard > .detail {
+  width: 100%;
+}
+.documentCard .controls {
+  align-items: center;
+}
+.documentCard .controls > button {
+  flex: 0 1 auto;
+}
+.decisionZone {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-sunken);
+}
+.decisionZone h3 {
+  margin-bottom: 0;
+}
+.drawerBody h2,
+.representative h4 {
+  font-family: var(--font-space-grotesk), sans-serif;
+}
+.deleteZone {
+  padding-top: 1rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--color-border-strong);
+}
+@keyframes drawer-in {
+  from {
+    opacity: 0.6;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (min-width: 768px) {
+  .filters {
+    grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 2fr);
+  }
+  .drawer {
+    width: clamp(35rem, 55vw, 47.5rem);
+  }
+  .drawerHeader {
+    padding: 1.5rem 2rem;
+  }
+  .drawerBody {
+    padding: 1.5rem 2rem 2rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .scrim {
+    animation: none;
+  }
+}
+@media (max-width: 767px) {
+  .dataGrid > div:nth-child(3),
+  .dataGrid > div:last-child {
+    grid-column: 1 / -1;
+  }
+}

@@ -12,11 +12,13 @@ export function ReviewActions({
   documentoId,
   onDone,
   onStale,
+  onDocumentReviewed,
 }: {
   id: string;
   documentoId?: string;
   onDone: (message: string, decision?: SolicitudDecision) => void;
-  onStale?: () => void;
+  onStale?: (message: string) => void;
+  onDocumentReviewed?: (document: { estado: string; motivoRechazo: string | null }) => void;
 }) {
   const [choice, setChoice] = useState<"approve" | "reject" | null>(null),
     [reason, setReason] = useState(""),
@@ -41,6 +43,10 @@ export function ReviewActions({
           choice === "approve" ? "aprobado" : "rechazado",
           choice === "reject" ? reason.trim() : undefined,
         );
+        onDocumentReviewed?.({
+          estado: choice === "approve" ? "aprobado" : "rechazado",
+          motivoRechazo: choice === "reject" ? reason.trim() : null,
+        });
         onDone(choice === "approve" ? "Documento aprobado." : "Documento rechazado.");
       } else {
         const result = await solicitudes.decide(
@@ -58,7 +64,7 @@ export function ReviewActions({
         e instanceof ApiError &&
         ["DOCUMENTO_YA_REVISADO", "SOLICITUD_CERRADA"].includes(e.code ?? "")
       ) {
-        onStale?.();
+        onStale?.(solicitudMessage(e));
       }
     } finally {
       lock.current = false;
