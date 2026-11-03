@@ -34,6 +34,7 @@ export function SolicitudDetail({
   const consent = solicitud.consentimiento;
   const estado = decision?.estado ?? solicitud.estado;
   const pending = estado === "pendiente_revision";
+  const documentsReviewable=["pendiente_revision","aprobada"].includes(estado);
   const documents =
     changed?.source === solicitud.documentos ? changed.documents : solicitud.documentos;
   const course = Array.isArray(courses)
@@ -119,6 +120,7 @@ export function SolicitudDetail({
         </section>
         <section className={styles.section} aria-labelledby="documents-title">
           <h3 id="documents-title">Documentos digitales</h3>
+          <p className="mb-4"><SolicitudStatus estado={["cedula","titulo_bachiller"].every(tipo=>documents.some(doc=>doc.tipoDocumento===tipo&&doc.documentoId))?"obligatorios_presentes":"obligatorios_incompletos"}/></p>
           <div className={styles.documentList}>
             {DOCUMENTOS.map(({ tipo, label }) => {
               const doc = documents.find((d) => d.tipoDocumento === tipo),
@@ -134,7 +136,7 @@ export function SolicitudDetail({
                   {hasFile ? (
                     <DocumentViewer solicitudId={solicitud.id} documentoId={doc.documentoId!} />
                   ) : null}
-                  {pending && hasFile && state === "recibido" ? (
+                  {documentsReviewable && hasFile && state === "recibido" ? (
                     <ReviewActions
                       key={doc.documentoId}
                       id={solicitud.id}
@@ -166,7 +168,7 @@ export function SolicitudDetail({
             />
           ) : (
             <p className="text-sm text-text-secondary">
-              Esta solicitud ya fue resuelta. La revisión está en modo solo lectura.
+              La decisión de esta solicitud es definitiva. Los documentos pendientes siguen disponibles para revisión si fue aprobada.
             </p>
           )}
           {solicitud.motivoRechazo ? <p>Motivo: {solicitud.motivoRechazo}</p> : null}
