@@ -16,5 +16,5 @@ it("reanuda en el primer paso incompleto y permite faltantes", () => {
   expect(firstIncompleteStep({ ...progress, consentimientoVigente: false })).toBe("consentimiento");
   expect(firstIncompleteStep({ ...progress, requiereRepresentante: true })).toBe("datos");
   expect(firstIncompleteStep(progress)).toBe("documentos");
-  expect(firstIncompleteStep({ ...progress, estado: "aprobada" })).toBe("enviado");
+  expect(firstIncompleteStep({ ...progress, estado: "aprobada" })).toBe("estado");
 });
