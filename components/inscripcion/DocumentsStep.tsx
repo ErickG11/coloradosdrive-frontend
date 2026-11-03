@@ -12,6 +12,7 @@ import {
 import styles from "./inscripcion.module.css";
 const MAX = 5 * 1024 * 1024;
 export function documentFileError(file: File): string {
+  if (!file.size) return "El archivo está vacío. Selecciona otro.";
   if (file.size > MAX) return "El archivo supera el máximo de 5 MiB.";
   if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type))
     return "Selecciona un archivo JPG, PNG o PDF.";
@@ -23,11 +24,15 @@ export function DocumentsStep({
   onFinish,
   onNotice,
   onUploaded,
+  sent=false,
+  missing=[],
 }: {
   session: SolicitudSession;
   initialDocuments?: SolicitudProgress["documentos"];
   onFinish: () => void;
   onNotice: (message: string) => void;
+  sent?: boolean;
+  missing?: DocumentoTipo[];
   onUploaded?: (tipo: DocumentoTipo, estado: string) => void;
 }) {
   const [states, setStates] = useState<Record<string, string>>(() =>
@@ -57,8 +62,7 @@ export function DocumentsStep({
   return (
     <div className={styles.form}>
       <p>
-        Sube los documentos que tengas. Los faltantes se entregan físicamente en la escuela, incluso
-        si el curso ya empezó.
+        Sube la cédula y el título de bachiller o certificado de décimo para enviar tu solicitud. La papeleta de votación y el tipo de sangre pueden quedar pendientes.
       </p>
       <p id="files-help" className="text-sm text-text-secondary">
         JPG, PNG o PDF. Máximo 5 MiB por archivo. Elegir otro archivo reemplaza el anterior si aún
@@ -72,7 +76,8 @@ export function DocumentsStep({
             label={label}
             estado={states[tipo]}
             busy={busy[tipo]}
-            error={errors[tipo]}
+            obligatorio={tipo==="cedula"||tipo==="titulo_bachiller"}
+            error={errors[tipo] || (missing.includes(tipo)&&!states[tipo]?"Este documento es obligatorio para enviar.":undefined)}
             reason={
               states[tipo] === "rechazado"
                 ? (initialDocuments.find((doc) => doc.tipo === tipo)?.motivoRechazo ?? undefined)
@@ -82,10 +87,10 @@ export function DocumentsStep({
           />
         ))}
       </div>
-      <p>No necesitas completar las cuatro ranuras para finalizar tu solicitud.</p>
+      <p>La cédula y el título son obligatorios para enviar; los otros dos documentos se pueden entregar después.</p>
       <div className={styles.stepActions}>
         <Button disabled={Object.values(busy).some(Boolean)} onClick={onFinish}>
-          Finalizar solicitud
+          {sent?"Volver al estado de mi solicitud":"Revisar y enviar"}
         </Button>
       </div>
     </div>

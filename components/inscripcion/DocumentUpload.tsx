@@ -23,6 +23,7 @@ export function DocumentUpload({
   error,
   reason,
   onFile,
+  obligatorio,
 }: {
   tipo: DocumentoTipo;
   label: string;
@@ -31,6 +32,7 @@ export function DocumentUpload({
   error?: string;
   reason?: string;
   onFile: (file: File) => void;
+  obligatorio?: boolean;
 }) {
   const id = useId(),
     input = useRef<HTMLInputElement>(null);
@@ -46,10 +48,11 @@ export function DocumentUpload({
     onFile(file);
   }
   return (
-    <section className={styles.documentSlot} aria-labelledby={`${id}-title`}>
+    <section className={styles.documentSlot} data-invalid={Boolean(error)} aria-labelledby={`${id}-title`}>
       <h3 id={`${id}-title`}>
         <label htmlFor={id}>{label}</label>
       </h3>
+      {obligatorio!==undefined?<p className="text-xs font-semibold text-text-secondary">{obligatorio?"Obligatorio":"Opcional por ahora, se entrega en la escuela"}</p>:null}
       <div role="status">
         <StatusBadge status={estado ?? "faltante"} label={status.label} tone={status.tone} />
       </div>

@@ -349,3 +349,5 @@
     transition: none;
   }
 }
+
+.documentSlot[data-invalid="true"]{border-color:var(--color-status-error);}

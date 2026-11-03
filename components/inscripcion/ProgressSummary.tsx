@@ -28,8 +28,8 @@ export const ENROLLMENT_STEPS = [
     help: "Adjunta los documentos disponibles. Puedes continuar aunque te falte alguno.",
   },
   {
-    key: "enviado",
-    label: "Solicitud enviada",
+    key: "revision",
+    label: "Revisar y enviar",
     help: "Tu solicitud ya está disponible para revisión.",
   },
 ] as const;
