@@ -346,6 +346,7 @@ export type DecisionInput =
   | { accion: "rechazar"; motivoCodigo: MotivoRechazo; mensaje?: string; notaInterna?: string };
 
 export interface DecisionResult {
+  etapa?: "por_agendar" | "reservado" | "activa";
   id: string;
   estado: EstadoInscripcion;
   cohorte?: { id: string; nombre: string } | null;

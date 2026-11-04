@@ -53,7 +53,12 @@ export const ResultadoDecisionCard = forwardRef<HTMLDivElement, { resultado: Res
           <div className={styles.detail}>
             {resultado.estado === "aprobada" ? (
               <>
-                {resultado.cohorte ? (
+                {resultado.etapa === "por_agendar" ? (
+                  <p>
+                    Por agendar: el alumno elegirá su horario y pagará antes de activar su
+                    matrícula. Todavía no tiene cohorte ni monto asignados.
+                  </p>
+                ) : resultado.cohorte ? (
                   <p>Cohorte asignada: {resultado.cohorte.nombre}</p>
                 ) : (
                   <p>

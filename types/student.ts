@@ -1,5 +1,5 @@
 import type { ManualEnrollmentDetails } from "@/app/(admin)/admin/enrollments/wizard/wizardTypes";
-import type { EnrollmentStatus } from "./enrollment";
+import type { EnrollmentStatus, EnrollmentStage } from "./enrollment";
 import type { CourseType } from "./course";
 
 export interface MatchingEnrollment {
@@ -8,6 +8,8 @@ export interface MatchingEnrollment {
   courseType: CourseType;
   cohortId: string | null;
   status: EnrollmentStatus;
+  origen?: "manual" | "solicitud";
+  etapa?: EnrollmentStage;
 }
 export interface AdminStudent {
   id: string;
@@ -34,6 +36,9 @@ export interface StudentList {
   } | null;
 }
 export interface StudentEnrollment extends ManualEnrollmentDetails {
+  origen?: "manual" | "solicitud";
+  etapa?: EnrollmentStage;
+  reservaExpiraAt?: string | null;
   status: EnrollmentStatus;
   courseId: string;
   courseType: CourseType;
