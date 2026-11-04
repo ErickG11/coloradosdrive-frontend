@@ -14,6 +14,7 @@ import type { InscripcionConfig, ProgresoSolicitud } from "@/types/inscripcion";
 import { IndicadorPasos } from "./IndicadorPasos";
 import { InscripcionesCerradas } from "./InscripcionesCerradas";
 import { PasoCodigo } from "./pasos/PasoCodigo";
+import { PasoConsentimiento } from "./pasos/PasoConsentimiento";
 import { PasoCorreo } from "./pasos/PasoCorreo";
 import { PasoRequisitos } from "./pasos/PasoRequisitos";
 import { PASOS_EXTERNOS, PasoPendiente } from "./pasos/registro";
@@ -185,9 +186,14 @@ export function InscripcionWizard({ initialCourseId = "" }: { initialCourseId?: 
         />
       );
     }
-    if (paso === PASO_CONSENTIMIENTO) {
-      // El paso 3 se conecta en su propia tarea.
-      return <PasoPendiente />;
+    if (paso === PASO_CONSENTIMIENTO && propsPaso) {
+      return (
+        <PasoConsentimiento
+          {...propsPaso}
+          config={datos}
+          onConfigDesactualizada={() => setIntento((n) => n + 1)}
+        />
+      );
     }
     const Externo = PASOS_EXTERNOS[paso];
     if (!propsPaso || !Externo) return <PasoPendiente />;
