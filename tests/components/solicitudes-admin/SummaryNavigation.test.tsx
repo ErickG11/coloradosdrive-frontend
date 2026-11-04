@@ -39,7 +39,7 @@ it("la entrada de documentos aparece solo en el área del alumno", () => {
       <Sidebar email={null} role="estudiante" />
     </ThemeProvider>,
   );
-  expect(screen.getByRole("link", { name: "Mis documentos" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Documentos para llevar" })).toHaveAttribute(
     "href",
     "/student/documents",
   );
