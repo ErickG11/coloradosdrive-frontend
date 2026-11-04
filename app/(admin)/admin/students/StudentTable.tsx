@@ -97,7 +97,15 @@ export function StudentTable({
                   >
                     {enrollment.cohortId ? cohortLabel(enrollment.cohortId) : "Sin cohorte"}
                   </StatusBadge>
-                  <StudentBadge status={enrollment.status} />
+                  {enrollment.etapa && enrollment.etapa !== "activa" ? (
+                    <StatusBadge
+                      status={enrollment.etapa}
+                      tone="warning"
+                      label={enrollment.etapa === "por_agendar" ? "Por agendar" : "Reservado"}
+                    />
+                  ) : (
+                    <StudentBadge status={enrollment.status} />
+                  )}
                 </div>
               </li>
             ))}

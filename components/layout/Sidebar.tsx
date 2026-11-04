@@ -24,9 +24,10 @@ const ROLE_LABELS: Record<Role, string> = {
 interface SidebarProps {
   email: string | null;
   role: Role | null;
+  studentEnrollmentRestricted?: boolean;
 }
 
-export function Sidebar({ email, role }: SidebarProps) {
+export function Sidebar({ email, role, studentEnrollmentRestricted = false }: SidebarProps) {
   const pathname = usePathname();
   const summary = useSolicitudSummary(role === "admin");
   const [isOpen, setIsOpen] = useState(false);
@@ -128,37 +129,58 @@ export function Sidebar({ email, role }: SidebarProps) {
       {role === "estudiante" ? (
         <>
           <SidebarLink
-            href="/student/exams"
-            active={pathname.startsWith("/student/exams")}
-            section="exams"
-            onClick={closeDrawer}
-          >
-            Exámenes
-          </SidebarLink>
-          <SidebarLink
-            href="/student/schedule"
-            active={pathname.startsWith("/student/schedule")}
-            section="schedule"
-            onClick={closeDrawer}
-          >
-            Horarios de práctica
-          </SidebarLink>
-          <SidebarLink
-            href="/student/documents"
-            active={pathname.startsWith("/student/documents")}
+            href="/student/inscripcion"
+            active={pathname.startsWith("/student/inscripcion")}
             section="enroll"
             onClick={closeDrawer}
           >
-            Documentos para llevar
+            Mi inscripción
           </SidebarLink>
-          <SidebarLink
-            href="/student/history"
-            active={pathname.startsWith("/student/history")}
-            section="history"
-            onClick={closeDrawer}
-          >
-            Mi historial de asistencia
-          </SidebarLink>
+          {studentEnrollmentRestricted ? (
+            <SidebarLink
+              href="/student/change-password"
+              active={pathname === "/student/change-password"}
+              section="security"
+              onClick={closeDrawer}
+            >
+              Cambiar contraseña
+            </SidebarLink>
+          ) : (
+            <>
+              <SidebarLink
+                href="/student/exams"
+                active={pathname.startsWith("/student/exams")}
+                section="exams"
+                onClick={closeDrawer}
+              >
+                Exámenes
+              </SidebarLink>
+              <SidebarLink
+                href="/student/schedule"
+                active={pathname.startsWith("/student/schedule")}
+                section="schedule"
+                onClick={closeDrawer}
+              >
+                Horarios de práctica
+              </SidebarLink>
+              <SidebarLink
+                href="/student/documents"
+                active={pathname.startsWith("/student/documents")}
+                section="enroll"
+                onClick={closeDrawer}
+              >
+                Documentos para llevar
+              </SidebarLink>
+              <SidebarLink
+                href="/student/history"
+                active={pathname.startsWith("/student/history")}
+                section="history"
+                onClick={closeDrawer}
+              >
+                Mi historial de asistencia
+              </SidebarLink>
+            </>
+          )}
         </>
       ) : null}
       {role === "instructor" ? (
