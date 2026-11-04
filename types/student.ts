@@ -94,6 +94,13 @@ export interface StudentDetail extends Omit<AdminStudent, "matchingEnrollments">
   ciudadania: string | null;
   direccion: string | null;
   updatedAt: string;
+  /** Ausente en backends anteriores a F44-d: no habilita la acción manual. */
+  identidadPresencial?: {
+    origenSolicitud: boolean;
+    confirmada: boolean;
+    confirmadaAt: string | null;
+    confirmadaPor: string | null;
+  };
   graduation: StudentGraduation;
   practiceSchedule: StudentSchedule;
   enrollments: StudentEnrollment[];
