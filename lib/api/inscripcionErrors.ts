@@ -97,6 +97,14 @@ const MENSAJES_POR_CODIGO: Record<string, string> = {
   INTERNAL_ERROR: "Ocurrió un error inesperado. Intenta de nuevo en unos minutos.",
 };
 
+// Defensa S1: nunca trasladar códigos de identidad del panel al postulante.
+const CODIGOS_IDENTIDAD_ADMIN = new Set([
+  "CEDULA_DUPLICADA",
+  "IDENTIDAD_NO_VERIFICADA",
+  "ESTUDIOS_NO_VERIFICADOS",
+  "CUENTA_YA_EXISTE",
+]);
+
 const MENSAJE_GENERICO = "No pudimos completar la acción. Intenta de nuevo en unos minutos.";
 const MENSAJE_SIN_CONEXION =
   "No pudimos conectar con el servidor. Revisa tu conexión e intenta de nuevo.";
@@ -119,6 +127,8 @@ export function inscripcionErrorCode(error: unknown): string | undefined {
 // estado HTTP y nunca muestra el texto técnico del servidor.
 export function inscripcionErrorMessage(error: unknown): string {
   if (!(error instanceof ApiError)) return MENSAJE_SIN_CONEXION;
+  if (error.code && CODIGOS_IDENTIDAD_ADMIN.has(error.code))
+    return MENSAJES_POR_CODIGO.DATOS_NO_REGISTRADOS;
   if (error.code && error.code in MENSAJES_POR_CODIGO) return MENSAJES_POR_CODIGO[error.code];
   switch (error.status) {
     case 401:
@@ -155,6 +165,8 @@ export function sugiereWhatsapp(error: unknown): boolean {
 
 // Campo del formulario al que pertenece el error, para mostrarlo junto al campo.
 export function inscripcionErrorField(error: unknown): string | undefined {
+  if (error instanceof ApiError && error.code && CODIGOS_IDENTIDAD_ADMIN.has(error.code))
+    return undefined;
   return error instanceof ApiError ? error.field : undefined;
 }
 

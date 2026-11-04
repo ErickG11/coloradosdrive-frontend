@@ -4,6 +4,13 @@ import { inscripcionErrorMessage } from "@/lib/api/inscripcionErrors";
 // Mensajes para el personal de la escuela. Los códigos que el mapa del postulante redacta en
 // segunda persona ("tu solicitud") se reescriben aquí; el resto reutiliza el mapa común.
 const MENSAJES_ADMIN: Record<string, string> = {
+  CEDULA_DUPLICADA: "Esta cédula ya está registrada en otra solicitud o en una cuenta existente.",
+  IDENTIDAD_NO_VERIFICADA:
+    "Falta verificar la identidad. Registra la verificación antes de aprobar.",
+  ESTUDIOS_NO_VERIFICADOS:
+    "Falta verificar los estudios. Registra la verificación antes de aprobar.",
+  CUENTA_YA_EXISTE:
+    "Ya existe una cuenta con este correo. Revisa si el postulante ya está inscrito.",
   ESTADO_INCORRECTO:
     "La solicitud ya no está en un estado que permita esta acción. Recarga el detalle.",
   SOLICITUD_CERRADA: "La solicitud ya fue decidida y no admite cambios.",
