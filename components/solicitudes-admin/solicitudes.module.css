@@ -492,3 +492,95 @@
 .documentCard form {
   width: 100%;
 }
+
+/* --- Decisión: acciones, requisitos, confirmación y resultado (F36) --- */
+.actionGroup {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+.actionOption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.actionOption:hover {
+  background: var(--color-bg-sunken);
+}
+.actionOption[data-checked="true"] {
+  border-color: var(--color-brand-primary);
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+}
+.actionOption:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.actionGroup:disabled .actionOption {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.checklist {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+.checklist li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.checklist li[data-ok="true"] {
+  color: var(--color-status-success);
+}
+.checklist li[data-ok="false"] {
+  color: var(--color-status-warning);
+}
+.preview {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.confirmBox {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--color-brand-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+.resultFocus:focus {
+  outline: none;
+}
+.resultFocus:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+@media (max-width: 479px) {
+  .actionGroup {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .actionOption {
+    transition: none;
+  }
+}
