@@ -1,175 +1,239 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFetch } from "@/hooks/useFetch";
 import { DataTable } from "@/components/ui/DataTable";
-import { Select } from "@/components/ui/Select";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { FormError } from "@/components/ui/FormError";
+import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
-import { solicitudes } from "@/lib/api/solicitudes";
-import type { SolicitudAdmin, SolicitudPage } from "@/types/solicitud";
-import { Toast } from "@/components/inscripcion/Toast";
+import { estadoDeTab } from "@/lib/api/inscripcion";
+import type { ListaSolicitudes, SolicitudAdminItem, TabSolicitudes } from "@/types/inscripcion";
+import { InscripcionesSwitch } from "./InscripcionesSwitch";
+import { MedidoresDiarios } from "./MedidoresDiarios";
 import { SolicitudDetail } from "./SolicitudDetail";
 import { SolicitudStatus } from "./SolicitudStatus";
+import { ID_PANEL_SOLICITUDES, SolicitudesTabs, idDeTab } from "./SolicitudesTabs";
+import { formatearFecha, nombreDe, superaHoras } from "./catalogo";
+import { useResumenSolicitudes } from "./useResumenSolicitudes";
+import { SOLICITUD_CHANGED_EVENT } from "./useSolicitudSummary";
 import styles from "./solicitudes.module.css";
+
+const PAGE_SIZE = 20;
+
 export function SolicitudesAdmin() {
-  const [estado, setEstado] = useState(""),
-    [draft, setDraft] = useState(""),
+  const [tab, setTab] = useState<TabSolicitudes>("pendientes"),
+    [borrador, setBorrador] = useState(""),
     [q, setQ] = useState(""),
-    [page, setPage] = useState(1);
-  const query = new URLSearchParams({
-    page: String(page),
-    pageSize: "20",
-    ...(estado ? { estado } : {}),
-    ...(q ? { q } : {}),
-  });
-  const { data, isLoading, error, refetch } = useFetch<SolicitudPage>(
-    `/admin/solicitudes?${query}`,
+    [page, setPage] = useState(1),
+    [seleccionada, setSeleccionada] = useState<SolicitudAdminItem | null>(null),
+    [ahora, setAhora] = useState(() => Date.now());
+  const { resumen, fallo, setResumen } = useResumenSolicitudes();
+
+  const query = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  const estado = estadoDeTab(tab);
+  if (estado) query.set("estado", estado);
+  if (q) query.set("q", q);
+  const { data, isLoading, error, refetch } = useFetch<ListaSolicitudes>(
+    `/admin/solicitudes?${query.toString()}`,
   );
-  const [message, setMessage] = useState(""),
-    [selected, setSelected] = useState<SolicitudAdmin | null>(null);
-  const openers = useRef(new Map<string, HTMLButtonElement>()),
-    heading = useRef<HTMLHeadingElement>(null);
-  const rows = data?.items ?? [];
-  function close() {
-    const opener = selected ? openers.current.get(selected.id) : null;
-    setSelected(null);
-    (opener ?? heading.current)?.focus();
+
+  const aperturas = useRef(new Map<string, HTMLButtonElement>());
+  const titulo = useRef<HTMLHeadingElement>(null);
+
+  // La insignia «Más de 48 h» se recalcula cada minuto sin recargar la lista.
+  useEffect(() => {
+    const timer = setInterval(() => setAhora(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Cuando el contador del menú detecta un cambio (decisión propia o de otra sesión) la lista
+  // visible también se refresca para no mostrar filas ya decididas.
+  useEffect(() => {
+    window.addEventListener(SOLICITUD_CHANGED_EVENT, refetch);
+    return () => window.removeEventListener(SOLICITUD_CHANGED_EVENT, refetch);
+  }, [refetch]);
+
+  function cerrarDetalle() {
+    const apertura = seleccionada ? aperturas.current.get(seleccionada.id) : null;
+    setSeleccionada(null);
+    // La fila puede haber salido de la pestaña tras una decisión: el título recibe el foco.
+    requestAnimationFrame(() => (apertura?.isConnected ? apertura : titulo.current)?.focus());
   }
-  async function refreshSelected() {
-    if (!selected) return;
-    // El filtro de la tabla puede ocultar una solicitud que otra pestaña decidió.
-    const result = await solicitudes.list(
-      new URLSearchParams({ q: selected.cedula, page: "1", pageSize: "100" }),
-    );
-    const current = result.items.find((item) => item.id === selected.id);
-    if (current) setSelected((previous) => (previous?.id === selected.id ? current : previous));
-    else throw new Error("No se pudo recuperar la solicitud");
-    refetch();
-  }
+
+  const filas = data?.items ?? [];
+  const conteos: Partial<Record<TabSolicitudes, number>> = resumen
+    ? { pendientes: resumen.pendientes, devueltas: resumen.devueltas }
+    : {};
+
   return (
     <div className={styles.workspace}>
-      <h1 ref={heading} tabIndex={-1}>
-        Solicitudes de inscripción
-      </h1>
-      <Toast message={message} onDismiss={() => setMessage("")} />
-      <div className={styles.filters}>
-        <Select
-          label="Estado"
-          value={estado}
-          onChange={(event) => {
-            setEstado(event.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="">Todas</option>
-          <option value="pendiente_revision">Pendientes</option>
-          <option value="aprobada">Aprobadas</option>
-          <option value="rechazada">Rechazadas</option>
-          <option value="con_documentos_por_revisar">Con documentos por revisar</option>
-        </Select>
-        <form
-          className={styles.controls}
-          onSubmit={(event) => {
-            event.preventDefault();
-            setQ(draft.trim());
-            setPage(1);
-          }}
-        >
-          <Input
-            label="Buscar por cédula, nombre o correo"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            maxLength={100}
-          />
-          <Button type="submit">Buscar</Button>
-        </form>
-      </div>
-      {data ? <FormError>{error}</FormError> : null}
-      <div className={styles.tableArea} aria-busy={isLoading}>
-        <DataTable<SolicitudAdmin>
+      <header className={styles.moduleHeader}>
+        <div>
+          <h1 ref={titulo} tabIndex={-1}>
+            Solicitudes de inscripción
+          </h1>
+          <p className={styles.lead}>
+            Revisa a quienes se inscriben en línea: verifica su identidad y estudios en la fuente y
+            decide.
+          </p>
+        </div>
+        <InscripcionesSwitch
+          abiertas={resumen ? resumen.inscripcionesAbiertas : null}
+          onChanged={(abiertas) =>
+            setResumen((previo) =>
+              previo ? { ...previo, inscripcionesAbiertas: abiertas } : previo,
+            )
+          }
+        />
+      </header>
+      {fallo && !resumen ? (
+        <FormError>
+          No se pudo consultar el resumen del día. Se reintentará automáticamente.
+        </FormError>
+      ) : null}
+      <MedidoresDiarios resumen={resumen} />
+      {resumen && resumen.conMasDe48h > 0 ? (
+        <p className={styles.overdueNote}>
+          {resumen.conMasDe48h === 1
+            ? "1 solicitud lleva más de 48 h esperando revisión."
+            : `${resumen.conMasDe48h} solicitudes llevan más de 48 h esperando revisión.`}
+        </p>
+      ) : null}
+
+      <SolicitudesTabs
+        activa={tab}
+        conteos={conteos}
+        onSelect={(siguiente) => {
+          setTab(siguiente);
+          setPage(1);
+        }}
+      />
+      <form
+        className={styles.controls}
+        role="search"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setQ(borrador.trim());
+          setPage(1);
+        }}
+      >
+        <Input
+          label="Buscar por cédula, nombre o correo"
+          type="search"
+          value={borrador}
+          onChange={(event) => setBorrador(event.target.value)}
+          maxLength={100}
+        />
+        <Button type="submit">Buscar</Button>
+        {q ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setBorrador("");
+              setQ("");
+              setPage(1);
+            }}
+          >
+            Quitar búsqueda
+          </Button>
+        ) : null}
+      </form>
+
+      <div
+        id={ID_PANEL_SOLICITUDES}
+        role="tabpanel"
+        aria-labelledby={idDeTab(tab)}
+        className={styles.tableArea}
+        aria-busy={isLoading}
+      >
+        {data && error ? <FormError>{error}</FormError> : null}
+        <DataTable<SolicitudAdminItem>
           caption="Solicitudes de inscripción"
-          rows={rows}
+          rows={filas}
           getRowKey={(item) => item.id}
           isLoading={isLoading && !data}
           error={data ? null : error}
           onRetry={refetch}
           mobileCards
+          empty={
+            <EmptyState
+              title={q ? "Sin resultados" : "No hay solicitudes en esta pestaña"}
+              description={
+                q
+                  ? "Ninguna solicitud coincide con la búsqueda."
+                  : "Cuando lleguen solicitudes aparecerán aquí."
+              }
+            />
+          }
           columns={[
-            { key: "nombre", header: "Postulante", render: (item) => item.nombreCompleto },
-            { key: "cedula", header: "Cédula", render: (item) => item.cedula },
+            {
+              key: "nombre",
+              header: "Postulante",
+              render: (item) => (
+                <span className={styles.person}>
+                  <span>{nombreDe(item)}</span>
+                  {item.estado === "enviada" && superaHoras(item.enviadaAt, ahora) ? (
+                    <span className={styles.overdueBadge}>Más de 48 h</span>
+                  ) : null}
+                </span>
+              ),
+            },
+            { key: "cedula", header: "Cédula", render: (item) => item.cedula ?? "—" },
             { key: "correo", header: "Correo", render: (item) => item.correo },
             {
               key: "enviada",
               header: "Fecha de envío",
-              render: (item) =>
-                item.enviadaAt
-                  ? new Date(item.enviadaAt).toLocaleString("es-EC", {
-                      timeZone: "America/Guayaquil",
-                    })
-                  : "—",
+              render: (item) => (item.enviadaAt ? formatearFecha(item.enviadaAt) : "—"),
             },
             {
-              key: "detail",
+              key: "estado",
+              header: "Estado",
+              render: (item) => <SolicitudStatus estado={item.estado} />,
+            },
+            {
+              key: "detalle",
               header: "Revisión",
               render: (item) => (
                 <Button
                   variant="secondary"
                   ref={(button) => {
-                    if (button) openers.current.set(item.id, button);
-                    else openers.current.delete(item.id);
+                    if (button) aperturas.current.set(item.id, button);
+                    else aperturas.current.delete(item.id);
                   }}
-                  data-selected={selected?.id === item.id}
-                  aria-expanded={selected?.id === item.id}
-                  aria-controls={selected?.id === item.id ? "solicitud-panel" : undefined}
-                  onClick={() => setSelected(item)}
+                  data-selected={seleccionada?.id === item.id}
+                  aria-label={`Revisar solicitud de ${nombreDe(item)}`}
+                  aria-expanded={seleccionada?.id === item.id}
+                  aria-controls={seleccionada?.id === item.id ? "solicitud-panel" : undefined}
+                  onClick={() => setSeleccionada(item)}
                 >
-                  Revisar solicitud
+                  Revisar
                 </Button>
-              ),
-            },
-            {
-              key: "estado",
-              header: "Estado",
-              render: (item) => (
-                <>
-                  <SolicitudStatus estado={item.estado} />
-                  {Boolean(item.documentosPorRevisar) ? (
-                    <span className="mt-2 block text-xs text-status-info">
-                      Documentos por revisar ({item.documentosPorRevisar})
-                    </span>
-                  ) : null}
-                </>
               ),
             },
           ]}
         />
       </div>
-      {selected ? (
-        <SolicitudDetail
-          key={selected.id}
-          solicitud={selected}
-          onClose={close}
-          onRefresh={refreshSelected}
-          onDone={(notice, result) => {
-            window.dispatchEvent(new Event("solicitudes-actualizadas"));
-            setMessage(notice);
-            if (result)
-              setSelected((current) => (current ? { ...current, estado: result.estado } : null));
-            refetch();
-          }}
-        />
-      ) : null}
       <Pagination
         total={data?.total ?? 0}
         page={page}
-        pageSize={20}
+        pageSize={PAGE_SIZE}
         singular="solicitud"
         plural="solicitudes"
         onPageChange={setPage}
         disabled={isLoading}
       />
+      {seleccionada ? (
+        <SolicitudDetail
+          key={seleccionada.id}
+          item={seleccionada}
+          onClose={cerrarDetalle}
+          onChanged={() => {
+            window.dispatchEvent(new Event(SOLICITUD_CHANGED_EVENT));
+          }}
+        />
+      ) : null}
     </div>
   );
 }
