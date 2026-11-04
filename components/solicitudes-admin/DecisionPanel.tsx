@@ -248,8 +248,8 @@ export function DecisionPanel({
             </p>
           ) : null}
           <p className={styles.note}>
-            Al aprobar se crea la cuenta del alumno sin contraseña, se asigna cohorte si corresponde
-            y se envía un enlace de un solo uso para crear la contraseña.
+            Al aprobar se crea la cuenta del alumno sin contraseña, la matrícula queda por agendar,
+            sin cohorte ni monto, y se envía un enlace de un solo uso para crear la contraseña.
           </p>
         </div>
       ) : (

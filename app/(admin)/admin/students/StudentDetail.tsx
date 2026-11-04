@@ -110,22 +110,31 @@ export function StudentProfile({
                     {enrollment.curso?.nombre ?? "Curso no disponible"} ·{" "}
                     {enrollment.cohorte?.nombre ?? "Sin cohorte asignada"}
                   </p>
-                  {enrollment.status === "pendiente_cohorte" && onAssignCohort && (
-                    <div className="mt-2 mb-4 flex flex-col items-start gap-2">
-                      <Button
-                        variant="secondary"
-                        disabled={assignmentDisabled || !student.activo}
-                        onClick={() => onAssignCohort(enrollment)}
-                      >
-                        Asignar cohorte
-                      </Button>
-                      {!student.activo && (
-                        <p className="text-sm text-text-secondary">
-                          Reactiva al alumno primero para asignar cohorte.
-                        </p>
-                      )}
-                    </div>
+                  {enrollment.etapa && enrollment.etapa !== "activa" && (
+                    <p className="mt-2 text-sm text-text-secondary">
+                      {enrollment.etapa === "por_agendar"
+                        ? "Por agendar: el alumno debe elegir su horario y pagar."
+                        : "Horario reservado temporalmente; pago pendiente."}
+                    </p>
                   )}
+                  {enrollment.status === "pendiente_cohorte" &&
+                    onAssignCohort &&
+                    (enrollment.origen !== "solicitud" || enrollment.etapa === "activa") && (
+                      <div className="mt-2 mb-4 flex flex-col items-start gap-2">
+                        <Button
+                          variant="secondary"
+                          disabled={assignmentDisabled || !student.activo}
+                          onClick={() => onAssignCohort(enrollment)}
+                        >
+                          Asignar cohorte
+                        </Button>
+                        {!student.activo && (
+                          <p className="text-sm text-text-secondary">
+                            Reactiva al alumno primero para asignar cohorte.
+                          </p>
+                        )}
+                      </div>
+                    )}
                 </div>
               ))}
             {!student.enrollments.some((e) =>
