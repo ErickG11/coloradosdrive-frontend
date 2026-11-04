@@ -283,6 +283,7 @@ export interface ResumenSolicitudes {
 }
 
 export interface VerificacionSolicitud {
+  vigente?: boolean;
   id: string;
   tipo: TipoVerificacion;
   metodo: MetodoVerificacion;
@@ -311,6 +312,7 @@ export interface ConsentimientoAdmin {
 }
 
 export interface SolicitudAdminDetalle extends SolicitudAdminItem {
+  studentId?: string | null;
   telefono: string | null;
   fechaNacimiento: string | null;
   nacionalidadTipo: Nacionalidad | null;
@@ -367,6 +369,8 @@ export interface ReenvioEnlaceResult {
 export type EstadoDocumentoFisico = "pendiente" | "entregado" | "exento";
 
 export interface DocumentoFisicoEstado {
+  label?: string;
+  destacado?: boolean;
   tipo: TipoDocumentoFisico;
   estado: EstadoDocumentoFisico;
   obligatorio: boolean;
