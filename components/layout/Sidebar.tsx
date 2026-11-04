@@ -141,7 +141,7 @@ export function Sidebar({ email, role }: SidebarProps) {
             section="enroll"
             onClick={closeDrawer}
           >
-            Mis documentos
+            Documentos para llevar
           </SidebarLink>
           <SidebarLink
             href="/student/history"
