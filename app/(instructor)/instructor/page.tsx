@@ -9,6 +9,7 @@ import { addWeeks, dayKey, formatWeekRangeLabel, getWeekDays } from "@/lib/utils
 import { formatSchoolTime, schoolCalendarDate, schoolWeekRange } from "@/lib/utils/schoolTime";
 import type { PracticeSlot, PracticeSlotStatus, PracticeSlotWithNames } from "@/types";
 
+import { IdentidadPresencialControl } from "./IdentidadPresencialControl";
 import { SlotAttendance } from "./SlotAttendance";
 
 const DAY_INITIALS = ["L", "M", "X", "J", "V", "S", "D"];
@@ -211,6 +212,7 @@ export default function InstructorPage() {
                       >
                         {isFree ? "Libre" : (slot.studentName ?? "Libre")}
                       </p>
+                      <IdentidadPresencialControl slot={slot} />
                       {slot.status === "completado" ? (
                         <SlotAttendance
                           slot={slot}

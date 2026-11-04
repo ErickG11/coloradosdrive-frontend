@@ -9,7 +9,8 @@ export type NavigationSection =
   | "exams"
   | "schedule"
   | "history"
-  | "menu";
+  | "menu"
+  | "security";
 const paths: Record<NavigationSection, string> = {
   panel: "M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7Z",
   students:
@@ -24,6 +25,7 @@ const paths: Record<NavigationSection, string> = {
     "M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3 10h3v3H8v-3Z",
   menu: "M4 6h16M4 12h16M4 18h16",
   history: "M3 11a9 9 0 1 1 2.6 7.4M3 4v7h7m2-4v5l3 2",
+  security: "M12 3 4 6v6c0 4.5 3.2 8.2 8 9 4.8-.8 8-4.5 8-9V6l-8-3Zm-3 9 2 2 4-4",
 };
 export function NavigationIcon({ section, className }: IconProps & { section: NavigationSection }) {
   return (
