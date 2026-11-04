@@ -8,6 +8,7 @@ import { Sidebar } from "./Sidebar";
 
 interface DashboardShellProps {
   children: ReactNode;
+  studentEnrollmentRestricted?: boolean;
 }
 
 // Shell compartido por los paneles de admin/estudiante/instructor: sidebar
@@ -16,7 +17,10 @@ interface DashboardShellProps {
 // 768px (Sidebar fijo a la izquierda, contenido a la derecha) — el propio
 // Sidebar decide qué de sus dos variantes (topbar/aside) se muestra según
 // el breakpoint.
-export async function DashboardShell({ children }: DashboardShellProps) {
+export async function DashboardShell({
+  children,
+  studentEnrollmentRestricted = false,
+}: DashboardShellProps) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -29,7 +33,11 @@ export async function DashboardShell({ children }: DashboardShellProps) {
       <a href="#main-content" className="skip-link">
         Saltar al contenido
       </a>
-      <Sidebar email={user?.email ?? null} role={role} />
+      <Sidebar
+        email={user?.email ?? null}
+        role={role}
+        studentEnrollmentRestricted={studentEnrollmentRestricted}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         {hasNotifications ? (
           <header

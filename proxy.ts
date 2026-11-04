@@ -57,20 +57,40 @@ export async function proxy(request: NextRequest) {
     const status = await fetch(`${env.NEXT_PUBLIC_API_URL}/${prefix}/account-status`, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
-    });
+      signal: AbortSignal.timeout(10_000),
+    }).catch(() => null);
     // 403 = cuenta desactivada (el JWT puede seguir vigente unos minutos).
-    if (status.status === 403)
+    if (status?.status === 403)
       return NextResponse.redirect(new URL("/account-inactive", request.url));
-    if (!status.ok)
+    if (!status?.ok)
       return NextResponse.json(
         { message: "No se pudo verificar el estado de la cuenta." },
         { status: 503 },
       );
-    const account = (await status.json()) as { mustChangePassword: boolean };
+    const account = (await status.json()) as {
+      mustChangePassword: boolean;
+      inscripcionIncompleta?: boolean;
+    };
     const changePage = request.nextUrl.pathname === changePath;
     if (account.mustChangePassword && !changePage)
       return NextResponse.redirect(new URL(changePath, request.url));
-    if (!account.mustChangePassword && changePage)
+    if (role === "estudiante" && typeof account.inscripcionIncompleta !== "boolean")
+      return NextResponse.json(
+        { message: "No se pudo verificar la inscripción." },
+        { status: 503 },
+      );
+    if (
+      role === "estudiante" &&
+      account.inscripcionIncompleta &&
+      !changePage &&
+      request.nextUrl.pathname !== "/student/inscripcion" &&
+      !request.nextUrl.pathname.startsWith("/student/inscripcion/")
+    ) {
+      const response = NextResponse.redirect(new URL("/student/inscripcion", request.url));
+      for (const cookie of supabaseResponse.cookies.getAll()) response.cookies.set(cookie);
+      return response;
+    }
+    if (!account.mustChangePassword && changePage && !account.inscripcionIncompleta)
       return NextResponse.redirect(new URL(home, request.url));
   }
 
