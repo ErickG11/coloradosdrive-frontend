@@ -13,6 +13,8 @@ import type { InscripcionConfig, ProgresoSolicitud } from "@/types/inscripcion";
 
 import { IndicadorPasos } from "./IndicadorPasos";
 import { InscripcionesCerradas } from "./InscripcionesCerradas";
+import { PasoCodigo } from "./pasos/PasoCodigo";
+import { PasoCorreo } from "./pasos/PasoCorreo";
 import { PasoRequisitos } from "./pasos/PasoRequisitos";
 import { PASOS_EXTERNOS, PasoPendiente } from "./pasos/registro";
 import {
@@ -24,6 +26,7 @@ import {
   type PasoId,
   type PasoProps,
 } from "./pasos/tipos";
+import { pasoSegunProgreso } from "./reanudacion";
 import styles from "./wizard.module.css";
 
 const TITULOS: Record<PasoId, string> = {
@@ -58,6 +61,7 @@ export function InscripcionWizard({ initialCourseId = "" }: { initialCourseId?: 
   const [cerrado, setCerrado] = useState(false);
   const [paso, setPaso] = useState<PasoId>(PASO_REQUISITOS);
   const [courseId, setCourseId] = useState(initialCourseId);
+  const [correo, setCorreo] = useState("");
   const [solicitudId, setSolicitudId] = useState<string | null>(null);
   const [progreso, setProgreso] = useState<ProgresoSolicitud | null>(null);
   const [intento, setIntento] = useState(0);
@@ -127,6 +131,15 @@ export function InscripcionWizard({ initialCourseId = "" }: { initialCourseId?: 
     );
   }, []);
 
+  // Con el código confirmado el servidor entrega el progreso: se conserva el curso original
+  // de la solicitud y se reanuda en el primer paso incompleto.
+  function alVerificar(id: string, datos: ProgresoSolicitud) {
+    setSolicitudId(id);
+    setProgreso(datos);
+    setCourseId(datos.courseId);
+    setPaso(pasoSegunProgreso(datos));
+  }
+
   function renderPaso(datos: InscripcionConfig) {
     const propsPaso: PasoProps | null = solicitudId
       ? {
@@ -149,8 +162,31 @@ export function InscripcionWizard({ initialCourseId = "" }: { initialCourseId?: 
         />
       );
     }
-    if (paso <= PASO_CODIGO || paso === PASO_CONSENTIMIENTO) {
-      // Los pasos 1 a 3 se conectan en sus propias tareas.
+    if (paso === PASO_CORREO) {
+      return (
+        <PasoCorreo
+          correo={correo}
+          courseId={courseId}
+          onCorreoChange={setCorreo}
+          onEnviado={() => setPaso(PASO_CODIGO)}
+          onVolver={() => setPaso(PASO_REQUISITOS)}
+          onCerrado={() => setCerrado(true)}
+        />
+      );
+    }
+    if (paso === PASO_CODIGO) {
+      return (
+        <PasoCodigo
+          correo={correo}
+          courseId={courseId}
+          onVerificado={alVerificar}
+          onCambiarCorreo={() => setPaso(PASO_CORREO)}
+          onCerrado={() => setCerrado(true)}
+        />
+      );
+    }
+    if (paso === PASO_CONSENTIMIENTO) {
+      // El paso 3 se conecta en su propia tarea.
       return <PasoPendiente />;
     }
     const Externo = PASOS_EXTERNOS[paso];
