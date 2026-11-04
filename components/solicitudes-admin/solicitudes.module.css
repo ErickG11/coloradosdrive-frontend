@@ -450,3 +450,45 @@
     transition: none;
   }
 }
+
+/* --- Detalle: verificaciones, notas e historial (F35) --- */
+.note {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+.verdict {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.verdict[data-resultado="verificado"] {
+  color: var(--color-status-success);
+}
+.verdict[data-resultado="no_coincide"],
+.verdict[data-resultado="no_encontrado"] {
+  color: var(--color-status-error);
+}
+.subheading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+}
+.history {
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+.history li {
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--color-border-strong);
+}
+.historyNote {
+  margin-top: 0.25rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.documentCard form {
+  width: 100%;
+}

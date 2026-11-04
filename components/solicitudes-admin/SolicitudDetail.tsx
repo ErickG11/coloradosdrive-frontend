@@ -6,9 +6,13 @@ import { getSolicitudAdmin } from "@/lib/api/inscripcion";
 import type { SolicitudAdminDetalle, SolicitudAdminItem } from "@/types/inscripcion";
 import { adminErrorMessage } from "./adminErrors";
 import { nombreDe } from "./catalogo";
+import { CertificadoPanel } from "./CertificadoPanel";
+import { ConsentimientoPanel } from "./ConsentimientoPanel";
+import { DatosDeclarados } from "./DatosDeclarados";
 import { DeleteSolicitud } from "./DeleteSolicitud";
 import { SolicitudDrawer } from "./SolicitudDrawer";
 import { SolicitudStatus } from "./SolicitudStatus";
+import { VerificacionesPanel } from "./VerificacionesPanel";
 import styles from "./solicitudes.module.css";
 
 // Panel de detalle. El detalle completo se pide al abrir; mientras llega se muestra el
@@ -73,6 +77,23 @@ export function SolicitudDetail({
           >
             Reintentar
           </Button>
+        ) : null}
+        {detalle ? (
+          <>
+            <DatosDeclarados detalle={detalle} />
+            <VerificacionesPanel
+              detalle={detalle}
+              onRegistrada={(verificacion) =>
+                setDetalle((previo) =>
+                  previo
+                    ? { ...previo, verificaciones: [...previo.verificaciones, verificacion] }
+                    : previo,
+                )
+              }
+            />
+            <CertificadoPanel detalle={detalle} />
+            <ConsentimientoPanel consentimiento={detalle.consentimiento} />
+          </>
         ) : null}
         {detalle && detalle.estado !== "aprobada" ? (
           <div className={styles.deleteZone}>
