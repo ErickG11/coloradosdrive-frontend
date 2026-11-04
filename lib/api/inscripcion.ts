@@ -261,4 +261,7 @@ export const getEstadoInscripcionAlumno = () =>
   api.get<EstadoInscripcionAlumno>("/estudiantes/estado-inscripcion");
 
 export const confirmarIdentidadPresencial = (slotId: string, input: IdentidadPresencialInput) =>
-  api.patch<void>(`/practice-slots/${encodeURIComponent(slotId)}/identidad-presencial`, input);
+  api.patch<{ transicion: boolean; confirmadaAt: string; certificadoOriginalVisto: boolean }>(
+    `/practice-slots/${encodeURIComponent(slotId)}/identidad-presencial`,
+    input,
+  );
