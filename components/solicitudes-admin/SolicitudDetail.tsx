@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/FormError";
 import { getSolicitudAdmin } from "@/lib/api/inscripcion";
@@ -9,7 +9,10 @@ import { nombreDe } from "./catalogo";
 import { CertificadoPanel } from "./CertificadoPanel";
 import { ConsentimientoPanel } from "./ConsentimientoPanel";
 import { DatosDeclarados } from "./DatosDeclarados";
+import { DecisionPanel } from "./DecisionPanel";
 import { DeleteSolicitud } from "./DeleteSolicitud";
+import { ResultadoDecisionCard } from "./ResultadoDecisionCard";
+import type { ResultadoDecision } from "./decisionTipos";
 import { SolicitudDrawer } from "./SolicitudDrawer";
 import { SolicitudStatus } from "./SolicitudStatus";
 import { VerificacionesPanel } from "./VerificacionesPanel";
@@ -31,7 +34,9 @@ export function SolicitudDetail({
     [cargando, setCargando] = useState(true);
 
   // `intento` fuerza una nueva carga desde «Reintentar» y tras acciones del panel.
-  const [intento, setIntento] = useState(0);
+  const [intento, setIntento] = useState(0),
+    [resultado, setResultado] = useState<ResultadoDecision | null>(null);
+  const resultadoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -51,6 +56,11 @@ export function SolicitudDetail({
       vivo = false;
     };
   }, [item.id, intento]);
+
+  // Al decidir, el formulario desaparece: el foco pasa al resultado para no perderlo.
+  useEffect(() => {
+    if (resultado) resultadoRef.current?.focus();
+  }, [resultado]);
 
   const actual = detalle ?? item;
   return (
@@ -93,6 +103,25 @@ export function SolicitudDetail({
             />
             <CertificadoPanel detalle={detalle} />
             <ConsentimientoPanel consentimiento={detalle.consentimiento} />
+            <section className={styles.decisionZone} aria-labelledby="decision-title">
+              <h3 id="decision-title">Decisión</h3>
+              {resultado ? (
+                <ResultadoDecisionCard ref={resultadoRef} resultado={resultado} />
+              ) : null}
+              <DecisionPanel
+                detalle={detalle}
+                onDecidida={(decidida) => {
+                  setResultado(decidida);
+                  setDetalle((previo) =>
+                    previo ? { ...previo, estado: decidida.estado } : previo,
+                  );
+                  onChanged();
+                  // Trae los campos de la decisión (motivo, mensaje, nota) para el solo lectura.
+                  setIntento((n) => n + 1);
+                }}
+                onConflicto={() => setIntento((n) => n + 1)}
+              />
+            </section>
           </>
         ) : null}
         {detalle && detalle.estado !== "aprobada" ? (
