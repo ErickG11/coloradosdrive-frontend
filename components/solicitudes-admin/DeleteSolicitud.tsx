@@ -3,65 +3,73 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { FormError } from "@/components/ui/FormError";
-import { solicitudes, solicitudMessage } from "@/lib/api/solicitudes";
+import { eliminarSolicitud } from "@/lib/api/inscripcion";
+import { adminErrorMessage } from "./adminErrors";
 import styles from "./solicitudes.module.css";
+
+// Eliminación definitiva de una solicitud no aprobada (borra archivo y filas en el servidor).
+// Se confirma tecleando la cédula; si no tiene cédula guardada se confirma con la palabra
+// ELIMINAR.
 export function DeleteSolicitud({
   id,
   cedula,
   onDeleted,
 }: {
   id: string;
-  cedula: string;
+  cedula: string | null;
   onDeleted: () => void;
 }) {
-  const [confirming, setConfirming] = useState(false),
-    [typed, setTyped] = useState(""),
+  const clave = cedula ?? "ELIMINAR";
+  const [confirmando, setConfirmando] = useState(false),
+    [escrito, setEscrito] = useState(""),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [ocupado, setOcupado] = useState(false);
   const lock = useRef(false);
-  async function remove() {
-    if (typed.trim() !== cedula || lock.current) return;
+  async function eliminar() {
+    if (escrito.trim() !== clave || lock.current) return;
     lock.current = true;
-    setBusy(true);
+    setOcupado(true);
     setError("");
     try {
-      await solicitudes.remove(id);
+      await eliminarSolicitud(id);
       onDeleted();
     } catch (e) {
-      setError(solicitudMessage(e));
+      setError(adminErrorMessage(e));
     } finally {
       lock.current = false;
-      setBusy(false);
+      setOcupado(false);
     }
   }
-  return confirming ? (
+  return confirmando ? (
     <div className={styles.detail} role="group" aria-label="Confirmar eliminación de solicitud">
-      <p>Se eliminarán los datos y archivos de esta solicitud. Esta acción no se puede deshacer.</p>
+      <p>
+        Se eliminarán los datos y el archivo de esta solicitud. Esta acción no se puede deshacer.
+      </p>
       <Input
         autoFocus
-        label="Escribe la cédula para confirmar"
-        value={typed}
-        onChange={(e) => setTyped(e.target.value)}
-        inputMode="numeric"
+        label={cedula ? "Escribe la cédula para confirmar" : "Escribe ELIMINAR para confirmar"}
+        value={escrito}
+        onChange={(e) => setEscrito(e.target.value)}
+        inputMode={cedula ? "numeric" : "text"}
         autoComplete="off"
-        error={typed && typed.trim() !== cedula ? "La cédula no coincide." : undefined}
+        error={escrito && escrito.trim() !== clave ? "No coincide." : undefined}
       />
       <FormError>{error}</FormError>
       <div className={styles.controls}>
         <Button
           variant="danger"
-          disabled={typed.trim() !== cedula}
-          isLoading={busy}
-          onClick={() => void remove()}
+          disabled={escrito.trim() !== clave}
+          isLoading={ocupado}
+          onClick={() => void eliminar()}
         >
           Eliminar definitivamente
         </Button>
         <Button
           variant="ghost"
-          disabled={busy}
+          disabled={ocupado}
           onClick={() => {
-            setConfirming(false);
-            setTyped("");
+            setConfirmando(false);
+            setEscrito("");
             setError("");
           }}
         >
@@ -70,7 +78,7 @@ export function DeleteSolicitud({
       </div>
     </div>
   ) : (
-    <Button variant="danger" onClick={() => setConfirming(true)}>
+    <Button variant="danger" onClick={() => setConfirmando(true)}>
       Eliminar solicitud
     </Button>
   );
