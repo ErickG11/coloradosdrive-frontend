@@ -1,6 +1,7 @@
-import { StudentDocuments } from "@/components/inscripcion/StudentDocuments";
-export default function Page() {
-  return <StudentDocuments />;
-}
+import { StudentDocumentosParaLlevar } from "@/components/inscripcion/StudentDocumentosParaLlevar";
 
-export const metadata = { title: "Mis documentos" };
+export const metadata = { title: "Documentos para llevar" };
+
+export default function Page() {
+  return <StudentDocumentosParaLlevar />;
+}
