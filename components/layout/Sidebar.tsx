@@ -115,6 +115,14 @@ export function Sidebar({ email, role }: SidebarProps) {
           >
             Horarios de práctica
           </SidebarLink>
+          <SidebarLink
+            href="/admin/seguridad"
+            active={pathname.startsWith("/admin/seguridad")}
+            section="security"
+            onClick={closeDrawer}
+          >
+            Seguridad
+          </SidebarLink>
         </>
       ) : null}
       {role === "estudiante" ? (
