@@ -1,7 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { solicitudes } from "@/lib/api/solicitudes";
+import { getResumenSolicitudes } from "@/lib/api/inscripcion";
+
 export const SOLICITUD_CHANGED_EVENT = "solicitudes-actualizadas";
+
+// Contador del menú del admin: consulta al cargar, cada 30 s con la pestaña visible, al
+// recuperar el foco y tras cada decisión. `notice` sube cuando aumentan las pendientes (nunca en
+// la carga inicial) y alimenta el aviso verde no bloqueante.
 export function useSolicitudSummary(enabled: boolean) {
   const [pending, setPending] = useState(0),
     [notice, setNotice] = useState(0),
@@ -15,7 +20,7 @@ export function useSolicitudSummary(enabled: boolean) {
       if (inflight) return;
       inflight = true;
       try {
-        const result = await solicitudes.summary();
+        const result = await getResumenSolicitudes();
         if (!alive) return;
         if (previous.current !== null && result.pendientes > previous.current)
           setNotice((n) => n + 1);
