@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useFetch } from "@/hooks/useFetch";
+import { EnrollmentAvatar, EnrollmentMetric } from "@/components/inscripcion/EnrollmentVisual";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -68,11 +69,46 @@ export function SolicitudesAdmin() {
 
   return (
     <div className={styles.workspace}>
+      <div className={styles.topbar}>
+        <form
+          className={styles.controls}
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setQ(borrador.trim());
+            setPage(1);
+          }}
+        >
+          <Input
+            label="Buscar por cédula, nombre o correo"
+            type="search"
+            value={borrador}
+            onChange={(event) => setBorrador(event.target.value)}
+            maxLength={100}
+          />
+          <Button type="submit">Buscar</Button>
+          {q ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setBorrador("");
+                setQ("");
+                setPage(1);
+              }}
+            >
+              Quitar búsqueda
+            </Button>
+          ) : null}
+        </form>
+        <span>Colorados Drive · Administración</span>
+      </div>
       <header className={styles.moduleHeader}>
         <div>
           <h1 ref={titulo} tabIndex={-1}>
             Solicitudes de inscripción
           </h1>
+          {data ? <span className={styles.totalBadge}>{data.total}</span> : null}
           <p className={styles.lead}>
             Revisa a quienes se inscriben en línea: verifica su identidad y estudios en la fuente y
             decide.
@@ -92,6 +128,27 @@ export function SolicitudesAdmin() {
           No se pudo consultar el resumen del día. Se reintentará automáticamente.
         </FormError>
       ) : null}
+      <section className={styles.metrics} aria-label="Resumen de solicitudes">
+        <EnrollmentMetric label="Pendientes" value={resumen?.pendientes ?? "…"} icon="users" />
+        <EnrollmentMetric
+          label="Devueltas"
+          value={resumen?.devueltas ?? "…"}
+          icon="document"
+          tone="neutral"
+        />
+        <EnrollmentMetric
+          label="Más de 48 h"
+          value={resumen?.conMasDe48h ?? "…"}
+          icon="clock"
+          tone="warning"
+        />
+        <EnrollmentMetric
+          label="Estado de las inscripciones"
+          value={resumen ? (resumen.inscripcionesAbiertas ? "Abiertas" : "Cerradas") : "…"}
+          icon="check"
+          tone={resumen?.inscripcionesAbiertas ? "success" : "neutral"}
+        />
+      </section>
       <MedidoresDiarios resumen={resumen} />
       {resumen && resumen.conMasDe48h > 0 ? (
         <p className={styles.overdueNote}>
@@ -109,37 +166,6 @@ export function SolicitudesAdmin() {
           setPage(1);
         }}
       />
-      <form
-        className={styles.controls}
-        role="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setQ(borrador.trim());
-          setPage(1);
-        }}
-      >
-        <Input
-          label="Buscar por cédula, nombre o correo"
-          type="search"
-          value={borrador}
-          onChange={(event) => setBorrador(event.target.value)}
-          maxLength={100}
-        />
-        <Button type="submit">Buscar</Button>
-        {q ? (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setBorrador("");
-              setQ("");
-              setPage(1);
-            }}
-          >
-            Quitar búsqueda
-          </Button>
-        ) : null}
-      </form>
 
       <div
         id={ID_PANEL_SOLICITUDES}
@@ -173,6 +199,7 @@ export function SolicitudesAdmin() {
               header: "Postulante",
               render: (item) => (
                 <span className={styles.person}>
+                  <EnrollmentAvatar name={nombreDe(item)} />
                   <span>{nombreDe(item)}</span>
                   {item.estado === "enviada" && superaHoras(item.enviadaAt, ahora) ? (
                     <span className={styles.overdueBadge}>Más de 48 h</span>

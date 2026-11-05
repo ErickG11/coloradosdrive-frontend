@@ -1,0 +1,94 @@
+.avatar {
+  display: inline-flex;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+  font-size: 12px;
+  font-weight: 650;
+}
+.avatar[data-large="true"] {
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
+  font-size: 17px;
+}
+.metric {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  min-height: 100px;
+  padding: 16px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+}
+.metric > div {
+  min-width: 0;
+}
+.metric strong {
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.metric p {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 5px;
+  color: var(--color-text-secondary);
+}
+.metric strong[data-label="true"] {
+  font-size: 18px;
+}
+.metricIcon {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+}
+.metricIcon svg {
+  width: 24px;
+  height: 24px;
+}
+.metric[data-tone="success"] .metricIcon {
+  color: var(--color-status-success);
+  background: var(--color-status-success-bg);
+}
+.metric[data-tone="warning"] .metricIcon {
+  color: var(--color-status-warning);
+  background: var(--color-status-warning-bg);
+}
+.metric[data-tone="neutral"] .metricIcon {
+  color: var(--color-status-neutral);
+  background: var(--color-status-neutral-bg);
+}
+@media (max-width: 767px) {
+  .metric {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+  .metric strong {
+    font-size: 25px;
+  }
+  .metricIcon {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+  }
+  .metricIcon svg {
+    width: 20px;
+    height: 20px;
+  }
+}

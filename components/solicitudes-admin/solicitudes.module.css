@@ -584,3 +584,228 @@
     transition: none;
   }
 }
+
+/* I16: proporciones de la ficha Alumnos, con tokens y alcance del módulo. */
+.workspace {
+  gap: 20px;
+}
+.workspace h1 {
+  display: inline;
+  font-size: clamp(28px, 3vw, 32px);
+  line-height: 1.15;
+}
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+}
+.topbar form {
+  flex: 1 1 28rem;
+}
+.topbar > span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.totalBadge {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 12px;
+  border-radius: 7px;
+  padding: 4px 10px;
+  background: var(--color-bg-sunken);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.lead {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.workspace :is(input, select),
+.drawer :is(input, select, textarea) {
+  border-radius: 7px;
+}
+.tabs {
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 0;
+  overflow: visible;
+}
+.tab {
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  background: var(--color-bg-surface);
+}
+.tab[aria-selected="true"] {
+  border-color: var(--color-brand-border);
+  background: var(--color-brand-tint);
+}
+.tableArea :global(.data-table) {
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+}
+.tableArea :global(thead th) {
+  background: var(--color-bg-sunken);
+  font-size: 12px;
+}
+.tableArea :global(td) {
+  font-size: 13px;
+}
+.tableArea :global(tbody tr):hover,
+.tableArea :global(tbody tr):focus-within {
+  background: var(--color-brand-tint);
+}
+.person {
+  flex-wrap: nowrap;
+  min-width: 180px;
+}
+.person > span:not([aria-hidden]) {
+  min-width: 0;
+}
+.person .overdueBadge {
+  white-space: normal;
+}
+.drawerHeader {
+  padding: 18px 16px;
+  gap: 12px;
+  align-items: start;
+}
+.drawerTitle {
+  gap: 7px;
+}
+.drawerTitle h2 {
+  font-size: 17px;
+  line-height: 1.5;
+}
+.drawerTitle p {
+  font-size: 12px;
+}
+.drawerBody {
+  padding: 0 16px 20px;
+  scroll-padding-top: 64px;
+}
+.detail {
+  gap: 12px;
+}
+.detail > div[id],
+#decision-title {
+  scroll-margin-top: 70px;
+}
+.detailTabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.detailTabs a {
+  flex: 1 0 auto;
+  padding: 12px 8px;
+  border-bottom: 2px solid var(--color-brand-primary);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-align: center;
+  min-height: 44px;
+}
+.detailTabs a:hover,
+.detailTabs a:focus-visible {
+  color: var(--color-brand-ink);
+  background: var(--color-brand-tint);
+}
+.section,
+.decisionZone {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-bg-field);
+}
+.section > h3,
+.decisionZone > h3 {
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+.dataGrid {
+  font-size: 13px;
+  gap: 12px;
+}
+.dataGrid dt {
+  font-size: 12px;
+}
+.documentCard {
+  padding: 12px;
+  border-radius: 9px;
+}
+.checklist li {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-bg-surface);
+}
+.actionOption {
+  border-radius: 7px;
+  font-size: 13px;
+}
+.actionOption[data-action="rechazar"][data-checked="true"] {
+  border-color: var(--color-status-error);
+  background: var(--color-status-error-bg);
+  color: var(--color-status-error);
+}
+.switchBox,
+.meter,
+.confirmBox {
+  border-radius: 10px;
+}
+.workspace :is(a, button, input, select):focus-visible,
+.drawer :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+@media (min-width: 768px) {
+  .drawer {
+    width: 440px;
+  }
+  .drawerHeader {
+    padding: 18px 16px;
+  }
+  .drawerBody {
+    padding: 0 16px 20px;
+  }
+}
+@media (min-width: 1100px) {
+  .metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 479px) {
+  .topbar {
+    padding: 12px;
+  }
+  .topbar > span {
+    display: none;
+  }
+  .person {
+    min-width: 0;
+  }
+  .metrics {
+    gap: 8px;
+  }
+}

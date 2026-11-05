@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { EnrollmentAvatar } from "@/components/inscripcion/EnrollmentVisual";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/FormError";
 import { getSolicitudAdmin } from "@/lib/api/inscripcion";
@@ -66,6 +67,7 @@ export function SolicitudDetail({
   return (
     <SolicitudDrawer
       title={`Solicitud de ${nombreDe(actual)}`}
+      avatar={<EnrollmentAvatar name={nombreDe(actual)} large />}
       onClose={onClose}
       header={
         <>
@@ -90,19 +92,31 @@ export function SolicitudDetail({
         ) : null}
         {detalle ? (
           <>
-            <DatosDeclarados detalle={detalle} />
-            <VerificacionesPanel
-              detalle={detalle}
-              onRegistrada={(verificacion) =>
-                setDetalle((previo) =>
-                  previo
-                    ? { ...previo, verificaciones: [...previo.verificaciones, verificacion] }
-                    : previo,
-                )
-              }
-            />
+            <nav className={styles.detailTabs} aria-label="Secciones de la solicitud">
+              <a href="#solicitud-informacion">Lo que declaró</a>
+              <a href="#solicitud-verificaciones">Verificaciones</a>
+              <a href="#solicitud-consentimiento">Consentimiento</a>
+              <a href="#decision-title">Decisión</a>
+            </nav>
+            <div id="solicitud-informacion">
+              <DatosDeclarados detalle={detalle} />
+            </div>
+            <div id="solicitud-verificaciones">
+              <VerificacionesPanel
+                detalle={detalle}
+                onRegistrada={(verificacion) =>
+                  setDetalle((previo) =>
+                    previo
+                      ? { ...previo, verificaciones: [...previo.verificaciones, verificacion] }
+                      : previo,
+                  )
+                }
+              />
+            </div>
             <CertificadoPanel detalle={detalle} />
-            <ConsentimientoPanel consentimiento={detalle.consentimiento} />
+            <div id="solicitud-consentimiento">
+              <ConsentimientoPanel consentimiento={detalle.consentimiento} />
+            </div>
             <section className={styles.decisionZone} aria-labelledby="decision-title">
               <h3 id="decision-title">Decisión</h3>
               {resultado ? (
