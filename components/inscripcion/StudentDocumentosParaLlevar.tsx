@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { FormError } from "@/components/ui/FormError";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useFetch } from "@/hooks/useFetch";
-import type { EstadoInscripcionAlumno } from "@/types/inscripcion";
+import type { StudentEnrollmentState } from "@/types/studentEnrollment";
 
 import {
   ETIQUETA_ESTADO,
@@ -16,7 +16,7 @@ import {
 
 // Página de solo lectura: lo que el alumno lleva a la escuela. No hay subida de archivos.
 export function StudentDocumentosParaLlevar() {
-  const { data, isLoading, error, refetch } = useFetch<EstadoInscripcionAlumno>(
+  const { data, isLoading, error, refetch } = useFetch<StudentEnrollmentState>(
     "/estudiantes/estado-inscripcion",
   );
 
@@ -43,6 +43,11 @@ export function StudentDocumentosParaLlevar() {
             <p role="status" className="text-sm">
               {textoPlazo(data.diasRestantes)} Fecha límite:{" "}
               {formatearFechaLimite(data.fechaLimite)}.
+              {data.origen === "solicitud" ? (
+                <span className="mt-1 block">
+                  El plazo corresponde a tu primera práctica asignada.
+                </span>
+              ) : null}
             </p>
           ) : null}
           {data.identidadPresencial ? (
@@ -64,7 +69,7 @@ export function StudentDocumentosParaLlevar() {
             <ul className="grid gap-4 md:grid-cols-2" aria-label="Lista de documentos">
               {data.documentosFisicos.map((doc) => (
                 <li key={doc.tipo}>
-                  <Card title={etiquetaDocumento(doc.tipo)} className="h-full">
+                  <Card title={doc.label ?? etiquetaDocumento(doc.tipo)} className="h-full">
                     <StatusBadge
                       status={doc.estado}
                       label={ETIQUETA_ESTADO[doc.estado] ?? doc.estado}
@@ -72,6 +77,11 @@ export function StudentDocumentosParaLlevar() {
                     <p className="mt-3 text-sm text-text-secondary">
                       {doc.obligatorio ? "Obligatorio" : "Opcional"}
                     </p>
+                    {doc.destacado ? (
+                      <p className="mt-3 text-sm text-status-warning">
+                        Presenta el carné de la Cruz Roja para completar tu tipo de sangre.
+                      </p>
+                    ) : null}
                     {doc.exento ? (
                       <p className="mt-1 text-sm text-text-secondary">
                         No se exige para tu caso (por ejemplo, desde los 65 años cumplidos).
