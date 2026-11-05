@@ -36,6 +36,19 @@ const cspReportOnly = [
   "frame-ancestors 'none'",
 ].join("; ");
 
+// Hosted Fields solo en la página del pago; el SDK se importa al montar Paso3.
+const paymentCsp =
+  cspReportOnly
+    .replace(
+      "script-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' https://cdn.sift.com https://*.cardinalcommerce.com",
+    )
+    .replace(
+      `connect-src ${conexiones.join(" ")}`,
+      `connect-src ${conexiones.join(" ")} https://api-uat.kushkipagos.com https://api.kushkipagos.com https://*.cardinalcommerce.com https://*.sift.com`,
+    ) +
+  "; frame-src 'self' https://spa-js-inputs.kushkipagos.com https://uat-spa-js-inputs.kushkipagos.ninja https://*.cardinalcommerce.com";
+
 const nextConfig: NextConfig = {
   // No generar AGENTS.md/CLAUDE.md en cada `next dev`.
   agentRules: false,
@@ -71,6 +84,10 @@ const nextConfig: NextConfig = {
         // noindex sin editar las páginas del flujo público.
         source: "/inscripcion/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/student/inscripcion",
+        headers: [{ key: "Content-Security-Policy-Report-Only", value: paymentCsp }],
       },
     ];
   },
