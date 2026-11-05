@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { EnrollmentBrand } from "@/components/inscripcion/EnrollmentVisual";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -218,7 +219,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
           <NavigationIcon section="menu" className="h-5 w-5" />
         </button>
         <span className="mx-2 min-w-0 truncate text-base font-semibold tracking-tight text-text-primary">
-          ColoradosDrive
+          {role === "estudiante" ? <EnrollmentBrand /> : "ColoradosDrive"}
         </span>
         <div className="flex shrink-0 items-center gap-1">
           {/* Reserva el lugar de la unica campana que monta DashboardShell. */}
@@ -232,7 +233,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
         aria-label="Barra lateral"
         className={cn(
           "sticky top-0 hidden h-dvh w-[var(--sidebar-width)] min-w-0 shrink-0 flex-col border-r border-border bg-bg-surface md:flex",
-          role === "admin" && styles.admin,
+          (role === "admin" || role === "estudiante") && styles.admin,
         )}
       >
         <div className="flex items-center justify-between gap-1 px-4 py-4">
@@ -247,6 +248,15 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
                 className={styles.logo}
               />
             </Link>
+          ) : role === "estudiante" ? (
+            <Image
+              unoptimized
+              src="/images/landing/logo.webp"
+              width={512}
+              height={256}
+              alt="Colorados Drive"
+              className={styles.logo}
+            />
           ) : (
             <span className="text-base font-semibold tracking-tight text-text-primary">
               ColoradosDrive
@@ -278,7 +288,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
             tabIndex={-1}
             className={cn(
               "absolute inset-y-0 left-0 flex w-[min(18rem,calc(100vw-2rem))] flex-col border-r border-border bg-bg-surface shadow-elevated",
-              role === "admin" && styles.admin,
+              (role === "admin" || role === "estudiante") && styles.admin,
             )}
           >
             <div className="flex items-center justify-between px-4 py-3">
@@ -298,6 +308,15 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
                     className={styles.logo}
                   />
                 </Link>
+              ) : role === "estudiante" ? (
+                <Image
+                  unoptimized
+                  src="/images/landing/logo.webp"
+                  width={512}
+                  height={256}
+                  alt="Colorados Drive"
+                  className={styles.logo}
+                />
               ) : (
                 <span className="font-semibold text-text-primary">ColoradosDrive</span>
               )}
