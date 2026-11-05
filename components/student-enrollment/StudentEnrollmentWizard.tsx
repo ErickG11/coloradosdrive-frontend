@@ -1,28 +1,45 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useFetch } from "@/hooks/useFetch";
 import type { StudentEnrollmentState } from "@/types/studentEnrollment";
 
+import { useStudentReservation } from "./useStudentReservation";
+import { ReservationBanner } from "./ReservationBanner";
+import { StudentSchedulePicker } from "./StudentSchedulePicker";
 const STEPS = ["Tus documentos", "Elige tu horario", "Pago"];
 export function StudentEnrollmentWizard() {
   const { data, isLoading, error, refetch } = useFetch<StudentEnrollmentState>(
     "/estudiantes/estado-inscripcion",
   );
   const [selected, setSelected] = useState<number | null>(null);
-  if (isLoading) return <p role="status">Cargando tu inscripción…</p>;
+  const closed = useCallback(() => {
+    setSelected(1);
+    refetch();
+  }, [refetch]);
+  const reservation = useStudentReservation(closed);
+  if (isLoading)
+    return (
+      <>
+        <ReservationBanner state={reservation} />
+        <p role="status">Cargando tu inscripción…</p>
+      </>
+    );
   if (error || !data)
     return (
-      <Card title="Mi inscripción">
-        <p role="alert">No pudimos consultar tu inscripción.</p>
-        <Button className="mt-4" onClick={refetch}>
-          Reintentar
-        </Button>
-      </Card>
+      <>
+        <ReservationBanner state={reservation} />
+        <Card title="Mi inscripción">
+          <p role="alert">No pudimos consultar tu inscripción.</p>
+          <Button className="mt-4" onClick={refetch}>
+            Reintentar
+          </Button>
+        </Card>
+      </>
     );
   if (data.accesoCompleto)
     return (
@@ -33,7 +50,8 @@ export function StudentEnrollmentWizard() {
         </Link>
       </Card>
     );
-  const step = selected ?? (data.reserva ? 2 : 0);
+  const desiredStep = selected ?? (reservation.held ? 2 : 0);
+  const step = desiredStep === 2 && !reservation.live ? 1 : desiredStep;
   return (
     <section className="grid min-w-0 gap-6">
       <header>
@@ -42,6 +60,7 @@ export function StudentEnrollmentWizard() {
           Revisa tus documentos, elige tu horario y completa el pago para activar tu matrícula.
         </p>
       </header>
+      <ReservationBanner state={reservation} />
       <nav aria-label="Pasos de la inscripción">
         <ol className="grid grid-cols-3 gap-2">
           {STEPS.map((label, index) => (
@@ -50,7 +69,11 @@ export function StudentEnrollmentWizard() {
                 className="min-h-11 w-full"
                 variant={step === index ? "primary" : "secondary"}
                 aria-current={step === index ? "step" : undefined}
-                disabled={index === 2 && !data.reserva}
+                disabled={
+                  (index > 0 && !data.requisitosVerificados) ||
+                  (index === 2 &&
+                    (!reservation.live || !!reservation.error || reservation.checking))
+                }
                 onClick={() => setSelected(index)}
               >
                 {index + 1}. {label}
@@ -134,15 +157,26 @@ export function StudentEnrollmentWizard() {
           </Button>
         </>
       ) : step === 1 ? (
-        <Card title="Elige tu horario">
-          <p>La reserva de horarios todavía no está habilitada.</p>
-          <Button className="mt-4" variant="secondary" onClick={() => setSelected(0)}>
-            Volver a documentos
-          </Button>
-        </Card>
+        data.enrollmentId ? (
+          <StudentSchedulePicker
+            key={data.enrollmentId}
+            enrollmentId={data.enrollmentId}
+            state={reservation}
+            onReserved={(result) => {
+              reservation.reserved(result);
+              setSelected(2);
+              refetch();
+            }}
+            onNext={() => setSelected(2)}
+          />
+        ) : (
+          <p role="alert">No encontramos una matrícula disponible para reservar.</p>
+        )
       ) : (
         <Card title="Pago">
-          <p>Tu horario debe estar reservado para continuar con el pago.</p>
+          <p>
+            El pago aún no está habilitado. Tu reserva se conserva hasta el vencimiento indicado.
+          </p>
           <Button className="mt-4" variant="secondary" onClick={() => setSelected(1)}>
             Revisar horario
           </Button>
