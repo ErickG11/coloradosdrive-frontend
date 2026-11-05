@@ -3,21 +3,6 @@
   margin-inline: auto;
   padding-block: 1.5rem 3rem;
 }
-.top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-.top a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: var(--color-text-secondary);
-  text-decoration: underline;
-}
 .eyebrow {
   color: var(--color-brand-ink);
   font-size: 0.75rem;
@@ -25,42 +10,11 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.title {
-  margin-top: 0.35rem;
-  font-family: var(--font-space-grotesk), sans-serif;
-  font-size: clamp(1.75rem, 3vw, 2.5rem);
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  color: var(--color-text-primary);
-}
 
 /* Indicador de progreso */
-.indicator {
-  margin-block: 1.5rem;
-  padding: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-bg-surface);
-}
-.indicatorSummary {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
 .indicatorSummary span {
   font-weight: 400;
   color: var(--color-text-secondary);
-}
-.bar {
-  height: 0.3rem;
-  overflow: hidden;
-  margin-top: 0.75rem;
-  border-radius: 1rem;
-  background: var(--color-bg-sunken);
 }
 .bar span {
   display: block;
@@ -76,17 +30,6 @@
   list-style: none;
   padding: 0;
 }
-.stepList li {
-  display: flex;
-  flex: 1 1 0;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-  text-align: center;
-  color: var(--color-text-secondary);
-}
 .stepNumber {
   display: grid;
   place-items: center;
@@ -100,11 +43,6 @@
   color: var(--color-brand-ink);
   font-weight: 600;
 }
-.stepList [aria-current="step"] .stepNumber {
-  color: #fff;
-  background: var(--color-brand-primary);
-  border-color: var(--color-brand-primary);
-}
 .stepList [data-done="true"] .stepNumber {
   color: var(--color-status-success);
   background: var(--color-status-success-bg);
@@ -112,9 +50,6 @@
 }
 
 /* Panel del paso */
-.panel {
-  min-width: 0;
-}
 .panelTitle:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 4px;
@@ -139,12 +74,6 @@
   font-size: 0.8125rem;
   line-height: 1.6;
   color: var(--color-text-secondary);
-}
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
 }
 .facts {
   display: grid;
@@ -292,25 +221,52 @@
 
 /* I16: mismos radios, jerarquía y separación que las fichas de Alumnos. */
 .indicator {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
   margin-block: 0;
   padding: 16px;
 }
 .indicatorSummary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
   font-size: 13px;
 }
 .bar {
+  overflow: hidden;
+  margin-top: 0.75rem;
+  border-radius: 1rem;
+  background: var(--color-bg-sunken);
   height: 6px;
 }
 .panel {
+  min-width: 0;
   padding: 20px;
 }
 .panel > h2 {
   font-size: 18px;
 }
 .title {
+  margin-top: 0.35rem;
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  letter-spacing: -0.035em;
+  color: var(--color-text-primary);
   font-weight: 700;
 }
 .stepList li {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+  color: var(--color-text-secondary);
   padding: 8px 4px;
   border: 1px solid transparent;
   border-radius: 9px;
@@ -340,12 +296,25 @@
   min-width: 0;
 }
 .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 12px;
 }
 .top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0;
 }
 .top a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-text-secondary);
+  text-decoration: underline;
   font-size: 13px;
 }
 @media (min-width: 768px) {
