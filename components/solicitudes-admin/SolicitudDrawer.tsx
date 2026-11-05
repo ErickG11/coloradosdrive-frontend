@@ -7,11 +7,13 @@ import styles from "./solicitudes.module.css";
 
 export function SolicitudDrawer({
   title,
+  avatar,
   header,
   children,
   onClose,
 }: {
   title: string;
+  avatar: ReactNode;
   header: ReactNode;
   children: ReactNode;
   onClose: () => void;
@@ -38,6 +40,7 @@ export function SolicitudDrawer({
         className={styles.drawer}
       >
         <header className={styles.drawerHeader}>
+          {avatar}
           <div className={styles.drawerTitle}>
             <span className={styles.eyebrow}>Revisión de inscripción</span>
             <h2 id={titleId}>{title}</h2>
