@@ -1,3 +1,13 @@
+.brand {
+  width: 120px;
+  height: 60px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+:global(.dark) .brand {
+  filter: invert(1) hue-rotate(180deg);
+  mix-blend-mode: screen;
+}
 .avatar {
   display: inline-flex;
   flex: 0 0 40px;

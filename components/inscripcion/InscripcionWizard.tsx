@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { EnrollmentBrand } from "./EnrollmentVisual";
+import visual from "./enrollment-surface.module.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -201,8 +203,9 @@ export function InscripcionWizard({ initialCourseId = "" }: { initialCourseId?: 
   }
 
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} ${visual.surface} ${visual.publicPage}`}>
       <div className={styles.top}>
+        <EnrollmentBrand />
         <Link href="/">Volver al inicio</Link>
         <ThemeToggle />
       </div>

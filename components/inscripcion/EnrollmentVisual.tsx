@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import styles from "./enrollment-visual.module.css";
 
 const paths = {
@@ -8,6 +9,18 @@ const paths = {
   clock: "M12 8v4l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z",
   check: "m5 12 4 4L19 6",
 };
+export function EnrollmentBrand() {
+  return (
+    <Image
+      unoptimized
+      src="/images/landing/logo.webp"
+      width={512}
+      height={256}
+      alt="Colorados Drive"
+      className={styles.brand}
+    />
+  );
+}
 export function EnrollmentIcon({ name }: { name: keyof typeof paths }) {
   return (
     <svg

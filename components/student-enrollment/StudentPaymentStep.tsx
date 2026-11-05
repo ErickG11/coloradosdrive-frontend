@@ -1,4 +1,5 @@
 "use client";
+import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/Button";
@@ -110,7 +111,7 @@ export function StudentPaymentStep({ state, reservation, onBack }: Props) {
   }
   const amount: PaymentQuote | null = current ?? quote;
   return (
-    <Card title="Pago">
+    <Card title="Pago" className={visual.payment} data-payment-state={current?.estado}>
       {current?.estado === "aprobado" ? (
         <div role="status">
           <h3 className="font-semibold text-status-success">

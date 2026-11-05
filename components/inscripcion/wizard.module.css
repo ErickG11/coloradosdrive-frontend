@@ -39,7 +39,7 @@
   margin-block: 1.5rem;
   padding: 1rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   background: var(--color-bg-surface);
 }
 .indicatorSummary {
@@ -113,7 +113,7 @@
 
 /* Panel del paso */
 .panel {
-  min-height: 24rem;
+  min-width: 0;
 }
 .panelTitle:focus-visible {
   outline: 2px solid var(--color-focus);
@@ -152,7 +152,7 @@
   margin: 0;
   padding: 1rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   background: var(--color-bg-sunken);
 }
 .facts dt {
@@ -193,7 +193,7 @@
 }
 .notice {
   padding: 1rem;
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   border: 1px solid var(--color-border);
   background: var(--color-bg-sunken);
   font-size: 0.9375rem;
@@ -233,7 +233,7 @@
   min-height: 44px;
   padding-inline: 1rem;
   border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   color: var(--color-text-primary);
   background: var(--color-bg-surface);
   font-weight: 600;
@@ -251,7 +251,7 @@
   overflow-y: auto;
   padding: 1rem;
   border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   background: var(--color-bg-field);
   font-size: 0.9375rem;
   line-height: 1.6;
@@ -281,11 +281,81 @@
     display: none;
   }
   .panel {
-    min-height: 28rem;
+    min-width: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .bar span {
     transition: none;
+  }
+}
+
+/* I16: mismos radios, jerarquía y separación que las fichas de Alumnos. */
+.indicator {
+  margin-block: 0;
+  padding: 16px;
+}
+.indicatorSummary {
+  font-size: 13px;
+}
+.bar {
+  height: 6px;
+}
+.panel {
+  padding: 20px;
+}
+.panel > h2 {
+  font-size: 18px;
+}
+.title {
+  font-weight: 700;
+}
+.stepList li {
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 11px;
+}
+.stepList li[aria-current="step"] {
+  border-color: var(--color-brand-border);
+  background: var(--color-brand-tint);
+}
+.stepList [aria-current="step"] .stepNumber {
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+  border-color: var(--color-brand-border);
+}
+.facts,
+.notice,
+.legalBox {
+  padding: 16px;
+}
+.facts dd,
+.notice,
+.check,
+.help {
+  font-size: 14px;
+}
+.facts > div {
+  min-width: 0;
+}
+.actions {
+  gap: 12px;
+}
+.top {
+  margin-bottom: 0;
+}
+.top a {
+  font-size: 13px;
+}
+@media (min-width: 768px) {
+  .bar {
+    display: block;
+  }
+  .stepList {
+    margin-top: 16px;
+  }
+  .panel {
+    padding: 24px;
   }
 }

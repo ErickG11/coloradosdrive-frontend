@@ -1,4 +1,5 @@
 "use client";
+import visual from "@/components/inscripcion/enrollment-surface.module.css";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,26 +36,26 @@ export function StudentEnrollmentWizard() {
     !!payment.payment && ["pendiente", "revision", "aprobado"].includes(payment.payment.estado);
   if (isLoading)
     return (
-      <>
+      <div className={visual.surface}>
         <ReservationBanner state={reservation} />
         <p role="status">Cargando tu inscripción…</p>
-      </>
+      </div>
     );
   if (error || !data)
     return (
-      <>
+      <div className={visual.surface}>
         <ReservationBanner state={reservation} />
-        <Card title="Mi inscripción">
+        <Card title="Mi inscripción" className={`${visual.surface} ${visual.active}`}>
           <p role="alert">No pudimos consultar tu inscripción.</p>
           <Button className="mt-4" onClick={refetch}>
             Reintentar
           </Button>
         </Card>
-      </>
+      </div>
     );
   if (data.accesoCompleto)
     return (
-      <Card title="Mi inscripción">
+      <Card title="Mi inscripción" className={`${visual.surface} ${visual.active}`}>
         <p>Tu cuenta tiene acceso a la plataforma. Tu matrícula está activa.</p>
         <Link className="mt-4 inline-flex min-h-11 items-center underline" href="/student">
           Ir a mi panel
@@ -64,7 +65,7 @@ export function StudentEnrollmentWizard() {
   const desiredStep = selected ?? (reservation.held ? 2 : 0);
   const step = desiredStep === 2 && !reservation.live && !paymentOpen ? 1 : desiredStep;
   return (
-    <section className="grid min-w-0 gap-6">
+    <section className={visual.surface}>
       <header>
         <h1 className="font-display text-2xl font-bold">Mi inscripción</h1>
         <p className="mt-2 text-text-secondary">
@@ -84,7 +85,7 @@ export function StudentEnrollmentWizard() {
           </Button>
         </div>
       ) : null}
-      <nav aria-label="Pasos de la inscripción">
+      <nav aria-label="Pasos de la inscripción" className={visual.stepper}>
         <ol className="grid grid-cols-3 gap-2">
           {STEPS.map((label, index) => (
             <li key={label}>
@@ -100,7 +101,8 @@ export function StudentEnrollmentWizard() {
                 }
                 onClick={() => setSelected(index)}
               >
-                {index + 1}. {label}
+                <span className={visual.stepNumber}>{index + 1}.</span>
+                <span>{label}</span>
               </Button>
             </li>
           ))}
@@ -109,7 +111,7 @@ export function StudentEnrollmentWizard() {
       {step === 0 ? (
         <>
           <Card title="Verificaciones de la escuela">
-            <ul className="grid gap-3">
+            <ul className={`grid gap-3 ${visual.requirements}`}>
               <li>
                 Identidad:{" "}
                 {data.verificaciones.identidad
@@ -140,7 +142,7 @@ export function StudentEnrollmentWizard() {
               Llévalos a la escuela; no necesitas subirlos aquí. Los pendientes no impiden elegir tu
               horario.
             </p>
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className={`grid gap-3 sm:grid-cols-2 ${visual.documents}`}>
               {data.documentosFisicos.map((doc) => (
                 <li key={doc.tipo} className="rounded-sm border border-border p-4">
                   <p className="mb-2 font-medium">{doc.label ?? doc.tipo}</p>
