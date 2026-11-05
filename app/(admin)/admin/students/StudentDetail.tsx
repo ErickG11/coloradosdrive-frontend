@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { AdminPaymentActions } from "@/components/student-enrollment/AdminPaymentActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Card, Modal, buttonClassName } from "@/components/ui";
@@ -54,6 +55,7 @@ export function StudentProfile({
   editDisabled = false,
   onAttendanceChanged,
   onAttendanceBusyChange,
+  onPaymentChanged,
 }: {
   student: Detail;
   onAssignCohort?: (enrollment: StudentEnrollment) => void;
@@ -67,6 +69,7 @@ export function StudentProfile({
   editDisabled?: boolean;
   onAttendanceChanged?: (slotId: string) => void;
   onAttendanceBusyChange?: (busy: boolean) => void;
+  onPaymentChanged?: () => void;
 }) {
   const show = (name: Section) => section === "all" || section === name;
   return (
@@ -245,6 +248,13 @@ export function StudentProfile({
                   </dl>
                 </Card>
               )}
+              {show("enrollments") && student.enrollments.some((e) => e.origen === "solicitud") ? (
+                <AdminPaymentActions
+                  studentId={student.id}
+                  active={student.activo}
+                  onChanged={onPaymentChanged}
+                />
+              ) : null}
               {show("documents") && (
                 <Card
                   title={`Documentos requeridos · ${enrollment.documentosPendientes} pendientes`}
@@ -439,6 +449,10 @@ export function StudentDetail({
           <StudentProfile
             actions={embedded ? undefined : actions}
             student={data}
+            onPaymentChanged={() => {
+              refetch();
+              onChanged?.();
+            }}
             onAttendanceBusyChange={setAttendanceBusy}
             onAttendanceChanged={(slotId) => {
               attendanceFocus.current = slotId;

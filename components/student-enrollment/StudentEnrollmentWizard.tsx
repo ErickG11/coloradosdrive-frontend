@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useStudentPayment } from "./useStudentPayment";
+import { StudentPaymentStep } from "./StudentPaymentStep";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -22,6 +25,14 @@ export function StudentEnrollmentWizard() {
     refetch();
   }, [refetch]);
   const reservation = useStudentReservation(closed);
+  const router = useRouter();
+  const paid = useCallback(() => {
+    refetch();
+    router.refresh();
+  }, [refetch, router]);
+  const payment = useStudentPayment(data?.enrollmentId, paid);
+  const paymentOpen =
+    !!payment.payment && ["pendiente", "revision", "aprobado"].includes(payment.payment.estado);
   if (isLoading)
     return (
       <>
@@ -44,14 +55,14 @@ export function StudentEnrollmentWizard() {
   if (data.accesoCompleto)
     return (
       <Card title="Mi inscripción">
-        <p>Tu cuenta tiene acceso a la plataforma.</p>
+        <p>Tu cuenta tiene acceso a la plataforma. Tu matrícula está activa.</p>
         <Link className="mt-4 inline-flex min-h-11 items-center underline" href="/student">
           Ir a mi panel
         </Link>
       </Card>
     );
   const desiredStep = selected ?? (reservation.held ? 2 : 0);
-  const step = desiredStep === 2 && !reservation.live ? 1 : desiredStep;
+  const step = desiredStep === 2 && !reservation.live && !paymentOpen ? 1 : desiredStep;
   return (
     <section className="grid min-w-0 gap-6">
       <header>
@@ -61,6 +72,18 @@ export function StudentEnrollmentWizard() {
         </p>
       </header>
       <ReservationBanner state={reservation} />
+      {paymentOpen && step !== 2 ? (
+        <div role="status" className="rounded-sm border border-border p-4">
+          <p>
+            Tienes un pago{" "}
+            {payment.payment?.estado === "revision" ? "en revisión" : "pendiente o recibido"}.
+            Consulta su estado antes de pagar otra vez.
+          </p>
+          <Button className="mt-3" variant="secondary" onClick={() => setSelected(2)}>
+            Consultar pago
+          </Button>
+        </div>
+      ) : null}
       <nav aria-label="Pasos de la inscripción">
         <ol className="grid grid-cols-3 gap-2">
           {STEPS.map((label, index) => (
@@ -72,6 +95,7 @@ export function StudentEnrollmentWizard() {
                 disabled={
                   (index > 0 && !data.requisitosVerificados) ||
                   (index === 2 &&
+                    !paymentOpen &&
                     (!reservation.live || !!reservation.error || reservation.checking))
                 }
                 onClick={() => setSelected(index)}
@@ -173,14 +197,11 @@ export function StudentEnrollmentWizard() {
           <p role="alert">No encontramos una matrícula disponible para reservar.</p>
         )
       ) : (
-        <Card title="Pago">
-          <p>
-            El pago aún no está habilitado. Tu reserva se conserva hasta el vencimiento indicado.
-          </p>
-          <Button className="mt-4" variant="secondary" onClick={() => setSelected(1)}>
-            Revisar horario
-          </Button>
-        </Card>
+        <StudentPaymentStep
+          state={payment}
+          reservation={reservation}
+          onBack={() => setSelected(1)}
+        />
       )}
     </section>
   );
