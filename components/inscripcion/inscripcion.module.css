@@ -51,7 +51,7 @@
   min-width: 0;
   padding: 1rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   background: var(--color-bg-surface);
 }
 .summaryHeading,
@@ -148,7 +148,7 @@
 .originalCourse {
   padding: 0.75rem;
   background: var(--color-bg-sunken);
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   margin-bottom: 1.5rem;
   font-size: 0.875rem;
 }
@@ -169,7 +169,7 @@
 .form fieldset {
   padding: 1rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
 }
 .form legend {
   padding-inline: 0.5rem;
@@ -237,7 +237,7 @@
   min-width: 0;
   padding: 1rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
 }
 .documentSlot h3 {
   font-family: var(--font-space-grotesk), sans-serif;
@@ -254,7 +254,7 @@
   padding: 1.25rem 0.75rem;
   min-height: 13rem;
   border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   background: var(--color-bg-sunken);
   text-align: center;
   overflow-wrap: anywhere;

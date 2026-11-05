@@ -1,4 +1,5 @@
 "use client";
+import visual from "./enrollment-surface.module.css";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -21,7 +22,7 @@ export function StudentDocumentosParaLlevar() {
   );
 
   return (
-    <section className="grid min-w-0 gap-6">
+    <section className={visual.surface}>
       <header>
         <h1 className="font-display text-2xl font-bold">Documentos para llevar</h1>
         <p className="mt-2 text-text-secondary">

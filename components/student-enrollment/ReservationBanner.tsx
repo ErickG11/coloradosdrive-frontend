@@ -1,4 +1,5 @@
 "use client";
+import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import type { useStudentReservation } from "./useStudentReservation";
@@ -8,7 +9,10 @@ export function ReservationBanner({ state }: Props) {
   return (
     <>
       {held && reservation ? (
-        <Card className={remaining <= 300 ? "border-status-warning" : undefined}>
+        <Card
+          className={`${visual.reservation} ${remaining <= 300 ? "border-status-warning" : ""}`}
+          data-near-expiry={remaining <= 300}
+        >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="font-semibold">Horario reservado · {reservation.cohorte.nombre}</p>

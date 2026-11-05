@@ -1,4 +1,5 @@
 "use client";
+import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -138,7 +139,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
     const plan = state.reservation.plan;
     const days: PlanDayView[] = plan?.dias.map((d) => ({ ...d, ok: true })) ?? [];
     return (
-      <Card title="Tu horario reservado">
+      <Card title="Tu horario reservado" className={visual.schedule}>
         <p className="font-semibold">Grupo: {state.reservation.cohorte.nombre}</p>
         {plan ? (
           <p className="mt-2" aria-live="polite">
@@ -223,7 +224,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
   const alternatives = list.filter((h) => h.factible && h.hora !== previewHour);
   const failure = options.error ?? preview.error ?? null;
   return (
-    <Card title="Elige tu horario">
+    <Card title="Elige tu horario" className={visual.schedule}>
       <p className="mb-5 text-text-secondary">
         Elige cuándo empiezas y a qué hora. Nosotros armamos el resto: todos los días tendrás la
         misma hora de inicio hasta completar tus horas de práctica.

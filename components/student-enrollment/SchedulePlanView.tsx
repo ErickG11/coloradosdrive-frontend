@@ -1,3 +1,4 @@
+import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { dayLabel, dayLabelLong, plural } from "./scheduleFormat";
 
 export interface PlanDayView {
@@ -17,7 +18,7 @@ export function SchedulePlanView({ days }: { days: PlanDayView[] }) {
   const startHour = Number(days[0].horaInicio.slice(0, 2));
   const rows = Array.from({ length: maxHours }, (_, i) => startHour + i);
   return (
-    <div>
+    <div className={visual.plan}>
       <div
         className="mt-4 hidden overflow-x-auto rounded-sm border border-border md:block"
         tabIndex={0}

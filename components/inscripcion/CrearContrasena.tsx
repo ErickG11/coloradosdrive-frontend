@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { EnrollmentBrand } from "./EnrollmentVisual";
+import visual from "./enrollment-surface.module.css";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
@@ -131,8 +133,9 @@ export function CrearContrasena() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg-base px-4 py-10">
-      <div className="w-full max-w-md">
+    <main className={visual.passwordPage}>
+      <div className={`${visual.surface} ${visual.passwordPanel}`}>
+        <EnrollmentBrand />
         <Card className="flex flex-col gap-5 md:p-8">
           {view === "loading" ? (
             <p role="status" className="text-sm text-text-secondary">
