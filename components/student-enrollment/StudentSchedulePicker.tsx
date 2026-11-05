@@ -1,134 +1,162 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { studentScheduleApi, scheduleError } from "@/lib/api/studentSchedule";
 import type {
-  StudentScheduleAvailability,
   StudentScheduleInput,
+  StudentScheduleOptions,
+  StudentSchedulePreview,
   StudentScheduleReservation,
 } from "@/types/studentSchedule";
+import { SchedulePlanView, type PlanDayView } from "./SchedulePlanView";
+import { SegmentedControl } from "./SegmentedControl";
+import { dayLabel, guayaquilDate, plural, summarySentence } from "./scheduleFormat";
 import type { useStudentReservation } from "./useStudentReservation";
-type Selection = { fecha: string; hora: string };
 interface Props {
   enrollmentId: string;
   state: ReturnType<typeof useStudentReservation>;
   onReserved: (reservation: StudentScheduleReservation) => void;
   onNext: () => void;
 }
-function dateLabel(date: string): string {
-  return new Intl.DateTimeFormat("es-EC", {
-    day: "numeric",
-    month: "short",
-    weekday: "short",
-    timeZone: "America/Guayaquil",
-  }).format(new Date(`${date}T12:00:00-05:00`));
+type Loaded<T> = { key: string; data?: T; error?: string } | null;
+const REASONS: Record<string, string> = {
+  DIA_SIN_INSTRUCTOR: "Sin disponibilidad",
+  SOLAPE_PROPIO: "Choca con tu agenda",
+  SIN_COHORTE_ELEGIBLE: "Sin grupo con cupo",
+};
+function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={`rounded-sm bg-bg-sunken motion-safe:animate-pulse ${className}`}
+    />
+  );
 }
-function slotLabel(scheduled: string): string {
-  return new Intl.DateTimeFormat("es-EC", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "America/Guayaquil",
-  }).format(new Date(scheduled));
+// Carga con clave: «cargando» es derivado (la clave del resultado no coincide con la
+// consulta actual), así una respuesta tardía de otros parámetros nunca se muestra.
+function useKeyedRequest<T>(
+  key: string | null,
+  run: (signal: AbortSignal) => Promise<T>,
+): { loading: boolean; data: T | undefined; error: string | undefined } {
+  const [result, setResult] = useState<Loaded<T>>(null);
+  useEffect(() => {
+    if (key === null) return;
+    const abort = new AbortController();
+    const timeout = window.setTimeout(() => abort.abort(), 15_000);
+    run(abort.signal)
+      .then((data) => {
+        if (!abort.signal.aborted) setResult({ key, data });
+      })
+      .catch((err: unknown) => {
+        if (!abort.signal.aborted) setResult({ key, error: scheduleError(err) });
+      })
+      .finally(() => window.clearTimeout(timeout));
+    return () => {
+      window.clearTimeout(timeout);
+      abort.abort();
+    };
+    // `run` cambia en cada render; la clave describe exactamente sus entradas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  const current = key !== null && result?.key === key ? result : null;
+  return {
+    loading: key !== null && current === null,
+    data: current?.data,
+    error: current?.error,
+  };
 }
 export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext }: Props) {
+  const minDate = guayaquilDate(1);
+  const maxDate = guayaquilDate(365);
   const [input, setInput] = useState<StudentScheduleInput>({
     modalidad: "entre_semana",
-    fechaInicio: "",
+    fechaInicio: minDate,
     horasPorDia: 3,
   });
-  const [availability, setAvailability] = useState<StudentScheduleAvailability | null>(null);
-  const [selection, setSelection] = useState<Selection[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"consultar" | "reservar" | null>(null);
+  const [chosenHour, setChosenHour] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+  const [reserving, setReserving] = useState(false);
+  const [reserveError, setReserveError] = useState<string | null>(null);
   const [confirmRelease, setConfirmRelease] = useState(false);
-  const request = useRef(0);
-  const controller = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => {
-      controller.current?.abort();
-      request.current++;
-    },
-    [],
+  const validDate =
+    /^\d{4}-\d{2}-\d{2}$/.test(input.fechaInicio) &&
+    input.fechaInicio >= minDate &&
+    input.fechaInicio <= maxDate;
+  const enabled = state.ready && !state.held && !state.error && validDate;
+  const optionsKey = enabled
+    ? `${enrollmentId}|${input.modalidad}|${input.fechaInicio}|${String(input.horasPorDia)}|${String(reload)}`
+    : null;
+  const options = useKeyedRequest<StudentScheduleOptions>(optionsKey, (signal) =>
+    studentScheduleApi.options(enrollmentId, input, signal),
   );
-  function update(next: StudentScheduleInput) {
-    request.current++;
-    controller.current?.abort();
-    setInput(next);
-    setAvailability(null);
-    setSelection([]);
-    setError(null);
-    setBusy(null);
+  const list = options.data?.horas ?? [];
+  const firstFeasible = list.find((h) => h.factible)?.hora ?? null;
+  // Preselecciona la primera hora factible; la elección del alumno solo vale si sigue siéndolo.
+  const hour =
+    chosenHour && list.some((h) => h.hora === chosenHour && h.factible)
+      ? chosenHour
+      : firstFeasible;
+  // Sin ninguna hora factible se previsualiza la primera para explicar qué días fallan.
+  const previewHour = hour ?? (options.data && !options.data.sinCohorte ? list[0]?.hora : null);
+  const previewKey =
+    optionsKey && options.data && previewHour ? `${optionsKey}|${previewHour}` : null;
+  const preview = useKeyedRequest<StudentSchedulePreview>(previewKey, (signal) =>
+    studentScheduleApi.preview(
+      enrollmentId,
+      { ...input, horaInicio: Number(previewHour?.slice(0, 2)) },
+      signal,
+    ),
+  );
+  function update(next: Partial<StudentScheduleInput>) {
+    setInput((current) => ({ ...current, ...next }));
+    setChosenHour(null);
+    setReserveError(null);
   }
-  async function search(event?: FormEvent) {
-    event?.preventDefault();
-    const sequence = ++request.current;
-    controller.current?.abort();
-    const abort = new AbortController();
-    controller.current = abort;
-    const timeout = window.setTimeout(() => abort.abort(), 15_000);
-    setBusy("consultar");
-    setError(null);
-    setSelection([]);
-    setAvailability(null);
-    try {
-      const result = await studentScheduleApi.availability(enrollmentId, input, abort.signal);
-      if (request.current === sequence) setAvailability(result);
-    } catch (err) {
-      if (request.current === sequence) {
-        setError(scheduleError(err));
-        state.refetch();
-      }
-    } finally {
-      window.clearTimeout(timeout);
-      if (request.current === sequence) setBusy(null);
-    }
-  }
-  function toggle(fecha: string, hora: string, maximum: number) {
-    setSelection((current) =>
-      current.some((s) => s.fecha === fecha && s.hora === hora)
-        ? current.filter((s) => s.fecha !== fecha || s.hora !== hora)
-        : current.filter((s) => s.fecha === fecha).length < maximum
-          ? [...current, { fecha, hora }]
-          : current,
-    );
-  }
-  const complete =
-    availability?.disponible &&
-    availability.dias.every(
-      (day) => selection.filter((s) => s.fecha === day.fecha).length === day.horasASeleccionar,
-    );
   async function reserve() {
-    if (!complete || busy) return;
-    setBusy("reservar");
-    setError(null);
+    if (!preview.data?.factible || reserving || !hour) return;
+    setReserving(true);
+    setReserveError(null);
     try {
-      const result = await studentScheduleApi.reserve(enrollmentId, input, selection);
-      onReserved(result);
+      onReserved(
+        await studentScheduleApi.reserve(enrollmentId, {
+          ...input,
+          horaInicio: Number(hour.slice(0, 2)),
+        }),
+      );
     } catch (err) {
-      setError(scheduleError(err));
+      setReserveError(scheduleError(err));
       // Una respuesta incierta puede haber creado una reserva. Consultar antes de reintentar.
-      setAvailability(null);
-      setSelection([]);
+      setReload((n) => n + 1);
       state.refetch();
     } finally {
-      setBusy(null);
+      setReserving(false);
     }
   }
-  if (state.held && state.reservation)
+  if (state.held && state.reservation) {
+    const plan = state.reservation.plan;
+    const days: PlanDayView[] = plan?.dias.map((d) => ({ ...d, ok: true })) ?? [];
     return (
       <Card title="Tu horario reservado">
-        <p className="font-semibold">Cohorte: {state.reservation.cohorte.nombre}</p>
+        <p className="font-semibold">Grupo: {state.reservation.cohorte.nombre}</p>
+        {plan ? (
+          <p className="mt-2" aria-live="polite">
+            {summarySentence({
+              primerDia: plan.dias[0].fecha,
+              horaInicio: plan.horaInicio,
+              ultimoDia: plan.ultimaFecha,
+              horaFin: plan.ultimaHoraFin,
+              horasTotales: plan.totalHoras,
+              dias: plan.dias.length,
+            })}
+          </p>
+        ) : null}
         <p className="mt-2 text-text-secondary">
-          La asignación del instructor se mostrará después del pago.
+          Te asignaremos al instructor después del pago. Este horario está retenido mientras corre
+          el contador.
         </p>
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-          {state.reservation.franjas.map((s) => (
-            <li key={s.scheduledAt}>{slotLabel(s.scheduledAt)} · 1 hora</li>
-          ))}
-        </ul>
+        <SchedulePlanView days={days} />
         <div className="mt-5 flex flex-wrap gap-3">
           <Button
             disabled={!state.live || !!state.error || state.checking || state.action !== null}
@@ -143,14 +171,14 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
             }
             onClick={() => setConfirmRelease(true)}
           >
-            Liberar horario
+            Cambiar horario
           </Button>
         </div>
         {confirmRelease ? (
           <div className="mt-4 rounded-sm border border-border p-4">
             <p>
-              Se liberarán todas las franjas y el cupo. Esta reserva seguirá contando para el límite
-              diario.
+              Se liberará este horario y podrás elegir otro. Esta reserva seguirá contando para el
+              límite diario.
             </p>
             <div className="mt-3 flex flex-wrap gap-3">
               <Button
@@ -175,161 +203,230 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
         ) : null}
       </Card>
     );
+  }
+  const expired =
+    state.reservation?.estado === "vencida"
+      ? "Tu reserva venció y el horario se liberó. Elige uno nuevo para continuar."
+      : null;
+  const data = preview.data;
+  const noCohort = options.data?.sinCohorte ?? null;
+  const days: PlanDayView[] =
+    data?.dias.map((d) => ({
+      fecha: d.fecha,
+      horaInicio: d.horaInicio,
+      horaFin: d.horaFin,
+      horas: d.horas,
+      ok: d.disponible,
+      motivo: d.motivo?.mensaje,
+    })) ?? [];
+  const failing = data?.diasFallan ?? [];
+  const alternatives = list.filter((h) => h.factible && h.hora !== previewHour);
+  const failure = options.error ?? preview.error ?? null;
   return (
     <Card title="Elige tu horario">
       <p className="mb-5 text-text-secondary">
-        Selecciona las horas de cada día, como las butacas de un cine. Reservaremos todo el plan a
-        la vez.
+        Elige cuándo empiezas y a qué hora. Nosotros armamos el resto: todos los días tendrás la
+        misma hora de inicio hasta completar tus horas de práctica.
       </p>
-      <form className="grid gap-4 sm:grid-cols-3" onSubmit={(event) => void search(event)}>
-        <Select
-          label="Modalidad"
+      {expired ? (
+        <p role="status" className="mb-4 rounded-sm bg-status-warning-bg p-3 text-status-warning">
+          {expired}
+        </p>
+      ) : null}
+      <div className="grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <SegmentedControl
+          legend="Modalidad"
           value={input.modalidad}
-          disabled={busy === "reservar"}
-          onChange={(e) =>
-            update({ ...input, modalidad: e.target.value as StudentScheduleInput["modalidad"] })
-          }
-        >
-          <option value="entre_semana">Entre semana</option>
-          <option value="fin_de_semana">Fin de semana</option>
-        </Select>
+          disabled={reserving}
+          options={[
+            { value: "entre_semana", label: "Entre semana" },
+            { value: "fin_de_semana", label: "Fin de semana" },
+          ]}
+          onChange={(modalidad) => update({ modalidad })}
+        />
         <Input
           label="Fecha de inicio"
           type="date"
           required
+          min={minDate}
+          max={maxDate}
           value={input.fechaInicio}
-          disabled={busy === "reservar"}
-          onChange={(e) => update({ ...input, fechaInicio: e.target.value })}
+          disabled={reserving}
+          onChange={(e) => update({ fechaInicio: e.target.value })}
+          error={
+            input.fechaInicio && !validDate
+              ? "Elige una fecha desde mañana y dentro del próximo año."
+              : undefined
+          }
         />
-        <Select
-          label="Horas por día"
+        <SegmentedControl
+          legend="Horas por día"
           value={input.horasPorDia}
-          disabled={busy === "reservar"}
-          onChange={(e) => update({ ...input, horasPorDia: Number(e.target.value) })}
-        >
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <option key={n} value={n}>
-              {n} {n === 1 ? "hora" : "horas"}
-            </option>
-          ))}
-        </Select>
-        <Button
-          type="submit"
-          className="justify-self-start sm:col-span-3"
-          isLoading={busy === "consultar"}
-          disabled={!state.ready || state.checking || !!state.error || busy === "reservar"}
-        >
-          Consultar disponibilidad
-        </Button>
-      </form>
-      {error ? (
-        <p role="alert" className="mt-4 text-status-error">
-          {error}
+          disabled={reserving}
+          options={[1, 2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
+          onChange={(horasPorDia) => update({ horasPorDia })}
+        />
+      </div>
+      <fieldset className="mt-6 min-w-0" disabled={reserving}>
+        <legend className="mb-2 text-sm font-medium text-text-secondary">Hora de inicio</legend>
+        {options.loading || (!options.data && !failure && enabled) ? (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8" aria-busy="true">
+            {Array.from({ length: 8 }, (_, i) => (
+              <Skeleton key={i} className="h-14" />
+            ))}
+            <span className="sr-only" role="status">
+              Buscando horas disponibles…
+            </span>
+          </div>
+        ) : !validDate ? (
+          <p className="text-text-secondary">Elige una fecha de inicio para ver las horas.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+            {list.map((item) => {
+              const selected = item.hora === hour;
+              const reason = item.motivo ? (REASONS[item.motivo.codigo] ?? "No disponible") : null;
+              return (
+                <button
+                  key={item.hora}
+                  type="button"
+                  disabled={!item.factible}
+                  aria-pressed={selected}
+                  aria-label={
+                    item.factible
+                      ? `${item.hora}${selected ? ", seleccionada" : ""}`
+                      : `${item.hora}, no disponible. ${item.motivo?.mensaje ?? ""}`
+                  }
+                  title={item.motivo?.mensaje}
+                  onClick={() => {
+                    setChosenHour(item.hora);
+                    setReserveError(null);
+                  }}
+                  className={`flex min-h-14 flex-col items-center justify-center rounded-sm border px-2 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${selected ? "border-brand-primary bg-brand-primary text-white" : "border-border-strong bg-bg-surface text-text-primary hover:bg-bg-sunken"}`}
+                >
+                  {item.hora}
+                  {reason ? (
+                    <span className="text-[11px] font-normal leading-tight">{reason}</span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </fieldset>
+      {failure ? (
+        <div role="alert" className="mt-5 rounded-sm bg-status-error-bg p-4 text-status-error">
+          <p>{failure}</p>
+          <Button className="mt-3" variant="secondary" onClick={() => setReload((n) => n + 1)}>
+            Reintentar
+          </Button>
+        </div>
+      ) : null}
+      {state.error && !failure ? (
+        <p role="alert" className="mt-5 text-status-error">
+          {state.error}
         </p>
       ) : null}
-      {availability ? (
-        <>
-          <p className="mt-5 font-semibold">
-            {availability.horasRequeridas} horas de práctica · {selection.length} seleccionadas
+      {noCohort ? (
+        <div role="status" className="mt-5 rounded-sm border border-border p-4">
+          <p className="font-medium">Ningún grupo con cupo cubre esas fechas.</p>
+          <p className="mt-1 text-text-secondary">
+            Prueba empezar más tarde o consulta a la escuela.
           </p>
-          {availability.mensaje ? (
-            <p role="status" className="mt-3">
-              {availability.mensaje}
+          {noCohort.primeraFechaPosible ? (
+            <Button
+              className="mt-3"
+              variant="secondary"
+              onClick={() => update({ fechaInicio: noCohort.primeraFechaPosible ?? minDate })}
+            >
+              Empezar el {dayLabel(noCohort.primeraFechaPosible)}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {options.data && !noCohort && !firstFeasible ? (
+        <div role="status" className="mt-5 rounded-sm border border-border p-4">
+          <p className="font-medium">No encontramos una hora con todos los días disponibles.</p>
+          <p className="mt-1 text-text-secondary">
+            Prueba otra fecha de inicio, otra cantidad de horas por día o la otra modalidad.
+          </p>
+        </div>
+      ) : null}
+      {preview.loading ? (
+        <div className="mt-5 grid gap-2" aria-busy="true">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-32" />
+        </div>
+      ) : null}
+      {data ? (
+        <section className="mt-6" aria-labelledby="plan-title">
+          <h3 id="plan-title" className="font-display text-lg font-semibold">
+            Tu plan
+          </h3>
+          <p className="mt-2 font-medium" aria-live="polite" aria-atomic="true">
+            {summarySentence({
+              primerDia: data.fechaInicioEfectiva,
+              horaInicio: data.horaInicio,
+              ultimoDia: data.ultimaFecha,
+              horaFin: data.ultimaHoraFin,
+              horasTotales: data.horasTotales,
+              dias: data.dias.length,
+            })}
+          </p>
+          {data.ajustada ? (
+            <p className="mt-1 text-sm text-text-secondary">
+              La fecha que elegiste no es de esta modalidad; empezamos el{" "}
+              {dayLabel(data.fechaInicioEfectiva)}.
             </p>
           ) : null}
-          {availability.fechasSugeridas.length ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span>Prueba estos inicios:</span>
-              {availability.fechasSugeridas.map((date) => (
-                <Button
-                  variant="secondary"
-                  key={date}
-                  onClick={() => update({ ...input, fechaInicio: date })}
-                >
-                  {dateLabel(date)}
-                </Button>
-              ))}
+          {data.cohorte ? (
+            <p className="mt-1 text-sm text-text-secondary">
+              Grupo: {data.cohorte.nombre} · se confirma al reservar.
+            </p>
+          ) : null}
+          <SchedulePlanView days={days} />
+          {failing.length ? (
+            <div
+              role="alert"
+              className="mt-4 rounded-sm border border-status-error bg-status-error-bg p-4 text-status-error"
+            >
+              <p className="font-medium">
+                Esta hora no se puede reservar: falta disponibilidad en{" "}
+                {plural(failing.length, "día", "días")}.
+              </p>
+              <p className="mt-1 text-sm">{failing.map(dayLabel).join(", ")}.</p>
+              {alternatives.length ? (
+                <p className="mt-2 text-sm">
+                  Prueba con: {alternatives.map((a) => a.hora).join(", ")}.
+                </p>
+              ) : null}
             </div>
           ) : null}
-          <p id="schedule-help" className="mt-4 text-sm text-text-secondary">
-            Cada casilla equivale a una hora. Elige la cantidad indicada por día. El último día
-            puede tener menos horas. Las casillas ocupadas no se pueden elegir.
-          </p>
-          <div
-            className="mt-4 overflow-x-auto rounded-sm border border-border"
-            tabIndex={0}
-            aria-label="Tabla de horas disponibles"
-          >
-            <table
-              className="w-full border-collapse text-center text-sm"
-              aria-describedby="schedule-help"
-            >
-              <caption className="sr-only">
-                Disponibilidad de prácticas, días por columna y horas por fila
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col" className="p-3">
-                    Hora
-                  </th>
-                  {availability.dias.map((day) => (
-                    <th scope="col" className="min-w-32 p-3" key={day.fecha}>
-                      {dateLabel(day.fecha)}
-                      <span className="mt-1 block font-normal">Elige {day.horasASeleccionar}h</span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: 16 }, (_, row) => (
-                  <tr key={row}>
-                    <th scope="row" className="p-2">
-                      {String(row + 6).padStart(2, "0")}:00
-                    </th>
-                    {availability.dias.map((day) => {
-                      const slot = day.franjas[row];
-                      const chosen = selection.some(
-                        (s) => s.fecha === day.fecha && s.hora === slot.hora,
-                      );
-                      const full =
-                        !chosen &&
-                        selection.filter((s) => s.fecha === day.fecha).length >=
-                          day.horasASeleccionar;
-                      return (
-                        <td className="border-t border-border p-1" key={day.fecha}>
-                          <Button
-                            className="min-h-11 w-full"
-                            size="sm"
-                            variant={chosen ? "primary" : "secondary"}
-                            aria-pressed={chosen}
-                            aria-label={`${dateLabel(day.fecha)}, ${slot.hora}, ${chosen ? "seleccionada" : slot.libre ? "libre" : "ocupada"}`}
-                            disabled={
-                              !slot.libre || full || busy !== null || !availability.disponible
-                            }
-                            onClick={() => toggle(day.fecha, slot.hora, day.horasASeleccionar)}
-                          >
-                            {chosen ? "Elegido" : slot.libre ? "Libre" : "Ocupado"}
-                          </Button>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-            <p>El cupo se confirma al reservar. No necesitas elegir instructor.</p>
-            <Button
-              isLoading={busy === "reservar"}
-              disabled={!complete || busy !== null || !!state.error || state.checking}
-              onClick={() => void reserve()}
-            >
-              Reservar horario
-            </Button>
-          </div>
-        </>
+        </section>
       ) : null}
+      {reserveError ? (
+        <p role="alert" className="mt-4 text-status-error">
+          {reserveError}
+        </p>
+      ) : null}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+        <p className="text-sm text-text-secondary">
+          El cupo se confirma al reservar. No necesitas elegir instructor.
+        </p>
+        <Button
+          isLoading={reserving}
+          disabled={
+            !data?.factible ||
+            !hour ||
+            reserving ||
+            !!state.error ||
+            state.checking ||
+            preview.loading
+          }
+          onClick={() => void reserve()}
+        >
+          Reservar este horario
+        </Button>
+      </div>
     </Card>
   );
 }

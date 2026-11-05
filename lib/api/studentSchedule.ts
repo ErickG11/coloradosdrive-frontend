@@ -2,29 +2,29 @@ import { api } from "./client";
 import { ApiError } from "./errors";
 import type {
   StudentScheduleInput,
-  StudentScheduleAvailability,
+  StudentScheduleOptions,
+  StudentSchedulePreview,
+  StudentScheduleSelection,
   StudentScheduleReservation,
   StudentReservationSnapshot,
 } from "@/types/studentSchedule";
 const ROOT = "/estudiantes/inscripcion";
 const options = () => ({ signal: AbortSignal.timeout(15_000), cache: "no-store" as const });
 export const studentScheduleApi = {
-  availability: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
-    api.post<StudentScheduleAvailability>(
-      `${ROOT}/disponibilidad`,
+  options: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
+    api.post<StudentScheduleOptions>(
+      `${ROOT}/horario/opciones`,
       { enrollmentId, ...input },
       { signal, cache: "no-store" },
     ),
-  reserve: (
-    enrollmentId: string,
-    input: StudentScheduleInput,
-    franjas: { fecha: string; hora: string }[],
-  ) =>
-    api.post<StudentScheduleReservation>(
-      `${ROOT}/reservas`,
-      { enrollmentId, ...input, franjas },
-      options(),
+  preview: (enrollmentId: string, input: StudentScheduleSelection, signal: AbortSignal) =>
+    api.post<StudentSchedulePreview>(
+      `${ROOT}/horario/plan`,
+      { enrollmentId, ...input },
+      { signal, cache: "no-store" },
     ),
+  reserve: (enrollmentId: string, input: StudentScheduleSelection) =>
+    api.post<StudentScheduleReservation>(`${ROOT}/reservas`, { enrollmentId, ...input }, options()),
   current: () => api.get<StudentReservationSnapshot>(`${ROOT}/reserva`, options()),
   change: (id: string, action: "ampliar" | "liberar") =>
     api.post<StudentReservationSnapshot>(
@@ -34,13 +34,16 @@ export const studentScheduleApi = {
     ),
 };
 const messages: Record<string, string> = {
-  HORARIO_NO_DISPONIBLE: "Una franja ya se ocupó. Consulta nuevamente y elige tu horario.",
+  HORARIO_NO_DISPONIBLE: "Ese horario ya no está libre. Elige otra hora de inicio.",
+  PLAN_NO_FACTIBLE: "Ese horario ya no es posible en todos los días. Elige otra hora de inicio.",
+  HORA_INICIO_INVALIDA: "Elige una hora de inicio que permita terminar a las 22:00.",
+  FECHA_INICIO_INVALIDA: "Elige una fecha de inicio desde mañana y dentro del próximo año.",
   RESERVA_CONCURRENTE: "El horario se está actualizando. Consulta su estado antes de reintentar.",
   RESERVA_YA_EXISTE: "Ya tienes una reserva. Consulta su estado antes de elegir otra.",
   LIMITE_RESERVAS_DIARIO: "Alcanzaste el máximo de reservas de hoy. Puedes volver mañana.",
   RESERVA_NO_AMPLIABLE: "Esta reserva ya no se puede ampliar.",
   PAGO_EN_CURSO: "Espera el resultado del pago antes de cambiar tu reserva.",
-  SIN_COHORTE_ELEGIBLE: "Ninguna cohorte con cupo contiene todas esas fechas. Prueba otro inicio.",
+  SIN_COHORTE_ELEGIBLE: "Ningún grupo con cupo cubre todas esas fechas. Prueba otro inicio.",
   RESERVA_NO_PERMITIDA:
     "No puedes reservar con el estado actual de tu inscripción. Recarga la página.",
   LIMITE_PETICIONES: "Has consultado demasiadas veces. Espera unos minutos antes de reintentar.",
