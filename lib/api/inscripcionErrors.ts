@@ -52,7 +52,7 @@ const MENSAJES_POR_CODIGO: Record<string, string> = {
   DATOS_INVALIDOS: "Revisa los datos ingresados.",
   DATOS_CAMBIARON: "Tus datos cambiaron mientras subías el archivo. Vuelve a intentarlo.",
   DATOS_NO_REGISTRADOS:
-    "No pudimos registrar estos datos. Si ya te inscribiste, usa tu correo para ver el estado o contacta a la escuela.",
+    "No pudimos continuar con estos datos. Si ya enviaste una solicitud o ya eres alumno, consulta el estado con tu correo o comunícate con la escuela.",
   CAMPO_INVALIDO: "Revisa este dato: no tiene un formato válido.",
   CAMPO_NO_PERMITIDO:
     "Se envió un dato que no corresponde. Recarga la página e inténtalo de nuevo.",

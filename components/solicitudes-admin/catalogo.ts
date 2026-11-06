@@ -38,7 +38,6 @@ export const ETIQUETA_NIVEL: Record<NivelEstudios, string> = {
   bachiller_reciente: "Bachiller reciente (menos de 12 meses)",
   bachiller_exterior: "Bachiller en el exterior",
   decimo_aprobado: "Décimo año aprobado",
-  cursando_bachillerato: "Cursando bachillerato",
   menos_de_decimo: "Menos de décimo año",
 };
 
@@ -91,32 +90,11 @@ export const ETIQUETA_RESULTADO: Record<ResultadoVerificacion, string> = {
 
 export const RESULTADOS: ResultadoVerificacion[] = ["verificado", "no_coincide", "no_encontrado"];
 
-// Métodos que el admin puede registrar (el servicio web aún no se usa). Los que no habilitan la
-// aprobación se ofrecen igual para dejar constancia, pero se rotulan para evitar confusiones.
-export function metodosParaVerificacion(
-  tipo: TipoVerificacion,
-  nivel: NivelEstudios | null,
-): { metodo: MetodoVerificacion; habilita: boolean }[] {
-  if (tipo === "identidad") {
-    return [
-      { metodo: "registro_civil_portal", habilita: true },
-      { metodo: "original_presencial", habilita: false },
-      { metodo: "revision_visual", habilita: false },
-    ];
-  }
-  if (nivel?.startsWith("bachiller")) {
-    return [
-      { metodo: "ministerio_portal", habilita: true },
-      { metodo: "original_presencial", habilita: false },
-      { metodo: "revision_visual", habilita: false },
-    ];
-  }
-  return [
-    { metodo: "codigo_qr_certificado", habilita: true },
-    { metodo: "llamada_institucion", habilita: true },
-    { metodo: "original_presencial", habilita: true },
-    { metodo: "revision_visual", habilita: false },
-  ];
+// Todos los métodos manuales habilitan ambos tipos cuando el resultado es verificado.
+export function metodosParaVerificacion(): { metodo: MetodoVerificacion; habilita: boolean }[] {
+  return (Object.keys(ETIQUETA_METODO) as MetodoVerificacion[])
+    .filter((metodo) => metodo !== "registro_civil_web_service")
+    .map((metodo) => ({ metodo, habilita: true }));
 }
 
 // Motivos con el mensaje predefinido que verá el postulante (refleja el catálogo del servidor).

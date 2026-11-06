@@ -17,7 +17,6 @@ export const NIVELES_ESTUDIOS = [
   "bachiller_reciente",
   "bachiller_exterior",
   "decimo_aprobado",
-  "cursando_bachillerato",
   "menos_de_decimo",
 ] as const;
 export type NivelEstudios = (typeof NIVELES_ESTUDIOS)[number];
@@ -159,7 +158,7 @@ export interface DatosSolicitudInput {
   apellidos: string;
   cedula: string;
   fechaNacimiento: string;
-  telefono?: string;
+  telefono: string;
   // extranjero_sin_cedula no se registra: el servidor responde ATENCION_POR_CONTACTO.
   nacionalidadTipo: Nacionalidad;
   tipoSangre: TipoSangre;
@@ -190,6 +189,8 @@ export interface DevolucionProgreso {
 }
 
 export interface ProgresoSolicitud {
+  identidadVerificada: boolean;
+  estudiosVerificados: boolean;
   courseId: string;
   curso: CursoInscripcion | null;
   estado: EstadoInscripcion;

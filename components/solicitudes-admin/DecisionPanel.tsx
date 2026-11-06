@@ -12,13 +12,7 @@ import type {
   SolicitudAdminDetalle,
 } from "@/types/inscripcion";
 import { adminErrorMessage, esConflictoDeEstado } from "./adminErrors";
-import {
-  ETIQUETA_MOTIVO,
-  MOTIVOS_DEVOLVER,
-  MOTIVOS_RECHAZAR,
-  formatearFecha,
-  metodosParaVerificacion,
-} from "./catalogo";
+import { ETIQUETA_MOTIVO, MOTIVOS_DEVOLVER, MOTIVOS_RECHAZAR, formatearFecha } from "./catalogo";
 import type { ResultadoDecision } from "./decisionTipos";
 import styles from "./solicitudes.module.css";
 
@@ -36,22 +30,21 @@ const ACCIONES: { id: Accion; label: string }[] = [
 
 // Requisitos que el servidor exige para aprobar. Es una guía visible para el admin: el
 // servidor sigue siendo quien decide.
-function requisitosDeAprobacion(detalle: SolicitudAdminDetalle): { texto: string; ok: boolean }[] {
+export function requisitosDeAprobacion(
+  detalle: SolicitudAdminDetalle,
+): { texto: string; ok: boolean }[] {
   const ultima = (tipo: "identidad" | "estudios") =>
     detalle.verificaciones
       .filter((v) => v.tipo === tipo)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))[0];
   const habilita = (tipo: "identidad" | "estudios") => {
     const v = ultima(tipo);
-    if (!v || v.resultado !== "verificado") return false;
-    if (v.metodo === "registro_civil_web_service") return tipo === "identidad";
-    return metodosParaVerificacion(tipo, detalle.nivelEstudios).some(
-      (m) => m.metodo === v.metodo && m.habilita,
-    );
+    if (!v || v.resultado !== "verificado" || v.vigente === false) return false;
+    return true;
   };
   const lista = [
-    { texto: "Identidad verificada en el Registro Civil", ok: habilita("identidad") },
-    { texto: "Estudios verificados con un método válido", ok: habilita("estudios") },
+    { texto: "Identidad verificada", ok: habilita("identidad") },
+    { texto: "Estudios verificados", ok: habilita("estudios") },
   ];
   if (detalle.documentoRequerido)
     lista.push({
@@ -125,6 +118,8 @@ export function DecisionPanel({
   onConflicto: () => void;
 }) {
   const baseId = useId();
+  const [abierto, setAbierto] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
   const [accion, setAccion] = useState<Accion>("aprobar"),
     [motivo, setMotivo] = useState(""),
     [mensaje, setMensaje] = useState(""),
@@ -144,7 +139,10 @@ export function DecisionPanel({
   const faltan = requisitos.filter((r) => !r.ok);
 
   function cambiarAccion(siguiente: Accion) {
+    if (lock.current) return;
+    setAbierto(true);
     setAccion(siguiente);
+    requestAnimationFrame(() => formRef.current?.focus());
     setMotivo("");
     setMensaje("");
     setErrores({});
@@ -154,6 +152,7 @@ export function DecisionPanel({
 
   // Devolver se envía directo; aprobar y rechazar piden una confirmación explícita antes.
   function continuar() {
+    if (accion === "aprobar" && faltan.length > 0) return;
     const nuevos: typeof errores = {};
     if (accion !== "aprobar" && !motivo) nuevos.motivo = "Selecciona el motivo.";
     if (esOtro) {
@@ -169,7 +168,7 @@ export function DecisionPanel({
   }
 
   async function enviar() {
-    if (lock.current) return;
+    if (lock.current || (accion === "aprobar" && faltan.length > 0)) return;
     lock.current = true;
     setOcupado(true);
     setError("");
@@ -208,152 +207,178 @@ export function DecisionPanel({
 
   return (
     <div className={styles.detail}>
-      <fieldset className={styles.actionGroup} disabled={ocupado}>
-        <legend className="sr-only">Acción de la decisión</legend>
-        {ACCIONES.map((item) => (
-          <label
-            key={item.id}
-            className={styles.actionOption}
-            data-action={item.id}
-            data-checked={accion === item.id}
-          >
-            <input
-              type="radio"
-              name={`${baseId}-accion`}
-              className="sr-only"
-              checked={accion === item.id}
-              onChange={() => cambiarAccion(item.id)}
-            />
-            {item.label}
-          </label>
-        ))}
-      </fieldset>
-
-      {accion === "aprobar" ? (
-        <div className={styles.detail}>
-          <ul className={styles.checklist} aria-label="Requisitos para aprobar">
-            {requisitos.map((r) => (
-              <li key={r.texto} data-ok={r.ok}>
-                <span aria-hidden="true">{r.ok ? "✔" : "✖"}</span>
-                <span>
-                  {r.texto}
-                  <span className="sr-only">{r.ok ? ": cumplido" : ": pendiente"}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          {faltan.length > 0 ? (
-            <p className={styles.note}>
-              Faltan requisitos: el servidor rechazará la aprobación hasta que estén completos.
-            </p>
-          ) : null}
-          <p className={styles.note}>
-            Al aprobar se crea la cuenta del alumno sin contraseña, la matrícula queda por agendar,
-            sin cohorte ni monto, y se envía un enlace de un solo uso para crear la contraseña.
-          </p>
-        </div>
-      ) : (
-        <div className={styles.detail}>
-          <Select
-            label="Motivo"
-            value={motivo}
-            error={errores.motivo}
-            onChange={(e) => {
-              setMotivo(e.target.value);
-              setMensaje("");
-              setErrores((previo) => ({ ...previo, motivo: undefined, mensaje: undefined }));
-            }}
-          >
-            <option value="">Selecciona un motivo…</option>
-            {motivos.map((m) => (
-              <option key={m.codigo} value={m.codigo}>
-                {m.label}
-              </option>
-            ))}
-          </Select>
-          {motivoActual?.mensaje ? (
-            <p className={styles.preview}>
-              <strong>Mensaje para el postulante:</strong> {motivoActual.mensaje}
-            </p>
-          ) : null}
-          {esOtro ? (
-            <div className={styles.detail}>
-              <Textarea
-                label="Mensaje para el postulante"
-                value={mensaje}
-                maxLength={MAX_MENSAJE}
-                error={errores.mensaje}
-                onChange={(e) => setMensaje(e.target.value)}
-                aria-describedby={`${baseId}-contador`}
-                required
-              />
-              <p id={`${baseId}-contador`} className="text-sm text-text-secondary">
-                Texto plano, de {MIN_MENSAJE} a {MAX_MENSAJE} caracteres ({mensaje.trim().length}/
-                {MAX_MENSAJE}). El postulante lo verá.
-              </p>
-            </div>
-          ) : null}
-          {accion === "devolver" ? (
-            <p className={styles.note}>
-              Se envía un correo corto sin datos: le indica que ingrese a la página de inscripción
-              con su correo para ver la corrección.
-            </p>
-          ) : null}
-          {sinCorreo ? (
-            <p className={styles.note}>
-              Este motivo no envía correo
-              {motivo === "SPAM" ? " y bloquea el correo del postulante durante 30 días" : ""}.
-            </p>
-          ) : null}
-        </div>
-      )}
-
-      <Textarea
-        label="Nota interna (opcional, el postulante no la ve)"
-        value={nota}
-        maxLength={MAX_NOTA}
-        error={errores.nota}
-        onChange={(e) => setNota(e.target.value)}
-      />
-
-      <FormError>{error}</FormError>
-
-      {confirmando ? (
-        <div
-          className={styles.confirmBox}
-          role="group"
-          aria-label={`Confirmar: ${etiquetaBoton.toLowerCase()}`}
-        >
-          <p>
-            {accion === "aprobar"
-              ? "¿Confirmas que quieres aprobar esta solicitud? Se creará la cuenta del alumno y se enviará el enlace para crear su contraseña."
-              : "¿Confirmas el rechazo? Es definitivo: el postulante no podrá corregir esta solicitud."}
-          </p>
-          <div className={styles.controls}>
-            <Button
-              autoFocus
-              variant={accion === "rechazar" ? "danger" : "primary"}
-              isLoading={ocupado}
-              onClick={() => void enviar()}
-            >
-              {accion === "aprobar" ? "Confirmar aprobación" : "Confirmar rechazo"}
-            </Button>
-            <Button variant="ghost" disabled={ocupado} onClick={() => setConfirmando(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      ) : (
+      <div
+        className={styles.decisionForm}
+        hidden={!abierto}
+        ref={formRef}
+        tabIndex={-1}
+        aria-label="Preparar decisión"
+      >
         <div className={styles.controls}>
-          <Button
-            variant={accion === "rechazar" ? "danger" : "primary"}
-            isLoading={ocupado}
-            onClick={continuar}
-          >
-            {etiquetaBoton}
+          <h3>
+            {accion === "aprobar"
+              ? "Aprobar solicitud"
+              : accion === "devolver"
+                ? "Devolver para corregir"
+                : "Rechazar solicitud"}
+          </h3>
+          <Button variant="ghost" disabled={ocupado} onClick={() => setAbierto(false)}>
+            Cerrar acción
           </Button>
         </div>
-      )}
+
+        {accion === "aprobar" ? (
+          <div className={styles.detail}>
+            <ul className={styles.checklist} aria-label="Requisitos para aprobar">
+              {requisitos.map((r) => (
+                <li key={r.texto} data-ok={r.ok}>
+                  <span aria-hidden="true">{r.ok ? "✔" : "✖"}</span>
+                  <span>
+                    {r.texto}
+                    <span className="sr-only">{r.ok ? ": cumplido" : ": pendiente"}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {faltan.length > 0 ? (
+              <p className={styles.note}>
+                Faltan requisitos: el servidor rechazará la aprobación hasta que estén completos.
+              </p>
+            ) : null}
+            <p className={styles.note}>
+              Al aprobar se crea la cuenta del alumno sin contraseña, la matrícula queda por
+              agendar, sin cohorte ni monto, y se envía un enlace de un solo uso para crear la
+              contraseña.
+            </p>
+          </div>
+        ) : (
+          <div className={styles.detail}>
+            <Select
+              label="Motivo"
+              value={motivo}
+              error={errores.motivo}
+              onChange={(e) => {
+                setMotivo(e.target.value);
+                setMensaje("");
+                setErrores((previo) => ({ ...previo, motivo: undefined, mensaje: undefined }));
+              }}
+            >
+              <option value="">Selecciona un motivo…</option>
+              {motivos.map((m) => (
+                <option key={m.codigo} value={m.codigo}>
+                  {m.label}
+                </option>
+              ))}
+            </Select>
+            {motivoActual?.mensaje ? (
+              <p className={styles.preview}>
+                <strong>Mensaje para el postulante:</strong> {motivoActual.mensaje}
+              </p>
+            ) : null}
+            {esOtro ? (
+              <div className={styles.detail}>
+                <Textarea
+                  label="Mensaje para el postulante"
+                  value={mensaje}
+                  maxLength={MAX_MENSAJE}
+                  error={errores.mensaje}
+                  onChange={(e) => setMensaje(e.target.value)}
+                  aria-describedby={`${baseId}-contador`}
+                  required
+                />
+                <p id={`${baseId}-contador`} className="text-sm text-text-secondary">
+                  Texto plano, de {MIN_MENSAJE} a {MAX_MENSAJE} caracteres ({mensaje.trim().length}/
+                  {MAX_MENSAJE}). El postulante lo verá.
+                </p>
+              </div>
+            ) : null}
+            {accion === "devolver" ? (
+              <p className={styles.note}>
+                Se envía un correo corto sin datos: le indica que ingrese a la página de inscripción
+                con su correo para ver la corrección.
+              </p>
+            ) : null}
+            {sinCorreo ? (
+              <p className={styles.note}>
+                Este motivo no envía correo
+                {motivo === "SPAM" ? " y bloquea el correo del postulante durante 30 días" : ""}.
+              </p>
+            ) : null}
+          </div>
+        )}
+
+        <Textarea
+          label="Nota interna (opcional, el postulante no la ve)"
+          value={nota}
+          maxLength={MAX_NOTA}
+          error={errores.nota}
+          onChange={(e) => setNota(e.target.value)}
+        />
+
+        <FormError>{error}</FormError>
+
+        {confirmando ? (
+          <div
+            className={styles.confirmBox}
+            role="group"
+            aria-label={`Confirmar: ${etiquetaBoton.toLowerCase()}`}
+          >
+            <p>
+              {accion === "aprobar"
+                ? "¿Confirmas que quieres aprobar esta solicitud? Se creará la cuenta del alumno y se enviará el enlace para crear su contraseña."
+                : "¿Confirmas el rechazo? Es definitivo: el postulante no podrá corregir esta solicitud."}
+            </p>
+            <div className={styles.controls}>
+              <Button
+                autoFocus
+                variant={accion === "rechazar" ? "danger" : "primary"}
+                disabled={accion === "aprobar" && faltan.length > 0}
+                isLoading={ocupado}
+                onClick={() => void enviar()}
+              >
+                {accion === "aprobar" ? "Confirmar aprobación" : "Confirmar rechazo"}
+              </Button>
+              <Button variant="ghost" disabled={ocupado} onClick={() => setConfirmando(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.controls}>
+            <Button
+              variant={accion === "rechazar" ? "danger" : "primary"}
+              disabled={accion === "aprobar" && faltan.length > 0}
+              isLoading={ocupado}
+              onClick={continuar}
+            >
+              {etiquetaBoton}
+            </Button>
+          </div>
+        )}
+      </div>
+      {faltan.length > 0 ? (
+        <p id={`${baseId}-faltantes`} className={styles.note} role="status">
+          Para aprobar falta: {faltan.map((r) => r.texto.toLowerCase()).join(", ")}.
+        </p>
+      ) : null}
+      <div className={styles.decisionActions}>
+        {ACCIONES.map((item) => (
+          <Button
+            key={item.id}
+            variant={
+              item.id === "aprobar" ? "primary" : item.id === "rechazar" ? "danger" : "secondary"
+            }
+            disabled={ocupado || (item.id === "aprobar" && faltan.length > 0)}
+            aria-describedby={
+              item.id === "aprobar" && faltan.length > 0 ? `${baseId}-faltantes` : undefined
+            }
+            aria-expanded={abierto && accion === item.id}
+            onClick={() => cambiarAccion(item.id)}
+          >
+            {item.id === "devolver" ? "Devolver para corregir" : item.label}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 }

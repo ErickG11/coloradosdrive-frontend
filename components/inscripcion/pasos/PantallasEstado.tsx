@@ -77,6 +77,32 @@ const SEGUIMIENTO = [
   "Lista para pagar",
 ];
 
+function Seguimiento({ progreso }: { progreso: ProgresoSolicitud }) {
+  const completadas = [
+    Boolean(progreso.enviadaAt),
+    progreso.identidadVerificada,
+    progreso.estudiosVerificados,
+    progreso.estado === "aprobada",
+  ];
+  return (
+    <ol className={styles.seguimiento} aria-label="Seguimiento de tu solicitud">
+      {SEGUIMIENTO.map((etapa, indice) => (
+        <li key={etapa} data-estado={completadas[indice] ? "hecho" : "pendiente"}>
+          <span className={styles.marca} aria-hidden="true">
+            {completadas[indice] ? "✓" : indice + 1}
+          </span>
+          <span>
+            {etapa}
+            <span className="sr-only">
+              {completadas[indice] ? " (completado)" : " (pendiente)"}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function PantallaEnviada({ progreso }: { progreso: ProgresoSolicitud }) {
   const titulo = useFocoEnTitulo();
   const fecha = formatearFechaHora(progreso.enviadaAt);
@@ -86,11 +112,11 @@ function PantallaEnviada({ progreso }: { progreso: ProgresoSolicitud }) {
       <Titulo referencia={titulo} id="estado-titulo">
         Tu solicitud está pendiente de revisión
       </Titulo>
-      {fecha ? <p>Enviada el {fecha}.</p> : null}
+      {fecha ? <p>Enviada el {fecha.replace(/\.$/, "")}.</p> : null}
       {progreso.curso ? <p>Curso: {progreso.curso.nombre}</p> : null}
       <p>
-        La escuela verificará tu identidad y tus estudios. Te avisaremos por correo cuando haya una
-        respuesta; no necesitas hacer nada más por ahora.
+        La escuela verificará tu identidad y tus estudios. Puedes consultar los avances en esta
+        página; no necesitas hacer nada más por ahora.
       </p>
       {progreso.documentoEstudiosPendientePorCupo ? (
         <div className={styles.aviso} role="note">
@@ -102,19 +128,7 @@ function PantallaEnviada({ progreso }: { progreso: ProgresoSolicitud }) {
         </div>
       ) : null}
       <h3 className="font-semibold">Seguimiento</h3>
-      <ol className={styles.seguimiento} aria-label="Seguimiento de tu solicitud">
-        {SEGUIMIENTO.map((etapa, indice) => (
-          <li key={etapa} data-estado={indice === 0 ? "hecho" : "pendiente"}>
-            <span className={styles.marca} aria-hidden="true">
-              {indice === 0 ? "✓" : indice + 1}
-            </span>
-            <span>
-              {etapa}
-              <span className="sr-only">{indice === 0 ? " (completado)" : " (pendiente)"}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
+      <Seguimiento progreso={progreso} />
       <p className="text-sm text-text-secondary">
         Si cierras esta página, verifica tu correo otra vez para consultar el estado.
       </p>
@@ -194,7 +208,7 @@ function PantallaDevuelta({
   );
 }
 
-function PantallaAprobada() {
+function PantallaAprobada({ progreso }: { progreso: ProgresoSolicitud }) {
   const titulo = useFocoEnTitulo();
   return (
     <section className={formStyles.form} aria-labelledby="estado-titulo">
@@ -202,6 +216,7 @@ function PantallaAprobada() {
       <Titulo referencia={titulo} id="estado-titulo">
         Tu solicitud fue aprobada
       </Titulo>
+      <Seguimiento progreso={progreso} />
       <div className={styles.avisoExito} role="status">
         <strong>Revisa tu correo para crear tu contraseña.</strong>
         <span>
@@ -279,7 +294,7 @@ export function PantallaInscripcionesCerradas() {
 }
 
 // Pantalla de estado y seguimiento (paso 7) según el estado de la solicitud.
-export function PantallasEstado({
+function ContenidoEstado({
   solicitudId,
   progreso,
   onProgreso,
@@ -299,7 +314,7 @@ export function PantallasEstado({
         />
       );
     case "aprobada":
-      return <PantallaAprobada />;
+      return <PantallaAprobada progreso={progreso} />;
     case "rechazada":
       return <PantallaRechazada progreso={progreso} />;
     default:
@@ -317,4 +332,79 @@ export function PantallasEstado({
         </section>
       );
   }
+}
+
+// Conserva el último resultado visible durante la consulta: no desmonta la pantalla.
+export function PantallasEstado(props: PantallasEstadoProps) {
+  const { solicitudId, onProgreso, irAPaso } = props;
+  const callbacks = useRef({ onProgreso, irAPaso });
+  useEffect(() => {
+    callbacks.current = { onProgreso, irAPaso };
+  }, [onProgreso, irAPaso]);
+  const [revision, setRevision] = useState(0);
+  const [actualizando, setActualizando] = useState(true);
+  const [error, setError] = useState("");
+  const [ultima, setUltima] = useState<string | null>(null);
+  useEffect(() => {
+    let vivo = true,
+      consultando = false;
+    let intervalo: ReturnType<typeof setInterval> | undefined;
+    async function actualizar() {
+      if (!vivo || consultando || document.visibilityState !== "visible") return;
+      consultando = true;
+      setActualizando(true);
+      try {
+        const progreso = await getProgreso(solicitudId);
+        if (!vivo) return;
+        if (!progreso?.estado) throw new Error("Respuesta de progreso vacía");
+        callbacks.current.onProgreso(progreso);
+        setUltima(new Date().toISOString());
+        setError("");
+      } catch (e) {
+        if (!vivo) return;
+        if (requiereVerificarCorreoDeNuevo(e)) callbacks.current.irAPaso(PASO_CORREO);
+        else setError(inscripcionErrorMessage(e));
+      } finally {
+        consultando = false;
+        if (vivo) setActualizando(false);
+      }
+    }
+    function visibilidad() {
+      clearInterval(intervalo);
+      if (document.visibilityState === "visible") {
+        void actualizar();
+        intervalo = setInterval(() => void actualizar(), 60000);
+      }
+    }
+    visibilidad();
+    document.addEventListener("visibilitychange", visibilidad);
+    return () => {
+      vivo = false;
+      clearInterval(intervalo);
+      document.removeEventListener("visibilitychange", visibilidad);
+    };
+  }, [solicitudId, revision]);
+  return (
+    <div className={formStyles.form}>
+      <div className={formStyles.actions}>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={actualizando}
+          onClick={() => setRevision((n) => n + 1)}
+        >
+          Actualizar
+        </Button>
+        <p role="status" className="text-sm text-text-secondary">
+          {actualizando
+            ? "Actualizando estado…"
+            : ultima
+              ? `Última actualización: ${formatearFechaHora(ultima)}`
+              : "Aún no se pudo actualizar el estado."}
+        </p>
+      </div>
+      <FormError>{error}</FormError>
+      <ContenidoEstado {...props} />
+    </div>
+  );
 }

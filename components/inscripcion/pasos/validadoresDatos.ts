@@ -1,6 +1,6 @@
 import { validStudentCedula } from "@/lib/api/studentProfile";
 import { applicantAge } from "../applicantValidation";
-import { nameError, normalizeApplicantName, normalizeApplicantPhone } from "../validation";
+import { nameError, normalizeApplicantName } from "../validation";
 
 // Reglas del brief (S5) para el formulario de datos; el servidor sigue siendo la fuente de verdad.
 const PATRON_NOMBRE = /^\p{L}[\p{L}\p{M}]*(?:[ '’-]\p{L}[\p{L}\p{M}]*)*$/u;
@@ -23,14 +23,14 @@ export function cedulaError(value: string): string {
 }
 
 export function telefonoNormalizado(value: string): string {
-  return normalizeApplicantPhone(value.replace(/[\s-]/g, ""));
+  return value;
 }
 
 export function telefonoError(value: string): string {
-  if (!value.trim()) return "";
-  return PATRON_TELEFONO.test(telefonoNormalizado(value))
+  if (!value) return "Ingresa tu teléfono.";
+  return PATRON_TELEFONO.test(value)
     ? ""
-    : "Usa un celular de 10 dígitos (09XXXXXXXX) o un convencional de 9 dígitos; se acepta +593.";
+    : "Usa un celular de 10 dígitos (09) o un convencional de 9 dígitos (02 a 07), solo números.";
 }
 
 export function fechaNacimientoError(value: string, edadMinima: number): string {

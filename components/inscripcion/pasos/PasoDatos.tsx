@@ -12,7 +12,7 @@ import {
   inscripcionErrorMessage,
   requiereVerificarCorreoDeNuevo,
 } from "@/lib/api/inscripcionErrors";
-import { NACIONALIDADES, TIPOS_SANGRE } from "@/types/inscripcion";
+import { NACIONALIDADES, NIVELES_ESTUDIOS, TIPOS_SANGRE } from "@/types/inscripcion";
 import type {
   DatosSolicitudInput,
   Nacionalidad,
@@ -219,6 +219,7 @@ export function PasoDatos({
     const errores = validar(valores, edadMinima);
     const primero = ORDEN_CAMPOS.find((campo) => errores[campo]);
     if (primero) {
+      setErrorGeneral("Revisa los campos marcados antes de continuar.");
       enfocar(primero);
       return;
     }
@@ -231,10 +232,12 @@ export function PasoDatos({
       apellidos: normalizeApplicantName(valores.apellidos),
       cedula: valores.cedula,
       fechaNacimiento: valores.fechaNacimiento,
-      ...(telefono ? { telefono } : {}),
+      telefono,
       nacionalidadTipo: valores.nacionalidadTipo,
       tipoSangre: valores.tipoSangre,
-      ...(nivel && nivel !== "menos_de_decimo" ? { nivelEstudios: nivel } : {}),
+      ...(nivel && NIVELES_ESTUDIOS.includes(nivel) && nivel !== "menos_de_decimo"
+        ? { nivelEstudios: nivel }
+        : {}),
       ...(pideRepresentante
         ? {
             representante: {
@@ -301,12 +304,20 @@ export function PasoDatos({
   const sinSangre = valores.tipoSangre === "no_sabe";
 
   return (
-    <form ref={formulario} className={formStyles.form} onSubmit={guardar} noValidate>
+    <form
+      ref={formulario}
+      className={`${formStyles.form} ${styles.datosForm}`}
+      onSubmit={guardar}
+      noValidate
+    >
+      <p className={formStyles.fieldHelp}>* Campo obligatorio</p>
       <FormError>{errorGeneral}</FormError>
       <div className={formStyles.fieldGrid}>
         <Input
           name="nombres"
-          label="Nombres"
+          label="Nombres *"
+          required
+          aria-required="true"
           value={valores.nombres}
           onChange={(e) => cambiar("nombres", e.target.value)}
           onBlur={() => tocar("nombres")}
@@ -316,7 +327,9 @@ export function PasoDatos({
         />
         <Input
           name="apellidos"
-          label="Apellidos"
+          label="Apellidos *"
+          required
+          aria-required="true"
           value={valores.apellidos}
           onChange={(e) => cambiar("apellidos", e.target.value)}
           onBlur={() => tocar("apellidos")}
@@ -326,7 +339,9 @@ export function PasoDatos({
         />
         <Input
           name="cedula"
-          label="Cédula"
+          label="Cédula *"
+          required
+          aria-required="true"
           value={valores.cedula}
           onChange={(e) => {
             const digitos = e.target.value.replace(/\D/g, "").slice(0, 10);
@@ -339,7 +354,9 @@ export function PasoDatos({
         />
         <Input
           name="fechaNacimiento"
-          label="Fecha de nacimiento"
+          label="Fecha de nacimiento *"
+          required
+          aria-required="true"
           type="date"
           max={hoy}
           value={valores.fechaNacimiento}
@@ -348,21 +365,31 @@ export function PasoDatos({
           error={errorDe("fechaNacimiento")}
           autoComplete="bday"
         />
-        <Input
-          name="telefono"
-          label="Teléfono (opcional)"
-          type="tel"
-          value={valores.telefono}
-          onChange={(e) => cambiar("telefono", e.target.value)}
-          onBlur={() => tocar("telefono")}
-          error={errorDe("telefono")}
-          autoComplete="tel"
-          maxLength={16}
-          aria-describedby="telefono-ayuda"
-        />
+        <div className="grid content-start gap-1">
+          <Input
+            name="telefono"
+            label="Teléfono *"
+            required
+            aria-required="true"
+            type="tel"
+            value={valores.telefono}
+            onChange={(e) => cambiar("telefono", e.target.value.replace(/\D/g, "").slice(0, 10))}
+            onBlur={() => tocar("telefono")}
+            error={errorDe("telefono")}
+            autoComplete="tel"
+            inputMode="tel"
+            maxLength={10}
+            aria-describedby="telefono-ayuda"
+          />
+          <p id="telefono-ayuda" className={formStyles.fieldHelp}>
+            Ejemplos: 0991234567 o 022345678. Solo números.
+          </p>
+        </div>
         <Select
           name="nacionalidadTipo"
-          label="Nacionalidad"
+          label="Nacionalidad *"
+          required
+          aria-required="true"
           value={valores.nacionalidadTipo}
           onChange={(e) => elegirNacionalidad(e.target.value as Nacionalidad | "")}
           onBlur={() => tocar("nacionalidadTipo")}
@@ -375,38 +402,40 @@ export function PasoDatos({
             </option>
           ))}
         </Select>
-        <Select
-          name="tipoSangre"
-          label="Tipo de sangre"
-          value={valores.tipoSangre}
-          onChange={(e) => cambiar("tipoSangre", e.target.value as TipoSangre | "", true)}
-          onBlur={() => tocar("tipoSangre")}
-          error={errorDe("tipoSangre")}
-          aria-describedby="sangre-ayuda"
-        >
-          <option value="">Selecciona una opción</option>
-          {TIPOS_SANGRE.map((valor) => (
-            <option key={valor} value={valor}>
-              {ETIQUETA_SANGRE[valor]}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <p id="telefono-ayuda" className={formStyles.fieldHelp}>
-        Ejemplos: 0991234567, 022345678 o +593991234567.
-      </p>
-      {sinSangre ? (
-        <div id="sangre-ayuda" className={styles.aviso} role="note">
-          <strong>La ANT exige el carné de la Cruz Roja para tu licencia.</strong>
-          <span>
-            Puedes continuar sin conocer tu tipo de sangre. Llévalo a la escuela cuando lo tengas.
-          </span>
+        <div className="grid content-start gap-1">
+          <Select
+            name="tipoSangre"
+            label="Tipo de sangre *"
+            required
+            aria-required="true"
+            value={valores.tipoSangre}
+            onChange={(e) => cambiar("tipoSangre", e.target.value as TipoSangre | "", true)}
+            onBlur={() => tocar("tipoSangre")}
+            error={errorDe("tipoSangre")}
+            aria-describedby="sangre-ayuda"
+          >
+            <option value="">Selecciona una opción</option>
+            {TIPOS_SANGRE.map((valor) => (
+              <option key={valor} value={valor}>
+                {ETIQUETA_SANGRE[valor]}
+              </option>
+            ))}
+          </Select>
+          {sinSangre ? (
+            <div id="sangre-ayuda" className={styles.aviso} role="note">
+              <strong>La ANT exige el carné de la Cruz Roja para tu licencia.</strong>
+              <span>
+                Puedes continuar sin conocer tu tipo de sangre. Llévalo a la escuela cuando lo
+                tengas.
+              </span>
+            </div>
+          ) : (
+            <p id="sangre-ayuda" className={formStyles.fieldHelp}>
+              Si no conoces tu tipo de sangre, elige «No lo sé».
+            </p>
+          )}
         </div>
-      ) : (
-        <p id="sangre-ayuda" className={formStyles.fieldHelp}>
-          Si no conoces tu tipo de sangre, elige «No lo sé».
-        </p>
-      )}
+      </div>
       {pideRepresentante ? (
         <fieldset className={formStyles.form}>
           <legend className="font-semibold">Representante legal</legend>
