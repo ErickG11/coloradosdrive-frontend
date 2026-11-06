@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
+import { EnrollmentCheckbox } from "../EnrollmentCheckbox";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/inscripcion/EnrollmentField";
 import type { InscripcionConfig } from "@/types/inscripcion";
 
 import { ContactoWhatsApp } from "../ContactoWhatsApp";
@@ -83,13 +84,12 @@ export function PasoRequisitos({
         ))}
       </Select>
 
-      <fieldset className="grid gap-4 border-0 p-0">
+      <fieldset className={styles.requirementList}>
         <legend className="sr-only">Confirma que cumples los requisitos</legend>
         {(["edad", "estudios", "documentos"] as const).map((casilla) => (
           <div key={casilla} className={styles.requirement}>
-            <label className={styles.check}>
-              <input
-                type="checkbox"
+            <label className={styles.requirementLabel}>
+              <EnrollmentCheckbox
                 checked={marcadas[casilla]}
                 aria-invalid={incumplidas.includes(casilla)}
                 aria-describedby={
@@ -97,22 +97,25 @@ export function PasoRequisitos({
                 }
                 onChange={(e) => alternar(casilla, e.target.checked)}
               />
-              {casilla === "edad"
-                ? `Edad mínima: ${curso?.edadMinima ?? "—"} años cumplidos`
-                : casilla === "estudios"
-                  ? "Estudios mínimos: décimo año aprobado"
-                  : "Puedo llevar mis documentos originales a la escuela"}
+              <span className={styles.requirementCopy}>
+                <span className="font-medium">
+                  {casilla === "edad"
+                    ? `Edad mínima: ${curso?.edadMinima ?? "—"} años cumplidos`
+                    : casilla === "estudios"
+                      ? "Estudios mínimos: décimo año aprobado"
+                      : "Puedo llevar mis documentos originales a la escuela"}
+                </span>
+                {casilla === "documentos" ? (
+                  <span role="list" className={styles.requirementDocuments}>
+                    {config.documentosFisicos.map((documento) => (
+                      <span role="listitem" key={documento.tipo}>
+                        {documento.label}
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
+              </span>
             </label>
-            {casilla === "documentos" ? (
-              <div className="pl-8 text-sm text-text-secondary">
-                <p className="font-medium">Documentos para llevar a la escuela</p>
-                <ul className="list-disc pl-5">
-                  {config.documentosFisicos.map((documento) => (
-                    <li key={documento.tipo}>{documento.label}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
             {incumplidas.includes(casilla) ? (
               <p id={`requisito-${casilla}`} role="alert" className="text-sm text-accent-red">
                 Confirma este requisito para continuar.
@@ -123,12 +126,7 @@ export function PasoRequisitos({
       </fieldset>
 
       {incumplidas.length > 0 ? (
-        <div
-          ref={avisoRef}
-          tabIndex={-1}
-          role="alert"
-          className={`${styles.notice} ${styles.noticeError}`}
-        >
+        <div ref={avisoRef} tabIndex={-1} role="alert" className={styles.noticeError}>
           <p>Por ahora no puedes continuar con la inscripción en línea:</p>
           <ul>
             {incumplidas.includes("edad") ? (

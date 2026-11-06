@@ -230,3 +230,13 @@
   -webkit-box-shadow: 0 0 0 1000px var(--color-bg-field) inset;
   caret-color: var(--color-text-primary);
 }
+
+.avisoAlerta[role="alert"] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--color-accent-red);
+  font-size: 13px;
+  font-weight: 400;
+}

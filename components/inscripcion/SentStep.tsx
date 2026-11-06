@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { EnrollmentActionLink } from "@/components/inscripcion/EnrollmentActionLink";
 import { Button } from "@/components/ui/Button";
 import styles from "./inscripcion.module.css";
 export function SentStep({ onDocuments }: { onDocuments: () => void }) {
@@ -22,7 +22,7 @@ export function SentStep({ onDocuments }: { onDocuments: () => void }) {
       <Button variant="secondary" onClick={onDocuments}>
         Revisar mis documentos
       </Button>
-      <Link href="/">Volver al inicio</Link>
+      <EnrollmentActionLink href="/">Volver al inicio</EnrollmentActionLink>
     </div>
   );
 }

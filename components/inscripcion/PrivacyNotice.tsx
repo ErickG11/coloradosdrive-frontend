@@ -1,6 +1,6 @@
 "use client";
+import { EnrollmentActionLink } from "@/components/inscripcion/EnrollmentActionLink";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/FormError";
@@ -78,7 +78,7 @@ export function PrivacyPage() {
   return (
     <main className={styles.page}>
       <div className={styles.flow}>
-        <Link href="/">Volver al inicio</Link>
+        <EnrollmentActionLink href="/">Volver al inicio</EnrollmentActionLink>
         <h1 className="text-2xl font-bold">Aviso de privacidad</h1>
         <FormError>{error}</FormError>
         {notice ? (

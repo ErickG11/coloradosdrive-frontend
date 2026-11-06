@@ -1,9 +1,10 @@
 "use client";
+import { EnrollmentActionLink } from "@/components/inscripcion/EnrollmentActionLink";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { Input } from "@/components/inscripcion/EnrollmentField";
+import { Select } from "@/components/inscripcion/EnrollmentField";
 import { Card } from "@/components/ui/Card";
 import { FormError } from "@/components/ui/FormError";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -112,7 +113,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
     <main className={`${styles.page} ${styles.enrollmentPage}`}>
       <div className={`${styles.flow} ${styles.enrollmentFlow}`}>
         <div className={styles.actions}>
-          <Link href="/">Volver al inicio</Link>
+          <EnrollmentActionLink href="/">Volver al inicio</EnrollmentActionLink>
           <ThemeToggle />
         </div>
         <header className={styles.pageHeading}>

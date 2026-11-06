@@ -6,7 +6,8 @@ import visual from "./enrollment-surface.module.css";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button, Card, FormError, Input } from "@/components/ui";
+import { Button, Card, FormError } from "@/components/ui";
+import { Input } from "@/components/inscripcion/EnrollmentField";
 import { buttonClassName } from "@/components/ui/buttonStyles";
 import { whatsappHref } from "@/lib/content/landing";
 import { createClient } from "@/lib/supabase/client";

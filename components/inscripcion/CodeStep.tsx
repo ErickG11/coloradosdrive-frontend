@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Input } from "@/components/inscripcion/EnrollmentField";
 import { FormError } from "@/components/ui/FormError";
 import { solicitudes, solicitudMessage } from "@/lib/api/solicitudes";
 import type { SolicitudSession } from "@/types/solicitud";

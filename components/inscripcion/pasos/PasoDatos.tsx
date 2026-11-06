@@ -1,10 +1,12 @@
 "use client";
+import { EnrollmentCheckbox } from "../EnrollmentCheckbox";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/FormError";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { RequiredMark } from "../EnrollmentField";
+import { Input } from "@/components/inscripcion/EnrollmentField";
+import { Select } from "@/components/inscripcion/EnrollmentField";
 import { getProgreso, guardarDatos } from "@/lib/api/inscripcion";
 import {
   inscripcionErrorCode,
@@ -310,8 +312,9 @@ export function PasoDatos({
       onSubmit={guardar}
       noValidate
     >
-      <p className={formStyles.fieldHelp}>* Campo obligatorio</p>
-      <FormError>{errorGeneral}</FormError>
+      <p className={formStyles.fieldHelp}>
+        <RequiredMark /> Campo obligatorio
+      </p>
       <div className={formStyles.fieldGrid}>
         <Input
           name="nombres"
@@ -365,26 +368,23 @@ export function PasoDatos({
           error={errorDe("fechaNacimiento")}
           autoComplete="bday"
         />
-        <div className="grid content-start gap-1">
-          <Input
-            name="telefono"
-            label="Teléfono *"
-            required
-            aria-required="true"
-            type="tel"
-            value={valores.telefono}
-            onChange={(e) => cambiar("telefono", e.target.value.replace(/\D/g, "").slice(0, 10))}
-            onBlur={() => tocar("telefono")}
-            error={errorDe("telefono")}
-            autoComplete="tel"
-            inputMode="tel"
-            maxLength={10}
-            aria-describedby="telefono-ayuda"
-          />
-          <p id="telefono-ayuda" className={formStyles.fieldHelp}>
-            Ejemplos: 0991234567 o 022345678. Solo números.
-          </p>
-        </div>
+        <Input
+          name="telefono"
+          label="Teléfono *"
+          required
+          aria-required="true"
+          type="tel"
+          value={valores.telefono}
+          onChange={(e) => cambiar("telefono", e.target.value.replace(/\D/g, "").slice(0, 10))}
+          onBlur={() => tocar("telefono")}
+          error={errorDe("telefono")}
+          autoComplete="tel"
+          inputMode="tel"
+          maxLength={10}
+          aria-describedby="telefono-ayuda"
+          helpId="telefono-ayuda"
+          help="Ejemplos: 0991234567 o 022345678. Solo números."
+        />
         <Select
           name="nacionalidadTipo"
           label="Nacionalidad *"
@@ -402,39 +402,40 @@ export function PasoDatos({
             </option>
           ))}
         </Select>
-        <div className="grid content-start gap-1">
-          <Select
-            name="tipoSangre"
-            label="Tipo de sangre *"
-            required
-            aria-required="true"
-            value={valores.tipoSangre}
-            onChange={(e) => cambiar("tipoSangre", e.target.value as TipoSangre | "", true)}
-            onBlur={() => tocar("tipoSangre")}
-            error={errorDe("tipoSangre")}
-            aria-describedby="sangre-ayuda"
-          >
-            <option value="">Selecciona una opción</option>
-            {TIPOS_SANGRE.map((valor) => (
-              <option key={valor} value={valor}>
-                {ETIQUETA_SANGRE[valor]}
-              </option>
-            ))}
-          </Select>
-          {sinSangre ? (
-            <div id="sangre-ayuda" className={styles.aviso} role="note">
-              <strong>La ANT exige el carné de la Cruz Roja para tu licencia.</strong>
-              <span>
-                Puedes continuar sin conocer tu tipo de sangre. Llévalo a la escuela cuando lo
-                tengas.
-              </span>
-            </div>
-          ) : (
-            <p id="sangre-ayuda" className={formStyles.fieldHelp}>
-              Si no conoces tu tipo de sangre, elige «No lo sé».
-            </p>
-          )}
-        </div>
+        <Select
+          name="tipoSangre"
+          label="Tipo de sangre *"
+          required
+          aria-required="true"
+          value={valores.tipoSangre}
+          onChange={(e) => cambiar("tipoSangre", e.target.value as TipoSangre | "", true)}
+          onBlur={() => tocar("tipoSangre")}
+          error={errorDe("tipoSangre")}
+          aria-describedby="sangre-ayuda"
+          helpId="sangre-ayuda"
+          help={
+            sinSangre ? (
+              <div className={styles.aviso} role="note">
+                <strong>La ANT exige el carné de la Cruz Roja para tu licencia.</strong>
+                <span>
+                  Puedes continuar sin conocer tu tipo de sangre. Llévalo a la escuela cuando lo
+                  tengas.
+                </span>
+              </div>
+            ) : (
+              <p className={formStyles.fieldHelp}>
+                Si no conoces tu tipo de sangre, elige «No lo sé».
+              </p>
+            )
+          }
+        >
+          <option value="">Selecciona una opción</option>
+          {TIPOS_SANGRE.map((valor) => (
+            <option key={valor} value={valor}>
+              {ETIQUETA_SANGRE[valor]}
+            </option>
+          ))}
+        </Select>
       </div>
       {pideRepresentante ? (
         <fieldset className={formStyles.form}>
@@ -469,9 +470,8 @@ export function PasoDatos({
             />
           </div>
           <label className={formStyles.checkbox}>
-            <input
+            <EnrollmentCheckbox
               name="representanteAcepta"
-              type="checkbox"
               checked={valores.representanteAcepta}
               onChange={(e) => cambiar("representanteAcepta", e.target.checked, true)}
               aria-invalid={Boolean(errorDe("representanteAcepta"))}
@@ -482,6 +482,7 @@ export function PasoDatos({
           <FormError id="representante-error">{errorDe("representanteAcepta")}</FormError>
         </fieldset>
       ) : null}
+      <FormError>{errorGeneral}</FormError>
       <div className={formStyles.stepActions}>
         <Button type="submit" isLoading={ocupado}>
           Guardar y continuar

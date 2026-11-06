@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { Input } from "@/components/ui/Input";
+import { Input } from "@/components/inscripcion/EnrollmentField";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/FormError";
 import {

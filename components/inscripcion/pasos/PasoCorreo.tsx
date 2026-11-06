@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Input } from "@/components/inscripcion/EnrollmentField";
 import { FormError } from "@/components/ui/FormError";
 import { verificarCorreo } from "@/lib/api/inscripcion";
 import {
@@ -101,14 +101,13 @@ export function PasoCorreo({
         }}
         error={errorCampo || undefined}
         aria-describedby="correo-ayuda"
+        helpId="correo-ayuda"
+        help="Te enviaremos un código de 6 dígitos para confirmar que el correo es tuyo."
         required
       />
-      <p id="correo-ayuda" className={styles.fieldHelp}>
-        Te enviaremos un código de 6 dígitos para confirmar que el correo es tuyo.
-      </p>
       <CaptchaSlot />
-      <FormError>{errorEnvio}</FormError>
       {derivar ? <ContactoWhatsApp /> : null}
+      <FormError>{errorEnvio}</FormError>
       <div className={styles.actions}>
         <Button type="button" variant="ghost" disabled={enviando} onClick={onVolver}>
           Volver a requisitos

@@ -1,4 +1,5 @@
 "use client";
+import { EnrollmentActionLink } from "@/components/inscripcion/EnrollmentActionLink";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -132,9 +133,7 @@ function PantallaEnviada({ progreso }: { progreso: ProgresoSolicitud }) {
       <p className="text-sm text-text-secondary">
         Si cierras esta página, verifica tu correo otra vez para consultar el estado.
       </p>
-      <Link href="/" className="inline-flex min-h-11 items-center underline">
-        Volver al inicio
-      </Link>
+      <EnrollmentActionLink href="/">Volver al inicio</EnrollmentActionLink>
     </section>
   );
 }
@@ -286,9 +285,7 @@ export function PantallaInscripcionesCerradas() {
       </Titulo>
       <p>Escríbenos por WhatsApp y te atendemos para inscribirte directamente en la escuela.</p>
       <ContactoWhatsApp mensaje="Hola, Colorados Drive. Las inscripciones en línea están cerradas y quiero inscribirme en un curso de conducción." />
-      <Link href="/" className="inline-flex min-h-11 items-center underline">
-        Volver al inicio
-      </Link>
+      <EnrollmentActionLink href="/">Volver al inicio</EnrollmentActionLink>
     </section>
   );
 }
@@ -386,6 +383,7 @@ export function PantallasEstado(props: PantallasEstadoProps) {
   }, [solicitudId, revision]);
   return (
     <div className={formStyles.form}>
+      <FormError>{error}</FormError>
       <div className={formStyles.actions}>
         <Button
           type="button"
@@ -403,7 +401,6 @@ export function PantallasEstado(props: PantallasEstadoProps) {
               : "Aún no se pudo actualizar el estado."}
         </p>
       </div>
-      <FormError>{error}</FormError>
       <ContenidoEstado {...props} />
     </div>
   );

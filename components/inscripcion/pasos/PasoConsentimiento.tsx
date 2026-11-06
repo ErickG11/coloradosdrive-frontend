@@ -1,4 +1,5 @@
 "use client";
+import { EnrollmentCheckbox } from "../EnrollmentCheckbox";
 
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
@@ -165,11 +166,10 @@ export function PasoConsentimiento({
         {casillas.map((casilla) => (
           <div key={casilla}>
             <label className={styles.check}>
-              <input
+              <EnrollmentCheckbox
                 ref={(nodo) => {
                   refs.current[casilla] = nodo;
                 }}
-                type="checkbox"
                 checked={marcadas[casilla]}
                 onChange={(e) => alternar(casilla, e.target.checked)}
                 aria-invalid={Boolean(errores[casilla])}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ClipboardEvent, FormEvent } from "react";
 
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Input } from "@/components/inscripcion/EnrollmentField";
 import { confirmarCodigo, getProgreso, verificarCorreo } from "@/lib/api/inscripcion";
 import {
   inscripcionErrorCode,
@@ -159,22 +159,21 @@ export function PasoCodigo({
         disabled={solicitudPendiente !== null}
         error={errorCodigo || undefined}
         aria-describedby="codigo-ayuda"
+        helpId="codigo-ayuda"
+        help="Puedes pegar el código completo."
         required
       />
-      <p id="codigo-ayuda" className={styles.fieldHelp}>
-        Puedes pegar el código completo.
-      </p>
       {aviso ? (
         <p role="status" className={`${styles.notice} ${styles.noticeSuccess}`}>
           {aviso}
         </p>
       ) : null}
+      {derivar ? <ContactoWhatsApp /> : null}
       {errorGeneral ? (
-        <p role="alert" className={`${styles.notice} ${styles.noticeError}`}>
+        <p role="alert" className={styles.noticeError}>
           {errorGeneral}
         </p>
       ) : null}
-      {derivar ? <ContactoWhatsApp /> : null}
       <div className={styles.actions}>
         <Button type="submit" isLoading={ocupado}>
           {solicitudPendiente ? "Reintentar" : "Verificar código"}

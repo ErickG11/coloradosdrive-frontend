@@ -63,7 +63,7 @@ export function ReservationBanner({ state }: Props) {
         </p>
       ) : null}
       {state.error ? (
-        <Card>
+        <div className="grid gap-3">
           <p role="alert">{state.error}</p>
           <Button
             className="mt-3"
@@ -73,7 +73,7 @@ export function ReservationBanner({ state }: Props) {
           >
             Consultar reserva
           </Button>
-        </Card>
+        </div>
       ) : null}
     </>
   );

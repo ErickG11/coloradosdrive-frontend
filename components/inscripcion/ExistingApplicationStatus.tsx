@@ -1,4 +1,5 @@
 "use client";
+import { buttonClassName } from "@/components/ui/Button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -65,7 +66,7 @@ export function ExistingApplicationStatus({
       ) : approved ? (
         <>
           <p>Revisa tu correo para encontrar tus credenciales de acceso.</p>
-          <Link href="/login" className="underline">
+          <Link href="/login" className={buttonClassName("secondary")}>
             Iniciar sesión
           </Link>
         </>
