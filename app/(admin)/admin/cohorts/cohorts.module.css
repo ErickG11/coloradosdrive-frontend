@@ -726,6 +726,9 @@
   font-size: 12px;
   padding-inline: 11px;
 }
+.formGrid :is(input, select)[aria-invalid="true"] {
+  border-color: var(--color-accent-red);
+}
 .formGrid select {
   padding-right: 28px;
 }

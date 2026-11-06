@@ -78,6 +78,36 @@ describe("CohortForm", () => {
     vi.clearAllMocks();
   });
 
+  it.each([
+    [false, "nombre", "Nombre de la cohorte"],
+    [false, "courseId", "Curso"],
+    [true, "nombre", "Nombre de la cohorte"],
+    [true, "courseId", "Curso"],
+  ] as const)(
+    "marca aria-invalid y enlaza el error en edición=%s, campo=%s",
+    async (edit, field, label) => {
+      const user = userEvent.setup();
+      const request = edit ? mockedPatch : mockedPost;
+      request.mockRejectedValueOnce(
+        new ApiError("Revisa este dato de la cohorte.", 400, { code: "INVALID_FIELD", field }),
+      );
+      render(
+        <CohortForm
+          courses={courses}
+          {...(edit ? { cohortId: "cohort-1", version: "2026-10-19T15:04:05.123456+00:00" } : {})}
+        />,
+      );
+      fillRequiredFields();
+      await user.click(
+        screen.getByRole("button", { name: edit ? "Guardar cambios" : "Crear cohorte" }),
+      );
+      const alert = await screen.findByRole("alert");
+      expect(screen.getByLabelText(label)).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByLabelText(label)).toHaveAttribute("aria-describedby", alert.id);
+      expect(screen.getByLabelText("Precio")).toHaveAttribute("aria-invalid", "false");
+    },
+  );
+
   it("marca los campos requeridos", () => {
     render(<CohortForm courses={courses} />);
 
