@@ -219,6 +219,11 @@ export function CohortForm({
       // Misma regla y frase que el servidor (contrato L3b).
       dateErrors.fechaFinCurso = "El curso no puede terminar antes de que abra la matrícula.";
     }
+    pendingFocusRef.current = dateErrors.fechaFinMatricula
+      ? "fechaFinMatricula"
+      : dateErrors.fechaFinCurso
+        ? "fechaFinCurso"
+        : null;
     setFieldErrors(dateErrors);
     if (Object.keys(dateErrors).length > 0) return;
 
