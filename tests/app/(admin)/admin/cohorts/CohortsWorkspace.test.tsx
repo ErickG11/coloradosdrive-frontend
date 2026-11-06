@@ -78,6 +78,25 @@ const statusText = () =>
     .join("");
 
 describe("panel lateral de cohortes", () => {
+  it.each(["Escape", "Cancelar"])(
+    "devuelve el foco al botón Eliminar al cerrar con %s",
+    async (action) => {
+      const user = userEvent.setup();
+      render(<CohortsPage />);
+      const opener = screen.getAllByRole("button", { name: "Eliminar Cohorte Marzo" })[0];
+      await user.click(opener);
+      const dialog = await screen.findByRole("dialog");
+      expect(
+        within(dialog).getByLabelText("Para confirmar, escribe el nombre exacto de la cohorte:"),
+      ).toHaveFocus();
+      if (action === "Escape") await user.keyboard("{Escape}");
+      else await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      await waitFor(() => expect(opener).toHaveFocus());
+      expect(api.delete).not.toHaveBeenCalled();
+    },
+  );
+
   it("edita en el panel con la versión cargada por id y avisa al guardar", async () => {
     const user = userEvent.setup();
     vi.mocked(api.patch).mockResolvedValue({});

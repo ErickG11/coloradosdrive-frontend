@@ -143,6 +143,7 @@ export function CohortsWorkspace() {
   // esperar a que vuelva la lista del servidor.
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   const deletedRef = useRef<HTMLParagraphElement>(null);
+  const deleteTrigger = useRef<HTMLButtonElement | null>(null);
   const existing = (cohorts ?? []).filter((cohort) => !removedIds.includes(cohort.id));
 
   // Al cerrar el modal el foco se pierde: pasa al mensaje de éxito.
@@ -275,10 +276,21 @@ export function CohortsWorkspace() {
     refetchCohorts();
     trigger.current?.focus();
   }
-  function askDelete(cohort: Cohort) {
+  function askDelete(cohort: Cohort, opener: HTMLButtonElement) {
+    deleteTrigger.current = opener;
     setPanel(null);
     setDeletedMessage(null);
     setToDelete(cohort);
+  }
+
+  function cancelDelete() {
+    const opener = deleteTrigger.current;
+    setToDelete(null);
+    // Después del desmontaje del modal y de su guarda de foco. Al eliminar,
+    // handleDeleted conserva el foco en el aviso, porque la fila ya no existe.
+    requestAnimationFrame(() => {
+      if (opener?.isConnected) opener.focus();
+    });
   }
 
   function editLink(cohort: Cohort) {
@@ -301,7 +313,7 @@ export function CohortsWorkspace() {
         className={`${styles.edit} ${styles.delete}`}
         aria-label={`Eliminar ${cohort.nombre}`}
         title={`Eliminar ${cohort.nombre}`}
-        onClick={() => askDelete(cohort)}
+        onClick={(event) => askDelete(cohort, event.currentTarget)}
       >
         <TrashIcon className="h-4 w-4" />
       </button>
@@ -825,7 +837,7 @@ export function CohortsWorkspace() {
         <DeleteCohortModal
           cohort={toDelete}
           courseLabel={courseLabel(coursesById.get(toDelete.courseId))}
-          onClose={() => setToDelete(null)}
+          onClose={cancelDelete}
           onDeleted={(message) => handleDeleted(toDelete, message)}
           onGone={refetchCohorts}
         />
