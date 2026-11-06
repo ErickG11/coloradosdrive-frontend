@@ -1289,3 +1289,13 @@
     background: var(--color-status-error-bg);
   }
 }
+
+/* La página /new usa Card y no .page: solo hereda las variables del formulario. */
+.formScope {
+  --cohort-accent: var(--color-brand-ink);
+  --cohort-input-line: var(--color-border-strong);
+}
+:global(.dark) .formScope {
+  --cohort-accent: #ffb0b9;
+  --cohort-input-line: #4c5969;
+}
