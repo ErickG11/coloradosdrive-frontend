@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { EnrollmentActionLink } from "./EnrollmentActionLink";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
@@ -20,9 +20,7 @@ export function Toast({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p>{message}</p>
             {action ? (
-              <Link href={action.href} className="inline-flex min-h-11 items-center underline">
-                {action.label}
-              </Link>
+              <EnrollmentActionLink href={action.href}>{action.label}</EnrollmentActionLink>
             ) : null}
             <Button type="button" variant="ghost" className="min-h-11" onClick={onDismiss}>
               Cerrar aviso

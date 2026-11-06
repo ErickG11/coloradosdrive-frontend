@@ -177,6 +177,7 @@
 .fieldGrid,
 .documentsGrid {
   display: grid;
+  align-items: start;
   gap: 1.25rem;
   min-width: 0;
 }
@@ -185,9 +186,6 @@
   font-size: 0.75rem;
   line-height: 1.6;
   color: var(--color-text-secondary);
-}
-.fieldHelp {
-  margin-top: -0.75rem;
 }
 .actions {
   display: flex;

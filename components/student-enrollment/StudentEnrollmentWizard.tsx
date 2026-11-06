@@ -1,7 +1,7 @@
 "use client";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 
-import Link from "next/link";
+import { EnrollmentActionLink } from "../inscripcion/EnrollmentActionLink";
 import { useRouter } from "next/navigation";
 import { useStudentPayment } from "./useStudentPayment";
 import { StudentPaymentStep } from "./StudentPaymentStep";
@@ -57,9 +57,9 @@ export function StudentEnrollmentWizard() {
     return (
       <Card title="Mi inscripción" className={`${visual.surface} ${visual.active}`}>
         <p>Tu cuenta tiene acceso a la plataforma. Tu matrícula está activa.</p>
-        <Link className="mt-4 inline-flex min-h-11 items-center underline" href="/student">
+        <EnrollmentActionLink className="mt-4" href="/student">
           Ir a mi panel
-        </Link>
+        </EnrollmentActionLink>
       </Card>
     );
   const desiredStep = selected ?? (reservation.held ? 2 : 0);

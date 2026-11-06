@@ -3,7 +3,7 @@ import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
+import { Input } from "@/components/inscripcion/EnrollmentField";
 import { studentScheduleApi, scheduleError } from "@/lib/api/studentSchedule";
 import type {
   StudentScheduleInput,
@@ -315,7 +315,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
         )}
       </fieldset>
       {failure ? (
-        <div role="alert" className="mt-5 rounded-sm bg-status-error-bg p-4 text-status-error">
+        <div role="alert" className="mt-5 text-sm text-accent-red">
           <p>{failure}</p>
           <Button className="mt-3" variant="secondary" onClick={() => setReload((n) => n + 1)}>
             Reintentar
@@ -386,10 +386,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
           ) : null}
           <SchedulePlanView days={days} />
           {failing.length ? (
-            <div
-              role="alert"
-              className="mt-4 rounded-sm border border-status-error bg-status-error-bg p-4 text-status-error"
-            >
+            <div role="alert" className="mt-4 text-sm text-accent-red">
               <p className="font-medium">
                 Esta hora no se puede reservar: falta disponibilidad en{" "}
                 {plural(failing.length, "día", "días")}.

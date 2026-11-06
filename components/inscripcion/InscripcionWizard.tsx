@@ -1,6 +1,6 @@
 "use client";
+import { EnrollmentActionLink } from "@/components/inscripcion/EnrollmentActionLink";
 
-import Link from "next/link";
 import { EnrollmentBrand } from "./EnrollmentVisual";
 import visual from "./enrollment-surface.module.css";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -206,7 +206,7 @@ export function InscripcionWizard({ initialCourseId = "" }: { initialCourseId?: 
     <main className={`${styles.page} ${visual.surface} ${visual.publicPage}`}>
       <div className={styles.top}>
         <EnrollmentBrand />
-        <Link href="/">Volver al inicio</Link>
+        <EnrollmentActionLink href="/">Volver al inicio</EnrollmentActionLink>
         <ThemeToggle />
       </div>
       <header>

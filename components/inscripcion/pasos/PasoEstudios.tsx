@@ -3,7 +3,7 @@ import { useId, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/FormError";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/inscripcion/EnrollmentField";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { getProgreso, guardarDatos, subirCertificado } from "@/lib/api/inscripcion";
 import {
@@ -211,7 +211,6 @@ export function PasoEstudios({
 
   return (
     <div className={formStyles.form}>
-      <FormError>{errorGeneral}</FormError>
       {faltanDatos ? (
         <div>
           <Button type="button" variant="secondary" onClick={() => irAPaso(PASO_DATOS)}>
@@ -377,6 +376,7 @@ export function PasoEstudios({
         </section>
       ) : null}
 
+      <FormError>{errorGeneral}</FormError>
       <div className={formStyles.stepActions}>
         <Button
           type="button"
