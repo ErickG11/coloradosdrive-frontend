@@ -6,7 +6,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormError } from "@/components/ui/FormError";
-import { Input } from "@/components/ui/Input";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { Pagination } from "@/components/ui/Pagination";
 import { estadoDeTab } from "@/lib/api/inscripcion";
 import type { ListaSolicitudes, SolicitudAdminItem, TabSolicitudes } from "@/types/inscripcion";
@@ -79,9 +79,15 @@ export function SolicitudesAdmin() {
             setPage(1);
           }}
         >
-          <Input
+          <SearchInput
             label="Buscar por cédula, nombre o correo"
-            type="search"
+            placeholder="Buscar por cédula, nombre o correo"
+            shortcut
+            onClear={() => {
+              setBorrador("");
+              setQ("");
+              setPage(1);
+            }}
             value={borrador}
             onChange={(event) => setBorrador(event.target.value)}
             maxLength={100}
@@ -158,109 +164,113 @@ export function SolicitudesAdmin() {
         </p>
       ) : null}
 
-      <SolicitudesTabs
-        activa={tab}
-        conteos={conteos}
-        onSelect={(siguiente) => {
-          setTab(siguiente);
-          setPage(1);
-        }}
-      />
+      <div className={styles.reviewLayout} data-open={Boolean(seleccionada)}>
+        <div className={styles.reviewList}>
+          <SolicitudesTabs
+            activa={tab}
+            conteos={conteos}
+            onSelect={(siguiente) => {
+              setTab(siguiente);
+              setPage(1);
+            }}
+          />
 
-      <div
-        id={ID_PANEL_SOLICITUDES}
-        role="tabpanel"
-        aria-labelledby={idDeTab(tab)}
-        className={styles.tableArea}
-        aria-busy={isLoading}
-      >
-        {data && error ? <FormError>{error}</FormError> : null}
-        <DataTable<SolicitudAdminItem>
-          caption="Solicitudes de inscripción"
-          rows={filas}
-          getRowKey={(item) => item.id}
-          isLoading={isLoading && !data}
-          error={data ? null : error}
-          onRetry={refetch}
-          mobileCards
-          empty={
-            <EmptyState
-              title={q ? "Sin resultados" : "No hay solicitudes en esta pestaña"}
-              description={
-                q
-                  ? "Ninguna solicitud coincide con la búsqueda."
-                  : "Cuando lleguen solicitudes aparecerán aquí."
+          <div
+            id={ID_PANEL_SOLICITUDES}
+            role="tabpanel"
+            aria-labelledby={idDeTab(tab)}
+            className={styles.tableArea}
+            aria-busy={isLoading}
+          >
+            {data && error ? <FormError>{error}</FormError> : null}
+            <DataTable<SolicitudAdminItem>
+              caption="Solicitudes de inscripción"
+              rows={filas}
+              getRowKey={(item) => item.id}
+              isLoading={isLoading && !data}
+              error={data ? null : error}
+              onRetry={refetch}
+              mobileCards
+              empty={
+                <EmptyState
+                  title={q ? "Sin resultados" : "No hay solicitudes en esta pestaña"}
+                  description={
+                    q
+                      ? "Ninguna solicitud coincide con la búsqueda."
+                      : "Cuando lleguen solicitudes aparecerán aquí."
+                  }
+                />
               }
+              columns={[
+                {
+                  key: "nombre",
+                  header: "Postulante",
+                  render: (item) => (
+                    <span className={styles.person}>
+                      <EnrollmentAvatar name={nombreDe(item)} />
+                      <span>{nombreDe(item)}</span>
+                      {item.estado === "enviada" && superaHoras(item.enviadaAt, ahora) ? (
+                        <span className={styles.overdueBadge}>Más de 48 h</span>
+                      ) : null}
+                    </span>
+                  ),
+                },
+                { key: "cedula", header: "Cédula", render: (item) => item.cedula ?? "—" },
+                { key: "correo", header: "Correo", render: (item) => item.correo },
+                {
+                  key: "enviada",
+                  header: "Fecha de envío",
+                  render: (item) => (item.enviadaAt ? formatearFecha(item.enviadaAt) : "—"),
+                },
+                {
+                  key: "estado",
+                  header: "Estado",
+                  render: (item) => <SolicitudStatus estado={item.estado} />,
+                },
+                {
+                  key: "detalle",
+                  header: "Revisión",
+                  render: (item) => (
+                    <Button
+                      variant="secondary"
+                      ref={(button) => {
+                        if (button) aperturas.current.set(item.id, button);
+                        else aperturas.current.delete(item.id);
+                      }}
+                      data-selected={seleccionada?.id === item.id}
+                      aria-label={`Revisar solicitud de ${nombreDe(item)}`}
+                      aria-expanded={seleccionada?.id === item.id}
+                      aria-controls={seleccionada?.id === item.id ? "solicitud-panel" : undefined}
+                      onClick={() => setSeleccionada(item)}
+                    >
+                      Revisar
+                    </Button>
+                  ),
+                },
+              ]}
             />
-          }
-          columns={[
-            {
-              key: "nombre",
-              header: "Postulante",
-              render: (item) => (
-                <span className={styles.person}>
-                  <EnrollmentAvatar name={nombreDe(item)} />
-                  <span>{nombreDe(item)}</span>
-                  {item.estado === "enviada" && superaHoras(item.enviadaAt, ahora) ? (
-                    <span className={styles.overdueBadge}>Más de 48 h</span>
-                  ) : null}
-                </span>
-              ),
-            },
-            { key: "cedula", header: "Cédula", render: (item) => item.cedula ?? "—" },
-            { key: "correo", header: "Correo", render: (item) => item.correo },
-            {
-              key: "enviada",
-              header: "Fecha de envío",
-              render: (item) => (item.enviadaAt ? formatearFecha(item.enviadaAt) : "—"),
-            },
-            {
-              key: "estado",
-              header: "Estado",
-              render: (item) => <SolicitudStatus estado={item.estado} />,
-            },
-            {
-              key: "detalle",
-              header: "Revisión",
-              render: (item) => (
-                <Button
-                  variant="secondary"
-                  ref={(button) => {
-                    if (button) aperturas.current.set(item.id, button);
-                    else aperturas.current.delete(item.id);
-                  }}
-                  data-selected={seleccionada?.id === item.id}
-                  aria-label={`Revisar solicitud de ${nombreDe(item)}`}
-                  aria-expanded={seleccionada?.id === item.id}
-                  aria-controls={seleccionada?.id === item.id ? "solicitud-panel" : undefined}
-                  onClick={() => setSeleccionada(item)}
-                >
-                  Revisar
-                </Button>
-              ),
-            },
-          ]}
-        />
+          </div>
+          <Pagination
+            total={data?.total ?? 0}
+            page={page}
+            pageSize={PAGE_SIZE}
+            singular="solicitud"
+            plural="solicitudes"
+            onPageChange={setPage}
+            disabled={isLoading}
+          />
+        </div>
+        {seleccionada ? (
+          <SolicitudDetail
+            key={seleccionada.id}
+            item={seleccionada}
+            onClose={cerrarDetalle}
+            onChanged={() => {
+              window.dispatchEvent(new Event(SOLICITUD_CHANGED_EVENT));
+            }}
+          />
+        ) : null}
       </div>
-      <Pagination
-        total={data?.total ?? 0}
-        page={page}
-        pageSize={PAGE_SIZE}
-        singular="solicitud"
-        plural="solicitudes"
-        onPageChange={setPage}
-        disabled={isLoading}
-      />
-      {seleccionada ? (
-        <SolicitudDetail
-          key={seleccionada.id}
-          item={seleccionada}
-          onClose={cerrarDetalle}
-          onChanged={() => {
-            window.dispatchEvent(new Event(SOLICITUD_CHANGED_EVENT));
-          }}
-        />
-      ) : null}
     </div>
   );
 }

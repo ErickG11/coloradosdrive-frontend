@@ -328,3 +328,12 @@
     padding: 24px;
   }
 }
+
+.requirement {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-bg-field);
+  display: grid;
+  gap: 8px;
+}

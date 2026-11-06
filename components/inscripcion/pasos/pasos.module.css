@@ -218,3 +218,15 @@
   overflow-wrap: anywhere;
   font-size: 14px;
 }
+
+.datosForm input:autofill {
+  background: var(--color-bg-field);
+  color: var(--color-text-primary);
+}
+.datosForm input:-webkit-autofill,
+.datosForm input:-webkit-autofill:hover,
+.datosForm input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg-field) inset;
+  caret-color: var(--color-text-primary);
+}

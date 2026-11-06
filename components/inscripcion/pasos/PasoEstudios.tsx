@@ -57,7 +57,11 @@ export function PasoEstudios({
   onVolver,
   irAPaso,
 }: PasoEstudiosProps) {
-  const [nivel, setNivel] = useState<NivelEstudios | "">(progreso.nivelEstudios ?? "");
+  const [nivel, setNivel] = useState<NivelEstudios | "">(
+    NIVELES.some((opcion) => opcion.nivel === progreso.nivelEstudios)
+      ? (progreso.nivelEstudios ?? "")
+      : "",
+  );
   const [subtipo, setSubtipo] = useState<SubtipoCertificado | "">("");
   const [archivo, setArchivo] = useState<ArchivoLocal | null>(null);
   const [errorNivel, setErrorNivel] = useState("");

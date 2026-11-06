@@ -44,7 +44,7 @@ export function PasoRequisitos({
 
   function alternar(casilla: Casilla, valor: boolean) {
     setMarcadas((previas) => ({ ...previas, [casilla]: valor }));
-    setIncumplidas([]);
+    setIncumplidas((previas) => previas.filter((pendiente) => pendiente !== casilla));
   }
 
   function continuar(event: FormEvent) {
@@ -68,6 +68,7 @@ export function PasoRequisitos({
         value={courseId}
         onChange={(e) => {
           onCourseChange(e.target.value);
+          setMarcadas({ edad: false, estudios: false, documentos: false });
           setErrorCurso("");
           setIncumplidas([]);
         }}
@@ -82,66 +83,43 @@ export function PasoRequisitos({
         ))}
       </Select>
 
-      {curso ? (
-        <dl className={styles.facts}>
-          <div>
-            <dt>Edad mínima</dt>
-            <dd>{curso.edadMinima} años cumplidos</dd>
-          </div>
-          <div>
-            <dt>Estudios mínimos</dt>
-            <dd>Décimo año aprobado</dd>
-          </div>
-          <div>
-            <dt>Documentos para llevar a la escuela</dt>
-            <dd>
-              {config.documentosFisicos.length > 0 ? (
-                <ul>
+      <fieldset className="grid gap-4 border-0 p-0">
+        <legend className="sr-only">Confirma que cumples los requisitos</legend>
+        {(["edad", "estudios", "documentos"] as const).map((casilla) => (
+          <div key={casilla} className={styles.requirement}>
+            <label className={styles.check}>
+              <input
+                type="checkbox"
+                checked={marcadas[casilla]}
+                aria-invalid={incumplidas.includes(casilla)}
+                aria-describedby={
+                  incumplidas.includes(casilla) ? `requisito-${casilla}` : undefined
+                }
+                onChange={(e) => alternar(casilla, e.target.checked)}
+              />
+              {casilla === "edad"
+                ? `Edad mínima: ${curso?.edadMinima ?? "—"} años cumplidos`
+                : casilla === "estudios"
+                  ? "Estudios mínimos: décimo año aprobado"
+                  : "Puedo llevar mis documentos originales a la escuela"}
+            </label>
+            {casilla === "documentos" ? (
+              <div className="pl-8 text-sm text-text-secondary">
+                <p className="font-medium">Documentos para llevar a la escuela</p>
+                <ul className="list-disc pl-5">
                   {config.documentosFisicos.map((documento) => (
-                    <li key={documento.tipo}>
-                      {documento.label}
-                      {documento.obligatorio ? "" : " (opcional)"}
-                    </li>
+                    <li key={documento.tipo}>{documento.label}</li>
                   ))}
                 </ul>
-              ) : (
-                "La escuela te indicará qué documentos llevar."
-              )}
-            </dd>
+              </div>
+            ) : null}
+            {incumplidas.includes(casilla) ? (
+              <p id={`requisito-${casilla}`} role="alert" className="text-sm text-accent-red">
+                Confirma este requisito para continuar.
+              </p>
+            ) : null}
           </div>
-        </dl>
-      ) : null}
-
-      <fieldset className="grid gap-1 border-0 p-0">
-        <legend className="mb-2 text-sm font-medium text-text-secondary">
-          Confirma que cumples los requisitos
-        </legend>
-        <label className={styles.check}>
-          <input
-            type="checkbox"
-            checked={marcadas.edad}
-            onChange={(e) => alternar("edad", e.target.checked)}
-          />
-          {curso
-            ? `Tengo ${curso.edadMinima} años cumplidos o más.`
-            : "Cumplo la edad mínima del curso."}
-        </label>
-        <label className={styles.check}>
-          <input
-            type="checkbox"
-            checked={marcadas.estudios}
-            onChange={(e) => alternar("estudios", e.target.checked)}
-          />
-          Aprobé al menos décimo año.
-        </label>
-        <label className={styles.check}>
-          <input
-            type="checkbox"
-            checked={marcadas.documentos}
-            onChange={(e) => alternar("documentos", e.target.checked)}
-          />
-          Puedo llevar mis documentos originales a la escuela.
-        </label>
+        ))}
       </fieldset>
 
       {incumplidas.length > 0 ? (

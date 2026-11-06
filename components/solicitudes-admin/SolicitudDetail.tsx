@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { EnrollmentAvatar } from "@/components/inscripcion/EnrollmentVisual";
 import { Button } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/FormError";
@@ -37,6 +37,13 @@ export function SolicitudDetail({
   // `intento` fuerza una nueva carga desde «Reintentar» y tras acciones del panel.
   const [intento, setIntento] = useState(0),
     [resultado, setResultado] = useState<ResultadoDecision | null>(null);
+  const [seccion, setSeccion] = useState("informacion");
+  const tabsId = useId();
+  const secciones = [
+    { id: "informacion", label: "Lo que declaró" },
+    { id: "verificaciones", label: "Verificaciones" },
+    { id: "consentimiento", label: "Consentimiento" },
+  ];
   const resultadoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,6 +76,21 @@ export function SolicitudDetail({
       title={`Solicitud de ${nombreDe(actual)}`}
       avatar={<EnrollmentAvatar name={nombreDe(actual)} large />}
       onClose={onClose}
+      footer={
+        detalle?.estado === "enviada" ? (
+          <DecisionPanel
+            detalle={detalle}
+            onDecidida={(decidida) => {
+              setResultado(decidida);
+              setDetalle((previo) => (previo ? { ...previo, estado: decidida.estado } : previo));
+              onChanged();
+              // Trae los campos de la decisión (motivo, mensaje, nota) para el solo lectura.
+              setIntento((n) => n + 1);
+            }}
+            onConflicto={() => setIntento((n) => n + 1)}
+          />
+        ) : undefined
+      }
       header={
         <>
           <p>Cédula · {actual.cedula ?? "No registrada"}</p>
@@ -92,16 +114,54 @@ export function SolicitudDetail({
         ) : null}
         {detalle ? (
           <>
-            <nav className={styles.detailTabs} aria-label="Secciones de la solicitud">
-              <a href="#solicitud-informacion">Lo que declaró</a>
-              <a href="#solicitud-verificaciones">Verificaciones</a>
-              <a href="#solicitud-consentimiento">Consentimiento</a>
-              <a href="#decision-title">Decisión</a>
-            </nav>
-            <div id="solicitud-informacion">
+            <div
+              className={styles.detailTabs}
+              role="tablist"
+              aria-label="Secciones de la solicitud"
+            >
+              {secciones.map((tab, indice) => (
+                <button
+                  key={tab.id}
+                  id={`${tabsId}-${tab.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={seccion === tab.id}
+                  aria-controls={`${tabsId}-${tab.id}-panel`}
+                  tabIndex={seccion === tab.id ? 0 : -1}
+                  onClick={() => setSeccion(tab.id)}
+                  onKeyDown={(event) => {
+                    let siguiente = indice;
+                    if (event.key === "ArrowRight") siguiente = (indice + 1) % secciones.length;
+                    else if (event.key === "ArrowLeft")
+                      siguiente = (indice + secciones.length - 1) % secciones.length;
+                    else if (event.key === "Home") siguiente = 0;
+                    else if (event.key === "End") siguiente = secciones.length - 1;
+                    else return;
+                    event.preventDefault();
+                    setSeccion(secciones[siguiente].id);
+                    document.getElementById(`${tabsId}-${secciones[siguiente].id}`)?.focus();
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <div
+              id={`${tabsId}-informacion-panel`}
+              role="tabpanel"
+              aria-labelledby={`${tabsId}-informacion`}
+              hidden={seccion !== "informacion"}
+              tabIndex={0}
+            >
               <DatosDeclarados detalle={detalle} />
             </div>
-            <div id="solicitud-verificaciones">
+            <div
+              id={`${tabsId}-verificaciones-panel`}
+              role="tabpanel"
+              aria-labelledby={`${tabsId}-verificaciones`}
+              hidden={seccion !== "verificaciones"}
+              tabIndex={0}
+            >
               <VerificacionesPanel
                 detalle={detalle}
                 onRegistrada={(verificacion) =>
@@ -112,29 +172,42 @@ export function SolicitudDetail({
                   )
                 }
               />
+              <CertificadoPanel detalle={detalle} />
             </div>
-            <CertificadoPanel detalle={detalle} />
-            <div id="solicitud-consentimiento">
+
+            <div
+              id={`${tabsId}-consentimiento-panel`}
+              role="tabpanel"
+              aria-labelledby={`${tabsId}-consentimiento`}
+              hidden={seccion !== "consentimiento"}
+              tabIndex={0}
+            >
               <ConsentimientoPanel consentimiento={detalle.consentimiento} />
             </div>
-            <section className={styles.decisionZone} aria-labelledby="decision-title">
+            <section
+              className={styles.decisionZone}
+              aria-labelledby="decision-title"
+              hidden={!resultado && detalle.estado === "enviada"}
+            >
               <h3 id="decision-title">Decisión</h3>
               {resultado ? (
                 <ResultadoDecisionCard ref={resultadoRef} resultado={resultado} />
               ) : null}
-              <DecisionPanel
-                detalle={detalle}
-                onDecidida={(decidida) => {
-                  setResultado(decidida);
-                  setDetalle((previo) =>
-                    previo ? { ...previo, estado: decidida.estado } : previo,
-                  );
-                  onChanged();
-                  // Trae los campos de la decisión (motivo, mensaje, nota) para el solo lectura.
-                  setIntento((n) => n + 1);
-                }}
-                onConflicto={() => setIntento((n) => n + 1)}
-              />
+              {detalle.estado !== "enviada" ? (
+                <DecisionPanel
+                  detalle={detalle}
+                  onDecidida={(decidida) => {
+                    setResultado(decidida);
+                    setDetalle((previo) =>
+                      previo ? { ...previo, estado: decidida.estado } : previo,
+                    );
+                    onChanged();
+                    // Trae los campos de la decisión (motivo, mensaje, nota) para el solo lectura.
+                    setIntento((n) => n + 1);
+                  }}
+                  onConflicto={() => setIntento((n) => n + 1)}
+                />
+              ) : null}
             </section>
           </>
         ) : null}

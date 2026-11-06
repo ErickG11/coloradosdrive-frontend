@@ -16,10 +16,10 @@ export interface InfoNivel {
   subtipos: { valor: SubtipoCertificado; etiqueta: string }[];
 }
 
-export const NIVELES: InfoNivel[] = [
+const OPCIONES: InfoNivel[] = [
   {
     nivel: "bachiller",
-    titulo: "Bachiller (graduado hace 12 meses o más)",
+    titulo: "Bachiller, graduado hace 12 meses o más",
     ayuda:
       "Verificamos tu título en el Ministerio de Educación. No necesitas subir ningún archivo.",
     archivo: "ninguno",
@@ -27,7 +27,7 @@ export const NIVELES: InfoNivel[] = [
   },
   {
     nivel: "bachiller_reciente",
-    titulo: "Bachiller (graduado hace menos de 12 meses)",
+    titulo: "Bachiller, graduado hace menos de 12 meses",
     ayuda:
       "Tu título puede tardar en aparecer en el Ministerio. Te recomendamos subir el acta de grado o una copia del título.",
     archivo: "opcional",
@@ -46,16 +46,10 @@ export const NIVELES: InfoNivel[] = [
   {
     nivel: "decimo_aprobado",
     titulo: "Décimo año aprobado",
-    ayuda: "Sube el certificado de promoción de décimo año con sello de la institución.",
+    ayuda:
+      "Incluye a quienes ahora cursan el bachillerato. Sube el certificado de promoción de décimo año con sello de la institución.",
     archivo: "obligatorio",
     subtipos: [{ valor: "certificado_promocion", etiqueta: "Certificado de promoción de 10.º" }],
-  },
-  {
-    nivel: "cursando_bachillerato",
-    titulo: "Cursando el bachillerato",
-    ayuda: "Sube el certificado de estudios con sello de tu colegio.",
-    archivo: "obligatorio",
-    subtipos: [{ valor: "certificado_estudios", etiqueta: "Certificado de estudios" }],
   },
   {
     nivel: "menos_de_decimo",
@@ -65,6 +59,14 @@ export const NIVELES: InfoNivel[] = [
     subtipos: [],
   },
 ];
+
+export const NIVELES = [
+  "menos_de_decimo",
+  "decimo_aprobado",
+  "bachiller_reciente",
+  "bachiller",
+  "bachiller_exterior",
+].map((nivel) => OPCIONES.find((opcion) => opcion.nivel === nivel)!);
 
 export const etiquetaNivel = (nivel: NivelEstudios | null): string =>
   NIVELES.find((n) => n.nivel === nivel)?.titulo ?? "Sin completar";
@@ -90,6 +92,7 @@ export function datosConNivel(
     !d.apellidos ||
     !d.cedula ||
     !d.fechaNacimiento ||
+    !d.telefono ||
     !d.nacionalidadTipo ||
     !d.tipoSangre
   )
@@ -99,7 +102,7 @@ export function datosConNivel(
     apellidos: d.apellidos,
     cedula: d.cedula,
     fechaNacimiento: d.fechaNacimiento.slice(0, 10),
-    ...(d.telefono ? { telefono: d.telefono } : {}),
+    telefono: d.telefono,
     nacionalidadTipo: d.nacionalidadTipo,
     tipoSangre: d.tipoSangre,
     nivelEstudios: nivel,

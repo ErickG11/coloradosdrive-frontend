@@ -48,7 +48,7 @@ function BloqueVerificacion({
   onRegistrada: (verificacion: VerificacionSolicitud) => void;
 }) {
   const baseId = useId();
-  const metodos = metodosParaVerificacion(tipo, detalle.nivelEstudios);
+  const metodos = metodosParaVerificacion();
   const [metodo, setMetodo] = useState<MetodoVerificacion | "">(""),
     [resultado, setResultado] = useState<ResultadoVerificacion | "">(""),
     [nota, setNota] = useState(""),
@@ -167,10 +167,9 @@ function BloqueVerificacion({
             onChange={(e) => setMetodo(e.target.value as MetodoVerificacion | "")}
           >
             <option value="">Selecciona…</option>
-            {metodos.map(({ metodo: m, habilita }) => (
+            {metodos.map(({ metodo: m }) => (
               <option key={m} value={m}>
                 {ETIQUETA_METODO[m]}
-                {habilita ? "" : " (no habilita la aprobación)"}
               </option>
             ))}
           </Select>
