@@ -102,3 +102,16 @@ Las variables CSS globales (espaciado, anchos, colores) están en `app/globals.c
 ## 10. Estado del CI
 
 Pendiente de revisión manual en la pestaña Checks de cada PR.
+
+## 11. Deuda de pruebas
+
+`npx tsc --noEmit`, `npm test` y `npm run build` pasan. Hay 9 casos saltados con `TODO(F23)` porque pertenecen a la pantalla de solicitudes anterior (panel modal y revisión documento por documento), eliminada en el rediseño. Hay que reescribirlos contra el panel acoplado, las pestañas y las verificaciones.
+
+| Archivo | Casos saltados | Motivo |
+| --- | --- | --- |
+| `tests/components/solicitudes-admin/SolicitudDetail.test.tsx` | 6 | Capa con bloqueo de fondo, trampa de foco, acciones por documento y bloqueo por estado documental ya no existen. |
+| `tests/components/solicitudes-admin/SolicitudesAdmin.test.tsx` | 2 | Decisión desde el panel y refresco por revisión de documento en otra pestaña. |
+| `tests/components/solicitudes-admin/DocumentReviewAfterApproval.test.tsx` | 1 | La revisión de documentos tras la aprobación se eliminó. |
+
+Se retiraron `DocumentViewer.test.tsx` y `ReviewActions.test.tsx` (componentes eliminados en `ef49c14`).
+Nota: `npm test` local también recorre las copias de `.claude/worktrees/`; el CI no las tiene.
