@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormError } from "@/components/ui/FormError";
 import { getInscripcionConfig, sesionSolicitud } from "@/lib/api/inscripcion";
 import { inscripcionErrorMessage } from "@/lib/api/inscripcionErrors";
@@ -212,6 +213,9 @@ export function InscripcionWizard({ initialCourseId = "" }: { initialCourseId?: 
       <header>
         <span className={styles.eyebrow}>Colorados Drive</span>
         <h1 className={styles.title}>Solicitar inscripción</h1>
+        {config?.demo ? (
+          <StatusBadge status="demo" tone="warning" label="Modo demostración" />
+        ) : null}
       </header>
 
       {config === null ? (
