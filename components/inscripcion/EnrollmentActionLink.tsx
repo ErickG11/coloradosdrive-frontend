@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
-import { buttonClassName } from "@/components/ui/Button";
+import { buttonClassName } from "@/components/ui/buttonStyles";
 
 // Mismo estilo secundario de Button, manteniendo la navegación nativa del enlace.
 export function EnrollmentActionLink({ className, ...props }: ComponentProps<typeof Link>) {
