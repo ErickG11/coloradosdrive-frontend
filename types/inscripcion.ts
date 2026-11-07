@@ -108,6 +108,8 @@ export interface InscripcionConfig {
   umbralBachillerReciente: number;
   documentosFisicos: DocumentoFisicoConfig[];
   captcha: { provider: "turnstile" | "off"; siteKey: string | null };
+  /** Solo llega (true) cuando el backend corre en modo demostración. */
+  demo?: true;
 }
 
 export interface VerificarCorreoInput {
