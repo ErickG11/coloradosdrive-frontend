@@ -18,13 +18,13 @@ beforeEach(() => {
 });
 it("preselecciona por UUID y distingue nombres del mismo tipo", async () => {
   render(<InscripcionFlow initialCourseId="b" />);
-  expect(await screen.findByLabelText("Curso")).toHaveValue("b");
+  expect(await screen.findByLabelText(/^Curso/i)).toHaveValue("b");
   expect(screen.getByRole("option", { name: "Tipo A — Motos mañana" })).toBeInTheDocument();
 });
 it("envía correo y curso, y muestra el paso de código", async () => {
   render(<InscripcionFlow initialCourseId="a" />);
   const user = userEvent.setup();
-  await user.type(await screen.findByLabelText("Correo electrónico"), "ana@example.com");
+  await user.type(await screen.findByLabelText(/^Correo electrónico/i), "ana@example.com");
   await user.click(screen.getByRole("button", { name: "Enviar código" }));
   await waitFor(() => expect(solicitudes.sendCode).toHaveBeenCalledWith("ana@example.com", "a"));
   expect(await screen.findByText("2. Verifica tu correo")).toBeInTheDocument();
@@ -32,11 +32,11 @@ it("envía correo y curso, y muestra el paso de código", async () => {
 it("avanza por teclado y lleva el foco al encabezado del paso", async () => {
   render(<InscripcionFlow />);
   const user = userEvent.setup();
-  const course = await screen.findByLabelText("Curso");
+  const course = await screen.findByLabelText(/^Curso/i);
   course.focus();
   await user.selectOptions(course, "a");
   await user.tab();
-  expect(screen.getByLabelText("Correo electrónico")).toHaveFocus();
+  expect(screen.getByLabelText(/^Correo electrónico/i)).toHaveFocus();
   await user.keyboard("ana@example.com");
   await user.tab();
   expect(screen.getByRole("button", { name: "Enviar código" })).toHaveFocus();
@@ -62,9 +62,9 @@ it("recupera el curso original y reintenta progreso sin consumir otro código", 
   const storage = vi.spyOn(Storage.prototype, "setItem");
   render(<InscripcionFlow initialCourseId="a" />);
   const user = userEvent.setup();
-  await user.type(await screen.findByLabelText("Correo electrónico"), "ana@example.com");
+  await user.type(await screen.findByLabelText(/^Correo electrónico/i), "ana@example.com");
   await user.click(screen.getByRole("button", { name: "Enviar código" }));
-  await user.type(await screen.findByLabelText("Código de verificación"), "012345");
+  await user.type(await screen.findByLabelText(/^Código de verificación/i), "012345");
   await user.click(screen.getByRole("button", { name: "Verificar código" }));
   await user.click(await screen.findByRole("button", { name: "Reintentar recuperación" }));
   expect(await screen.findByText("Curso solicitado: Motos tarde")).toBeInTheDocument();
