@@ -115,3 +115,7 @@ Pendiente de revisión manual en la pestaña Checks de cada PR.
 
 Se retiraron `DocumentViewer.test.tsx` y `ReviewActions.test.tsx` (componentes eliminados en `ef49c14`).
 Nota: `npm test` local también recorre las copias de `.claude/worktrees/`; el CI no las tiene.
+
+## 12. Despliegue
+
+La guía de despliegue (Railway + Vercel, modo demostración y correo por la API de Gmail) está en el backend: `coloradosdrive-backend/docs/DESPLIEGUE.md`. Variables del frontend: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
