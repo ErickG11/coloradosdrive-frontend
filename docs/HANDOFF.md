@@ -92,3 +92,13 @@ Las variables CSS globales (espaciado, anchos, colores) están en `app/globals.c
 - Commits en español con prefijo convencional en inglés y última línea `Tarea: Pxx · Historia: ...`.
 - Sin `Co-Authored-By` ni marcas de herramientas. Sin `push --force`, sin `--no-verify`, sin empujar a `main`.
 - Solo datos ficticios en pruebas y documentos.
+
+## 9. Ramas de validaciones y avisos de éxito
+
+- `fix/matricula-validaciones-ui` (7 commits: validación por paso del asistente de matrícula manual, errores accesibles con foco y aria, edad mínima 15) y `fix/toasts-exito` (16 commits: contiene los 7 anteriores más avisos de éxito accesibles con pausa al pasar el cursor o enfocar) están **publicadas como respaldo** y **sin PR**.
+- Dan conflictos con `main` (34 commits más nuevos): 16 archivos y 36 bloques. Causa: `main` rediseñó el sistema de diseño (tokens de estado), movió cohortes y alumnos a `CohortsWorkspace`/`StudentsWorkspace` con su propio aviso de éxito y cambió `DashboardShell`. La fusión se intentó en la rama local `fix/ui-validaciones-y-toasts` y se abortó para no adivinar; esa rama no está publicada y no tiene commits propios.
+- Siguiente paso recomendado: rehacer los avisos sobre `main` (portar `Toast` con los tokens nuevos y reubicar los avisos en los workspaces) y fusionar aparte la validación por paso del asistente. Debe revisarse y fusionarse antes de nuevo trabajo en esos módulos. Detalle por archivo: `conflictos-p06.md` (carpeta de publicación, fuera del repositorio).
+
+## 10. Estado del CI
+
+Pendiente de revisión manual en la pestaña Checks de cada PR.
