@@ -5,8 +5,20 @@ import {
   useSolicitudSummary,
   SOLICITUD_CHANGED_EVENT,
 } from "@/components/solicitudes-admin/useSolicitudSummary";
-import { solicitudes } from "@/lib/api/solicitudes";
-vi.mock("@/lib/api/solicitudes", () => ({ solicitudes: { summary: vi.fn() } }));
+import type { ResumenSolicitudes } from "@/types/inscripcion";
+import { getResumenSolicitudes } from "@/lib/api/inscripcion";
+vi.mock("@/lib/api/inscripcion", async (original) => ({
+  ...(await original<typeof import("@/lib/api/inscripcion")>()),
+  getResumenSolicitudes: vi.fn(),
+}));
+const resumen = (pendientes: number): ResumenSolicitudes => ({
+  pendientes,
+  devueltas: 0,
+  conMasDe48h: 0,
+  cupoCodigosHoy: { usado: 0, tope: 250 },
+  cupoSubidasHoy: { usado: 0, tope: 40 },
+  inscripcionesAbiertas: true,
+});
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -25,11 +37,11 @@ it("oculta cero", () => {
 it("consulta inicialmente sin aviso, por temporizador visible, foco y tras decisión", async () => {
   vi.useFakeTimers();
   const visible = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
-  vi.mocked(solicitudes.summary)
-    .mockResolvedValueOnce({ pendientes: 2, documentosPorRevisar: 4 })
-    .mockResolvedValueOnce({ pendientes: 3, documentosPorRevisar: 5 })
-    .mockResolvedValueOnce({ pendientes: 1, documentosPorRevisar: 1 })
-    .mockResolvedValue({ pendientes: 4, documentosPorRevisar: 4 });
+  vi.mocked(getResumenSolicitudes)
+    .mockResolvedValueOnce(resumen(2))
+    .mockResolvedValueOnce(resumen(3))
+    .mockResolvedValueOnce(resumen(1))
+    .mockResolvedValue(resumen(4));
   const { result } = renderHook(() => useSolicitudSummary(true));
   await act(async () => {
     await Promise.resolve();
@@ -47,7 +59,7 @@ it("consulta inicialmente sin aviso, por temporizador visible, foco y tras decis
     vi.advanceTimersByTime(30000);
     await Promise.resolve();
   });
-  expect(solicitudes.summary).toHaveBeenCalledTimes(2);
+  expect(getResumenSolicitudes).toHaveBeenCalledTimes(2);
   visible.mockReturnValue("visible");
   await act(async () => {
     window.dispatchEvent(new Event("focus"));
@@ -64,5 +76,5 @@ it("consulta inicialmente sin aviso, por temporizador visible, foco y tras decis
 });
 it("no consulta para roles distintos del admin", () => {
   renderHook(() => useSolicitudSummary(false));
-  expect(solicitudes.summary).not.toHaveBeenCalled();
+  expect(getResumenSolicitudes).not.toHaveBeenCalled();
 });

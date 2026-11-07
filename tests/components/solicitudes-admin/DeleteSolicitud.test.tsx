@@ -1,14 +1,14 @@
 import { expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-vi.mock("@/lib/api/solicitudes", () => ({
-  solicitudes: { remove: vi.fn() },
-  solicitudMessage: () => "Error",
+vi.mock("@/lib/api/inscripcion", async (original) => ({
+  ...(await original<typeof import("@/lib/api/inscripcion")>()),
+  eliminarSolicitud: vi.fn(),
 }));
-import { solicitudes } from "@/lib/api/solicitudes";
+import { eliminarSolicitud } from "@/lib/api/inscripcion";
 import { DeleteSolicitud } from "@/components/solicitudes-admin/DeleteSolicitud";
 it("exige escribir la cédula y permite cancelar antes de eliminar", async () => {
-  vi.mocked(solicitudes.remove).mockResolvedValue(undefined);
+  vi.mocked(eliminarSolicitud).mockResolvedValue(undefined);
   const done = vi.fn();
   render(<DeleteSolicitud id="s" cedula="1710034065" onDeleted={done} />);
   const user = userEvent.setup();
@@ -16,10 +16,10 @@ it("exige escribir la cédula y permite cancelar antes de eliminar", async () =>
   expect(screen.getByRole("button", { name: "Eliminar definitivamente" })).toBeDisabled();
   expect(screen.getByLabelText("Escribe la cédula para confirmar")).toHaveFocus();
   await user.click(screen.getByRole("button", { name: "Cancelar eliminación" }));
-  expect(solicitudes.remove).not.toHaveBeenCalled();
+  expect(eliminarSolicitud).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Eliminar solicitud" }));
   await user.type(screen.getByLabelText("Escribe la cédula para confirmar"), "1710034065");
   await user.click(screen.getByRole("button", { name: "Eliminar definitivamente" }));
-  expect(solicitudes.remove).toHaveBeenCalledWith("s");
+  expect(eliminarSolicitud).toHaveBeenCalledWith("s");
   expect(done).toHaveBeenCalledOnce();
 });
