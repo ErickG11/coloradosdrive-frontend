@@ -103,7 +103,7 @@ describe("proxy por rol y estado del instructor", () => {
 
   it("no hay bucle: de /login el estudiante con clave temporal termina en change-password", async () => {
     session("estudiante");
-    fetchMock.mockImplementation(async () => Response.json({ mustChangePassword: true }));
+    fetchMock.mockImplementation(async () => Response.json({ mustChangePassword: true, inscripcionIncompleta: false }));
     const first = await visit("/login");
     expect(first.headers.get("location")).toBe("http://localhost:3001/student");
     const second = await visit("/student");
