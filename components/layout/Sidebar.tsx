@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { EnrollmentBrand } from "@/components/inscripcion/EnrollmentVisual";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -11,6 +12,9 @@ import { cn } from "@/lib/utils/cn";
 import type { Role } from "@/types/user";
 import { LogoutButton } from "./LogoutButton";
 import { NavigationIcon, type NavigationSection } from "./NavigationIcon";
+import { useSolicitudSummary } from "@/components/solicitudes-admin/useSolicitudSummary";
+import { PendingSolicitudesBadge } from "@/components/solicitudes-admin/PendingSolicitudesBadge";
+import { Toast } from "@/components/inscripcion/Toast";
 import styles from "./admin-sidebar.module.css";
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -21,10 +25,12 @@ const ROLE_LABELS: Record<Role, string> = {
 interface SidebarProps {
   email: string | null;
   role: Role | null;
+  studentEnrollmentRestricted?: boolean;
 }
 
-export function Sidebar({ email, role }: SidebarProps) {
+export function Sidebar({ email, role, studentEnrollmentRestricted = false }: SidebarProps) {
   const pathname = usePathname();
+  const summary = useSolicitudSummary(role === "admin");
   const [isOpen, setIsOpen] = useState(false);
   const drawer = useRef<HTMLElement>(null);
   const isInstructorScheduleActive =
@@ -79,6 +85,15 @@ export function Sidebar({ email, role }: SidebarProps) {
             Instructores
           </SidebarLink>
           <SidebarLink
+            indicator={<PendingSolicitudesBadge count={summary.pending} />}
+            href="/admin/solicitudes"
+            active={pathname.startsWith("/admin/solicitudes")}
+            section="enroll"
+            onClick={closeDrawer}
+          >
+            Solicitudes de inscripción
+          </SidebarLink>
+          <SidebarLink
             href="/admin/enrollments"
             active={pathname.startsWith("/admin/enrollments")}
             section="enroll"
@@ -102,34 +117,71 @@ export function Sidebar({ email, role }: SidebarProps) {
           >
             Horarios de práctica
           </SidebarLink>
+          <SidebarLink
+            href="/admin/seguridad"
+            active={pathname.startsWith("/admin/seguridad")}
+            section="security"
+            onClick={closeDrawer}
+          >
+            Seguridad
+          </SidebarLink>
         </>
       ) : null}
       {role === "estudiante" ? (
         <>
           <SidebarLink
-            href="/student/exams"
-            active={pathname.startsWith("/student/exams")}
-            section="exams"
+            href="/student/inscripcion"
+            active={pathname.startsWith("/student/inscripcion")}
+            section="enroll"
             onClick={closeDrawer}
           >
-            Exámenes
+            Mi inscripción
           </SidebarLink>
-          <SidebarLink
-            href="/student/schedule"
-            active={pathname.startsWith("/student/schedule")}
-            section="schedule"
-            onClick={closeDrawer}
-          >
-            Horarios de práctica
-          </SidebarLink>
-          <SidebarLink
-            href="/student/history"
-            active={pathname.startsWith("/student/history")}
-            section="history"
-            onClick={closeDrawer}
-          >
-            Mi historial de asistencia
-          </SidebarLink>
+          {studentEnrollmentRestricted ? (
+            <SidebarLink
+              href="/student/change-password"
+              active={pathname === "/student/change-password"}
+              section="security"
+              onClick={closeDrawer}
+            >
+              Cambiar contraseña
+            </SidebarLink>
+          ) : (
+            <>
+              <SidebarLink
+                href="/student/exams"
+                active={pathname.startsWith("/student/exams")}
+                section="exams"
+                onClick={closeDrawer}
+              >
+                Exámenes
+              </SidebarLink>
+              <SidebarLink
+                href="/student/schedule"
+                active={pathname.startsWith("/student/schedule")}
+                section="schedule"
+                onClick={closeDrawer}
+              >
+                Horarios de práctica
+              </SidebarLink>
+              <SidebarLink
+                href="/student/documents"
+                active={pathname.startsWith("/student/documents")}
+                section="enroll"
+                onClick={closeDrawer}
+              >
+                Documentos para llevar
+              </SidebarLink>
+              <SidebarLink
+                href="/student/history"
+                active={pathname.startsWith("/student/history")}
+                section="history"
+                onClick={closeDrawer}
+              >
+                Mi historial de asistencia
+              </SidebarLink>
+            </>
+          )}
         </>
       ) : null}
       {role === "instructor" ? (
@@ -146,6 +198,15 @@ export function Sidebar({ email, role }: SidebarProps) {
   );
   return (
     <>
+      {role === "admin" && summary.notice > 0 ? (
+        <div className="fixed bottom-4 right-4 z-50 max-w-[calc(100vw-2rem)]">
+          <Toast
+            message="Nueva solicitud de inscripción"
+            onDismiss={summary.dismiss}
+            action={{ href: "/admin/solicitudes", label: "Ver" }}
+          />
+        </div>
+      ) : null}
       <header className="flex h-16 min-w-0 shrink-0 items-center justify-between border-b border-border bg-bg-surface px-4 md:hidden">
         <button
           type="button"
@@ -158,7 +219,7 @@ export function Sidebar({ email, role }: SidebarProps) {
           <NavigationIcon section="menu" className="h-5 w-5" />
         </button>
         <span className="mx-2 min-w-0 truncate text-base font-semibold tracking-tight text-text-primary">
-          ColoradosDrive
+          {role === "estudiante" ? <EnrollmentBrand /> : "ColoradosDrive"}
         </span>
         <div className="flex shrink-0 items-center gap-1">
           {/* Reserva el lugar de la unica campana que monta DashboardShell. */}
@@ -172,7 +233,7 @@ export function Sidebar({ email, role }: SidebarProps) {
         aria-label="Barra lateral"
         className={cn(
           "sticky top-0 hidden h-dvh w-[var(--sidebar-width)] min-w-0 shrink-0 flex-col border-r border-border bg-bg-surface md:flex",
-          role === "admin" && styles.admin,
+          (role === "admin" || role === "estudiante") && styles.admin,
         )}
       >
         <div className="flex items-center justify-between gap-1 px-4 py-4">
@@ -187,6 +248,15 @@ export function Sidebar({ email, role }: SidebarProps) {
                 className={styles.logo}
               />
             </Link>
+          ) : role === "estudiante" ? (
+            <Image
+              unoptimized
+              src="/images/landing/logo.webp"
+              width={512}
+              height={256}
+              alt="Colorados Drive"
+              className={styles.logo}
+            />
           ) : (
             <span className="text-base font-semibold tracking-tight text-text-primary">
               ColoradosDrive
@@ -218,7 +288,7 @@ export function Sidebar({ email, role }: SidebarProps) {
             tabIndex={-1}
             className={cn(
               "absolute inset-y-0 left-0 flex w-[min(18rem,calc(100vw-2rem))] flex-col border-r border-border bg-bg-surface shadow-elevated",
-              role === "admin" && styles.admin,
+              (role === "admin" || role === "estudiante") && styles.admin,
             )}
           >
             <div className="flex items-center justify-between px-4 py-3">
@@ -238,6 +308,15 @@ export function Sidebar({ email, role }: SidebarProps) {
                     className={styles.logo}
                   />
                 </Link>
+              ) : role === "estudiante" ? (
+                <Image
+                  unoptimized
+                  src="/images/landing/logo.webp"
+                  width={512}
+                  height={256}
+                  alt="Colorados Drive"
+                  className={styles.logo}
+                />
               ) : (
                 <span className="font-semibold text-text-primary">ColoradosDrive</span>
               )}
@@ -269,12 +348,14 @@ function SidebarLink({
   section,
   onClick,
   children,
+  indicator,
 }: {
   href: string;
   active: boolean;
   section: NavigationSection;
   onClick: () => void;
   children: ReactNode;
+  indicator?: ReactNode;
 }) {
   return (
     <Link
@@ -290,6 +371,7 @@ function SidebarLink({
     >
       <NavigationIcon section={section} className="h-5 w-5 shrink-0" />
       <span className="min-w-0">{children}</span>
+      {indicator}
     </Link>
   );
 }

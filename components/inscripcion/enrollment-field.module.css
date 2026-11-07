@@ -1,0 +1,43 @@
+.field {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  gap: 6px;
+}
+.label {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.required {
+  color: var(--color-accent-red);
+}
+.control {
+  min-width: 0;
+}
+.control :is(input, select)[aria-invalid="true"] {
+  border-color: var(--color-accent-red);
+}
+.field .error {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--color-accent-red);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.help {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}

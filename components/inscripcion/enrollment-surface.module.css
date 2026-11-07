@@ -1,0 +1,245 @@
+.surface {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+.surface > header h1,
+.surface h1 {
+  font-size: clamp(28px, 3vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+.surface > header p {
+  font-size: 14px;
+  max-width: 48rem;
+}
+.surface h2 {
+  font-size: 18px;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+}
+.surface h3 {
+  letter-spacing: -0.015em;
+}
+.surface :global(.border) {
+  border-radius: 10px;
+}
+.surface :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  border-radius: 7px;
+  background-color: var(--color-bg-field);
+}
+.surface :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+.surface :is(button, a) {
+  touch-action: manipulation;
+}
+.surface button {
+  min-height: 44px;
+}
+.surface dt {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.surface dd {
+  overflow-wrap: anywhere;
+}
+.surface [role="alert"] {
+  display: block;
+  margin-block: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-accent-red);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.surface [role="alert"] :is(strong, h3) {
+  color: inherit;
+  font-size: inherit;
+  font-weight: 500;
+}
+
+.surface > [role="status"] {
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+}
+.stepper {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+  padding: 12px;
+}
+.stepper button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-height: 84px;
+  padding: 12px 6px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  border-radius: 9px;
+}
+.stepper button[aria-current="step"] {
+  border-color: var(--color-brand-border);
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+}
+.stepNumber {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  font-variant-numeric: tabular-nums;
+  background: var(--color-bg-field);
+}
+.stepper button[aria-current="step"] .stepNumber {
+  border-color: var(--color-brand-border);
+  color: var(--color-brand-ink);
+}
+.requirements > li {
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-bg-field);
+  font-size: 14px;
+}
+.documents > li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 9px;
+  background: var(--color-bg-field);
+}
+.documents > li :global(.inline-flex) {
+  align-self: flex-start;
+}
+.schedule,
+.payment,
+.reservation,
+.active {
+  border-radius: 10px;
+  border-color: var(--color-border);
+  background: var(--color-bg-surface);
+}
+.schedule :is(fieldset, section) {
+  min-width: 0;
+}
+.schedule button[aria-pressed] {
+  border-radius: 9px;
+  min-height: 64px;
+  font-variant-numeric: tabular-nums;
+}
+.schedule button[aria-pressed="true"] {
+  border-color: var(--color-brand-primary);
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+  box-shadow: inset 0 0 0 1px var(--color-brand-primary);
+}
+.schedule button[aria-pressed]:disabled {
+  background: var(--color-bg-sunken);
+  color: var(--color-text-secondary);
+}
+.plan table {
+  font-size: 13px;
+}
+.plan th {
+  background: var(--color-bg-sunken);
+}
+.plan td > span {
+  border-radius: 7px;
+}
+.reservation {
+  border-left: 3px solid var(--color-brand-primary);
+}
+.reservation[data-near-expiry="true"] {
+  border-color: var(--color-status-warning);
+  background: var(--color-status-warning-bg);
+}
+.reservation [role="timer"] {
+  display: inline-flex;
+  min-width: 6.5rem;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+  font-size: 26px;
+  font-weight: 650;
+}
+.payment dl {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-bg-field);
+}
+.payment dl > div {
+  display: grid;
+  gap: 4px;
+}
+.payment dl > div:last-child {
+  padding: 12px;
+  border: 1px solid var(--color-brand-border);
+  border-radius: 7px;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+}
+.payment[data-payment-state="aprobado"] > [role="status"] {
+  padding: 16px;
+  border: 1px solid var(--color-status-success);
+  border-radius: 9px;
+  background: var(--color-status-success-bg);
+  color: var(--color-status-success);
+}
+
+.surface.publicPage {
+  width: min(calc(100% - 32px), 64rem);
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding-block: 24px 48px;
+}
+.passwordPage {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 32px 16px;
+  background: var(--color-bg-canvas);
+}
+.passwordPanel {
+  width: min(100%, 30rem);
+}
+@media (max-width: 479px) {
+  .stepper {
+    padding: 8px;
+  }
+  .stepper button {
+    font-size: 12px;
+  }
+  .surface > :global(.border) {
+    padding: 16px;
+  }
+  .surface > header h1 {
+    font-size: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .surface *,
+  .surface *::before,
+  .surface *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

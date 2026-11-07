@@ -66,15 +66,13 @@ export function LandingHeader() {
           <Link href="/login" className={styles.headerLogin}>
             Iniciar sesión
           </Link>
-          <a
+          <Link
             href={landingContent.enrollmentHref}
-            target="_blank"
-            rel="noopener noreferrer"
             className={`${styles.button} ${styles.headerCta}`}
           >
             Inscríbete
             <LandingIcon name="arrow" />
-          </a>
+          </Link>
           <button
             ref={menuButton}
             type="button"
@@ -108,16 +106,14 @@ export function LandingHeader() {
             Iniciar sesión
             <LandingIcon name="arrow" />
           </Link>
-          <a
+          <Link
             href={landingContent.enrollmentHref}
-            target="_blank"
-            rel="noopener noreferrer"
             className={styles.button}
             onClick={() => setOpen(false)}
           >
-            Inscríbete por WhatsApp
-            <LandingIcon name="whatsapp" />
-          </a>
+            Inscríbete
+            <LandingIcon name="arrow" />
+          </Link>
         </div>
       </nav>
     </header>

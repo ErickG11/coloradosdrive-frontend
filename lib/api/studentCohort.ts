@@ -16,6 +16,7 @@ export function assignStudentCohort(studentId: string, enrollmentId: string, coh
 export function studentCohortError(error: unknown) {
   const code = error instanceof ApiError ? error.code : undefined;
   const messages: Record<string, string> = {
+    INSCRIPCION_INCOMPLETA: "El alumno debe reservar su horario y pagar antes de asignar cohorte.",
     COHORT_FULL: "La cohorte ya no tiene cupo. Actualiza las opciones y elige otra.",
     COHORT_CHANGED: "La cohorte o el día cambiaron. Recarga las opciones y confirma de nuevo.",
     COHORT_WINDOW_CLOSED: "La ventana de matrícula no está abierta. Actualiza las opciones.",
@@ -37,9 +38,13 @@ export function studentCohortError(error: unknown) {
     refreshOptions: code === "COHORT_CHANGED",
     blocked:
       uncertain ||
-      ["ENROLLMENT_NOT_PENDING", "DELETION_PENDING", "CD030", "ACCOUNT_INACTIVE"].includes(
-        code ?? "",
-      ),
+      [
+        "INSCRIPCION_INCOMPLETA",
+        "ENROLLMENT_NOT_PENDING",
+        "DELETION_PENDING",
+        "CD030",
+        "ACCOUNT_INACTIVE",
+      ].includes(code ?? ""),
     deletionPending: code === "DELETION_PENDING" || code === "CD030",
   };
 }

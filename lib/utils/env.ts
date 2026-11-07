@@ -17,5 +17,9 @@ export const env = {
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   ),
-  NEXT_PUBLIC_API_URL: requireEnv("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL),
+  // Sin barra final: las rutas del API se concatenan con "/ruta".
+  NEXT_PUBLIC_API_URL: requireEnv("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL).replace(
+    /\/+$/,
+    "",
+  ),
 };

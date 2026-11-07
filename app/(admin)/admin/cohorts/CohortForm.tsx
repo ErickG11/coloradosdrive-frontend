@@ -250,7 +250,16 @@ export function CohortForm({
       router.push(`/admin/cohorts?aviso=${notice}`);
       router.refresh();
     } catch (err) {
-      if (err instanceof ApiError && isFormField(err.field)) {
+      if (
+        err instanceof ApiError &&
+        ["IC409", "COHORT_CUPO_BELOW_ACTIVE"].includes(err.code ?? "")
+      ) {
+        pendingFocusRef.current = "cupoMaximo";
+        setFieldErrors({
+          cupoMaximo:
+            "El cupo máximo no puede ser menor que las matrículas activas y las reservas vigentes. Aumenta el cupo o recarga la cohorte.",
+        });
+      } else if (err instanceof ApiError && isFormField(err.field)) {
         // Error de un campo concreto (400 de validación, 404 de curso,
         // 409 de nombre duplicado): se muestra junto a ese campo.
         pendingFocusRef.current = err.field;

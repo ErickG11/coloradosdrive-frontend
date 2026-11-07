@@ -25,10 +25,19 @@ async function extractError(response: Response): Promise<ApiError> {
       "message" in data &&
       typeof (data as { message: unknown }).message === "string"
     ) {
-      const body = data as { message: string; code?: unknown; field?: unknown };
+      const body = data as {
+        message: string;
+        code?: unknown;
+        field?: unknown;
+        detalles?: { faltantes?: string[] };
+        faltantes?: string[];
+      };
       return new ApiError(body.message, response.status, {
         code: typeof body.code === "string" ? body.code : undefined,
         field: typeof body.field === "string" ? body.field : undefined,
+        detalles:
+          body.detalles ??
+          (Array.isArray(body.faltantes) ? { faltantes: body.faltantes } : undefined),
       });
     }
   } catch {
@@ -52,6 +61,17 @@ async function extractError(response: Response): Promise<ApiError> {
   }
 }
 
+// En /mfa y en el panel de seguridad no se redirige: allí se resuelve el factor, y
+// redirigir de nuevo crearía un bucle por las consultas de fondo del panel.
+function redirigirAlDesafioMfa(): void {
+  if (typeof window === "undefined") return;
+  const { pathname } = window.location;
+  if (pathname === "/mfa" || pathname.startsWith("/admin/seguridad")) return;
+  // Fuera de React no hay router; una navegación completa también limpia el estado.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.assign("/mfa");
+}
+
 // Fetch wrapper para el backend REST de ColoradosDrive: arma la URL desde
 // NEXT_PUBLIC_API_URL, adjunta el JWT de la sesión activa de Supabase en
 // Authorization: Bearer, y centraliza el manejo de errores HTTP.
@@ -70,7 +90,10 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   });
 
   if (!response.ok) {
-    throw await extractError(response);
+    const apiError = await extractError(response);
+    // El servidor exige el segundo factor en /admin/*: se lleva al admin al desafío.
+    if (apiError.status === 403 && apiError.code === "MFA_REQUERIDA") redirigirAlDesafioMfa();
+    throw apiError;
   }
 
   if (response.status === 204) {

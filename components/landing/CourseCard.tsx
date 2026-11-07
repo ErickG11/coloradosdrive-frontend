@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "motion/react";
 import type { ReactElement } from "react";
 
@@ -60,18 +61,12 @@ export function CourseCard({ course }: CourseCardProps) {
 
         <p className="mt-3 flex-1 text-sm text-text-secondary">{TYPE_DESCRIPTIONS[course.tipo]}</p>
 
-        {/* /inscripcion todavía no existe (Fase 7): un enlace a un
-           placeholder sería un callejón sin salida, así que el botón queda
-           deshabilitado con estado claro en vez de simular una acción que
-           no lleva a nada (regla `loading-buttons` / disabled-states). */}
-        <button
-          type="button"
-          disabled
-          title="La inscripción en línea estará disponible próximamente"
-          className={cn(buttonClassName("secondary", "md"), "mt-6 w-full cursor-not-allowed")}
+        <Link
+          href={`/inscripcion?courseId=${encodeURIComponent(course.id)}`}
+          className={cn(buttonClassName("secondary", "md"), "mt-6 w-full")}
         >
-          Solicitar inscripción — Próximamente
-        </button>
+          Solicitar inscripción
+        </Link>
       </Card>
     </motion.div>
   );

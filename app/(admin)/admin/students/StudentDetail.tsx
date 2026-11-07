@@ -1,8 +1,11 @@
 "use client";
 import Link from "next/link";
+import { AdminPaymentActions } from "@/components/student-enrollment/AdminPaymentActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Card, Modal, buttonClassName } from "@/components/ui";
+import { StudentIdentityConfirmation } from "./StudentIdentityConfirmation";
+import { Toast } from "@/components/inscripcion/Toast";
 import { StudentEditForm } from "./StudentEditForm";
 import { useFetch } from "@/hooks/useFetch";
 import { readStudentFilters, studentListHref } from "@/lib/api/students";
@@ -52,6 +55,7 @@ export function StudentProfile({
   editDisabled = false,
   onAttendanceChanged,
   onAttendanceBusyChange,
+  onPaymentChanged,
 }: {
   student: Detail;
   onAssignCohort?: (enrollment: StudentEnrollment) => void;
@@ -65,6 +69,7 @@ export function StudentProfile({
   editDisabled?: boolean;
   onAttendanceChanged?: (slotId: string) => void;
   onAttendanceBusyChange?: (busy: boolean) => void;
+  onPaymentChanged?: () => void;
 }) {
   const show = (name: Section) => section === "all" || section === name;
   return (
@@ -108,27 +113,51 @@ export function StudentProfile({
                     {enrollment.curso?.nombre ?? "Curso no disponible"} ·{" "}
                     {enrollment.cohorte?.nombre ?? "Sin cohorte asignada"}
                   </p>
-                  {enrollment.status === "pendiente_cohorte" && onAssignCohort && (
-                    <div className="mt-2 mb-4 flex flex-col items-start gap-2">
-                      <Button
-                        variant="secondary"
-                        disabled={assignmentDisabled || !student.activo}
-                        onClick={() => onAssignCohort(enrollment)}
-                      >
-                        Asignar cohorte
-                      </Button>
-                      {!student.activo && (
-                        <p className="text-sm text-text-secondary">
-                          Reactiva al alumno primero para asignar cohorte.
-                        </p>
-                      )}
-                    </div>
+                  {enrollment.etapa && enrollment.etapa !== "activa" && (
+                    <p className="mt-2 text-sm text-text-secondary">
+                      {enrollment.etapa === "por_agendar"
+                        ? "Por agendar: el alumno debe elegir su horario y pagar."
+                        : "Horario reservado temporalmente; pago pendiente."}
+                    </p>
                   )}
+                  {enrollment.status === "pendiente_cohorte" &&
+                    onAssignCohort &&
+                    (enrollment.origen !== "solicitud" || enrollment.etapa === "activa") && (
+                      <div className="mt-2 mb-4 flex flex-col items-start gap-2">
+                        <Button
+                          variant="secondary"
+                          disabled={assignmentDisabled || !student.activo}
+                          onClick={() => onAssignCohort(enrollment)}
+                        >
+                          Asignar cohorte
+                        </Button>
+                        {!student.activo && (
+                          <p className="text-sm text-text-secondary">
+                            Reactiva al alumno primero para asignar cohorte.
+                          </p>
+                        )}
+                      </div>
+                    )}
                 </div>
               ))}
             {!student.enrollments.some((e) =>
               ["activo", "pendiente_cohorte"].includes(e.status),
             ) && <p className="mt-3">Sin matrícula vigente · Sin cohorte asignada</p>}
+            {student.identidadPresencial?.origenSolicitud && (
+              <p className="mt-3 text-sm text-text-secondary">
+                Identidad presencial:{" "}
+                {student.identidadPresencial.confirmada ? "Confirmada" : "Pendiente"}
+                {student.identidadPresencial.confirmadaAt && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <time dateTime={student.identidadPresencial.confirmadaAt}>
+                      {studentTimestamp(student.identidadPresencial.confirmadaAt)}
+                    </time>
+                  </>
+                )}
+              </p>
+            )}
           </Card>
           {actions}
           <StudentGraduation graduation={student.graduation} />
@@ -219,6 +248,13 @@ export function StudentProfile({
                   </dl>
                 </Card>
               )}
+              {show("enrollments") && student.enrollments.some((e) => e.origen === "solicitud") ? (
+                <AdminPaymentActions
+                  studentId={student.id}
+                  active={student.activo}
+                  onChanged={onPaymentChanged}
+                />
+              ) : null}
               {show("documents") && (
                 <Card
                   title={`Documentos requeridos · ${enrollment.documentosPendientes} pendientes`}
@@ -270,6 +306,8 @@ export function StudentDetail({
 }) {
   const [section, setSection] = useState<Section>("information");
   const [editing, setEditing] = useState(false);
+  const [confirmingIdentity, setConfirmingIdentity] = useState(false);
+  const [identityNotice, setIdentityNotice] = useState("");
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
@@ -280,9 +318,11 @@ export function StudentDetail({
   const [assigning, setAssigning] = useState<StudentEnrollment | null>(null);
   // El panel no se cierra con Escape mientras hay una operación en curso.
   useEffect(() => {
-    onBusyChange?.(editing || saving || actionBusy || assigning !== null || attendanceBusy);
+    onBusyChange?.(
+      editing || saving || actionBusy || assigning !== null || attendanceBusy || confirmingIdentity,
+    );
     return () => onBusyChange?.(false);
-  }, [editing, saving, actionBusy, assigning, attendanceBusy, onBusyChange]);
+  }, [editing, saving, actionBusy, assigning, attendanceBusy, confirmingIdentity, onBusyChange]);
   const params = useSearchParams();
   const { data, isLoading, error, errorStatus, errorCode, refetch } = useFetch<Detail>(
     `/admin/estudiantes/${id}`,
@@ -297,7 +337,7 @@ export function StudentDetail({
     <>
       <StudentActions
         student={data}
-        disabled={editing || saving || assigning !== null}
+        disabled={editing || saving || assigning !== null || confirmingIdentity}
         deletionPending={deletionPending}
         onBusyChange={setActionBusy}
         onPending={() => setDeletionPending(true)}
@@ -308,10 +348,28 @@ export function StudentDetail({
           onChanged?.();
         }}
       />
+      {data.identidadPresencial?.origenSolicitud && !data.identidadPresencial.confirmada && (
+        <Button
+          variant="secondary"
+          className="self-start"
+          disabled={
+            editing ||
+            saving ||
+            actionBusy ||
+            attendanceBusy ||
+            deletionPending ||
+            assigning !== null ||
+            confirmingIdentity
+          }
+          onClick={() => setConfirmingIdentity(true)}
+        >
+          Confirmar identidad manualmente
+        </Button>
+      )}
       <Button
         variant="secondary"
         className="self-start"
-        disabled={actionBusy || deletionPending || assigning !== null}
+        disabled={actionBusy || deletionPending || assigning !== null || confirmingIdentity}
         onClick={() => {
           setSuccess(false);
           setEditing(true);
@@ -331,6 +389,7 @@ export function StudentDetail({
           Volver a Alumnos
         </Link>
       )}
+      {identityNotice && <Toast message={identityNotice} onDismiss={() => setIdentityNotice("")} />}
       {success && (
         <p role="status" className="text-sm text-accent-blue">
           Los datos del alumno se guardaron correctamente.
@@ -390,6 +449,10 @@ export function StudentDetail({
           <StudentProfile
             actions={embedded ? undefined : actions}
             student={data}
+            onPaymentChanged={() => {
+              refetch();
+              onChanged?.();
+            }}
             onAttendanceBusyChange={setAttendanceBusy}
             onAttendanceChanged={(slotId) => {
               attendanceFocus.current = slotId;
@@ -407,10 +470,15 @@ export function StudentDetail({
                   }
                 : undefined
             }
-            editDisabled={actionBusy || deletionPending || assigning !== null}
+            editDisabled={actionBusy || deletionPending || assigning !== null || confirmingIdentity}
             onAssignCohort={setAssigning}
             assignmentDisabled={
-              editing || saving || actionBusy || deletionPending || assigning !== null
+              editing ||
+              saving ||
+              actionBusy ||
+              deletionPending ||
+              assigning !== null ||
+              confirmingIdentity
             }
           />
           {embedded && <div className={styles.accountActions}>{actions}</div>}
@@ -428,6 +496,23 @@ export function StudentDetail({
               onSaved={() => {
                 setAssigning(null);
                 setActionNotice("La cohorte se asignó correctamente.");
+                refetch();
+                onChanged?.();
+              }}
+            />
+          )}
+          {confirmingIdentity && (
+            <StudentIdentityConfirmation
+              key={id}
+              studentId={id}
+              onClose={() => setConfirmingIdentity(false)}
+              onReload={() => {
+                setConfirmingIdentity(false);
+                refetch();
+              }}
+              onSaved={() => {
+                setConfirmingIdentity(false);
+                setIdentityNotice("La identidad presencial se confirmó correctamente.");
                 refetch();
                 onChanged?.();
               }}
