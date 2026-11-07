@@ -433,8 +433,14 @@ describe("EditCohortPage", () => {
       await screen.findByLabelText(label);
       await saveWithAChange(user);
 
+      // El cupo por debajo de las matrículas activas y las reservas vigentes se
+      // muestra con el texto propio del formulario (regla de reservas, I04).
+      const shown =
+        code === "COHORT_CUPO_BELOW_ACTIVE"
+          ? "El cupo máximo no puede ser menor que las matrículas activas y las reservas vigentes. Aumenta el cupo o recarga la cohorte."
+          : message;
       const alert = await screen.findByRole("alert");
-      expect(alert).toHaveTextContent(message);
+      expect(alert).toHaveTextContent(shown);
       const input = screen.getByLabelText(label);
       expect(input).toHaveAttribute("aria-invalid", "true");
       expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(alert.id);

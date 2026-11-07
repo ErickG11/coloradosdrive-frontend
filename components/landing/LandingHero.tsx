@@ -26,14 +26,9 @@ export function LandingHero() {
           </h1>
           <p className={styles.heroDescription}>{landingContent.description}</p>
           <div className={styles.actions}>
-            <a
-              href={landingContent.enrollmentHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.button}
-            >
+            <Link href={landingContent.enrollmentHref} className={styles.button}>
               ¡Inscríbete hoy! <LandingIcon name="arrow" />
-            </a>
+            </Link>
             <Link href="/login" className={styles.heroLogin}>
               Iniciar sesión <LandingIcon name="arrow" />
             </Link>

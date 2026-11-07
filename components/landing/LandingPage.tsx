@@ -107,15 +107,10 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
                   Gana confianza al volante con una formación segura y práctica, acompañado en cada
                   paso.
                 </p>
-                <a
-                  href={landingContent.enrollmentHref}
-                  className={styles.textLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <Link href={landingContent.enrollmentHref} className={styles.textLink}>
                   Consulta por tus prácticas
                   <LandingIcon name="arrow" />
-                </a>
+                </Link>
               </div>
             </div>
             <div className={`${styles.practiceRow} ${styles.practiceRowReverse}`}>
@@ -229,15 +224,10 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
               </ScrollReveal>
               <p>{landingContent.slogan}.</p>
               <div className={styles.actions}>
-                <a
-                  href={landingContent.enrollmentHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.button}
-                >
+                <Link href={landingContent.enrollmentHref} className={styles.button}>
                   ¡Inscríbete hoy!
                   <LandingIcon name="arrow" />
-                </a>
+                </Link>
                 <Link href="/login" className={styles.heroLogin}>
                   Iniciar sesión
                   <LandingIcon name="arrow" />

@@ -51,3 +51,18 @@ skills-lock.json
 .github/hooks/
 .taste-skill/
 docs/design-references/
+
+# Secretos y credenciales locales
+.env*
+!.env.example
+*.pem
+*.key
+
+# Sesiones y resultados de pruebas e2e
+.auth/
+storageState*.json
+playwright-report/
+test-results/
+
+# Herramientas locales de asistentes
+.claude/

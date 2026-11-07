@@ -8,6 +8,7 @@ import { Button, FormError } from "@/components/ui";
 import { LoginIcon } from "@/components/auth/LoginIcon";
 import styles from "@/components/auth/login.module.css";
 import { useValidationMessages } from "@/hooks/useValidationMessages";
+import { RUTA_DESAFIO_MFA, requiereDesafioMfa } from "@/lib/auth/mfa";
 import { createClient } from "@/lib/supabase/client";
 import { getUserRole } from "@/lib/supabase/getUserRole";
 import { getRoleHomePath } from "@/lib/utils/roleRedirect";
@@ -64,6 +65,13 @@ export function LoginForm() {
       // para no dejar una cookie viva detrás del mensaje.
       await supabase.auth.signOut();
       fail("Tu cuenta no tiene un rol asignado. Contacta al administrador.");
+      return;
+    }
+
+    // El admin con factor TOTP verificado debe pasar el desafío antes de entrar.
+    if (role === "admin" && (await requiereDesafioMfa())) {
+      router.push(RUTA_DESAFIO_MFA);
+      router.refresh();
       return;
     }
 
