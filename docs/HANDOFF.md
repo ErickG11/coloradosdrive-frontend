@@ -6,15 +6,16 @@ No contiene secretos: los valores reales se piden al responsable por un canal se
 
 ## 1. Ramas y PR
 
-| Rama | Estado |
-| --- | --- |
-| `feat/inscripcion-en-linea-ui` | Punta de la inscripción en línea (publicada, PR en borrador). Parte de aquí para trabajo nuevo sobre la inscripción. |
-| `fix/cohortes-color-y-foco` | Publicada, PR en borrador. |
-| `fix/matricula-validaciones-ui` (7 commits) y `fix/toasts-exito` (16, contiene a la anterior) | **No publicadas**: al fusionarlas con `origin/main` dan conflictos en `app/(admin)/admin/enrollments/wizard/` (4 archivos en la primera, 16 en la segunda). Hay que resolver los conflictos en una rama nueva, con revisión de quien conozca ese asistente de matrícula manual. |
-| `feat/instructores-agenda-simple` | Pertenece a otra persona: **no la toques**. |
-| `worktree-agent-*`, `feature/design-system` | No se publican; no usar como base. |
+| Rama | PR | Estado |
+| --- | --- | --- |
+| `main` | | Línea estable; incluye la inscripción en línea. No se empuja a mano. |
+| `feat/inscripcion-en-linea-ui` | #38 | **Fusionado en `main`**. Flujo público, administrativo y del alumno. Ya no hace falta; se conserva, no se borra. |
+| `fix/cohortes-color-y-foco` | #47 | **Fusionado en `main`**. Se conserva. |
+| `fix/matricula-validaciones-ui` (7 commits) y `fix/toasts-exito` (16, contiene a la anterior) | sin PR | **NO están en `main`, a propósito.** Publicadas solo como respaldo; ver la sección 9. |
+| `feat/instructores-agenda-simple` | | Pertenece a otra persona: **no la toques**. |
+| `worktree-agent-*`, `feature/design-system` | | No se publican; no usar como base. |
 
-Trabajo ajeno a la inscripción parte de `origin/main`. Los PR se abren en borrador y no se fusionan con el CI en rojo.
+Todo trabajo nuevo **parte de `main`**: `git checkout main && git pull`, y crear una rama nueva. Los PR se abren en borrador.
 
 ## 2. Cómo correr en local
 
@@ -78,10 +79,10 @@ Las variables CSS globales (espaciado, anchos, colores) están en `app/globals.c
 
 ## 7. Pendientes del frontend
 
-1. **CI en verde:** hay pruebas heredadas con **9 errores de tipos** que impiden pasar el chequeo; corregirlas sin cambiar el comportamiento.
-2. Resolver los conflictos de `fix/matricula-validaciones-ui` y `fix/toasts-exito` con `main` y publicarlas.
+1. **Pruebas:** el CI de `main` está en verde. Queda reescribir los 9 casos saltados (sección 11).
+2. Portar a `main` los avisos de éxito y la validación por paso de la matrícula manual (plan en la sección 9).
 3. **Widget Turnstile (F43)** en `CaptchaSlot` con la clave pública real.
-4. Despliegue en Vercel (variables públicas, dominio y redirects de Supabase Auth).
+4. Despliegue en Vercel desde `main` (variables públicas, dominio y redirects de Supabase Auth; ver la guía del backend).
 5. Confirmar la URL del Registro Civil en `lib/content/verificacion-links.ts` (hoy provisional).
 6. Recorrido de ensayo completo con el backend (guion en el HANDOFF del backend, correo en consola).
 7. Trabajo futuro: contenido descargable de profesores, exámenes asignados por alumno, cuotas, IVA, feriados.
@@ -93,15 +94,15 @@ Las variables CSS globales (espaciado, anchos, colores) están en `app/globals.c
 - Sin `Co-Authored-By` ni marcas de herramientas. Sin `push --force`, sin `--no-verify`, sin empujar a `main`.
 - Solo datos ficticios en pruebas y documentos.
 
-## 9. Ramas de validaciones y avisos de éxito
+## 9. Ramas de validaciones y avisos de éxito (pendientes, NO fusionadas)
 
-- `fix/matricula-validaciones-ui` (7 commits: validación por paso del asistente de matrícula manual, errores accesibles con foco y aria, edad mínima 15) y `fix/toasts-exito` (16 commits: contiene los 7 anteriores más avisos de éxito accesibles con pausa al pasar el cursor o enfocar) están **publicadas como respaldo** y **sin PR**.
-- Dan conflictos con `main` (34 commits más nuevos): 16 archivos y 36 bloques. Causa: `main` rediseñó el sistema de diseño (tokens de estado), movió cohortes y alumnos a `CohortsWorkspace`/`StudentsWorkspace` con su propio aviso de éxito y cambió `DashboardShell`. La fusión se intentó en la rama local `fix/ui-validaciones-y-toasts` y se abortó para no adivinar; esa rama no está publicada y no tiene commits propios.
-- Siguiente paso recomendado: rehacer los avisos sobre `main` (portar `Toast` con los tokens nuevos y reubicar los avisos en los workspaces) y fusionar aparte la validación por paso del asistente. Debe revisarse y fusionarse antes de nuevo trabajo en esos módulos. Detalle por archivo: `conflictos-p06.md` (carpeta de publicación, fuera del repositorio).
+- `fix/matricula-validaciones-ui` (7 commits: validación por paso del asistente de matrícula manual, errores accesibles con foco y aria, edad mínima 15) y `fix/toasts-exito` (16 commits: contiene los 7 anteriores más avisos de éxito accesibles con pausa al pasar el cursor o enfocar) están **publicadas como respaldo** y **sin PR**. **No están en `main`.**
+- **Por qué no se fusionaron:** dan 16 archivos y 36 bloques en conflicto con `main`. `main` rediseñó el sistema de diseño (tokens `--color-status-*` y tema nuevo en `app/globals.css`), movió cohortes y alumnos a `CohortsWorkspace` y `StudentsWorkspace` (cada uno con su propio aviso de éxito) y cambió `components/layout/DashboardShell.tsx`. Ambos lados cambian la misma lógica de forma incompatible, así que no se resolvió a ciegas.
+- **Plan:** crear una rama nueva desde `main` que (1) porte el `Toast` con los tokens vigentes y reubique los avisos en los workspaces, y (2) aparte, porte la validación por paso del asistente de matrícula manual. El backend ya valida lo mismo (PR #44 del backend), así que la validación del cliente es de usabilidad. Las dos ramas originales se conservan como referencia; no se borran. Detalle por archivo: `conflictos-p06.md` (carpeta de publicación, fuera del repositorio).
 
 ## 10. Estado del CI
 
-Pendiente de revisión manual en la pestaña Checks de cada PR.
+El CI de `main` pasó en verde tras los merges (revisado por el responsable en GitHub). CircleCI aparece en rojo porque no tiene configuración: se ignora. Los casos de prueba saltados están en la sección 11.
 
 ## 11. Deuda de pruebas
 
@@ -119,3 +120,7 @@ Nota: `npm test` local también recorre las copias de `.claude/worktrees/`; el C
 ## 12. Despliegue
 
 La guía de despliegue (Railway + Vercel, modo demostración y correo por la API de Gmail) está en el backend: `coloradosdrive-backend/docs/DESPLIEGUE.md`. Variables del frontend: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+
+## 13. Dependabot
+
+Dependabot abre PR automáticos de dependencias. Antes de la defensa **no se fusionan saltos de versión mayor** (por ejemplo React o TypeScript 7). Los PR con el CI en rojo no se tocan. Solo se aceptan actualizaciones menores o de parche con el CI en verde y revisadas por el responsable.
