@@ -78,6 +78,36 @@ describe("CohortForm", () => {
     vi.clearAllMocks();
   });
 
+  it.each([
+    [false, "nombre", "Nombre de la cohorte"],
+    [false, "courseId", "Curso"],
+    [true, "nombre", "Nombre de la cohorte"],
+    [true, "courseId", "Curso"],
+  ] as const)(
+    "marca aria-invalid y enlaza el error en edición=%s, campo=%s",
+    async (edit, field, label) => {
+      const user = userEvent.setup();
+      const request = edit ? mockedPatch : mockedPost;
+      request.mockRejectedValueOnce(
+        new ApiError("Revisa este dato de la cohorte.", 400, { code: "INVALID_FIELD", field }),
+      );
+      render(
+        <CohortForm
+          courses={courses}
+          {...(edit ? { cohortId: "cohort-1", version: "2026-10-19T15:04:05.123456+00:00" } : {})}
+        />,
+      );
+      fillRequiredFields();
+      await user.click(
+        screen.getByRole("button", { name: edit ? "Guardar cambios" : "Crear cohorte" }),
+      );
+      const alert = await screen.findByRole("alert");
+      expect(screen.getByLabelText(label)).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByLabelText(label)).toHaveAttribute("aria-describedby", alert.id);
+      expect(screen.getByLabelText("Precio")).toHaveAttribute("aria-invalid", "false");
+    },
+  );
+
   it("marca los campos requeridos", () => {
     render(<CohortForm courses={courses} />);
 
@@ -149,6 +179,48 @@ describe("CohortForm", () => {
       );
     });
   });
+
+  it.each([
+    [{ fechaFinMatricula: "2026-01-01" }, "Fin de matrícula"],
+    [{ fechaFinCurso: "2026-02-01" }, "Fin de curso"],
+    [
+      {
+        fechaInicioMatricula: "2026-08-01",
+        fechaFinMatricula: "2026-08-25",
+        fechaInicioCurso: "2026-01-01",
+        fechaFinCurso: "2026-03-01",
+      },
+      "Fin de curso",
+    ],
+    [{ fechaFinMatricula: "2026-01-01", fechaFinCurso: "2026-02-01" }, "Fin de matrícula"],
+  ] as const)(
+    "enfoca el primer error local de fechas con ARIA ya actualizado: %o",
+    async (changes, label) => {
+      const user = userEvent.setup();
+      render(<CohortForm courses={courses} />);
+      fillRequiredFields();
+      for (const [field, value] of Object.entries(changes)) {
+        const control = document.querySelector(`[name="${field}"]`);
+        if (!control) throw new Error("Campo de fecha no encontrado");
+        fireEvent.change(control, { target: { value } });
+      }
+      const target = screen.getByLabelText(label);
+      const atFocus: { invalid: string | null; describedBy: string | null }[] = [];
+      target.addEventListener("focus", () =>
+        atFocus.push({
+          invalid: target.getAttribute("aria-invalid"),
+          describedBy: target.getAttribute("aria-describedby"),
+        }),
+      );
+      await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
+      await waitFor(() => expect(target).toHaveFocus());
+      const errorId = target.getAttribute("aria-describedby");
+      expect(target).toHaveAttribute("aria-invalid", "true");
+      expect(document.getElementById(errorId ?? "")).toHaveAttribute("role", "alert");
+      expect(atFocus).toEqual([{ invalid: "true", describedBy: errorId }]);
+      expect(mockedPost).not.toHaveBeenCalled();
+    },
+  );
 
   it("muestra un error si el fin de matrícula es anterior al inicio", async () => {
     const user = userEvent.setup();
