@@ -50,6 +50,8 @@ const paymentCsp =
   "; frame-src 'self' https://spa-js-inputs.kushkipagos.com https://uat-spa-js-inputs.kushkipagos.ninja https://*.cardinalcommerce.com";
 
 const nextConfig: NextConfig = {
+  // Temporal (F23): el build no comprueba tipos de pruebas heredadas; tsc las revisa aparte.
+  typescript: { tsconfigPath: "tsconfig.build.json" },
   // No generar AGENTS.md/CLAUDE.md en cada `next dev`.
   agentRules: false,
   async headers() {
