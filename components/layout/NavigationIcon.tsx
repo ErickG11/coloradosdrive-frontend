@@ -7,6 +7,7 @@ export type NavigationSection =
   | "instructors"
   | "enroll"
   | "exams"
+  | "content"
   | "schedule"
   | "history"
   | "menu"
@@ -21,6 +22,7 @@ const paths: Record<NavigationSection, string> = {
   enroll:
     "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm7 1v6m-3-3h6",
   exams: "M9 3H5v18h14V3h-4M9 2h6v4H9V2Zm-1 9h8m-8 4h5",
+  content: "M3 4h7l2 3h9v14H3V4Zm4 8h10M7 16h6",
   schedule:
     "M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3 10h3v3H8v-3Z",
   menu: "M4 6h16M4 12h16M4 18h16",

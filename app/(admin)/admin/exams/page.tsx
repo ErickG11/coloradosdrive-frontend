@@ -1,6 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { api } from "@/lib/api/client";
+import { ContentConfirm } from "@/components/content-admin/ContentUI";
+import { useContentMutation } from "@/components/content-admin/useContentResource";
+import { Button } from "@/components/ui/Button";
 
 import {
   FormError,
@@ -10,7 +15,7 @@ import {
   iconButtonClassName,
 } from "@/components/ui";
 import { EditIcon } from "@/components/ui/icons";
-import { useFetch } from "@/hooks/useFetch";
+import { useContentResource } from "@/components/content-admin/useContentResource";
 import type { Course, Exam } from "@/types";
 
 const TYPE_LABELS: Record<Exam["type"], string> = {
@@ -26,12 +31,20 @@ function courseLabel(course: Course | undefined): string {
 }
 
 export default function ExamsPage() {
-  const { data: exams, isLoading: isLoadingExams, error: examsError } = useFetch<Exam[]>("/exams");
+  const [deleting, setDeleting] = useState<Exam | null>(null);
+  const action = useContentMutation();
+  const {
+    data: exams,
+    loading: isLoadingExams,
+    error: examsError,
+    reload: reloadExams,
+  } = useContentResource<Exam[]>("/exams");
   const {
     data: courses,
-    isLoading: isLoadingCourses,
+    loading: isLoadingCourses,
     error: coursesError,
-  } = useFetch<Course[]>("/courses");
+    reload: reloadCourses,
+  } = useContentResource<Course[]>("/courses");
 
   const isLoading = isLoadingExams || isLoadingCourses;
   const error = examsError ?? coursesError;
@@ -55,6 +68,17 @@ export default function ExamsPage() {
         </p>
       ) : null}
       {error ? <FormError>{error}</FormError> : null}
+      {error ? (
+        <button
+          className="min-h-11 underline"
+          onClick={() => {
+            reloadExams();
+            reloadCourses();
+          }}
+        >
+          Reintentar carga
+        </button>
+      ) : null}
 
       {!isLoading && !error ? (
         <div className="relative min-w-0 max-w-full overflow-x-auto rounded-md border border-border bg-bg-surface">
@@ -101,6 +125,12 @@ export default function ExamsPage() {
                     </td>
                     <td className="px-4 py-2 text-right">
                       <Link
+                        className="mr-3 underline"
+                        href={`/admin/content?view=resultados&exam=${exam.id}`}
+                      >
+                        Resultados
+                      </Link>
+                      <Link
                         href={`/admin/exams/${exam.id}/edit`}
                         aria-label={`Editar ${exam.title}`}
                         title={`Editar ${exam.title}`}
@@ -108,6 +138,14 @@ export default function ExamsPage() {
                       >
                         <EditIcon className="h-5 w-5" />
                       </Link>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        disabled={action.busy}
+                        onClick={() => setDeleting(exam)}
+                      >
+                        Eliminar
+                      </Button>
                     </td>
                   </tr>
                 ))
@@ -115,6 +153,28 @@ export default function ExamsPage() {
             </tbody>
           </table>
         </div>
+      ) : null}
+      {deleting ? (
+        <ContentConfirm
+          key={deleting.id}
+          title={`Eliminar ${deleting.title}`}
+          description="Solo puede eliminarse un examen sin colocaciones ni intentos. Su banco de preguntas se eliminará. Si tiene dependencias, despublícalo."
+          busy={action.busy}
+          error={action.error}
+          onClose={() => setDeleting(null)}
+          onConfirm={() =>
+            void (async () => {
+              const result = await action.run(
+                () => api.delete(`/exams/${deleting.id}`),
+                "Examen eliminado.",
+              );
+              if (result.ok) {
+                setDeleting(null);
+                reloadExams();
+              }
+            })()
+          }
+        />
       ) : null}
     </div>
   );
