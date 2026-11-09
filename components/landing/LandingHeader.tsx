@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useMotionValueEvent, useScroll } from "framer-motion";
+import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { landingContent, landingImages } from "@/lib/content/landing";
@@ -13,10 +13,31 @@ import styles from "./landing.module.css";
 export function LandingHeader() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
   const menuButton = useRef<HTMLButtonElement>(null);
   const header = useRef<HTMLElement>(null);
-  const { scrollY } = useScroll();
-  useMotionValueEvent(scrollY, "change", (value) => setScrolled(value > 16));
+  const { scrollY, scrollYProgress } = useScroll();
+  useMotionValueEvent(scrollY, "change", (value) => {
+    setScrolled(value > 16);
+    if (value < 100) setActiveSection("");
+  });
+
+  useEffect(() => {
+    const sections = landingContent.navigation.flatMap(({ href }) => {
+      const element = document.querySelector(href);
+      return element ? [element] : [];
+    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActiveSection(`#${entry.target.id}`);
+        }
+      },
+      { rootMargin: "-15% 0px -60% 0px", threshold: 0 },
+    );
+    sections.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -56,7 +77,11 @@ export function LandingHeader() {
         </Link>
         <nav aria-label="Navegación principal" className={styles.desktopNav}>
           {landingContent.navigation.map((link) => (
-            <a key={link.href} href={link.href}>
+            <a
+              key={link.href}
+              href={link.href}
+              aria-current={activeSection === link.href ? "location" : undefined}
+            >
               {link.label}
             </a>
           ))}
@@ -116,6 +141,11 @@ export function LandingHeader() {
           </Link>
         </div>
       </nav>
+      <motion.div
+        className={styles.readingProgress}
+        style={{ scaleX: scrollYProgress }}
+        aria-hidden="true"
+      />
     </header>
   );
 }

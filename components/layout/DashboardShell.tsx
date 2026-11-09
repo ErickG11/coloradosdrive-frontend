@@ -41,7 +41,7 @@ export async function DashboardShell({
       <div className="flex min-w-0 flex-1 flex-col">
         {hasNotifications ? (
           <header
-            aria-label="Avisos de prácticas"
+            aria-label="Avisos"
             className="absolute right-16 top-2.5 z-40 flex h-11 items-center md:static md:h-16 md:shrink-0 md:justify-end md:border-b md:border-border md:bg-bg-surface md:px-6"
           >
             <NotificationBell key={user?.id} role={role} />

@@ -1,63 +1,37 @@
 "use client";
-
 import { useParams } from "next/navigation";
-
-import { Card, FormError } from "@/components/ui";
-import { useFetch } from "@/hooks/useFetch";
+import { Card } from "@/components/ui/Card";
+import { ContentLoad } from "@/components/content-admin/ContentUI";
+import { useContentResource } from "@/components/content-admin/useContentResource";
 import type { Course, ExamWithQuestions } from "@/types";
-
-import { ExamForm, type ExamFormValues } from "../../ExamForm";
-import type { QuestionFormValue } from "../../QuestionBuilder";
-
-function toFormValues(exam: ExamWithQuestions): ExamFormValues {
-  return {
-    courseId: exam.courseId,
-    title: exam.title,
-    type: exam.type,
-    timeLimitMinutes: String(exam.timeLimitMinutes),
-    passingScorePercent: String(exam.passingScorePercent),
-    isPublished: exam.isPublished,
-    questions: exam.questions
-      .slice()
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((question): QuestionFormValue => ({
-        id: question.id,
-        type: question.type,
-        prompt: question.prompt,
-        points: String(question.points),
-        correctAnswerText: question.correctAnswerText ?? "",
-        synonyms: question.synonyms ?? [],
-        options: question.options
-          .slice()
-          .sort((a, b) => a.orderIndex - b.orderIndex)
-          .map((option) => ({ optionText: option.optionText, isCorrect: option.isCorrect })),
-      })),
-  };
-}
-
+import type { ExamResult } from "@/types/content";
+import { ExamForm, examToFormValues } from "../../ExamForm";
 export default function EditExamPage() {
   const params = useParams<{ id: string }>();
-  const {
-    data: courses,
-    isLoading: isLoadingCourses,
-    error: coursesError,
-  } = useFetch<Course[]>("/courses");
-  const {
-    data: exam,
-    isLoading: isLoadingExam,
-    error: examError,
-  } = useFetch<ExamWithQuestions>(`/exams/${params.id}`);
-
-  const isLoading = isLoadingCourses || isLoadingExam;
-  const error = coursesError ?? examError;
-
+  const courses = useContentResource<Course[]>("/courses");
+  const exam = useContentResource<ExamWithQuestions>(`/exams/${params.id}`);
+  const results = useContentResource<ExamResult[]>(`/admin/content/exams/${params.id}/results`);
   return (
     <Card title="Editar examen" titleAs="h1">
-      {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
-      {error ? <FormError>{error}</FormError> : null}
-      {courses && exam ? (
-        <ExamForm courses={courses} examId={exam.id} initialValues={toFormValues(exam)} />
-      ) : null}
+      <ContentLoad
+        loading={courses.loading || exam.loading || results.loading}
+        error={courses.error ?? exam.error ?? results.error}
+        retry={() => {
+          courses.reload();
+          exam.reload();
+          results.reload();
+        }}
+      >
+        {courses.data && exam.data && results.data ? (
+          <ExamForm
+            key={exam.data.id}
+            courses={courses.data}
+            examId={exam.data.id}
+            initialValues={examToFormValues(exam.data)}
+            hasAttempts={results.data.some((r) => r.intentos_usados > 0)}
+          />
+        ) : null}
+      </ContentLoad>
     </Card>
   );
 }

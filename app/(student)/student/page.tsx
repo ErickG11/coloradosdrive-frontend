@@ -23,6 +23,9 @@ export default function StudentPage() {
           certificarte.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
+          <Link href="/student/course" className={buttonClassName("secondary")}>
+            Ver mi curso
+          </Link>
           <Link href="/student/history" className={buttonClassName()}>
             Ver mi historial de asistencia
           </Link>

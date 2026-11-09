@@ -1,19 +1,20 @@
 "use client";
 
-import { Card, FormError } from "@/components/ui";
-import { useFetch } from "@/hooks/useFetch";
+import { Card } from "@/components/ui/Card";
+import { useContentResource } from "@/components/content-admin/useContentResource";
+import { ContentLoad } from "@/components/content-admin/ContentUI";
 import type { Course } from "@/types";
 
 import { ExamForm } from "../ExamForm";
 
 export default function NewExamPage() {
-  const { data: courses, isLoading, error } = useFetch<Course[]>("/courses");
+  const { data: courses, loading, error, reload } = useContentResource<Course[]>("/courses");
 
   return (
     <Card title="Nuevo examen" titleAs="h1">
-      {isLoading ? <p className="text-sm text-text-secondary">Cargando cursos…</p> : null}
-      {error ? <FormError>{error}</FormError> : null}
-      {courses ? <ExamForm courses={courses} /> : null}
+      <ContentLoad loading={loading} error={error} retry={reload} empty={courses?.length === 0}>
+        {courses ? <ExamForm courses={courses} /> : null}
+      </ContentLoad>
     </Card>
   );
 }

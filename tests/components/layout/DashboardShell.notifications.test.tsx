@@ -18,7 +18,7 @@ describe("campana en el layout por rol", () => {
     });
     render(await DashboardShell({ children: <p>Contenido</p> }));
     expect(screen.getAllByRole("button", { name: "Campana de avisos" })).toHaveLength(1);
-    expect(screen.getByRole("banner", { name: "Avisos de prácticas" })).toBeInTheDocument();
+    expect(screen.getByRole("banner", { name: "Avisos" })).toBeInTheDocument();
     expect(bell.mock.calls[0][0]).toMatchObject({ role });
   });
   it("admin conserva su layout sin campana", async () => {

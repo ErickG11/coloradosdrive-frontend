@@ -13,7 +13,6 @@ import styles from "./landing.module.css";
 export function LearningJourney() {
   const section = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
-  const reducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: section, offset: ["start 0.6", "end 0.8"] });
   const progress = useSpring(scrollYProgress, { stiffness: 160, damping: 30 });
   const images = [landingContent.courses[0].image, landingImages.classes, landingImages.practice];
@@ -71,7 +70,7 @@ export function LearningJourney() {
         </div>
         <div className={styles.journeyRoad}>
           <div className={styles.journeyRail} aria-hidden="true">
-            <motion.span style={{ scaleY: reducedMotion ? 1 : progress }} />
+            <motion.span style={{ scaleY: progress }} />
           </div>
           <ol className={styles.journeySteps}>
             {landingContent.steps.map((step, index) => (
@@ -109,15 +108,10 @@ export function LearningJourney() {
 
 export function ParallaxMedia({ image }: { image: LandingImage }) {
   const element = useRef<HTMLDivElement>(null);
-  const reducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: element, offset: ["start end", "end start"] });
   const offset = useTransform(scrollYProgress, [0, 1], [24, -24]);
   return (
-    <motion.div
-      ref={element}
-      style={{ y: reducedMotion ? 0 : offset }}
-      className={styles.parallaxMedia}
-    >
+    <motion.div ref={element} style={{ y: offset }} className={styles.parallaxMedia}>
       <Image
         unoptimized
         {...image}
