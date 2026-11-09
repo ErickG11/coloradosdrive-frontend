@@ -52,15 +52,15 @@ describe("Sidebar", () => {
     }
   });
 
-  it("estudiante: ve Exámenes y Horarios de práctica (su propia sección), nunca los enlaces de admin", () => {
+  it("estudiante: ve Mi curso (exámenes y contenido) y Horarios de práctica (su propia sección), nunca los enlaces de admin", () => {
     renderSidebar("estudiante");
 
     expect(screen.queryAllByRole("link", { name: /Cohortes/ })).toHaveLength(0);
     expect(screen.queryAllByRole("link", { name: /Matricular estudiante/ })).toHaveLength(0);
-    const examLinks = screen.getAllByRole("link", { name: /Exámenes/ });
-    expect(examLinks.length).toBeGreaterThan(0);
-    for (const link of examLinks) {
-      expect(link).toHaveAttribute("href", "/student/exams");
+    const courseLinks = screen.getAllByRole("link", { name: /Mi curso/ });
+    expect(courseLinks.length).toBeGreaterThan(0);
+    for (const link of courseLinks) {
+      expect(link).toHaveAttribute("href", "/student/course");
     }
     for (const link of screen.getAllByRole("link", { name: /Horarios de práctica/ })) {
       expect(link).toHaveAttribute("href", "/student/schedule");

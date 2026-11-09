@@ -1,15 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ExamsPage from "@/app/(admin)/admin/exams/page";
-import { useFetch } from "@/hooks/useFetch";
+import { api } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import type { Course, Exam } from "@/types";
 
-vi.mock("@/hooks/useFetch", () => ({
-  useFetch: vi.fn(),
+vi.mock("@/lib/api/client", () => ({
+  api: { get: vi.fn(), delete: vi.fn() },
 }));
 
-const mockedUseFetch = vi.mocked(useFetch);
+const mockedGet = vi.mocked(api.get);
+const mockedDelete = vi.mocked(api.delete);
 
 const exams: Exam[] = [
   {
@@ -36,24 +39,14 @@ const courses: Course[] = [
   },
 ];
 
-function mockFetchResults(options: {
-  exams?: { data: Exam[] | null; isLoading: boolean; error: string | null };
-  courses?: { data: Course[] | null; isLoading: boolean; error: string | null };
-}) {
-  mockedUseFetch.mockImplementation((path: unknown) => {
-    if (path === "/exams") {
-      return {
-        refetch: vi.fn(),
-        ...(options.exams ?? { data: [], isLoading: false, error: null }),
-      };
-    }
-    if (path === "/courses") {
-      return {
-        refetch: vi.fn(),
-        ...(options.courses ?? { data: [], isLoading: false, error: null }),
-      };
-    }
-    throw new Error(`useFetch mockeado con un path inesperado: ${String(path)}`);
+// La pantalla carga con useContentResource (api.get), no con useFetch.
+function mockFetchResults(options: { exams?: Exam[] | Error; courses?: Course[] | Error }) {
+  const respond = (value: Exam[] | Course[] | Error | undefined) =>
+    value instanceof Error ? Promise.reject(value) : Promise.resolve(value ?? []);
+  mockedGet.mockImplementation((path: unknown) => {
+    if (path === "/exams") return respond(options.exams);
+    if (path === "/courses") return respond(options.courses);
+    throw new Error(`api.get mockeado con un path inesperado: ${String(path)}`);
   });
 }
 
@@ -63,45 +56,69 @@ describe("ExamsPage", () => {
   });
 
   it("muestra el estado de carga", () => {
-    mockFetchResults({
-      exams: { data: null, isLoading: true, error: null },
-      courses: { data: null, isLoading: true, error: null },
-    });
+    mockedGet.mockReturnValue(new Promise(() => {}));
 
     render(<ExamsPage />);
 
     expect(screen.getByText("Cargando…")).toBeInTheDocument();
   });
 
-  it("muestra el error si falla la carga", () => {
-    mockFetchResults({
-      exams: { data: null, isLoading: false, error: "No se pudo conectar con el servidor." },
-    });
+  it("muestra el error si falla la carga y ofrece reintentar", async () => {
+    mockFetchResults({ exams: new ApiError("Caída", 500) });
 
     render(<ExamsPage />);
 
-    expect(screen.getByText("No se pudo conectar con el servidor.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("No se pudo conectar con Contenido. Intenta de nuevo."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reintentar carga" })).toBeInTheDocument();
   });
 
-  it("muestra un mensaje cuando no hay exámenes", () => {
+  it("muestra un mensaje cuando no hay exámenes", async () => {
     mockFetchResults({});
 
     render(<ExamsPage />);
 
-    expect(screen.getByText("Todavía no hay exámenes.")).toBeInTheDocument();
+    expect(await screen.findByText("Todavía no hay exámenes.")).toBeInTheDocument();
   });
 
-  it("renderiza el examen con el curso unido del lado del cliente, tipo y estado de publicación", () => {
-    mockFetchResults({
-      exams: { data: exams, isLoading: false, error: null },
-      courses: { data: courses, isLoading: false, error: null },
-    });
+  it("renderiza el examen con el curso unido del lado del cliente, tipo y estado de publicación", async () => {
+    mockFetchResults({ exams, courses });
 
     render(<ExamsPage />);
 
-    expect(screen.getByText("Examen de práctica - Señales")).toBeInTheDocument();
+    expect(await screen.findByText("Examen de práctica - Señales")).toBeInTheDocument();
     expect(screen.getByText("Motocicletas (Tipo A)")).toBeInTheDocument();
     expect(screen.getByText("Práctica")).toBeInTheDocument();
     expect(screen.getByText("Sí")).toBeInTheDocument();
+  });
+
+  it("enlaza a los resultados del examen en Contenido", async () => {
+    mockFetchResults({ exams, courses });
+
+    render(<ExamsPage />);
+
+    expect(await screen.findByRole("link", { name: "Resultados" })).toHaveAttribute(
+      "href",
+      "/admin/content?view=resultados&exam=exam-1",
+    );
+  });
+
+  it("eliminar exige escribir ELIMINAR y recién entonces llama DELETE /exams/:id", async () => {
+    const user = userEvent.setup();
+    mockFetchResults({ exams, courses });
+    mockedDelete.mockResolvedValue(undefined);
+
+    render(<ExamsPage />);
+    await user.click(await screen.findByRole("button", { name: "Eliminar" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const confirmButton = within(dialog).getByRole("button", { name: "Eliminar" });
+    expect(confirmButton).toBeDisabled();
+    expect(mockedDelete).not.toHaveBeenCalled();
+    await user.type(within(dialog).getByLabelText(/Escribe ELIMINAR/), "ELIMINAR");
+    await user.click(confirmButton);
+
+    await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith("/exams/exam-1"));
   });
 });
