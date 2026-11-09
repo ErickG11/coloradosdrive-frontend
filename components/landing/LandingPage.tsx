@@ -71,7 +71,7 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
                   <LandingIcon name="arrow" />
                 </Link>
               </div>
-              <ScrollReveal className={styles.platformMedia}>
+              <ScrollReveal className={styles.platformMedia} variant="media">
                 <Image
                   unoptimized
                   {...landingImages.platform}
@@ -197,7 +197,7 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
                 <p className={styles.note}>Horario: {landingContent.hours}</p>
               )}
             </div>
-            <ScrollReveal className={styles.contactMedia}>
+            <ScrollReveal className={styles.contactMedia} variant="media">
               <Image
                 unoptimized
                 {...landingImages.contact}

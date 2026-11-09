@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-import { Card } from "@/components/ui/Card";
+import styles from "./landing.module.css";
 
 import { BallotIcon, BloodDropIcon, DiplomaIcon, IdCardIcon } from "./icons";
 import { ScrollReveal } from "./ScrollReveal";
@@ -24,22 +24,24 @@ const REQUIREMENTS: Requirement[] = [
 
 export function RequirementsSection() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-16 md:px-8 md:py-24">
+    <section
+      className={`${styles.container} ${styles.requirements}`}
+      aria-labelledby="requirements-title"
+    >
       <ScrollReveal>
-        <h2 className="font-display text-3xl font-bold tracking-tight text-text-primary md:text-4xl">
-          Requisitos para inscribirte
-        </h2>
+        <h2 id="requirements-title">Requisitos para inscribirte</h2>
       </ScrollReveal>
 
-      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <div className={styles.requirementGrid}>
         {REQUIREMENTS.map((requirement, index) => (
           <ScrollReveal key={requirement.label} delay={index * 0.08}>
-            <Card className="flex h-full flex-col items-start gap-3 p-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-md bg-accent-blue-subtle text-accent-blue">
-                {requirement.icon}
-              </div>
-              <span className="text-sm font-medium text-text-primary">{requirement.label}</span>
-            </Card>
+            <div className={styles.requirementItem}>
+              <span className={styles.requirementNumber} aria-hidden="true">
+                0{index + 1}
+              </span>
+              <div className={styles.requirementIcon}>{requirement.icon}</div>
+              <span>{requirement.label}</span>
+            </div>
           </ScrollReveal>
         ))}
       </div>

@@ -110,6 +110,14 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
             Exámenes
           </SidebarLink>
           <SidebarLink
+            href="/admin/content"
+            active={pathname.startsWith("/admin/content")}
+            section="content"
+            onClick={closeDrawer}
+          >
+            Contenido
+          </SidebarLink>
+          <SidebarLink
             href="/admin/practice-slots"
             active={pathname.startsWith("/admin/practice-slots")}
             section="schedule"
@@ -149,12 +157,14 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
           ) : (
             <>
               <SidebarLink
-                href="/student/exams"
-                active={pathname.startsWith("/student/exams")}
-                section="exams"
+                href="/student/course"
+                active={
+                  pathname.startsWith("/student/exams") || pathname.startsWith("/student/course")
+                }
+                section="content"
                 onClick={closeDrawer}
               >
-                Exámenes
+                Mi curso
               </SidebarLink>
               <SidebarLink
                 href="/student/schedule"

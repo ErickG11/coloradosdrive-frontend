@@ -38,7 +38,11 @@ interface CourseCardProps {
 
 export function CourseCard({ course }: CourseCardProps) {
   return (
-    <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.15, ease: "easeOut" }}>
+    <motion.div
+      whileHover={{ y: -5 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+    >
       <Card className="flex h-full flex-col">
         <div
           className={cn(

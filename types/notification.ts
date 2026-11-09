@@ -1,4 +1,7 @@
 export type NotificationType =
+  | "contenido_habilitado"
+  | "examen_habilitado"
+  | "intento_extra"
   | "recordatorio_practica"
   | "resultado_cancelacion"
   | "cupo_disponible"
