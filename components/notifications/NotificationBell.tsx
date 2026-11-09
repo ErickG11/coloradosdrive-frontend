@@ -13,6 +13,8 @@ import { formatPracticeDateTime } from "@/lib/utils/schoolTime";
 import type { Notification } from "@/types/notification";
 import type { Role } from "@/types/user";
 
+const contentNotices = new Set(["contenido_habilitado", "examen_habilitado", "intento_extra"]);
+
 export function NotificationBell({ role }: { role: Role | null }) {
   if (role !== "estudiante" && role !== "instructor") return null;
   return <UserNotificationBell role={role} />;
@@ -31,6 +33,11 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
 
   async function read(notification: Notification) {
     const saved = await notifications.markRead(notification);
+    if (saved && role === "estudiante" && contentNotices.has(notification.tipo)) {
+      close();
+      router.push("/student/course");
+      return;
+    }
     if (saved && notification.practiceSlotId) {
       close();
       router.push(
@@ -152,7 +159,7 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
               notifications.items.length === 0 ? (
                 <EmptyState
                   title="No tienes avisos por ahora"
-                  description="Aquí aparecerán los avisos de tus prácticas, aunque no tengas la pantalla abierta."
+                  description="Aquí aparecerán los avisos de tus prácticas y contenido, aunque no tengas la pantalla abierta."
                 />
               ) : null}
               {notifications.items.length > 0 ? (
@@ -175,6 +182,15 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
                       >
                         <span className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
                           <span className="min-w-0 break-words text-sm font-semibold text-text-primary">
+                            {contentNotices.has(notification.tipo) ? (
+                              <span aria-hidden="true" className="mr-2 text-brand-primary">
+                                {notification.tipo === "intento_extra"
+                                  ? "↻"
+                                  : notification.tipo === "examen_habilitado"
+                                    ? "✎"
+                                    : "▤"}
+                              </span>
+                            ) : null}
                             {notification.tipo === "encuesta_practica" ? (
                               <span aria-hidden="true" className="mr-2 text-brand-primary">
                                 ★
@@ -194,6 +210,13 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
                         {notification.tipo === "encuesta_practica" ? (
                           <span className="text-xs font-medium text-brand-primary">
                             Ver encuesta de práctica
+                          </span>
+                        ) : null}
+                        {contentNotices.has(notification.tipo) ? (
+                          <span className="text-xs font-medium text-brand-primary">
+                            {notification.tipo === "intento_extra"
+                              ? "Revisar intentos en Mi curso"
+                              : "Ver en Mi curso"}
                           </span>
                         ) : null}
                         {notification.scheduledAt ? (

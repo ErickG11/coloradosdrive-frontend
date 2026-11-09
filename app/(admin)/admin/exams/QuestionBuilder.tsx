@@ -5,11 +5,14 @@ import { TrashIcon } from "@/components/ui/icons";
 import type { QuestionType } from "@/types";
 
 export interface QuestionOptionFormValue {
+  id?: string;
   optionText: string;
   isCorrect: boolean;
 }
 
 export interface QuestionFormValue {
+  orderIndex?: number;
+  draftKey?: string;
   /** Presente solo en edición, para preguntas que ya existían al cargar el formulario. */
   id?: string;
   type: QuestionType;
@@ -45,6 +48,7 @@ interface QuestionBuilderProps {
   canRemove: boolean;
   onChange: (question: QuestionFormValue) => void;
   onRemove: () => void;
+  textOnly?: boolean;
 }
 
 // Una pregunta del constructor dinámico (RF-02, tarea 2): cambia de forma
@@ -59,6 +63,7 @@ export function QuestionBuilder({
   canRemove,
   onChange,
   onRemove,
+  textOnly = false,
 }: QuestionBuilderProps) {
   const questionLabel = `Pregunta ${index + 1}`;
 
@@ -134,7 +139,7 @@ export function QuestionBuilder({
           icon={<TrashIcon className="h-5 w-5" />}
           variant="danger"
           onClick={onRemove}
-          disabled={!canRemove}
+          disabled={!canRemove || textOnly}
           aria-label={`Quitar ${questionLabel}`}
           title={canRemove ? undefined : "El examen necesita al menos una pregunta"}
         />
@@ -145,6 +150,7 @@ export function QuestionBuilder({
           label={`${questionLabel} - Tipo`}
           name={`question-${index}-type`}
           value={question.type}
+          disabled={textOnly || Boolean(question.id)}
           onChange={(event) => handleTypeChange(event.target.value as QuestionType)}
         >
           {TYPE_OPTIONS.map((option) => (
@@ -161,6 +167,7 @@ export function QuestionBuilder({
           step="0.01"
           required
           value={question.points}
+          disabled={textOnly}
           onChange={(event) => updateField("points", event.target.value)}
         />
       </div>
@@ -185,6 +192,7 @@ export function QuestionBuilder({
                 name={`question-${index}-correct-option`}
                 aria-label={`${questionLabel} - Opción ${optionIndex + 1} es correcta`}
                 checked={option.isCorrect}
+                disabled={textOnly}
                 onChange={() => markOptionCorrect(optionIndex)}
                 className="h-4 w-4 accent-accent-red"
               />
@@ -202,7 +210,7 @@ export function QuestionBuilder({
                 icon={<TrashIcon className="h-5 w-5" />}
                 variant="ghost"
                 onClick={() => removeOption(optionIndex)}
-                disabled={question.options.length <= 2}
+                disabled={textOnly || question.options.length <= 2}
                 aria-label={`Quitar ${questionLabel} - Opción ${optionIndex + 1}`}
                 title={
                   question.options.length <= 2
@@ -212,7 +220,13 @@ export function QuestionBuilder({
               />
             </div>
           ))}
-          <Button type="button" variant="secondary" size="sm" onClick={addOption}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={addOption}
+            disabled={textOnly}
+          >
             Agregar opción
           </Button>
         </div>
@@ -223,6 +237,7 @@ export function QuestionBuilder({
             name={`question-${index}-correct-answer-text`}
             required
             value={question.correctAnswerText}
+            disabled={textOnly}
             onChange={(event) => updateField("correctAnswerText", event.target.value)}
           />
           <div className="flex flex-col gap-3">
@@ -236,6 +251,7 @@ export function QuestionBuilder({
                   name={`question-${index}-synonym-${synonymIndex}`}
                   required
                   value={synonym}
+                  disabled={textOnly}
                   onChange={(event) => updateSynonym(synonymIndex, event.target.value)}
                   className="flex-1"
                 />
@@ -243,11 +259,18 @@ export function QuestionBuilder({
                   icon={<TrashIcon className="h-5 w-5" />}
                   variant="ghost"
                   onClick={() => removeSynonym(synonymIndex)}
+                  disabled={textOnly}
                   aria-label={`Quitar ${questionLabel} - Sinónimo ${synonymIndex + 1}`}
                 />
               </div>
             ))}
-            <Button type="button" variant="secondary" size="sm" onClick={addSynonym}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={addSynonym}
+              disabled={textOnly}
+            >
               Agregar sinónimo
             </Button>
           </div>

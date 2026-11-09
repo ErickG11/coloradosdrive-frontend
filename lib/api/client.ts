@@ -78,15 +78,16 @@ function redirigirAlDesafioMfa(): void {
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { body, token, headers, ...rest } = options;
   const accessToken = token !== undefined ? token : await getAccessToken();
+  const multipart = typeof FormData !== "undefined" && body instanceof FormData;
 
   const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${path}`, {
     ...rest,
     headers: {
-      "Content-Type": "application/json",
+      ...(!multipart ? { "Content-Type": "application/json" } : {}),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: multipart ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   if (!response.ok) {

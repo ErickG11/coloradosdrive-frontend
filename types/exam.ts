@@ -32,6 +32,10 @@ export type QuestionForStudent = Omit<Question, "correctAnswerText" | "synonyms"
 };
 
 export interface Exam {
+  description?: string | null;
+  maxAttemptsDefault?: number | null;
+  shuffleQuestions?: boolean;
+  shuffleOptions?: boolean;
   id: string;
   courseId: string;
   title: string;
@@ -69,6 +73,10 @@ export interface CreateQuestionInput {
 
 // POST /exams: el examen y su banco de preguntas en una sola operación.
 export interface CreateExamInput {
+  description?: string | null;
+  maxAttemptsDefault?: number | null;
+  shuffleQuestions?: boolean;
+  shuffleOptions?: boolean;
   courseId: string;
   title: string;
   type: ExamType;
@@ -80,6 +88,10 @@ export interface CreateExamInput {
 // El backend no permite cambiar type ni courseId después de creado
 // (ver docs/adr y questions_open_text_has_answer en la migración 004).
 export type UpdateExamInput = Partial<{
+  description: string | null;
+  maxAttemptsDefault: number | null;
+  shuffleQuestions: boolean;
+  shuffleOptions: boolean;
   title: string;
   timeLimitMinutes: number;
   passingScorePercent: number;
@@ -88,4 +100,5 @@ export type UpdateExamInput = Partial<{
 
 export type UpdateQuestionInput = Partial<Omit<CreateQuestionInput, "options" | "type">> & {
   options?: CreateQuestionOptionInput[];
+  optionTexts?: { id: string; optionText: string }[];
 };

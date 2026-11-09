@@ -11,10 +11,15 @@ export interface AttemptOwnAnswer {
   prompt: string;
   selectedOptionId: string | null;
   textAnswer: string | null;
-  isCorrect: boolean;
+  /** @deprecated Legacy fixtures only. Current API omits this; never render or infer it. */
+  isCorrect?: boolean;
 }
 
 export interface ExamAttempt {
+  deadlineAt?: string;
+  attemptNumber?: number;
+  maxAttemptsAplicado?: number | null;
+  minutosAplicados?: number;
   id: string;
   examId: string;
   studentId: string;
@@ -40,7 +45,8 @@ export interface SubmitAttemptInput {
 export interface AttemptAnswerDetail {
   questionId: string;
   prompt: string;
-  isCorrect: boolean;
+  /** @deprecated Legacy fixtures only. Current API omits this; never render or infer it. */
+  isCorrect?: boolean;
   pointsEarned: number;
   pointsPossible: number;
   similarityScore: number | null;
