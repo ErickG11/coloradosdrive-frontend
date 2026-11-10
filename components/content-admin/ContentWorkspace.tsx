@@ -138,7 +138,9 @@ function CourseContent({
     initialView,
   );
   const subjects = sorted(catalog.subjects.filter((s) => s.course_id === course.id));
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(
+    () => catalog.items.find((item) => item.exam_id === initialExam)?.subject_id ?? "",
+  );
   const [accessKind, setAccessKind] = useState<ContentScope["scope"]>("curso");
   const [accessChoice, setAccessChoice] = useState("");
   const subject = subjects.find((s) => s.id === selected) ?? subjects[0];
