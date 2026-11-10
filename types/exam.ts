@@ -14,7 +14,16 @@ export interface QuestionOption {
 // nunca incluye isCorrect.
 export type QuestionOptionForStudent = Omit<QuestionOption, "isCorrect">;
 
+export interface QuestionImage {
+  url: string;
+  alt: string | null;
+}
+export interface AttemptQuestionImage extends QuestionImage {
+  questionId: string;
+}
+
 export interface Question {
+  image?: QuestionImage | null;
   id: string;
   examId: string;
   type: QuestionType;

@@ -1,4 +1,4 @@
-import type { ExamType, QuestionType } from "./exam";
+import type { ExamType, QuestionType, QuestionImage } from "./exam";
 
 export interface QuestionOptionFormValue {
   id?: string;
@@ -6,6 +6,7 @@ export interface QuestionOptionFormValue {
   isCorrect: boolean;
 }
 export interface QuestionFormValue {
+  image?: QuestionImage | null;
   orderIndex?: number;
   draftKey?: string;
   id?: string;
