@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import styles from "@/components/exams-admin/exam-admin.module.css";
 import { Button, IconButton, Input, Select, Textarea } from "@/components/ui";
 import { TrashIcon } from "@/components/ui/icons";
@@ -41,6 +41,7 @@ interface QuestionBuilderProps {
   onMoveDown?: () => void;
   onDuplicate?: () => void;
   issues?: string[];
+  imageField?: ReactNode;
 }
 
 export function QuestionBuilder({
@@ -56,6 +57,7 @@ export function QuestionBuilder({
   onMoveDown,
   onDuplicate,
   issues = [],
+  imageField,
 }: QuestionBuilderProps) {
   const details = useRef<HTMLDetailsElement>(null);
   const questionLabel = `Pregunta ${index + 1}`;
@@ -219,6 +221,7 @@ export function QuestionBuilder({
             onChange={(event) => updateField("prompt", event.target.value)}
           />
 
+          {imageField}
           {question.type === "opcion_multiple" ? (
             <div className="flex flex-col gap-3">
               <span className="text-sm font-medium text-text-secondary">
