@@ -57,6 +57,8 @@ Pendiente: prueba de Erick con datos nuevos y sesión admin real, especialmente 
 
 No hay cambios de backend necesarios para esta entrega. Si el volumen por curso aumenta, la mejora mínima propuesta es un endpoint agregado de resumen por curso que devuelva por examen cantidad de preguntas, puntos, intentos, materia/publicación y estado de habilitaciones. Reemplazaría el abanico de lecturas de metadatos; no se implementó ni se cambió ningún contrato.
 
+La extensión de imágenes de preguntas tiene su contrato, restricciones y pruebas en [Imágenes de preguntas](examenes-imagenes-ui.md).
+
 ## Prueba manual con datos nuevos (10 pasos)
 
 1. Entrar como admin en `/admin/exams`. Cambiar curso, tipo y estado; buscar títulos con/sin tilde. Confirmar contador, resultados vacíos, carga y reintento ante fallo de red.
