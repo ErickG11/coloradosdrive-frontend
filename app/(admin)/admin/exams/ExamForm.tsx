@@ -21,6 +21,16 @@ import {
 } from "@/lib/utils/examAdmin";
 import { useUnsavedExam } from "@/components/exams-admin/useUnsavedExam";
 import { AdminChip, ContentBanner } from "@/components/content-admin/AdminContentUI";
+import { useQuestionImageDrafts } from "@/components/exams-admin/useQuestionImageDrafts";
+import { QuestionImageField } from "@/components/exams-admin/QuestionImageField";
+import { QuestionImage } from "@/components/exams/QuestionImage";
+import {
+  examContentFingerprint,
+  keepQuestionDraftKeys,
+  questionDraftKey,
+  questionImageError,
+} from "@/lib/utils/questionImages";
+import { ApiError } from "@/lib/api/errors";
 import { Modal } from "@/components/ui/Modal";
 import styles from "@/components/exams-admin/exam-admin.module.css";
 import { emptyQuestion, QuestionBuilder, type QuestionFormValue } from "./QuestionBuilder";
@@ -45,6 +55,7 @@ export function examToFormValues(exam: ExamWithQuestions): ExamFormValues {
       .slice()
       .sort((a, b) => a.orderIndex - b.orderIndex)
       .map((q) => ({
+        image: q.image ?? null,
         id: q.id,
         orderIndex: q.orderIndex,
         type: q.type,
@@ -104,11 +115,15 @@ export function ExamForm({
     questions: [{ ...emptyQuestion(), draftKey: "initial" }],
     ...initialValues,
   }));
+  const imageDrafts = useQuestionImageDrafts();
   const [cleanValues, setCleanValues] = useState(values);
   const [reordered, setReordered] = useState(false);
   const [preview, setPreview] = useState(false);
   const issues = examDraftIssues(values);
-  const dirty = JSON.stringify(values) !== JSON.stringify(cleanValues);
+  const dirty =
+    examContentFingerprint(values) !== examContentFingerprint(cleanValues) ||
+    imageDrafts.hasPending ||
+    imageDrafts.checking;
   useUnsavedExam(dirty);
   const [baseline, setBaseline] = useState(initialValues);
   const [id, setId] = useState(examId ?? "");
@@ -139,9 +154,68 @@ export function ExamForm({
       lock.current = false;
     }
   }
+  function handleImageConflict(code?: string) {
+    if (code === "EXAM_STRUCTURE_FROZEN") setFrozen(true);
+    if (code === "EXAM_PUBLISHED_UNPUBLISH") setPublished(true);
+  }
+  async function retryImage(question: QuestionFormValue) {
+    if (lock.current || !id || published || reloadRequired || imageDrafts.working()) return;
+    lock.current = true;
+    setBusy(true);
+    try {
+      const result = await imageDrafts.saveOne(id, question);
+      handleImageConflict(result.code);
+      if (result.ok && result.image !== undefined) {
+        setValues((current) => ({
+          ...current,
+          questions: current.questions.map((entry) =>
+            questionDraftKey(entry) === questionDraftKey(question)
+              ? { ...entry, image: result.image }
+              : entry,
+          ),
+        }));
+        if (!imageDrafts.pending()) setError(null);
+        notify("Imagen y descripción guardadas.");
+      }
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
+  async function reloadImage(question: QuestionFormValue, discardChange = true) {
+    if (lock.current || !id) throw new Error("Guardado en curso");
+    lock.current = true;
+    setBusy(true);
+    try {
+      const latest = await api.get<ExamWithQuestions>(`/exams/${id}`, { cache: "no-store" });
+      const fresh = latest.questions.find((entry) => entry.id === question.id);
+      if (!fresh) throw new ApiError("No disponible", 404, { code: "IMAGE_NOT_FOUND" });
+      if (discardChange) imageDrafts.discard(questionDraftKey(question));
+      setValues((current) => ({
+        ...current,
+        questions: current.questions.map((entry) =>
+          entry.id === question.id ? { ...entry, image: fresh.image ?? null } : entry,
+        ),
+      }));
+      setPublished(latest.isPublished);
+      if (!imageDrafts.pending()) setError(null);
+    } catch (failure) {
+      setError(questionImageError(failure));
+      throw failure;
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
+  function previewImage(question: QuestionFormValue) {
+    const draft = imageDrafts.drafts[questionDraftKey(question)];
+    if (draft?.action === "remove") return null;
+    if (draft?.preview) return { url: draft.preview, alt: draft.alt };
+    return question.image ? { ...question.image, alt: draft?.alt ?? question.image.alt } : null;
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (lock.current || published || reloadRequired) return;
+    if (lock.current || published || reloadRequired || imageDrafts.working()) return;
     const wantsPublish =
       (event.nativeEvent as SubmitEvent).submitter?.getAttribute("data-publish") === "true";
     lock.current = true;
@@ -149,6 +223,12 @@ export function ExamForm({
     setError(null);
     let changed = false;
     let currentId = id;
+    const bindings: Record<string, string> = {};
+    const readValues = (latest: ExamWithQuestions) => {
+      const fresh = examToFormValues(latest);
+      fresh.questions = keepQuestionDraftKeys(fresh.questions, values.questions, bindings);
+      return fresh;
+    };
     try {
       if (issues.length) throw new ContentInputError(issues[0].message);
       const meta = {
@@ -166,6 +246,10 @@ export function ExamForm({
           courseId: values.courseId,
           type: values.type,
           questions: values.questions.map((q, i) => questionPayload(q, i + 1)),
+        });
+        values.questions.forEach((question, index) => {
+          const saved = created.questions?.find((entry) => entry.orderIndex === index + 1);
+          if (saved?.id) bindings[questionDraftKey(question)] = saved.id;
         });
         currentId = created.id;
         setId(currentId);
@@ -198,10 +282,11 @@ export function ExamForm({
         let order = maxOrder + 1;
         for (const [index, q] of values.questions.entries()) {
           if (!q.id) {
-            await api.post<Question>(
+            const createdQuestion = await api.post<Question>(
               `/exams/${currentId}/questions`,
               questionPayload(q, reordered ? index + 1 : order++),
             );
+            if (createdQuestion.id) bindings[questionDraftKey(q)] = createdQuestion.id;
             changed = true;
             continue;
           }
@@ -238,6 +323,48 @@ export function ExamForm({
           }
         }
       }
+      if (imageDrafts.pending()) {
+        const latest = await api.get<ExamWithQuestions>(`/exams/${currentId}`, {
+          cache: "no-store",
+        });
+        const fresh = readValues(latest);
+        setValues(fresh);
+        setCleanValues(fresh);
+        setBaseline(fresh);
+        setReordered(false);
+        setPublished(latest.isPublished);
+        if (latest.isPublished) {
+          setError(
+            "Despublica para editar las imágenes pendientes. Los archivos siguen en esta pestaña.",
+          );
+          return;
+        }
+        const savedImages = new Map<string, Question["image"]>();
+        for (const question of fresh.questions) {
+          const result = await imageDrafts.saveOne(currentId, question);
+          if (result.ok && result.image !== undefined)
+            savedImages.set(questionDraftKey(question), result.image);
+          handleImageConflict(result.code);
+        }
+        const savedFresh = {
+          ...fresh,
+          questions: fresh.questions.map((question) =>
+            savedImages.has(questionDraftKey(question))
+              ? { ...question, image: savedImages.get(questionDraftKey(question)) }
+              : question,
+          ),
+        };
+        setValues(savedFresh);
+        setCleanValues(savedFresh);
+        setBaseline(savedFresh);
+        if (imageDrafts.pending()) {
+          setError(
+            "Examen guardado como borrador. Hay imágenes pendientes; revisa sus avisos y reintenta sin volver a crear el examen.",
+          );
+          notify("Examen guardado. Algunas imágenes siguen pendientes.");
+          return;
+        }
+      }
       if (wantsPublish) {
         await api.patch(`/exams/${currentId}`, { isPublished: true });
         setPublished(true);
@@ -245,7 +372,7 @@ export function ExamForm({
       }
       notify(wantsPublish ? "Examen guardado y publicado." : "Examen guardado como borrador.");
       const latest = await api.get<ExamWithQuestions>(`/exams/${currentId}`, { cache: "no-store" });
-      const fresh = examToFormValues(latest);
+      const fresh = readValues(latest);
       setValues(fresh);
       setCleanValues(fresh);
       setReordered(false);
@@ -272,7 +399,7 @@ export function ExamForm({
           const latest = await api.get<ExamWithQuestions>(`/exams/${currentId}`, {
             cache: "no-store",
           });
-          const fresh = examToFormValues(latest);
+          const fresh = readValues(latest);
           setValues(fresh);
           setCleanValues(fresh);
           setReordered(false);
@@ -358,7 +485,10 @@ export function ExamForm({
         </ContentBanner>
       ) : null}
       <form onSubmit={submit} className={styles.editor}>
-        <fieldset disabled={busy || published || reloadRequired} className={styles.mainFields}>
+        <fieldset
+          disabled={busy || published || reloadRequired || imageDrafts.saving}
+          className={styles.mainFields}
+        >
           <section className={styles.section} aria-labelledby="exam-general">
             <div className={styles.sectionHeading}>
               <span>01</span>
@@ -527,11 +657,12 @@ export function ExamForm({
               <span className="ml-auto">{values.questions.length}</span>
             </div>
             <p className={styles.help}>
-              Completa cada enunciado. En opción múltiple, marca exactamente una respuesta correcta.
+              Completa cada enunciado. En opción múltiple, marca exactamente una respuesta correcta.{" "}
+              Duplicar copia el texto y las opciones; la imagen se agrega por separado.
             </p>
             {values.questions.map((question, index) => (
               <QuestionBuilder
-                key={question.id ?? question.draftKey ?? index}
+                key={questionDraftKey(question)}
                 question={question}
                 index={index}
                 textOnly={frozen}
@@ -543,6 +674,7 @@ export function ExamForm({
                 onDuplicate={() => {
                   const copy: QuestionFormValue = {
                     ...question,
+                    image: null,
                     id: undefined,
                     orderIndex: undefined,
                     draftKey: crypto.randomUUID(),
@@ -556,6 +688,8 @@ export function ExamForm({
                   questions.splice(index + 1, 0, copy);
                   field("questions", questions);
                   setReordered(true);
+                  if (question.image || imageDrafts.drafts[questionDraftKey(question)]?.preview)
+                    notify("Pregunta duplicada sin imagen. Agrégala por separado.");
                 }}
                 issues={issues
                   .filter((issue) => issue.questionIndex === index)
@@ -565,6 +699,28 @@ export function ExamForm({
                     "questions",
                     values.questions.map((old, position) => (position === index ? updated : old)),
                   )
+                }
+                imageField={
+                  <QuestionImageField
+                    image={question.image}
+                    draft={imageDrafts.drafts[questionDraftKey(question)]}
+                    index={index}
+                    frozen={frozen}
+                    published={published}
+                    disabled={busy || reloadRequired || imageDrafts.saving}
+                    saved={Boolean(question.id)}
+                    onChoose={(file, alt) =>
+                      imageDrafts.choose(questionDraftKey(question), file, alt)
+                    }
+                    onAlt={(alt) =>
+                      imageDrafts.changeAlt(questionDraftKey(question), alt, question.image)
+                    }
+                    onRemove={() => imageDrafts.remove(questionDraftKey(question), question.image)}
+                    onDiscard={() => imageDrafts.discard(questionDraftKey(question))}
+                    onRetry={() => retryImage(question)}
+                    onReload={() => reloadImage(question)}
+                    onRefresh={() => reloadImage(question, false)}
+                  />
                 }
                 onRemove={() => setRemoved(index)}
               />
@@ -585,10 +741,19 @@ export function ExamForm({
           </section>
           <div className={styles.actions}>
             <span>{dirty ? "Cambios sin guardar" : "Sin cambios pendientes"}</span>
-            <Button type="submit" variant="secondary" isLoading={busy}>
+            <Button
+              type="submit"
+              variant="secondary"
+              isLoading={busy}
+              disabled={imageDrafts.checking || imageDrafts.saving}
+            >
               Guardar borrador
             </Button>
-            <Button type="submit" disabled={busy} data-publish="true">
+            <Button
+              type="submit"
+              disabled={busy || imageDrafts.checking || imageDrafts.saving}
+              data-publish="true"
+            >
               Guardar y publicar
             </Button>
           </div>
@@ -665,6 +830,8 @@ export function ExamForm({
           error={null}
           onClose={() => setRemoved(null)}
           onConfirm={() => {
+            if (values.questions[removed])
+              imageDrafts.discard(questionDraftKey(values.questions[removed]));
             field(
               "questions",
               values.questions.filter((_, index) => index !== removed),
@@ -686,6 +853,12 @@ export function ExamForm({
         <h2 className="my-4 text-xl font-semibold">{values.title || "Sin título"}</h2>
         {values.questions.map((question, index) => (
           <div key={index} className={styles.previewQuestion}>
+            <QuestionImage
+              image={previewImage(question)}
+              index={index}
+              eager={index === 0}
+              expandable={false}
+            />
             <h3>
               {index + 1}. {question.prompt || "Enunciado pendiente"}
             </h3>
