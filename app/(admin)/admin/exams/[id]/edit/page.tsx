@@ -1,6 +1,5 @@
 "use client";
 import { useParams } from "next/navigation";
-import { Card } from "@/components/ui/Card";
 import { ContentLoad } from "@/components/content-admin/ContentUI";
 import { useContentResource } from "@/components/content-admin/useContentResource";
 import type { Course, ExamWithQuestions } from "@/types";
@@ -12,7 +11,8 @@ export default function EditExamPage() {
   const exam = useContentResource<ExamWithQuestions>(`/exams/${params.id}`);
   const results = useContentResource<ExamResult[]>(`/admin/content/exams/${params.id}/results`);
   return (
-    <Card title="Editar examen" titleAs="h1">
+    <div className="space-y-6">
+      <h1 className="text-3xl font-semibold tracking-tight">Editar examen</h1>
       <ContentLoad
         loading={courses.loading || exam.loading || results.loading}
         error={courses.error ?? exam.error ?? results.error}
@@ -32,6 +32,6 @@ export default function EditExamPage() {
           />
         ) : null}
       </ContentLoad>
-    </Card>
+    </div>
   );
 }
