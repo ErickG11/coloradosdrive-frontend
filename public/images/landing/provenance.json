@@ -1,0 +1,77 @@
+{
+  "generator": "sharp 0.35.4",
+  "images": [
+    {
+      "file": "clases.webp",
+      "source": "../clases.png",
+      "origin": "Imagen proporcionada por el usuario; derivado local para web.",
+      "transform": "WebP quality 82; same dimensions",
+      "sourceSha256": "106f160baf8a84f3933402d3606f1a8e0dc17c385469ce248e6cbd3ca05453a4",
+      "originalBytes": 2053008,
+      "webpBytes": 146564
+    },
+    {
+      "file": "contacto.webp",
+      "source": "../contacto.png",
+      "origin": "Imagen proporcionada por el usuario; derivado local para web.",
+      "transform": "WebP quality 82; same dimensions",
+      "sourceSha256": "8a6312b4455df14d897c5c82f165648052535ca947826b8f4564253f55b4900a",
+      "originalBytes": 2476739,
+      "webpBytes": 242018
+    },
+    {
+      "file": "curso-tipo-a.webp",
+      "source": "../curso-tipo-a.png",
+      "origin": "Imagen proporcionada por el usuario; derivado local para web.",
+      "transform": "WebP quality 82; same dimensions",
+      "sourceSha256": "03e35b3b473dc591b618df02f0e71c4270c7494005d7da518eb2d60ad60450fe",
+      "originalBytes": 2120580,
+      "webpBytes": 167556
+    },
+    {
+      "file": "curso-tipo-b.webp",
+      "source": "../curso-tipo-b.png",
+      "origin": "Imagen proporcionada por el usuario; derivado local para web.",
+      "transform": "WebP quality 82; same dimensions",
+      "sourceSha256": "d2ac1ecf1ffcf3687d300430d0056cea71c93efde79dcabb801867da2c35702e",
+      "originalBytes": 2114180,
+      "webpBytes": 167080
+    },
+    {
+      "file": "hero-conduce-tu-futuro.webp",
+      "source": "../hero-conduce-tu-futuro.png",
+      "origin": "Imagen proporcionada por el usuario; derivado local para web.",
+      "transform": "WebP quality 82; same dimensions",
+      "sourceSha256": "cf108c277e1cb460ab4f3363436c85032d9c1823ca831f230a8450352e0490ea",
+      "originalBytes": 2347639,
+      "webpBytes": 245714
+    },
+    {
+      "file": "logo.webp",
+      "source": "../logo.png",
+      "origin": "Imagen proporcionada por el usuario; derivado local para web.",
+      "transform": "WebP quality 90, width 512",
+      "sourceSha256": "f8aad337879724a7e21c6b97dc12a56a3b52032e34e7d64da2fd3f52a21e432b",
+      "originalBytes": 1187784,
+      "webpBytes": 18502
+    },
+    {
+      "file": "plataforma.webp",
+      "source": "../plataforma.png",
+      "origin": "Imagen proporcionada por el usuario; derivado local para web.",
+      "transform": "WebP quality 82; same dimensions",
+      "sourceSha256": "f517b33f03fa88ab1adecc7fb3f0ed39d99f673e157257bde947903486b2c8cb",
+      "originalBytes": 1829539,
+      "webpBytes": 108734
+    },
+    {
+      "file": "practicas.webp",
+      "source": "../practicas.png",
+      "origin": "Imagen proporcionada por el usuario; derivado local para web.",
+      "transform": "WebP quality 82; same dimensions",
+      "sourceSha256": "5304c0e92cab9fd7d0979797abd3f9e5768c4baf9113929eaa976c5478ea0cb9",
+      "originalBytes": 2017006,
+      "webpBytes": 145138
+    }
+  ]
+}

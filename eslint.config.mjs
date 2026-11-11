@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "coverage/**",
     // Herramientas locales y artefactos del navegador: no son código de la app.
     ".agents/**",
+    ".claude/**",
+    ".impeccable/**",
     ".playwright-cli/**",
     ".local-auth/**",
   ]),

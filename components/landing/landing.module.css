@@ -200,8 +200,7 @@
   transition:
     background-color 160ms ease,
     color 160ms ease,
-    transform 180ms var(--landing-ease),
-    box-shadow 180ms var(--landing-ease);
+    transform 120ms var(--landing-ease);
 }
 .button {
   background: var(--color-brand-primary);
@@ -209,7 +208,6 @@
 }
 .button:hover {
   background: var(--color-brand-hover);
-  box-shadow: 0 8px 22px rgb(190 24 39 / 22%);
 }
 .button:active {
   background: var(--color-brand-pressed);
@@ -284,11 +282,11 @@
 }
 .heroTitle > span {
   display: block;
-  animation: titleArrive 520ms var(--landing-ease) both;
+  animation: titleArrive 280ms var(--landing-ease) both;
 }
 .heroTitle > span:last-child {
   color: var(--landing-red-light);
-  animation-delay: 100ms;
+  animation-delay: 65ms;
 }
 .heroDescription {
   max-width: 37ch;
@@ -346,25 +344,28 @@
   content: "";
   inset: 0;
   background:
-    linear-gradient(0deg, var(--landing-night), transparent 35%),
-    /* taste-skill-ignore: neutral photo scrim for readable foreground text. */
+    linear-gradient(0deg, var(--landing-night), transparent 35%), /* taste-skill-ignore: neutral photo scrim for readable foreground text. */
     /* taste-skill-ignore: neutral photo scrim keeps the foreground readable. */
     linear-gradient(90deg, var(--landing-night), transparent 28%); /* taste-skill-ignore: neutral photo scrim. */
 }
 .heroPhoto {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: -80%;
   width: 180%;
   height: 100%;
   max-width: none;
   object-fit: cover;
   object-position: right center;
-  transform: scale(1.015);
+  opacity: 0;
+  transform: scale(1.035);
+  transition:
+    opacity 240ms ease,
+    transform 280ms var(--landing-ease);
 }
-.heroPhotoFrame {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
+.heroPhoto[data-active="true"] {
+  opacity: 1;
+  transform: scale(1);
 }
 .heroShade {
   display: none;
@@ -401,8 +402,7 @@
   color: var(--landing-muted-night);
   transition:
     background-color 160ms ease,
-    color 160ms ease,
-    transform 180ms var(--landing-ease);
+    color 160ms ease;
 }
 .heroChoice button > span:first-child {
   font-size: 1.125rem;
@@ -421,169 +421,16 @@
   transition: transform 180ms var(--landing-ease);
 }
 .heroChoice button::after {
-  display: none;
-}
-.heroChoice button .courseIndicator {
+  content: "";
   position: absolute;
-  inset: auto 20px 0;
+  bottom: 0;
+  left: 20px;
+  right: 20px;
   height: 3px;
   background: var(--color-brand-primary);
-  pointer-events: none;
-}
-.readingProgress {
-  position: absolute;
-  inset: auto 0 0;
-  height: 2px;
-  background: var(--color-brand-primary);
+  transform: scaleX(0);
   transform-origin: left;
-  pointer-events: none;
-}
-.desktopNav a[aria-current="location"] {
-  color: var(--color-brand-ink);
-}
-.desktopNav a[aria-current="location"]::after {
-  transform: scaleX(1);
-}
-.requirements {
-  padding-block: 24px 64px;
-}
-.requirements h2 {
-  font-size: clamp(1.75rem, 3vw, 2.5rem);
-}
-.requirementGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 36px;
-  border-top: 1px solid var(--color-border);
-}
-.requirementItem {
-  position: relative;
-  height: 100%;
-  padding: 28px 28px 12px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: 20px;
-  line-height: 1.65;
-  font-size: 0.9375rem;
-}
-.requirementNumber {
-  position: absolute;
-  top: 32px;
-  right: 28px;
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
-.requirementIcon {
-  color: var(--color-brand-ink);
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  background: var(--landing-alt);
-  border-radius: 50%;
-}
-.scheduleSection {
-  padding-bottom: 88px;
-}
-.scheduleBand {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 32px;
-  border-radius: 16px;
-  background: var(--landing-alt);
-}
-.scheduleBand h2 {
-  font-size: 1.5rem;
-  letter-spacing: -0.025em;
-}
-.scheduleBand p {
-  margin-top: 8px;
-  line-height: 1.7;
-  color: var(--color-text-secondary);
-}
-.scheduleIcon {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  color: var(--color-brand-ink);
-  background: var(--landing-ground);
-}
-.course:focus-within {
-  border-color: var(--color-brand-ink);
-}
-.mobileNav:not([hidden]) {
-  animation: arrive 200ms var(--landing-ease) both;
-}
-.contactPhones > a {
-  border-bottom: 1px solid var(--color-border);
-  transition: color 160ms ease;
-}
-.contactPhones > a:focus-visible {
-  border-radius: 4px;
-}
-@media (hover: hover) and (pointer: fine) {
-  .requirementIcon {
-    transition:
-      transform 220ms var(--landing-ease),
-      color 180ms ease;
-  }
-  .requirementItem:hover .requirementIcon {
-    transform: translateY(-3px);
-  }
-  .platformMedia > img,
-  .contactMedia > img {
-    transition: transform 600ms var(--landing-ease);
-  }
-  .platformMedia:hover > img,
-  .contactMedia:hover > img {
-    transform: scale(1.025);
-  }
-}
-@media (max-width: 899px) {
-  .requirementGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 12px;
-  }
-}
-@media (max-width: 599px) {
-  .requirements {
-    padding-top: 0;
-    padding-bottom: 40px;
-  }
-  .requirementGrid {
-    gap: 12px 20px;
-  }
-  .requirementItem {
-    padding-right: 0;
-    font-size: 0.875rem;
-  }
-  .requirementNumber {
-    right: 0;
-  }
-  .scheduleSection {
-    padding-bottom: 56px;
-  }
-  .scheduleBand {
-    padding: 24px 20px;
-    gap: 16px;
-    align-items: start;
-  }
-  .scheduleBand h2 {
-    font-size: 1.25rem;
-  }
-  .scheduleIcon {
-    width: 44px;
-    height: 44px;
-  }
-  .heroChoice button .courseIndicator {
-    inset-inline: 12px;
-  }
+  transition: transform 220ms var(--landing-ease);
 }
 .heroChoice button[aria-pressed="true"] {
   background: rgb(255 255 255 / 6%);
@@ -657,14 +504,6 @@
   border: 1px solid var(--color-border);
   border-radius: 16px;
   background: var(--landing-ground);
-  box-shadow: 0 0 0 rgb(10 12 18 / 0%);
-  transition:
-    border-color 220ms ease,
-    box-shadow 260ms var(--landing-ease);
-}
-.course:hover {
-  border-color: color-mix(in srgb, var(--color-brand-ink) 24%, var(--color-border));
-  box-shadow: 0 18px 48px rgb(10 12 18 / 10%);
 }
 .courseImage {
   position: relative;
@@ -677,7 +516,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 520ms var(--landing-ease);
+  transition: transform 280ms var(--landing-ease);
 }
 .course:hover .courseImage > img {
   transform: scale(1.035);
@@ -832,41 +671,13 @@
   pointer-events: none;
   transition: opacity 240ms ease;
 }
-.journeyCertificate[data-active="true"] {
-  opacity: 1;
-}
-.journeyCertificate > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.journeyCertificate img {
-  display: block;
-  width: 144px;
-  height: 72px;
-  object-fit: contain;
-}
-.journeyCertificate span {
-  font-size: 0.8125rem;
-  color: #566171;
-}
-.journeyCertificate h3 {
-  font-size: clamp(1.75rem, 3vw, 2.5rem);
-  line-height: 1.05;
-}
-.journeyCertificate p {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.875rem;
-}
-.journeyCertificate p svg {
-  color: #a91e1e;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-}
+.journeyCertificate[data-active="true"] { opacity: 1; }
+.journeyCertificate > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.journeyCertificate img { display: block; width: 144px; height: 72px; object-fit: contain; }
+.journeyCertificate span { font-size: 0.8125rem; color: #566171; }
+.journeyCertificate h3 { font-size: clamp(1.75rem,3vw,2.5rem); line-height: 1.05; }
+.journeyCertificate p { display: flex; align-items: center; gap: 12px; font-size: 0.875rem; }
+.journeyCertificate p svg { color: #a91e1e; width: 22px; height: 22px; flex-shrink: 0; }
 .journeyCaption {
   position: absolute;
   inset: auto 0 0;
@@ -875,8 +686,8 @@
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  background: linear-gradient(
-    /* taste-skill-ignore: neutral photo scrim for readable foreground text. */ transparent,
+  background: linear-gradient( /* taste-skill-ignore: neutral photo scrim for readable foreground text. */
+    transparent,
     rgb(0 0 0 / 90%)
   ); /* taste-skill-ignore: caption scrim over a photograph. */
   color: white;
@@ -1303,8 +1114,7 @@
   position: absolute;
   content: "";
   inset: 0;
-  background: linear-gradient(
-    /* taste-skill-ignore: neutral photo scrim for readable foreground text. */
+  background: linear-gradient( /* taste-skill-ignore: neutral photo scrim for readable foreground text. */
     /* taste-skill-ignore: neutral scrim over the closing photograph. */ 90deg,
     var(--landing-night) 0%,
     rgb(12 13 16 / 98%) 25%,
@@ -1493,9 +1303,8 @@
     z-index: 1;
     inset: 0;
     background:
-      linear-gradient(
-        /* taste-skill-ignore: neutral photo scrim for readable foreground text. */
-          /* taste-skill-ignore: neutral photo scrim for readable hero copy. */ 90deg,
+      linear-gradient( /* taste-skill-ignore: neutral photo scrim for readable foreground text. */
+        /* taste-skill-ignore: neutral photo scrim for readable hero copy. */ 90deg,
         var(--landing-night) 0%,
         rgb(12 13 16 / 98%) 30%,
         rgb(12 13 16 / 72%) 48%,
@@ -1723,10 +1532,6 @@
   .heroVisual {
     height: 285px;
   }
-  .heroPhotoFrame .heroPhoto {
-    width: 200%;
-    left: -100%;
-  }
   .heroBottom {
     display: grid;
     gap: 8px;
@@ -1801,16 +1606,9 @@
   .journeyCaption {
     padding-inline: 18px;
   }
-  .journeyCertificate {
-    padding: 16px 18px 100px;
-  }
-  .journeyCertificate img {
-    width: 100px;
-    height: 50px;
-  }
-  .journeyCertificate p {
-    font-size: 0.8125rem;
-  }
+  .journeyCertificate { padding: 16px 18px 100px; }
+  .journeyCertificate img { width: 100px; height: 50px; }
+  .journeyCertificate p { font-size: 0.8125rem; }
   .platformGrid {
     gap: 36px;
   }
@@ -1894,18 +1692,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .journeyRail > span {
-    transform: scaleY(1) !important;
-  }
-  .readingProgress {
-    display: none;
-  }
-  .heroTitle > span,
-  .heroDescription,
-  .heroCopy .actions {
-    animation-duration: 0.01ms !important;
-    animation-delay: 0ms !important;
-  }
   .page *,
   .page *::before,
   .page *::after {

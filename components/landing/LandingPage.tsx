@@ -10,8 +10,6 @@ import { LandingHero } from "./LandingHero";
 import { LandingIcon } from "./LandingIcon";
 import { LearningJourney, ParallaxMedia, RoleViews } from "./LandingInteractions";
 import { MotionRoot } from "./MotionRoot";
-import { RequirementsSection } from "./RequirementsSection";
-import { ScheduleSection } from "./ScheduleSection";
 import { ScrollReveal } from "./ScrollReveal";
 import styles from "./landing.module.css";
 
@@ -36,9 +34,6 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
             </div>
           </div>
           <CoursesSection courses={courses} />
-          {/* Información fija de la landing anterior que la nueva no cubría. */}
-          <RequirementsSection />
-          <ScheduleSection />
           <LearningJourney />
           <section
             id="plataforma"
@@ -71,7 +66,7 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
                   <LandingIcon name="arrow" />
                 </Link>
               </div>
-              <ScrollReveal className={styles.platformMedia} variant="media">
+              <ScrollReveal className={styles.platformMedia}>
                 <Image
                   unoptimized
                   {...landingImages.platform}
@@ -107,10 +102,15 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
                   Gana confianza al volante con una formación segura y práctica, acompañado en cada
                   paso.
                 </p>
-                <Link href={landingContent.enrollmentHref} className={styles.textLink}>
+                <a
+                  href={landingContent.enrollmentHref}
+                  className={styles.textLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Consulta por tus prácticas
                   <LandingIcon name="arrow" />
-                </Link>
+                </a>
               </div>
             </div>
             <div className={`${styles.practiceRow} ${styles.practiceRowReverse}`}>
@@ -197,7 +197,7 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
                 <p className={styles.note}>Horario: {landingContent.hours}</p>
               )}
             </div>
-            <ScrollReveal className={styles.contactMedia} variant="media">
+            <ScrollReveal className={styles.contactMedia}>
               <Image
                 unoptimized
                 {...landingImages.contact}
@@ -224,10 +224,15 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
               </ScrollReveal>
               <p>{landingContent.slogan}.</p>
               <div className={styles.actions}>
-                <Link href={landingContent.enrollmentHref} className={styles.button}>
+                <a
+                  href={landingContent.enrollmentHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.button}
+                >
                   ¡Inscríbete hoy!
                   <LandingIcon name="arrow" />
-                </Link>
+                </a>
                 <Link href="/login" className={styles.heroLogin}>
                   Iniciar sesión
                   <LandingIcon name="arrow" />

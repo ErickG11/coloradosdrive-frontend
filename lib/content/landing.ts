@@ -31,7 +31,7 @@ export const landingContent = {
     ...phone,
     href: whatsappHref(undefined, phone.international),
   })),
-  enrollmentHref: "/inscripcion",
+  enrollmentHref: whatsappHref(),
   hours: null as string | null,
   email: null as string | null,
   socialLinks: null as { label: string; href: string }[] | null,
@@ -55,7 +55,9 @@ export const landingContent = {
         alt: "Banner del curso Tipo B con un vehículo liviano de Colorados Drive y sus beneficios de formación.",
       },
       benefits: ["Instructores certificados", "Formación segura y práctica", "Vehículos modernos"],
-      href: "/inscripcion",
+      href: whatsappHref(
+        "Hola, Colorados Drive. Quiero inscribirme en el curso Tipo B para vehículos livianos ($175 + IVA). ¿Qué fechas y cohortes están disponibles?",
+      ),
     },
     {
       type: "A",
@@ -73,7 +75,9 @@ export const landingContent = {
         "Formación segura y práctica",
         "Manejo real en vía y circuito",
       ],
-      href: "/inscripcion",
+      href: whatsappHref(
+        "Hola, Colorados Drive. Quiero inscribirme en el curso Tipo A para motocicletas ($135 + IVA). ¿Qué fechas y cohortes están disponibles?",
+      ),
     },
   ],
   platformFeatures: [

@@ -1,5 +1,4 @@
-// Columna decorativa local (patrón de carretera en SVG): no pide ningún
-// recurso remoto, así /login no genera 404 ni errores en consola.
+// A local, decorative road pattern replaces the missing remote image asset.
 export function LoginHeroImage() {
   return (
     <div
