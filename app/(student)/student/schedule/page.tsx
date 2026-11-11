@@ -1,23 +1,53 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
-
-import { Button, Card, FormError, StatusBadge } from "@/components/ui";
-import { CheckIcon, XIcon } from "@/components/ui/icons";
+import Link from "next/link";
+import { MotionConfig } from "framer-motion";
+import { Button, FormError } from "@/components/ui";
+import { XIcon } from "@/components/ui/icons";
+import { Toast } from "@/components/inscripcion/Toast";
 import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { useFetch } from "@/hooks/useFetch";
 import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 import { api } from "@/lib/api/client";
-import { ApiError } from "@/lib/api/errors";
-import { cn } from "@/lib/utils/cn";
-import type { PracticeSlotStatus, StudentPracticeSlot } from "@/types";
-import type { CancellationPreview, CancelPracticeSlotResult, PendingPracticeSlot, ReleasedPracticeSlot, SwapPracticeResult } from "@/types/practiceSlot";
-
+import type { StudentPracticeSlot } from "@/types";
+import type { PracticeHistoryEnrollment, PracticeHistoryItem } from "@/types/practiceAttendance";
+import type {
+  CancellationPreview,
+  CancelPracticeSlotResult,
+  PendingPracticeSlot,
+  ReleasedPracticeSlot,
+  SwapPracticeResult,
+} from "@/types/practiceSlot";
 import { CancelPracticeModal, cancellationConsequence } from "./CancelPracticeModal";
-import { formatPracticeDateTime } from "./formatPracticeDateTime";
 import { SwapPracticeModal } from "./SwapPracticeModal";
+import { NextPractice, ScheduleAgenda } from "./ScheduleAgenda";
+import { PracticePlan } from "./PracticePlan";
+import { PracticeBadge, ScheduleIcon, ScheduleSkeleton } from "./ScheduleVisual";
+import {
+  dateLabel,
+  downloadCalendar,
+  friendlyError,
+  groupSlots,
+  hoursLabel,
+  isActive,
+  isPlanConfigurationError,
+  slotEnd,
+  timeLabel,
+  visualState,
+  type VisualState,
+} from "./scheduleModel";
+import { usePracticePlan } from "./usePracticePlan";
+import styles from "./schedule.module.css";
 
-const ACTIVE_OWN_STATUSES: PracticeSlotStatus[] = ["asignado", "confirmado"];
+const historyStates: Record<PracticeHistoryItem["estado"], VisualState> = {
+  asistio: { label: "Asistió", tone: "complete", icon: "check" },
+  no_asistio: { label: "No asistió", tone: "error", icon: "cross" },
+  pendiente: { label: "Asistencia pendiente", tone: "neutral", icon: "clock" },
+  liberada: { label: "Pendiente por reponer", tone: "warning", icon: "clock" },
+  falta: { label: "Falta", tone: "error", icon: "cross" },
+  cancelada: { label: "Cancelada", tone: "neutral", icon: "cross", cancelled: true },
+};
 
 export default function StudentSchedulePage() {
   const {
@@ -26,356 +56,661 @@ export default function StudentSchedulePage() {
     error,
     refetch: refetchSlots,
   } = useFetch<StudentPracticeSlot[]>("/practice-slots");
-  const { data: releasedSlots, isLoading: releasedLoading, error: releasedError, refetch: refetchReleased } =
-    useFetch<ReleasedPracticeSlot[]>("/practice-slots/released-for-me");
-  const { data: pendingPractices, isLoading: pendingLoading, error: pendingError, refetch: refetchPending } =
-    useFetch<PendingPracticeSlot[]>("/practice-slots/my-pending");
-  const { data: enrollments, error: enrollmentsError } = useFetch<
-    { cohortId: string | null; courseType: "A" | "B" }[]
-  >("/estudiantes/enrollments");
-
+  const {
+    data: releasedSlots,
+    isLoading: releasedLoading,
+    error: releasedError,
+    refetch: refetchReleased,
+  } = useFetch<ReleasedPracticeSlot[]>("/practice-slots/released-for-me");
+  const {
+    data: pendingPractices,
+    isLoading: pendingLoading,
+    error: pendingError,
+    refetch: refetchPending,
+  } = useFetch<PendingPracticeSlot[]>("/practice-slots/my-pending");
+  const {
+    data: enrollments,
+    error: enrollmentsError,
+    refetch: refetchEnrollments,
+  } = useFetch<{ cohortId: string | null; courseType: "A" | "B" }[]>("/estudiantes/enrollments");
+  const {
+    data: planEnrollments,
+    error: planEnrollmentsError,
+    refetch: refetchPlanEnrollments,
+  } = useFetch<PracticeHistoryEnrollment[]>("/estudiantes/practice-history/enrollments");
+  const [selectedCohort, setSelectedCohort] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "week">("list");
+  const [section, setSection] = useState<"agenda" | "available">("agenda");
+  const [planNoticeDismissed, setPlanNoticeDismissed] = useState(false);
+  const [focusedDay, setFocusedDay] = useState<{ day: string; request: number } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [configurationIssue, setConfigurationIssue] = useState(false);
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
   const [confirmationDue, setConfirmationDue] = useState(false);
   const [noPracticeNotice, setNoPracticeNotice] = useState(false);
-  const [cancelTarget, setCancelTarget] = useState<{ slotId: string; preview: CancellationPreview } | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<{
+    slotId: string;
+    preview: CancellationPreview;
+  } | null>(null);
   const [swapTarget, setSwapTarget] = useState<ReleasedPracticeSlot | null>(null);
-  const [knownRemaining, setKnownRemaining] = useState<number | null>(null);
-  const [successNotice, setSuccessNotice] = useState<string | null>(null);
-  const [successDetail, setSuccessDetail] = useState<string | null>(null);
+  const [knownRemaining, setKnownRemaining] = useState<Record<string, number>>({});
+  const [successNotice, setSuccessNotice] = useState("");
   const [currentTime, setCurrentTime] = useState<number | null>(null);
+  const [planReload, setPlanReload] = useState(0);
   const cancelTrigger = useRef<HTMLButtonElement | null>(null);
   const swapTrigger = useRef<HTMLButtonElement | null>(null);
-  const successRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (successNotice) successRef.current?.focus();
-  }, [successNotice]);
+  const workspace = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const refreshTime = () => setCurrentTime(Date.now());
-    const initialRefresh = window.setTimeout(refreshTime, 0);
-    const refreshInterval = window.setInterval(refreshTime, 30_000);
+    const initialRefresh = window.setTimeout(() => {
+      refreshTime();
+      try {
+        if (localStorage.getItem("coloradosdrive:practice-view:v1") === "week") setView("week");
+        if (sessionStorage.getItem("coloradosdrive:practice-plan-notice:v1") === "dismissed")
+          setPlanNoticeDismissed(true);
+      } catch {
+        /* Storage is optional. */
+      }
+    }, 0);
+    const refreshInterval = window.setInterval(refreshTime, 15000);
+    window.addEventListener("focus", refreshTime);
     return () => {
       window.clearTimeout(initialRefresh);
       window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", refreshTime);
     };
   }, []);
 
-  const counterSlotId = currentTime === null ? null : slots?.find((slot) => slot.studentId !== null
-    && ACTIVE_OWN_STATUSES.includes(slot.status)
-    && new Date(slot.scheduledAt).getTime() > currentTime)?.id ?? null;
+  const cohortOptions = (enrollments ?? []).filter((item) => item.cohortId !== null);
+  const cohortId =
+    cohortOptions.find((item) => item.cohortId === selectedCohort)?.cohortId ??
+    cohortOptions[0]?.cohortId ??
+    slots?.find((slot) => slot.studentId !== null)?.cohortId ??
+    null;
+  const planEnrollment = planEnrollments?.find(
+    (item) => item.status === "activo" && item.cohortId === cohortId,
+  );
+  const history = usePracticePlan(planEnrollment?.enrollmentId ?? null, slots, planReload);
+  const ownSlots = (slots ?? []).filter(
+    (slot) => slot.studentId !== null && (!cohortId || slot.cohortId === cohortId),
+  );
+  const upcoming = ownSlots.filter(
+    (slot) => isActive(slot) && (currentTime === null || slotEnd(slot) > currentTime),
+  );
+  const past = ownSlots.filter(
+    (slot) => !isActive(slot) || (currentTime !== null && slotEnd(slot) <= currentTime),
+  );
+  const blocks = groupSlots(upcoming);
+  const nextBlock = blocks[0];
+  const counterSlotId =
+    upcoming.find((slot) => currentTime !== null && Date.parse(slot.scheduledAt) > currentTime)
+      ?.id ?? null;
   useEffect(() => {
-    if (!counterSlotId) return;
+    if (!counterSlotId || !cohortId) return;
     let active = true;
-    api.get<CancellationPreview>(`/practice-slots/${counterSlotId}/cancel-preview`)
+    api
+      .get<CancellationPreview>(`/practice-slots/${counterSlotId}/cancel-preview`)
       .then((preview) => {
-        if (active && typeof preview?.reprogramacionesRestantes === "number") {
-          setKnownRemaining(preview.reprogramacionesRestantes);
-        }
+        if (active && typeof preview?.reprogramacionesRestantes === "number")
+          setKnownRemaining((values) => ({
+            ...values,
+            [cohortId]: preview.reprogramacionesRestantes,
+          }));
       })
-      .catch(() => { /* El contador también puede venir del listado de cupos o una acción. */ });
-    return () => { active = false; };
-  }, [counterSlotId]);
+      .catch(() => {
+        /* The list or the next successful action may supply the count. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [counterSlotId, cohortId, slots]);
 
   const userId = useCurrentUserId();
-  // Ambas cohortes propias, incluso si todavía no tienen franjas visibles.
-  const cohortId = enrollments?.find((e) => e.courseType === "A")?.cohortId ?? null;
-  const cohortB = enrollments?.find((e) => e.courseType === "B")?.cohortId ?? null;
-
-  useRealtimeChannel(cohortId ? `cohort-${cohortId}-practice-slots` : null, {
-    "slot-released": () => { refetchSlots(); refetchReleased(); },
-    "slot-taken": () => { refetchSlots(); refetchReleased(); },
+  const cohortA = enrollments?.find((item) => item.courseType === "A")?.cohortId ?? null;
+  const cohortB = enrollments?.find((item) => item.courseType === "B")?.cohortId ?? null;
+  function refreshAll() {
+    refetchSlots();
+    refetchReleased();
+    refetchPending();
+    setPlanReload((value) => value + 1);
+  }
+  useRealtimeChannel(cohortA ? `cohort-${cohortA}-practice-slots` : null, {
+    "slot-released": refreshAll,
+    "slot-taken": refreshAll,
   });
   useRealtimeChannel(cohortB ? `cohort-${cohortB}-practice-slots` : null, {
-    "slot-released": () => { refetchSlots(); refetchReleased(); },
-    "slot-taken": () => { refetchSlots(); refetchReleased(); },
+    "slot-released": refreshAll,
+    "slot-taken": refreshAll,
   });
   useRealtimeChannel(userId ? `user-${userId}-practice-slots` : null, {
     "confirmation-requested": () => {
       setConfirmationDue(true);
-      refetchSlots();
-      refetchPending();
+      refreshAll();
     },
     "no-practice": () => {
       setNoPracticeNotice(true);
-      refetchSlots();
-      refetchPending();
+      refreshAll();
     },
-    "slots-updated": () => { refetchSlots(); refetchPending(); refetchReleased(); },
+    "slots-updated": refreshAll,
   });
 
-  // Cualquier franja con studentId no nulo en esta lista es, por
-  // construcción, del propio estudiante (el backend solo incluye
-  // disponible/liberado -sin estudiante- o las suyas propias, ver
-  // practiceSlot.service.ts::listSlotsForStudent). Se muestran solo las
-  // "activas" (asignado/confirmado); completado/sin_practica son
-  // historial, fuera de alcance de esta pantalla.
-  const ownSlots = (slots ?? []).filter(
-    (slot) => slot.studentId !== null && ACTIVE_OWN_STATUSES.includes(slot.status),
-  );
   const availableSlots = (releasedSlots ?? [])
-    .slice()
-    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
-  const releasedCounts = new Set(availableSlots.map((slot) => slot.reprogramacionesRestantes));
-  const displayedRemaining = releasedCounts.size > 1 ? null
-    : releasedLoading && knownRemaining !== null ? knownRemaining
-      : releasedCounts.size === 1 ? availableSlots[0].reprogramacionesRestantes
-        : knownRemaining;
+    .filter(
+      (slot) =>
+        (!cohortId || slot.cohortId === cohortId) &&
+        (currentTime === null || Date.parse(slot.scheduledAt) - currentTime > 300000),
+    )
+    .sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt));
+  const counts = new Set(availableSlots.map((slot) => slot.reprogramacionesRestantes));
+  const remaining =
+    counts.size === 1
+      ? availableSlots[0].reprogramacionesRestantes
+      : counts.size > 1
+        ? null
+        : cohortId
+          ? (knownRemaining[cohortId] ?? null)
+          : null;
+  const invalidPlan =
+    configurationIssue ||
+    [releasedError, pendingError].some(isPlanConfigurationError) ||
+    Boolean(
+      history?.data &&
+      (history.data.summary.horasObjetivo === null || history.data.summary.horasObjetivo <= 0),
+    );
+  const listErrors = [releasedError, pendingError].filter(
+    (message): message is string => Boolean(message) && !isPlanConfigurationError(message),
+  );
+  const pastHistory = (history?.data?.items ?? []).filter(
+    (item) =>
+      item.estado !== "pendiente" ||
+      (currentTime !== null &&
+        Date.parse(item.scheduledAt) + (item.durationMinutes ?? 60) * 60000 <= currentTime),
+  );
+  const historyIds = new Set(pastHistory.map((item) => item.practiceSlotId));
+  const pastOwn = past.filter((slot) => !historyIds.has(slot.id));
 
-  async function performAction(
-    slotId: string,
-    action: () => Promise<unknown>,
-    fallbackMessage: string,
-  ) {
+  function changeView(value: "list" | "week") {
+    setView(value);
+    try {
+      localStorage.setItem("coloradosdrive:practice-view:v1", value);
+    } catch {
+      /* Convenience only. */
+    }
+  }
+  function navigateToDay(day: string) {
+    setSection("agenda");
+    setFocusedDay((previous) => ({ day, request: (previous?.request ?? 0) + 1 }));
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(
+        view === "list" ? `practice-day-${day}` : "practice-week",
+      );
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
+      });
+      if (view === "week")
+        document
+          .getElementById(`practice-week-day-${day}`)
+          ?.scrollIntoView({ behavior: "instant", block: "nearest", inline: "center" });
+    });
+  }
+  function retry() {
+    setConfigurationIssue(false);
+    refreshAll();
+    refetchEnrollments();
+    refetchPlanEnrollments();
+  }
+  function restoreFocus(trigger: HTMLButtonElement | null) {
+    window.requestAnimationFrame(() => {
+      if (trigger?.isConnected) trigger.focus();
+      else workspace.current?.focus();
+    });
+  }
+  function rememberRemaining(value: number) {
+    if (cohortId) setKnownRemaining((counts) => ({ ...counts, [cohortId]: value }));
+  }
+  async function handleConfirm(slotId: string) {
     setActionError(null);
     setPendingSlotId(slotId);
     try {
-      await action();
+      await api.post(`/practice-slots/${slotId}/confirm`);
+      setSuccessNotice("Listo, confirmaste tu asistencia. ¡Te esperamos!");
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : fallbackMessage);
+      setActionError(friendlyError(err, "No se pudo confirmar tu asistencia. Inténtalo de nuevo."));
     } finally {
       setPendingSlotId(null);
-      // Se refresca incluso si falló: un 409 por condición de carrera
-      // (ej. alguien más ya reclamó la franja) significa que la lista ya
-      // está desactualizada, así que traer el estado real la corrige.
-      refetchSlots();
+      refreshAll();
     }
   }
-
-  function handleConfirm(slotId: string) {
-    void performAction(
-      slotId,
-      () => api.post(`/practice-slots/${slotId}/confirm`),
-      "No se pudo confirmar la franja.",
-    );
-  }
-
   async function handleCancelPreview(slotId: string, trigger: HTMLButtonElement) {
     cancelTrigger.current = trigger;
     setActionError(null);
-    setSuccessNotice(null);
-    setSuccessDetail(null);
     setPendingSlotId(slotId);
     try {
-      const preview = await api.get<CancellationPreview>(`/practice-slots/${slotId}/cancel-preview`);
-      setKnownRemaining(preview.reprogramacionesRestantes);
+      const preview = await api.get<CancellationPreview>(
+        `/practice-slots/${slotId}/cancel-preview`,
+      );
+      rememberRemaining(preview.reprogramacionesRestantes);
       setCancelTarget({ slotId, preview });
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "No se pudo revisar el aviso de inasistencia.");
+      if (err instanceof Error && isPlanConfigurationError(err.message))
+        setConfigurationIssue(true);
+      else
+        setActionError(
+          friendlyError(err, "No se pudo revisar tu aviso de inasistencia. Inténtalo de nuevo."),
+        );
+      restoreFocus(trigger);
       refetchSlots();
     } finally {
       setPendingSlotId(null);
     }
   }
-
-  function closeCancelModal() {
-    setCancelTarget(null);
-    cancelTrigger.current?.focus();
-  }
-
   function handleCancelled(result: CancelPracticeSlotResult) {
     setCancelTarget(null);
     setActionError(null);
-    setSuccessNotice("Listo, avisamos que no asistirás a esta práctica");
-    setSuccessDetail(`${cancellationConsequence(result.cancelacion.resultado)} Te quedan ${result.cancelacion.reprogramacionesRestantes} de 2 reprogramaciones.`);
-    setKnownRemaining(result.cancelacion.reprogramacionesRestantes);
-    refetchSlots();
-    refetchReleased();
-    refetchPending();
+    rememberRemaining(result.cancelacion.reprogramacionesRestantes);
+    setSuccessNotice(
+      `Listo, avisamos que no asistirás a esta práctica. ${cancellationConsequence(result.cancelacion.resultado)} Te quedan ${result.cancelacion.reprogramacionesRestantes} de 2 reprogramaciones.`,
+    );
+    restoreFocus(cancelTrigger.current);
+    refreshAll();
   }
-
   function openSwap(slot: ReleasedPracticeSlot, trigger: HTMLButtonElement) {
     swapTrigger.current = trigger;
     setActionError(null);
-    setSuccessNotice(null);
-    setSuccessDetail(null);
-    setKnownRemaining(slot.reprogramacionesRestantes);
+    rememberRemaining(slot.reprogramacionesRestantes);
     setSwapTarget(slot);
   }
-
-  function closeSwap() {
-    setSwapTarget(null);
-    swapTrigger.current?.focus();
-  }
-
   function handleSwapped(result: SwapPracticeResult) {
     setSwapTarget(null);
-    setKnownRemaining(result.reprogramacionesRestantes);
+    rememberRemaining(result.reprogramacionesRestantes);
     setSuccessNotice("Listo, cambiaste tu horario");
-    setSuccessDetail(null);
-    refetchSlots();
-    refetchReleased();
-    refetchPending();
+    restoreFocus(swapTrigger.current);
+    refreshAll();
   }
+  const actions = {
+    now: currentTime,
+    pendingSlotId,
+    onConfirm: (id: string) => {
+      void handleConfirm(id);
+    },
+    onCancel: (id: string, trigger: HTMLButtonElement) => {
+      void handleCancelPreview(id, trigger);
+    },
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="font-display text-2xl font-bold tracking-tight text-text-primary">
-        Horarios de práctica
-      </h1>
-
-      {displayedRemaining !== null ? (
-        <p className="text-sm text-text-secondary">Reprogramaciones disponibles: {displayedRemaining} de 2</p>
-      ) : null}
-
-      {isLoading ? <p className="text-sm text-text-secondary">Cargando…</p> : null}
-      {error ? <FormError>{error}</FormError> : null}
-      {enrollmentsError ? (
-        <p role="alert" className="text-sm text-accent-red">
-          {enrollmentsError}
-        </p>
-      ) : null}
-      {releasedError ? <FormError>{releasedError}</FormError> : null}
-      {pendingError ? <FormError>{pendingError}</FormError> : null}
-      {actionError ? <FormError>{actionError}</FormError> : null}
-
-      {successNotice ? (
-        <div ref={successRef} role="status" tabIndex={-1} className="fixed bottom-4 right-4 z-40 max-w-sm rounded-md border border-green-600 bg-green-50 px-4 py-3 text-sm text-green-900 shadow-elevated outline-none dark:border-green-500 dark:bg-green-950 dark:text-green-100">
-          <div className="flex items-start gap-3">
-            <div className="flex flex-col gap-1">
-              <span>{successNotice}</span>
-              {successDetail ? <span className="text-xs">{successDetail}</span> : null}
-            </div>
-            <button type="button" aria-label="Cerrar aviso" onClick={() => setSuccessNotice(null)} className="font-medium hover:underline">Cerrar</button>
+    <MotionConfig reducedMotion="user">
+      <div ref={workspace} tabIndex={-1} className={styles.workspace}>
+        <header className={styles.header}>
+          <div>
+            <h1>Mis prácticas</h1>
+            <p>Tu próxima hora al volante, y todo lo que viene después.</p>
           </div>
+          <div className={styles.headerTools}>
+            {cohortOptions.length > 1 ? (
+              <label className={styles.cohortSelect}>
+                Mi cohorte
+                <select
+                  aria-label="Plan de prácticas"
+                  value={cohortId ?? ""}
+                  disabled={pendingSlotId !== null}
+                  onChange={(event) => {
+                    setSelectedCohort(event.target.value);
+                    setActionError(null);
+                    setConfigurationIssue(false);
+                  }}
+                >
+                  {cohortOptions.map((item) => (
+                    <option key={item.cohortId} value={item.cohortId ?? ""}>
+                      Licencia {item.courseType}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : cohortOptions[0] ? (
+              <span className={styles.cohortChip}>
+                Licencia {cohortOptions[0].courseType} · Mi cohorte
+              </span>
+            ) : null}
+            <div className={styles.segmented} role="group" aria-label="Vista de la agenda">
+              <button
+                type="button"
+                aria-pressed={view === "list"}
+                onClick={() => changeView("list")}
+              >
+                Lista
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === "week"}
+                onClick={() => changeView("week")}
+              >
+                Semana
+              </button>
+            </div>
+          </div>
+        </header>
+        {invalidPlan && !planNoticeDismissed ? (
+          <div className={styles.planNotice} role="status">
+            <ScheduleIcon kind="info" />
+            <p>
+              Estamos terminando de configurar tu plan. Tus prácticas asignadas siguen disponibles.
+            </p>
+            <button
+              type="button"
+              className={styles.noticeClose}
+              aria-label="Cerrar aviso del plan durante esta sesión"
+              onClick={() => {
+                setPlanNoticeDismissed(true);
+                try {
+                  sessionStorage.setItem("coloradosdrive:practice-plan-notice:v1", "dismissed");
+                } catch {
+                  /* Dismissal still applies to this visit. */
+                }
+              }}
+            >
+              <XIcon className={styles.smallIcon} />
+            </button>
+          </div>
+        ) : null}
+        {enrollmentsError ? (
+          <div className={styles.inlineError}>
+            No pudimos consultar tu cohorte.
+            <Button variant="ghost" onClick={refetchEnrollments}>
+              Reintentar
+            </Button>
+          </div>
+        ) : null}
+        {actionError ? <FormError>{actionError}</FormError> : null}
+        <div className={styles.toast}>
+          <Toast message={successNotice} onDismiss={() => setSuccessNotice("")} />
         </div>
-      ) : null}
-
-      {noPracticeNotice ? (
-        <div className="flex items-center justify-between gap-4 rounded-md border border-accent-red bg-accent-red-subtle px-4 py-3 text-sm text-accent-red">
-          <span>Esta práctica ya no se realizará. Consulta tus horarios actualizados.</span>
-          <button
-            type="button"
-            onClick={() => setNoPracticeNotice(false)}
-            className="shrink-0 font-medium hover:underline"
-          >
-            Entendido
-          </button>
-        </div>
-      ) : null}
-
-      {!isLoading && !error ? (
-        <>
-          <section className="flex flex-col gap-3">
-            <h2 className="font-display text-lg font-semibold text-text-primary">Tu franja</h2>
-            {ownSlots.length === 0 ? (
-              <Card>
-                <p className="text-sm text-text-secondary">
-                  No tienes prácticas asignadas por ahora.
-                </p>
-              </Card>
-            ) : (
-              ownSlots.map((slot) => {
-                const isConfirmationDue = confirmationDue && slot.status === "asignado";
-                const canNotifyAbsence = currentTime !== null
-                  && new Date(slot.scheduledAt).getTime() > currentTime;
-                return (
-                  <Card
-                    key={slot.id}
-                    className={cn("flex flex-col gap-3", isConfirmationDue && "border-accent-blue")}
-                  >
-                    {isConfirmationDue ? (
-                      <p className="text-sm font-medium text-accent-blue">
-                        Tu práctica está por empezar. Puedes confirmar tu asistencia si deseas;
-                        si no respondes, se asume que asistirás.
-                      </p>
-                    ) : null}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium text-text-primary">
-                          {formatPracticeDateTime(slot.scheduledAt)}
-                        </span>
-                        <span className="text-sm text-text-secondary">
-                          {slot.durationMinutes} min · {"instructorName" in slot ? slot.instructorName : ""}
-                        </span>
-                      </div>
-                      <StatusBadge status={slot.status} />
-                    </div>
-                    <div className="flex justify-end gap-3">
-                      {slot.status === "asignado" ? (
-                        <Button
-                          variant="secondary"
-                          icon={<CheckIcon className="h-4 w-4" />}
-                          isLoading={pendingSlotId === slot.id}
-                          disabled={pendingSlotId !== null}
-                          onClick={() => handleConfirm(slot.id)}
-                        >
-                          Confirmar asistencia (opcional)
-                        </Button>
-                      ) : null}
-                      {canNotifyAbsence ? (
-                        <Button
-                          variant="danger"
-                          icon={<XIcon className="h-4 w-4" />}
-                          isLoading={pendingSlotId === slot.id}
-                          disabled={pendingSlotId !== null}
-                          onClick={(event) => { void handleCancelPreview(slot.id, event.currentTarget); }}
-                        >
-                          No podré asistir
-                        </Button>
-                      ) : null}
-                    </div>
-                  </Card>
-                );
-              })
-            )}
+        {noPracticeNotice ? (
+          <div className={styles.planNotice}>
+            <ScheduleIcon kind="info" />
+            <p>Esta práctica ya no se realizará. Consulta tus horarios actualizados.</p>
+            <Button variant="ghost" onClick={() => setNoPracticeNotice(false)}>
+              Entendido
+            </Button>
+          </div>
+        ) : null}
+        {isLoading && slots === null ? (
+          <ScheduleSkeleton />
+        ) : error && slots === null ? (
+          <section className={styles.empty}>
+            <ScheduleIcon kind="calendar" />
+            <h2>No pudimos cargar tus prácticas</h2>
+            <p>Revisa tu conexión e inténtalo de nuevo.</p>
+            <Button variant="secondary" onClick={retry}>
+              Reintentar
+            </Button>
           </section>
-
-          <section className="flex flex-col gap-3">
-            <h2 className="font-display text-lg font-semibold text-text-primary">Cupos disponibles para ti</h2>
-            {releasedLoading ? <p className="text-sm text-text-secondary">Cargando cupos…</p> : null}
-            {!releasedLoading && !releasedError && availableSlots.length === 0 ? (
-              <Card>
-                <p className="text-sm text-text-secondary">No hay cupos liberados por ahora.</p>
-              </Card>
-            ) : !releasedError ? (
-              <div className="flex flex-col gap-3">
-                {availableSlots.map((slot) => (
-                  <Card key={slot.id} className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium text-text-primary">
-                        {formatPracticeDateTime(slot.scheduledAt)}
-                      </span>
-                      <span className="text-sm text-text-secondary">
-                        {slot.durationMinutes} min · {slot.caso === "A" ? "Reposición de hora pendiente" : "Cambio de práctica"}
-                      </span>
-                      {releasedCounts.size > 1 ? (
-                        <span className="text-xs text-text-secondary">Reprogramaciones disponibles para este horario: {slot.reprogramacionesRestantes} de 2</span>
-                      ) : null}
-                    </div>
-                    <Button
-                      disabled={slot.caso === "B" && (pendingLoading || pendingError !== null)}
-                      onClick={(event) => openSwap(slot, event.currentTarget)}
-                    >
-                      Tomar este horario
-                    </Button>
-                  </Card>
-                ))}
+        ) : (
+          <>
+            {error ? (
+              <div className={styles.inlineError}>
+                No pudimos actualizar tu agenda.
+                <Button variant="ghost" onClick={retry}>
+                  Reintentar
+                </Button>
               </div>
             ) : null}
-          </section>
-        </>
-      ) : null}
-      {cancelTarget ? (
-        <CancelPracticeModal
-          key={cancelTarget.slotId}
-          slotId={cancelTarget.slotId}
-          preview={cancelTarget.preview}
-          onClose={closeCancelModal}
-          onCancelled={handleCancelled}
-        />
-      ) : null}
-      {swapTarget ? (
-        <SwapPracticeModal
-          key={swapTarget.id}
-          slot={swapTarget}
-          pending={pendingPractices ?? []}
-          onClose={closeSwap}
-          onSwapped={handleSwapped}
-          onConflict={() => { refetchReleased(); refetchPending(); refetchSlots(); }}
-        />
-      ) : null}
-    </div>
+            <div className={styles.layout}>
+              <div className={styles.main}>
+                {nextBlock ? (
+                  <NextPractice
+                    block={nextBlock}
+                    actions={actions}
+                    following={blocks.slice(1)}
+                    onNavigate={navigateToDay}
+                  />
+                ) : (
+                  <section className={styles.empty}>
+                    <ScheduleIcon />
+                    <h2>Aún no tienes prácticas asignadas</h2>
+                    <p>
+                      Cuando la escuela asigne tu horario, lo encontrarás aquí. Si ya te
+                      matriculaste, consulta con la escuela la fecha de inicio.
+                    </p>
+                  </section>
+                )}
+                <div
+                  className={styles.sectionNav}
+                  role="group"
+                  aria-label="Secciones de mis prácticas"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={section === "agenda"}
+                    onClick={() => setSection("agenda")}
+                  >
+                    Mi agenda
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={section === "available"}
+                    onClick={() => setSection("available")}
+                  >
+                    Cupos disponibles{" "}
+                    {!releasedLoading && !releasedError ? (
+                      <span>({availableSlots.length})</span>
+                    ) : null}
+                  </button>
+                </div>
+                {section === "agenda" ? (
+                  <section aria-label="Mi agenda" className={styles.agenda}>
+                    <div className={styles.agendaHeading}>
+                      <h2>Lo que viene</h2>
+                      {blocks.length ? (
+                        <Button
+                          variant="ghost"
+                          icon={<ScheduleIcon />}
+                          onClick={() => downloadCalendar(blocks)}
+                        >
+                          Exportar agenda
+                        </Button>
+                      ) : null}
+                    </div>
+                    {confirmationDue ? (
+                      <p className={styles.hint}>
+                        Tu práctica está por empezar. Puedes confirmar si deseas; si no respondes,
+                        igual te esperamos.
+                      </p>
+                    ) : null}
+                    {blocks.length || view === "week" ? (
+                      <ScheduleAgenda
+                        blocks={blocks}
+                        actions={actions}
+                        view={view}
+                        focusedDay={focusedDay}
+                      />
+                    ) : (
+                      <p className={styles.emptyAgenda}>
+                        Tu agenda está al día. Aquí aparecerán tus próximas prácticas.
+                      </p>
+                    )}
+                    <details className={styles.previous}>
+                      <summary>
+                        Anteriores <span>({pastHistory.length + pastOwn.length})</span>
+                      </summary>
+                      {pastHistory.map((item) => (
+                        <div key={item.id} className={styles.pastRow}>
+                          <div>
+                            <p>
+                              {dateLabel(item.scheduledAt, {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}{" "}
+                              · {timeLabel(item.scheduledAt)}
+                            </p>
+                            {item.durationMinutes !== null ? (
+                              <span className={styles.hint}>
+                                {hoursLabel(item.durationMinutes)}
+                              </span>
+                            ) : null}
+                          </div>
+                          <PracticeBadge state={historyStates[item.estado]} />
+                        </div>
+                      ))}
+                      {pastOwn.map((slot) => (
+                        <div key={slot.id} className={styles.pastRow}>
+                          <span>
+                            {dateLabel(slot.scheduledAt, {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}{" "}
+                            · {timeLabel(slot.scheduledAt)}
+                          </span>
+                          <PracticeBadge state={visualState(slot, currentTime)} />
+                        </div>
+                      ))}
+                      {!pastHistory.length && !pastOwn.length ? (
+                        <p className={styles.hint}>
+                          Tus prácticas anteriores aparecerán aquí. El historial completo conserva
+                          también los avisos de inasistencia.
+                        </p>
+                      ) : null}
+                      <Link href="/student/history" className={styles.textLink}>
+                        Ver todo mi historial
+                        {history?.data && history.data.total > history.data.items.length
+                          ? ` (${history.data.total})`
+                          : ""}
+                      </Link>
+                    </details>
+                  </section>
+                ) : (
+                  <section className={styles.available} aria-label="Cupos disponibles">
+                    <h2>Encuentra otro horario</h2>
+                    <p className={styles.hint}>
+                      Solo aparecen los cupos que puedes elegir para tu plan.
+                    </p>
+                    {listErrors.length ? (
+                      <div className={styles.inlineError}>
+                        <p>No pudimos actualizar los cupos o las prácticas que puedes cambiar.</p>
+                        <Button variant="ghost" onClick={retry}>
+                          Reintentar
+                        </Button>
+                      </div>
+                    ) : null}
+                    {releasedLoading && releasedSlots === null ? (
+                      [1, 2].map((id) => (
+                        <div key={id} className={`${styles.skeleton} ${styles.rowSkeleton}`} />
+                      ))
+                    ) : releasedError ? (
+                      <p className={styles.emptyAgenda}>
+                        {invalidPlan
+                          ? "Los cupos para cambiar de horario estarán disponibles cuando la escuela termine de configurar tu plan."
+                          : "Vuelve a intentarlo para consultar los cupos actualizados."}
+                      </p>
+                    ) : !availableSlots.length ? (
+                      <p className={styles.emptyAgenda}>
+                        No hay cupos liberados por ahora. Tu agenda se actualiza cuando aparece uno
+                        disponible.
+                      </p>
+                    ) : (
+                      availableSlots.map((slot) => (
+                        <article
+                          className={styles.availableSlot}
+                          data-tone={slot.caso === "A" ? "warning" : "info"}
+                          key={`${slot.enrollmentId}-${slot.id}`}
+                        >
+                          <div>
+                            <PracticeBadge
+                              state={{
+                                label:
+                                  slot.caso === "A" ? "Pendiente por reponer" : "Cupo disponible",
+                                tone: slot.caso === "A" ? "warning" : "info",
+                                icon: "clock",
+                              }}
+                            />
+                            <p className={styles.panelDate}>
+                              {dateLabel(slot.scheduledAt, {
+                                weekday: "short",
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </p>
+                            <strong>
+                              {timeLabel(slot.scheduledAt)} – {timeLabel(slotEnd(slot))}
+                            </strong>
+                            <p className={styles.hint}>
+                              {hoursLabel(slot.durationMinutes)} ·{" "}
+                              {slot.caso === "A"
+                                ? "Reposición de hora pendiente"
+                                : "Cambio de práctica"}
+                            </p>
+                            <p className={styles.hint}>
+                              Te quedan {slot.reprogramacionesRestantes} de 2 reprogramaciones.
+                            </p>
+                          </div>
+                          <Button
+                            className={styles.primaryAction}
+                            disabled={
+                              pendingSlotId !== null ||
+                              (slot.caso === "B" && (pendingLoading || pendingError !== null))
+                            }
+                            onClick={(event) => openSwap(slot, event.currentTarget)}
+                          >
+                            Tomar cupo
+                          </Button>
+                        </article>
+                      ))
+                    )}
+                  </section>
+                )}
+              </div>
+              <PracticePlan
+                history={history?.data ?? null}
+                assignedMinutes={ownSlots
+                  .filter((slot) => isActive(slot) || slot.status === "completado")
+                  .reduce((sum, slot) => sum + slot.durationMinutes, 0)}
+                remainingPractices={upcoming.length}
+                practiceStates={upcoming.map((slot) => visualState(slot, currentTime))}
+                remainingChanges={remaining}
+                invalidPlan={invalidPlan}
+                loading={Boolean(planEnrollment && !history)}
+                error={
+                  history?.error ??
+                  (planEnrollmentsError ? "No pudimos cargar el avance de tu plan." : null)
+                }
+                onRetry={retry}
+              />
+            </div>
+          </>
+        )}
+        {cancelTarget ? (
+          <CancelPracticeModal
+            key={cancelTarget.slotId}
+            slotId={cancelTarget.slotId}
+            preview={cancelTarget.preview}
+            onClose={() => {
+              setCancelTarget(null);
+              restoreFocus(cancelTrigger.current);
+            }}
+            onCancelled={handleCancelled}
+          />
+        ) : null}
+        {swapTarget ? (
+          <SwapPracticeModal
+            key={swapTarget.id}
+            slot={swapTarget}
+            pending={pendingPractices ?? []}
+            onClose={() => {
+              setSwapTarget(null);
+              restoreFocus(swapTrigger.current);
+            }}
+            onSwapped={handleSwapped}
+            onConflict={refreshAll}
+          />
+        ) : null}
+      </div>
+    </MotionConfig>
   );
 }
