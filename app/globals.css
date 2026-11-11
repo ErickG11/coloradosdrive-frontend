@@ -63,6 +63,7 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --shadow-elevated: 0 12px 36px -12px rgb(24 32 43 / 20%);
+  --color-vehicle-contact-shadow: rgb(16 17 20 / 32%);
   --gradient-decorative: linear-gradient(135deg, rgb(198 40 40 / 1.2%), transparent 45%);
 }
 
@@ -113,11 +114,10 @@
   --color-avatar-5: #86d8a8;
   --color-avatar-5-bg: #193126;
   --shadow-elevated: 0 16px 48px -12px rgb(0 0 0 / 55%);
+  --color-vehicle-contact-shadow: rgb(0 0 0 / 65%);
   --gradient-decorative: linear-gradient(135deg, rgb(198 40 40 / 1.8%), transparent 45%);
 }
 
-@theme inline {
-  --color-bg-canvas: var(--color-bg-canvas);
 /* Shared student practice states. Keep the schedule palette identical in both themes. */
 :root,
 .dark {
@@ -183,6 +183,8 @@
   --status-in-progress-border: color-mix(in srgb, var(--status-in-progress-fg) 28%, transparent);
 }
 
+@theme inline {
+  --color-bg-canvas: var(--color-bg-canvas);
   --color-bg-sunken: var(--color-bg-sunken);
   --color-bg-surface: var(--color-bg-surface);
   --color-bg-surface-raised: var(--color-bg-surface-raised);
