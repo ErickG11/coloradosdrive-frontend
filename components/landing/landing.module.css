@@ -1377,6 +1377,14 @@
     padding-block: 104px;
   }
 }
+.readingProgress {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--color-brand-primary);
+  transform-origin: left;
+  pointer-events: none;
+}
 @media (min-width: 1100px) {
   .desktopNav {
     display: flex !important;
@@ -1401,8 +1409,12 @@
     transform-origin: left;
     transition: transform 180ms var(--landing-ease);
   }
-  .desktopNav a:hover::after {
+  .desktopNav a:hover::after,
+  .desktopNav a[aria-current="location"]::after {
     transform: scaleX(1);
+  }
+  .desktopNav a[aria-current="location"] {
+    color: var(--color-brand-ink);
   }
   .menuToggle {
     display: none;
@@ -1692,6 +1704,9 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .readingProgress {
+    display: none;
+  }
   .page *,
   .page *::before,
   .page *::after {

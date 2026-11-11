@@ -103,7 +103,7 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
                   paso.
                 </p>
                 <a
-                  href={landingContent.enrollmentHref}
+                  href={landingContent.whatsappEnrollmentHref}
                   className={styles.textLink}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -224,15 +224,10 @@ export function LandingPage({ courses }: { courses: PublicCourse[] }) {
               </ScrollReveal>
               <p>{landingContent.slogan}.</p>
               <div className={styles.actions}>
-                <a
-                  href={landingContent.enrollmentHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.button}
-                >
+                <Link href={landingContent.enrollmentHref} className={styles.button}>
                   ¡Inscríbete hoy!
                   <LandingIcon name="arrow" />
-                </a>
+                </Link>
                 <Link href="/login" className={styles.heroLogin}>
                   Iniciar sesión
                   <LandingIcon name="arrow" />
