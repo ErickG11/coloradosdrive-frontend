@@ -118,6 +118,71 @@
 
 @theme inline {
   --color-bg-canvas: var(--color-bg-canvas);
+/* Shared student practice states. Keep the schedule palette identical in both themes. */
+:root,
+.dark {
+  --status-scheduled-fg: var(--color-status-info);
+  --status-scheduled-bg: color-mix(
+    in srgb,
+    var(--status-scheduled-fg) 12%,
+    var(--color-bg-surface-raised)
+  );
+  --status-scheduled-border: color-mix(in srgb, var(--status-scheduled-fg) 28%, transparent);
+  --status-confirmed-fg: var(--color-status-success);
+  --status-confirmed-bg: color-mix(
+    in srgb,
+    var(--status-confirmed-fg) 12%,
+    var(--color-bg-surface-raised)
+  );
+  --status-confirmed-border: color-mix(in srgb, var(--status-confirmed-fg) 28%, transparent);
+  --status-attended-fg: color-mix(
+    in srgb,
+    var(--color-status-success) 75%,
+    var(--color-text-secondary)
+  );
+  --status-attended-bg: color-mix(
+    in srgb,
+    var(--status-attended-fg) 12%,
+    var(--color-bg-surface-raised)
+  );
+  --status-attended-border: color-mix(in srgb, var(--status-attended-fg) 28%, transparent);
+  --status-missed-fg: var(--color-status-error);
+  --status-missed-bg: color-mix(
+    in srgb,
+    var(--status-missed-fg) 12%,
+    var(--color-bg-surface-raised)
+  );
+  --status-missed-border: color-mix(in srgb, var(--status-missed-fg) 28%, transparent);
+  --status-pending-review-fg: var(--color-status-warning);
+  --status-pending-review-bg: color-mix(
+    in srgb,
+    var(--status-pending-review-fg) 12%,
+    var(--color-bg-surface-raised)
+  );
+  --status-pending-review-border: color-mix(
+    in srgb,
+    var(--status-pending-review-fg) 28%,
+    transparent
+  );
+  --status-lost-fg: var(--color-status-warning);
+  --status-lost-bg: color-mix(in srgb, var(--status-lost-fg) 12%, var(--color-bg-surface-raised));
+  --status-lost-border: color-mix(in srgb, var(--status-lost-fg) 28%, transparent);
+  --status-cancelled-fg: var(--color-status-neutral);
+  --status-cancelled-bg: color-mix(
+    in srgb,
+    var(--status-cancelled-fg) 12%,
+    var(--color-bg-surface-raised)
+  );
+  --status-cancelled-border: color-mix(in srgb, var(--status-cancelled-fg) 28%, transparent);
+  --status-in-progress-fg: var(--color-brand-ink);
+  --status-in-progress-bg: color-mix(
+    in srgb,
+    var(--status-in-progress-fg) 12%,
+    var(--color-bg-surface-raised)
+  );
+  --status-in-progress-border: color-mix(in srgb, var(--status-in-progress-fg) 28%, transparent);
+}
+
   --color-bg-sunken: var(--color-bg-sunken);
   --color-bg-surface: var(--color-bg-surface);
   --color-bg-surface-raised: var(--color-bg-surface-raised);

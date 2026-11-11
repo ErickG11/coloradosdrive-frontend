@@ -7,7 +7,11 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { PendingPracticeSlot, ReleasedPracticeSlot, SwapPracticeResult } from "@/types/practiceSlot";
 
-import { formatPracticeDateTime } from "./formatPracticeDateTime";
+import { dateLabel, timeLabel, friendlyError } from "./scheduleModel";
+import styles from "./schedule.module.css";
+
+const formatPracticeDateTime = (iso: string) =>
+  `${dateLabel(iso, { weekday: "long", day: "numeric", month: "long" })}, ${timeLabel(iso)}`;
 
 interface SwapPracticeModalProps {
   slot: ReleasedPracticeSlot;
@@ -32,7 +36,7 @@ function swapError(err: unknown): string {
   if (err.status === 403 || err.message.includes("no es elegible") || err.message.includes("no tienes matrícula activa")) {
     return "Este horario ya no está disponible para ti. Revisa los cupos actualizados.";
   }
-  if (err.status === 409) return err.message || "El horario cambió. Revisa los cupos actualizados.";
+  if (err.status === 409) return friendlyError(err, "El horario cambió. Revisa los cupos actualizados.");
   return "No se pudo cambiar el horario. Inténtalo de nuevo.";
 }
 
@@ -64,7 +68,7 @@ export function SwapPracticeModal({ slot, pending, onClose, onSwapped, onConflic
   }
 
   return (
-    <Modal isOpen onClose={() => { if (!isSubmitting) onClose(); }} title="Cambiar horario">
+    <Modal isOpen onClose={() => { if (!isSubmitting) onClose(); }} title="Cambiar horario" className={styles.sheet}>
       <form onSubmit={(event) => { void submit(event); }} className="flex flex-col gap-4">
         <p className="text-sm text-text-primary">Nuevo horario: {formatPracticeDateTime(slot.scheduledAt)}.</p>
         {isChange ? (

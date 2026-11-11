@@ -13,6 +13,9 @@ import type {
   CancelPracticeSlotResult,
 } from "@/types/practiceSlot";
 
+import { friendlyError } from "./scheduleModel";
+import styles from "./schedule.module.css";
+
 const CATEGORY_LABELS: Record<CancellationCategory, string> = {
   salud: "Salud",
   trabajo: "Trabajo",
@@ -69,7 +72,7 @@ export function CancelPracticeModal({ slotId, preview, onClose, onCancelled }: C
           setError("Revisa el motivo e inténtalo de nuevo.");
         }
       } else if (err instanceof ApiError && err.status === 409) {
-        setError(err.message);
+        setError(friendlyError(err, "El horario cambió. Revisa tu agenda e inténtalo de nuevo."));
       } else {
         setError("No se pudo enviar el aviso de inasistencia. Intenta de nuevo.");
       }
@@ -79,7 +82,7 @@ export function CancelPracticeModal({ slotId, preview, onClose, onCancelled }: C
   }
 
   return (
-    <Modal isOpen onClose={() => { if (!isSubmitting) onClose(); }} title="Avisar que no asistirás">
+    <Modal isOpen onClose={() => { if (!isSubmitting) onClose(); }} title="Avisar que no asistirás" className={styles.sheet}>
       <form onSubmit={(event) => { void submit(event); }} className="flex flex-col gap-4">
         <p className="text-sm text-text-secondary">
           Al confirmar, la hora quedará liberada para otros alumnos de tu cohorte.
