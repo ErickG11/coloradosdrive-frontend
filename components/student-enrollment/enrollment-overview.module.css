@@ -1,0 +1,1101 @@
+.workspace {
+  --enrollment-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --enrollment-shadow: 0 12px 32px color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 1240px;
+  margin-inline: auto;
+  display: grid;
+  gap: 28px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text-primary);
+}
+.workspace::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 40px 0 auto;
+  height: 440px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 22% 20%,
+    color-mix(in srgb, var(--color-brand-ink) 6%, transparent),
+    transparent 70%
+  );
+}
+.workspace *,
+.workspace *::before,
+.workspace *::after {
+  box-sizing: border-box;
+}
+.workspace :is(h1, h2, h3, p, dl, dd, ol) {
+  margin: 0;
+}
+.workspace h1,
+.workspace h2,
+.workspace h3 {
+  text-wrap: balance;
+}
+.workspace h1,
+.workspace h2 {
+  font-family: var(--font-space-grotesk), var(--font-inter), sans-serif;
+}
+.workspace h1 {
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+.workspace h2 {
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.workspace h3 {
+  font-size: 14px;
+  font-weight: 650;
+}
+.workspace p {
+  max-width: 70ch;
+}
+.workspace :is(a, button):focus-visible {
+  outline: 2px solid var(--color-brand-ink);
+  outline-offset: 4px;
+}
+.workspace :is(a, button) {
+  -webkit-tap-highlight-color: transparent;
+}
+.workspace ::selection {
+  color: var(--color-bg-surface-raised);
+  background: var(--color-brand-ink);
+}
+.icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.header p {
+  margin-top: 8px;
+  color: var(--color-text-secondary);
+}
+.badge {
+  --badge-fg: var(--status-cancelled-fg);
+  --badge-bg: var(--status-cancelled-bg);
+  --badge-border: var(--status-cancelled-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--badge-border);
+  border-radius: 999px;
+  background: var(--badge-bg);
+  color: var(--badge-fg);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.badge .icon {
+  width: 15px;
+  height: 15px;
+}
+.badge[data-tone="confirmed"] {
+  --badge-fg: var(--status-confirmed-fg);
+  --badge-bg: var(--status-confirmed-bg);
+  --badge-border: var(--status-confirmed-border);
+}
+.badge[data-tone="scheduled"] {
+  --badge-fg: var(--status-scheduled-fg);
+  --badge-bg: var(--status-scheduled-bg);
+  --badge-border: var(--status-scheduled-border);
+}
+.badge[data-tone="pending-review"] {
+  --badge-fg: var(--status-pending-review-fg);
+  --badge-bg: var(--status-pending-review-bg);
+  --badge-border: var(--status-pending-review-border);
+}
+.badge[data-tone="in-progress"] {
+  --badge-fg: var(--status-in-progress-fg);
+  --badge-bg: var(--status-in-progress-bg);
+  --badge-border: var(--status-in-progress-border);
+}
+.liveDot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: breathe 2.8s ease-in-out infinite;
+}
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  justify-self: start;
+  max-width: 100%;
+  background: var(--color-bg-sunken);
+  border-radius: 14px;
+}
+.segmented button {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms var(--enrollment-ease);
+}
+.segmented button[aria-pressed="true"] {
+  color: var(--color-brand-ink);
+  background: var(--color-bg-surface-raised);
+  border-color: var(--color-brand-border);
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+}
+.segmented small {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+.content {
+  display: grid;
+  gap: 28px;
+  min-width: 0;
+}
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+  min-width: 0;
+}
+.heroGrid > * {
+  min-width: 0;
+}
+.enter {
+  animation: sectionIn 240ms var(--enrollment-ease) both;
+}
+.heroGrid > :nth-child(2) {
+  animation-delay: 40ms;
+}
+.content > :nth-child(2) {
+  animation-delay: 80ms;
+}
+.content > :nth-child(3) {
+  animation-delay: 120ms;
+}
+.cardStage {
+  perspective: 1100px;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  height: 100%;
+}
+.cardTilt {
+  position: relative;
+  min-height: 324px;
+  height: 100%;
+  transform: rotateX(var(--card-tilt-x, 0deg)) rotateY(var(--card-tilt-y, 0deg));
+  transition: transform 180ms var(--enrollment-ease);
+}
+.credential {
+  position: relative;
+  display: grid;
+  height: 100%;
+  min-height: 324px;
+  aspect-ratio: 1.6;
+  transform-style: preserve-3d;
+  transition: transform 260ms var(--enrollment-ease);
+}
+.credential[data-flipped="true"] {
+  transform: rotateY(180deg);
+}
+.cardFace {
+  position: relative;
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+  min-width: 0;
+  min-height: 324px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px 58px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background:
+    linear-gradient(
+        145deg,
+        var(--color-bg-surface-raised),
+        color-mix(in srgb, var(--color-brand-ink) 5%, var(--color-bg-surface))
+      )
+      padding-box,
+    linear-gradient(135deg, var(--color-brand-border), var(--color-border), var(--color-border))
+      border-box;
+  box-shadow: var(--enrollment-shadow);
+  overflow: hidden;
+}
+.cardFace::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: var(--color-brand-primary);
+}
+.cardFace::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  width: 120px;
+  height: 400px;
+  right: -24px;
+  bottom: -170px;
+  transform: rotate(32deg);
+  border-inline: 1px solid color-mix(in srgb, var(--color-brand-ink) 12%, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent 49%,
+    color-mix(in srgb, var(--color-brand-ink) 9%, transparent) 49%,
+    color-mix(in srgb, var(--color-brand-ink) 9%, transparent) 51%,
+    transparent 51%
+  );
+}
+.cardFace > * {
+  position: relative;
+}
+.cardBrand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.logo {
+  display: block;
+  width: 126px;
+  height: 63px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: white;
+}
+.cardBrand > span {
+  font-weight: 650;
+  font-size: 12px;
+  color: var(--color-brand-ink);
+}
+.cardIdentity h2 {
+  font-size: clamp(21px, 2.25vw, 28px);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.cardIdentity p {
+  font-size: 12px;
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+}
+.cedula {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.cedula button {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-brand-ink);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.cardCourse {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+}
+.cardCourse > .icon {
+  width: 34px;
+  height: 34px;
+  color: var(--color-brand-ink);
+}
+.cardCourse strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 650;
+}
+.cardCourse span {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+.cardBottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cardBottom > span:first-child {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+.cardBack {
+  transform: rotateY(180deg);
+  justify-content: center;
+}
+.cardBack h2 {
+  font-size: 19px;
+}
+.cardBackData {
+  display: grid;
+  gap: 12px;
+}
+.cardBackData dt {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.cardBackData dd {
+  font-size: 14px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.informational {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: auto !important;
+}
+.flipButton {
+  position: absolute;
+  right: 16px;
+  bottom: 10px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding-inline: 10px;
+  background: var(--color-bg-surface-raised);
+  color: var(--color-brand-ink);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 160ms var(--enrollment-ease);
+}
+.statusPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 28px;
+  border-radius: 16px;
+  background: var(--color-bg-surface-raised);
+  box-shadow: var(--enrollment-shadow);
+}
+.statusPanel h2 {
+  font-size: 21px;
+}
+.hours {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  padding-block: 4px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.hours > strong {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(42px, 4vw, 60px);
+  line-height: 1.05;
+  font-weight: 700;
+  color: var(--color-brand-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.hours > strong > span:last-child {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+}
+.hours > div {
+  font-size: 14px;
+  font-weight: 600;
+}
+.hours p {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+.nextPractice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.nextPractice .dataIcon {
+  color: var(--status-scheduled-fg);
+  background: var(--status-scheduled-bg);
+}
+.nextPractice p {
+  margin-top: 5px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  text-wrap: pretty;
+}
+.panelNote {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  padding-top: 4px;
+  margin-top: auto !important;
+}
+.courseTime {
+  width: 100%;
+  font-size: 14px;
+}
+.courseTime > strong {
+  display: block;
+  font-size: 42px;
+  font-variant-numeric: tabular-nums;
+}
+.timeBar {
+  height: 5px;
+  margin-top: 14px;
+  background: var(--color-bg-sunken);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.timeBar span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--color-brand-ink);
+  transform-origin: left;
+}
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  color: var(--color-brand-ink);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.textLink .icon {
+  width: 17px;
+  height: 17px;
+  transition: transform 160ms var(--enrollment-ease);
+}
+.journey {
+  padding: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-bg-surface);
+  min-width: 0;
+}
+.sectionTitle p {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 6px;
+}
+.milestones {
+  display: flex;
+  padding: 0;
+  list-style: none;
+  margin-top: 28px !important;
+}
+.milestones > li {
+  --milestone-fg: var(--status-confirmed-fg);
+  --milestone-bg: var(--status-confirmed-bg);
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding-right: 16px;
+}
+.milestones > li:last-child {
+  padding-right: 0;
+}
+.milestones > li::before {
+  content: "";
+  position: absolute;
+  left: 38px;
+  right: 0;
+  top: 19px;
+  height: 1px;
+  background: var(--status-confirmed-border);
+  transform-origin: left;
+  animation: lineIn 240ms var(--enrollment-ease) both;
+}
+.milestones > li:last-child::before {
+  display: none;
+}
+.milestones > li[data-state="current"] {
+  --milestone-fg: var(--status-in-progress-fg);
+  --milestone-bg: var(--status-in-progress-bg);
+}
+.milestones > li[data-state="future"] {
+  --milestone-fg: var(--status-cancelled-fg);
+  --milestone-bg: var(--color-bg-surface);
+}
+.milestoneIcon {
+  position: relative;
+  z-index: 1;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--milestone-fg);
+  background: var(--milestone-bg);
+}
+.milestones > li[data-state="current"] .milestoneIcon {
+  animation: breathe 2.8s ease-in-out infinite;
+}
+.milestones > li[data-state="future"] .milestoneIcon {
+  border-style: dashed;
+}
+.milestones > li > div {
+  margin-top: 12px;
+}
+.milestones > li:nth-child(-n + 4) {
+  animation: milestoneIn 200ms var(--enrollment-ease) var(--milestone-delay) both;
+}
+.milestones strong {
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 600;
+  display: block;
+  overflow-wrap: anywhere;
+}
+.milestones time {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  min-width: 0;
+}
+.dataCard {
+  --enrollment-accent: var(--color-brand-ink);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 26px;
+  gap: 20px;
+  border-radius: 16px;
+  background: var(--color-bg-surface-raised);
+  box-shadow: var(--enrollment-shadow);
+}
+.dataCard::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 8% 0,
+    color-mix(in srgb, var(--enrollment-accent) 7%, transparent),
+    transparent 65%
+  );
+}
+.dataCard[data-identity="cohort"] {
+  --enrollment-accent: var(--color-avatar-0);
+}
+.dataCard[data-identity="access"] {
+  --enrollment-accent: var(--color-avatar-4);
+}
+.dataCard[data-identity="documents"] {
+  --enrollment-accent: var(--color-avatar-3);
+}
+.dataCard[data-identity="documents"][data-complete="true"] {
+  --enrollment-accent: var(--status-confirmed-fg);
+}
+.dataCard[data-identity="payment"] {
+  --enrollment-accent: var(--color-avatar-1);
+}
+.dataCard:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  width: calc((100% - 24px) / 2);
+  justify-self: center;
+}
+.dataTitle {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.dataIcon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--enrollment-accent, var(--color-brand-ink));
+  background: color-mix(
+    in srgb,
+    var(--enrollment-accent, var(--color-brand-ink)) 10%,
+    var(--color-bg-surface-raised)
+  );
+}
+.dataIcon .icon {
+  width: 23px;
+  height: 23px;
+}
+.dataList {
+  width: 100%;
+  display: grid;
+  gap: 15px;
+}
+.dataList > div {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  align-items: baseline;
+}
+.dataList dt {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+.dataList dd {
+  font-size: 14px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.dataCard > .textLink {
+  margin-top: auto;
+}
+.secondary {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.securityNote {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+.documentSummary {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.documentSummary > div:last-child > strong {
+  font-weight: 650;
+  font-size: 16px;
+}
+.documentSummary p {
+  font-size: 13px;
+  margin-top: 5px;
+  color: var(--color-text-secondary);
+}
+.miniRing {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
+  color: var(--status-pending-review-fg);
+}
+.miniRing[data-complete="true"] {
+  color: var(--status-confirmed-fg);
+}
+.miniRing svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.miniRing circle {
+  fill: none;
+  stroke-width: 5;
+  stroke: var(--color-border-strong);
+}
+.miniRing circle:last-child {
+  stroke: currentColor;
+  stroke-linecap: round;
+}
+.miniRing strong {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.quickActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 4px;
+}
+.quickActions > :is(a, button) {
+  min-width: 0;
+  font-size: 14px;
+}
+.whatsapp {
+  color: var(--color-avatar-1);
+}
+.updateNotice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--status-pending-review-border);
+  border-radius: 12px;
+  background: var(--status-pending-review-bg);
+  color: var(--status-pending-review-fg);
+  font-size: 13px;
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  padding: 48px 24px;
+  border-radius: 16px;
+  background: var(--color-bg-surface-raised);
+  box-shadow: var(--enrollment-shadow);
+}
+.empty > .icon {
+  width: 44px;
+  height: 44px;
+  color: var(--color-brand-ink);
+}
+.empty p {
+  color: var(--color-text-secondary);
+  max-width: 55ch;
+}
+.skeleton {
+  display: grid;
+  gap: 28px;
+}
+.skeletonCard,
+.skeletonPanel,
+.skeletonRoute,
+.skeletonData {
+  background: var(--color-bg-sunken);
+  border-radius: 16px;
+  animation: skeletonPulse 1.8s ease-in-out infinite;
+}
+.skeletonCard {
+  min-height: 324px;
+  aspect-ratio: 1.6;
+}
+.skeletonPanel {
+  min-height: 324px;
+}
+.skeletonRoute {
+  height: 200px;
+}
+.skeletonData {
+  height: 260px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .textLink:hover .icon {
+    transform: translateX(3px);
+  }
+  .flipButton:hover,
+  .segmented button:hover {
+    transform: translateY(-1px);
+  }
+  .cardTilt::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(
+      110deg,
+      transparent 35%,
+      color-mix(in srgb, var(--color-text-primary) 5%, transparent) 50%,
+      transparent 65%
+    );
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-25%);
+  }
+  .cardStage:hover .cardTilt::after {
+    animation: shineIn 240ms var(--enrollment-ease) both;
+  }
+}
+.flipButton:active,
+.segmented button:active {
+  transform: scale(0.98);
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .heroGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cardStage {
+    margin-inline: 0;
+  }
+  .milestones {
+    flex-direction: column;
+    gap: 22px;
+  }
+  .milestones > li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding-right: 0;
+  }
+  .milestones > li::before {
+    top: 38px;
+    bottom: -22px;
+    left: 18px;
+    right: auto;
+    width: 1px;
+    height: auto;
+    transform-origin: top;
+    animation-name: lineInVertical;
+  }
+  .milestones > li > div {
+    margin-top: 0;
+  }
+  .milestoneIcon {
+    flex-shrink: 0;
+  }
+  .dataList > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+  .documentSummary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+}
+@media (max-width: 767px) {
+  .workspace,
+  .content {
+    gap: 24px;
+  }
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .heroGrid,
+  .detailGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dataCard:last-child:nth-child(odd) {
+    width: 100%;
+    grid-column: auto;
+  }
+  .statusPanel,
+  .dataCard,
+  .journey {
+    padding: 22px;
+  }
+  .cardFace {
+    padding-inline: 20px;
+  }
+  .cardStage {
+    max-width: 480px;
+  }
+  .cardTilt,
+  .cardFace,
+  .credential {
+    min-height: 340px;
+  }
+  .milestones {
+    flex-direction: column;
+    gap: 22px;
+  }
+  .milestones > li {
+    display: flex;
+    gap: 14px;
+    padding-right: 0;
+  }
+  .milestones > li::before {
+    top: 38px;
+    bottom: -22px;
+    left: 18px;
+    right: auto;
+    width: 1px;
+    height: auto;
+    transform-origin: top;
+    animation-name: lineInVertical;
+  }
+  .milestones > li > div {
+    margin-top: 0;
+  }
+  .milestoneIcon {
+    flex-shrink: 0;
+  }
+  .milestones strong {
+    font-size: 14px;
+  }
+  .quickActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .quickActions > a {
+    width: 100%;
+  }
+  .segmented {
+    width: 100%;
+  }
+  .segmented button {
+    flex: 1;
+    padding-inline: 10px;
+  }
+  .updateNotice {
+    flex-wrap: wrap;
+  }
+  .hours {
+    gap: 18px;
+  }
+}
+@media (max-width: 390px) {
+  .dataList > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+  .documentSummary {
+    gap: 14px;
+  }
+  .cardBottom {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@keyframes sectionIn {
+  from {
+    opacity: 0.45;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes milestoneIn {
+  from {
+    opacity: 0.45;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes lineIn {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes lineInVertical {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes shineIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-25%);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(25%);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace *,
+  .workspace *::before,
+  .workspace *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .cardTilt,
+  .credential,
+  .credential[data-flipped="true"],
+  .cardBack {
+    transform: none !important;
+  }
+  .cardFace[data-current="false"] {
+    visibility: hidden;
+  }
+  .cardTilt::after {
+    display: none;
+  }
+  .textLink:hover .icon,
+  .flipButton:hover,
+  .flipButton:active,
+  .segmented button:hover,
+  .segmented button:active {
+    transform: none;
+  }
+}

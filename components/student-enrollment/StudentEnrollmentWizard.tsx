@@ -1,7 +1,7 @@
 "use client";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 
-import { EnrollmentActionLink } from "../inscripcion/EnrollmentActionLink";
+import { EnrollmentWorkspace } from "./EnrollmentWorkspace";
 import { useRouter } from "next/navigation";
 import { useStudentPayment } from "./useStudentPayment";
 import { StudentPaymentStep } from "./StudentPaymentStep";
@@ -34,6 +34,16 @@ export function StudentEnrollmentWizard() {
   const payment = useStudentPayment(data?.enrollmentId, paid);
   const paymentOpen =
     !!payment.payment && ["pendiente", "revision", "aprobado"].includes(payment.payment.estado);
+  if (data?.accesoCompleto)
+    return (
+      <EnrollmentWorkspace
+        state={data}
+        refreshStatus={refetch}
+        statusError={Boolean(error)}
+        payment={payment.payment}
+        reservation={reservation.reservation}
+      />
+    );
   if (isLoading)
     return (
       <div className={visual.surface}>
@@ -52,15 +62,6 @@ export function StudentEnrollmentWizard() {
           </Button>
         </Card>
       </div>
-    );
-  if (data.accesoCompleto)
-    return (
-      <Card title="Mi inscripción" className={`${visual.surface} ${visual.active}`}>
-        <p>Tu cuenta tiene acceso a la plataforma. Tu matrícula está activa.</p>
-        <EnrollmentActionLink className="mt-4" href="/student">
-          Ir a mi panel
-        </EnrollmentActionLink>
-      </Card>
     );
   const desiredStep = selected ?? (reservation.held ? 2 : 0);
   const step = desiredStep === 2 && !reservation.live && !paymentOpen ? 1 : desiredStep;
