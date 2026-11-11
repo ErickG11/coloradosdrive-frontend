@@ -42,7 +42,7 @@ export default function ChangePasswordPage() {
     }
   }
   return (
-    <Card title="Cambiar contraseña temporal" titleAs="h1">
+    <Card title="Cambiar contraseña" titleAs="h1">
       {completed ? (
         <div className="flex flex-col gap-4">
           <p role="status">
