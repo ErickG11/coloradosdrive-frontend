@@ -137,6 +137,16 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
       ) : null}
       {role === "estudiante" ? (
         <>
+          {!studentEnrollmentRestricted ? (
+            <SidebarLink
+              href="/student/dashboard"
+              active={pathname === "/student/dashboard"}
+              section="panel"
+              onClick={closeDrawer}
+            >
+              Mi panel
+            </SidebarLink>
+          ) : null}
           <SidebarLink
             href="/student/inscripcion"
             active={pathname.startsWith("/student/inscripcion")}
