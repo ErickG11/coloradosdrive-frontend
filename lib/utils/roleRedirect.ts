@@ -6,7 +6,7 @@ export function getRoleHomePath(role: Role): string {
     case "admin":
       return "/admin";
     case "estudiante":
-      return "/student";
+      return "/student/dashboard";
     case "instructor":
       return "/instructor";
   }
