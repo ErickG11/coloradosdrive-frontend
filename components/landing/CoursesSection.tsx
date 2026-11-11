@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { landingContent } from "@/lib/content/landing";
 import type { PublicCourse } from "@/types/publicCourse";
 import { LandingIcon } from "./LandingIcon";
@@ -24,7 +25,13 @@ export function CoursesSection({ courses }: { courses: PublicCourse[] }) {
       </div>
       <div className={styles.courseGrid}>
         {landingContent.courses.map((course, index) => {
-          const publicCourse = courses.find((item) => item.tipo === course.type);
+          const matchingCourses = courses.filter((item) => item.tipo === course.type);
+          const publicCourse = matchingCourses[0];
+          // Con un único curso público del tipo, la inscripción llega con el curso elegido.
+          const enrollmentHref =
+            matchingCourses.length === 1 && publicCourse?.id
+              ? `${course.href}?courseId=${encodeURIComponent(publicCourse.id)}`
+              : course.href;
           return (
             <ScrollReveal key={course.type} delay={index * 0.06}>
               <article
@@ -65,16 +72,14 @@ export function CoursesSection({ courses }: { courses: PublicCourse[] }) {
                         ? `${publicCourse.horasRequeridas} horas requeridas`
                         : "Consulta la próxima cohorte"}
                     </p>
-                    <a
-                      href={course.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      href={enrollmentHref}
                       className={styles.courseAction}
                       aria-label={`Inscribirme en ${course.name}`}
                     >
                       Inscribirme
                       <LandingIcon name="arrow" />
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </article>
@@ -82,7 +87,18 @@ export function CoursesSection({ courses }: { courses: PublicCourse[] }) {
           );
         })}
       </div>
-      <p className={styles.note}>Valores sin IVA. Consulta fechas y cohortes por WhatsApp.</p>
+      <p className={styles.note}>
+        Valores sin IVA. Consulta fechas y cohortes por{" "}
+        <a
+          href={landingContent.whatsappEnrollmentHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.textLink}
+        >
+          WhatsApp
+        </a>
+        .
+      </p>
     </section>
   );
 }
