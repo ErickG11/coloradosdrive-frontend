@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useFetch } from "@/hooks/useFetch";
+import { CohortRulesControls, type CohortRulesConfig } from "./CohortRulesControls";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
@@ -61,6 +63,10 @@ function isFormField(field: string | undefined): field is keyof CohortFormValues
 }
 
 interface CohortFormProps {
+  rulesState?: "matricula_abierta" | "matricula_cerrada_en_curso" | "terminada";
+  codigo?: string | null;
+  habilitadaInicial?: boolean;
+  cierreMatricula?: string;
   courses: Course[];
   /** Presente => modo edición (PATCH). Ausente => modo creación (POST). */
   cohortId?: string;
@@ -138,6 +144,10 @@ function sameCohortData(a: CohortFormValues, b: CohortFormValues): boolean {
 export function CohortForm({
   courses,
   cohortId,
+  rulesState,
+  codigo,
+  habilitadaInicial = true,
+  cierreMatricula,
   version,
   initialValues,
   onReload,
@@ -147,6 +157,11 @@ export function CohortForm({
   onCancel,
 }: CohortFormProps) {
   const router = useRouter();
+  const rules = useFetch<CohortRulesConfig>("/cohorts/configuracion");
+  const [habilitada, setHabilitada] = useState(habilitadaInicial);
+  const [reason, setReason] = useState("");
+  const readOnly = rules.data?.active && rulesState === "terminada";
+
   const formRef = useRef<HTMLFormElement>(null);
   const isEditMode = Boolean(cohortId);
   // El servidor rechaza cambiar el curso si hay matrículas de cualquier estado
@@ -229,7 +244,12 @@ export function CohortForm({
 
     // Edición sin cambios: no se llama a la API (guardar cambiaría la
     // versión aunque los datos sean los mismos).
-    if (isEditMode && initialValues && sameCohortData(values, initialValues)) {
+    if (
+      isEditMode &&
+      initialValues &&
+      sameCohortData(values, initialValues) &&
+      (!rules.data?.active || habilitada === habilitadaInicial)
+    ) {
       setNoChanges(true);
       setNoChangesCount((count) => count + 1);
       return;
@@ -237,13 +257,22 @@ export function CohortForm({
 
     setIsSubmitting(true);
 
-    const body = buildBody(values);
+    const body = buildBody(
+      rules.data?.active ? { ...values, precio: values.precio || "0" } : values,
+    );
 
     try {
       if (cohortId) {
-        await api.patch(`/cohorts/${cohortId}`, { ...body, updatedAt: version });
+        await api.patch(`/cohorts/${cohortId}`, {
+          ...body,
+          updatedAt: version,
+          ...(rules.data?.active ? { habilitada, reason: reason.trim() } : {}),
+        });
       } else {
-        await api.post("/cohorts", body);
+        await api.post("/cohorts", {
+          ...body,
+          ...(rules.data?.active ? { habilitada, reason: reason.trim() } : {}),
+        });
       }
       const notice: CohortSavedNotice = isEditMode ? "cohorte-guardada" : "cohorte-creada";
       if (onSaved) {
@@ -294,7 +323,43 @@ export function CohortForm({
       className={styles.form}
       aria-busy={isSubmitting}
     >
-      <fieldset className={styles.section}>
+      {rules.error ? <p role="alert">{rules.error}</p> : null}
+      {rules.data?.active ? (
+        <>
+          <p>
+            Código: {codigo ?? "Se genera al guardar"} · Estado: {rulesState ?? "Nueva cohorte"}
+            {cierreMatricula ? ` · Cierre: ${cierreMatricula} a las 23:59:59` : ""}
+          </p>
+          <label>
+            <input
+              type="checkbox"
+              checked={habilitada}
+              disabled={readOnly || isSubmitting}
+              onChange={(e) => setHabilitada(e.target.checked)}
+            />{" "}
+            Habilitada para futuras inscripciones
+          </label>
+          <p>Deshabilitar no quita acceso a quien ya pagó.</p>
+          <Input
+            label="Motivo de la edición"
+            value={reason}
+            maxLength={500}
+            required
+            onChange={(e) => setReason(e.target.value)}
+            disabled={readOnly || isSubmitting}
+          />
+          {readOnly ? <p role="status">Cohorte terminada: solo lectura.</p> : null}
+          {rulesState === "matricula_cerrada_en_curso" &&
+          values.fechaFinCurso !== initialValues?.fechaFinCurso &&
+          values.fechaFinMatricula === initialValues?.fechaFinMatricula ? (
+            <p role="status">
+              ¿Extender también la matrícula? Cambiar solo el fin del curso no reabre la matrícula.
+            </p>
+          ) : null}
+          <CohortRulesControls config={rules.data} onUpdated={rules.refetch} />
+        </>
+      ) : null}
+      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
         <legend>
           <span className={styles.sectionIcon}>
             <CohortIcon name="layers" />
@@ -344,7 +409,7 @@ export function CohortForm({
         </div>
       </fieldset>
 
-      <fieldset className={styles.section}>
+      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
         <legend>
           <span className={styles.sectionIcon}>
             <CohortIcon name="money" />
@@ -354,15 +419,16 @@ export function CohortForm({
         <div className={styles.formGrid}>
           <Input
             placeholder="0.00 USD"
-            label="Precio"
+            label={rules.data?.active ? "Precio histórico de cohorte (informativo)" : "Precio"}
+            disabled={Boolean(rules.data?.active)}
             name="precio"
             error={fieldErrors.precio}
             type="number"
             min={COHORT_LIMITS.precioMin}
             max={COHORT_LIMITS.precioMax}
             step={COHORT_LIMITS.precioStep}
-            required
-            value={values.precio}
+            required={!rules.data?.active}
+            value={rules.data?.active ? values.precio || "0" : values.precio}
             onChange={(event) => updateField("precio", event.target.value)}
           />
           <div className="flex min-w-0 flex-col gap-1">
@@ -389,7 +455,7 @@ export function CohortForm({
         </div>
       </fieldset>
 
-      <fieldset className={styles.section}>
+      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
         <legend>
           <span className={styles.sectionIcon}>
             <CohortIcon name="calendar" />
@@ -424,7 +490,7 @@ export function CohortForm({
         </div>
       </fieldset>
 
-      <fieldset className={styles.section}>
+      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
         <legend>
           <span className={styles.sectionIcon}>
             <CohortIcon name="car" />
@@ -459,7 +525,7 @@ export function CohortForm({
         </div>
       </fieldset>
 
-      <fieldset className={styles.section}>
+      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
         <legend>
           <span className={styles.sectionIcon}>
             <CohortIcon name="document" />
@@ -543,7 +609,12 @@ export function CohortForm({
         <div>
           {/* Volver sin guardar: por simpleza no se pregunta si hay cambios. */}
           {onCancel ? (
-            <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCancel}
+              disabled={isSubmitting || Boolean(readOnly)}
+            >
               Cancelar
             </Button>
           ) : (
