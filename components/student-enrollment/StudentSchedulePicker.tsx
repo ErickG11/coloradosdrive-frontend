@@ -104,9 +104,6 @@ export function StudentSchedulePicker({
     (signal) =>
       studentScheduleApi.calendar(enrollmentId, { ...input, fechaInicio: `${month}-01` }, signal),
   );
-  useEffect(() => {
-    if (options.data) onWaiting?.(Boolean(options.data.sinCohorte));
-  }, [options.data, onWaiting]);
   const maxDate = rules.data?.active
     ? (calendar.data?.calendarEndDate ?? undefined)
     : legacyMaxDate;
@@ -126,6 +123,9 @@ export function StudentSchedulePicker({
   const options = useKeyedRequest<StudentScheduleOptions>(optionsKey, (signal) =>
     studentScheduleApi.options(enrollmentId, input, signal),
   );
+  useEffect(() => {
+    if (options.data) onWaiting?.(Boolean(options.data.sinCohorte));
+  }, [options.data, onWaiting]);
   const list = options.data?.horas ?? [];
   const firstFeasible = list.find((h) => h.factible)?.hora ?? null;
   // Preselecciona la primera hora factible; la elección del alumno solo vale si sigue siéndolo.
