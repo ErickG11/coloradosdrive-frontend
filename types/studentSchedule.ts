@@ -9,7 +9,9 @@ export interface StudentScheduleSelection extends StudentScheduleInput {
 }
 export type StartHourReason = "DIA_SIN_INSTRUCTOR" | "SOLAPE_PROPIO" | "SIN_COHORTE_ELEGIBLE";
 export interface StudentScheduleNoCohort {
-  codigo: "SIN_COHORTE_ELEGIBLE";
+  codigo:
+    "SIN_COHORTE_ELEGIBLE" | "SIN_CURSOS_ABIERTOS" | "SIN_FECHAS_COMPATIBLES" | "SIN_HORAS_LIBRES";
+  ultimaFechaInicioPosible?: string | null;
   mensaje: string;
   primeraFechaPosible: string | null;
 }

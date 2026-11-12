@@ -159,6 +159,7 @@ export function CohortForm({
   const [savedOffer, setSavedOffer] = useState<{
     id: string;
     count?: number;
+    ranges?: { type: string; from: string; to: string; cutoff: string }[];
     type?: string;
     error?: string;
   } | null>(null);
@@ -403,6 +404,12 @@ export function CohortForm({
           La cohorte ya se guardó. El correo indicará que la asignación está sujeta a cupos
           disponibles. La marca se retira después de confirmar la entrega.
         </p>
+        {savedOffer?.ranges?.map((range, i) => (
+          <p key={i}>
+            Tipo {range.type}: prácticas del {range.from} al {range.to}; inscripción hasta{" "}
+            {range.cutoff}.
+          </p>
+        ))}
         {savedOffer?.error ? <p role="alert">{savedOffer.error}</p> : null}
         <div className="mt-4 flex flex-wrap gap-3">
           {savedOffer?.count ? (
