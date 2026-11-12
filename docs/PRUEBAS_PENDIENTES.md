@@ -37,3 +37,8 @@ para cada pantalla/control cambiado cuya prueba automática se difiera.
 
 Aprobaciones: **1 solo → 2+3 → 4+5 → 6+7 → 8+9+10 → 11**.
 No iniciar un grupo sin aprobación; entregar y detener al cerrar cada grupo.
+
+## Autorización posterior de pasada continua
+
+Lotes 2 al 11 autorizados sin paradas por grupos. Esta instrucción sustituye la
+agrupación anterior. Mantener solo pruebas obligatorias y tipos; no activar indicadores.

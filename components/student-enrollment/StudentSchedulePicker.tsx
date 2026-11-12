@@ -1,4 +1,5 @@
 "use client";
+import { ScheduleDurationTable } from "./ScheduleDurationTable";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -6,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/inscripcion/EnrollmentField";
 import { studentScheduleApi, scheduleError } from "@/lib/api/studentSchedule";
 import type {
+  StudentPlanRules,
   StudentScheduleInput,
   StudentScheduleOptions,
   StudentSchedulePreview,
@@ -69,6 +71,7 @@ function useKeyedRequest<T>(
   };
 }
 export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext }: Props) {
+  const rules = useKeyedRequest<StudentPlanRules>(state.ready ? "plan-rules" : null, (signal) => studentScheduleApi.rules(signal));
   const minDate = guayaquilDate(1);
   const maxDate = guayaquilDate(365);
   const [input, setInput] = useState<StudentScheduleInput>({
@@ -225,6 +228,8 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
   const failure = options.error ?? preview.error ?? null;
   return (
     <Card title="Elige tu horario" className={visual.schedule}>
+      {rules.data ? <ScheduleDurationTable rules={rules.data} /> : null}
+      {rules.error ? <p role="status" className="text-status-warning">{rules.error}</p> : null}
       <p className="mb-5 text-text-secondary">
         Elige cuándo empiezas y a qué hora. Nosotros armamos el resto: todos los días tendrás la
         misma hora de inicio hasta completar tus horas de práctica.
