@@ -7,6 +7,7 @@ import type {
   StudentReservationSnapshot,
 } from "@/types/studentSchedule";
 interface ClockSnapshot extends StudentReservationSnapshot {
+  scope?: string;
   receivedAt: number;
   serverMs: number;
 }
@@ -27,7 +28,7 @@ export function useStudentReservation(onClosed: () => void, enrollmentId?: strin
       if (!Number.isFinite(serverMs)) throw new Error("invalid_server_clock");
       const receivedAt = performance.now();
       setMonotonicNow(receivedAt);
-      setSnapshot({ ...data, receivedAt, serverMs });
+      setSnapshot({ ...data, scope: enrollmentId, receivedAt, serverMs });
       setError(null);
       if (
         data.reserva &&
@@ -38,7 +39,7 @@ export function useStudentReservation(onClosed: () => void, enrollmentId?: strin
         onClosed();
       }
     },
-    [onClosed],
+    [onClosed, enrollmentId],
   );
 
   useEffect(() => {
@@ -80,14 +81,18 @@ export function useStudentReservation(onClosed: () => void, enrollmentId?: strin
     return () => window.clearInterval(timer);
   }, []);
   // Reloj monotónico: cambiar la hora del equipo no prolonga el contador.
-  const elapsed = snapshot ? Math.max(0, monotonicNow - snapshot.receivedAt) : 0;
-  const remaining = snapshot?.reserva
+  const currentSnapshot = snapshot?.scope === enrollmentId ? snapshot : null;
+  const elapsed = currentSnapshot ? Math.max(0, monotonicNow - currentSnapshot.receivedAt) : 0;
+  const remaining = currentSnapshot?.reserva
     ? Math.max(
         0,
-        Math.ceil((Date.parse(snapshot.reserva.expiraAt) - snapshot.serverMs - elapsed) / 1000),
+        Math.ceil(
+          (Date.parse(currentSnapshot.reserva.expiraAt) - currentSnapshot.serverMs - elapsed) /
+            1000,
+        ),
       )
     : 0;
-  const reservation = snapshot?.reserva ?? null;
+  const reservation = currentSnapshot?.reserva ?? null;
   const held = reservation?.estado === "vigente" || reservation?.estado === "pago_en_curso";
   const live = reservation?.estado === "pago_en_curso" || (held && remaining > 0);
   useEffect(() => {
@@ -123,7 +128,7 @@ export function useStudentReservation(onClosed: () => void, enrollmentId?: strin
     held,
     error,
     checking,
-    ready: snapshot !== null,
+    ready: currentSnapshot !== null,
     action,
     change,
     reserved,

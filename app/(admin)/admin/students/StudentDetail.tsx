@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { StudentEnrollmentAccess } from "./StudentEnrollmentAccess";
 import { AdminPaymentActions } from "@/components/student-enrollment/AdminPaymentActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
@@ -74,6 +75,9 @@ export function StudentProfile({
   const show = (name: Section) => section === "all" || section === name;
   return (
     <div className={styles.profile}>
+      {show("enrollments") ? (
+        <StudentEnrollmentAccess studentId={student.id} onChanged={onPaymentChanged} />
+      ) : null}
       {!hideHeading && (
         <>
           <div className={styles.profileHeading}>
