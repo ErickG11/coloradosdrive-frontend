@@ -15,6 +15,7 @@ export interface PrivacyNotice {
   retencionDias: number;
 }
 export interface SolicitudProgress {
+  revokedAt?: string | null;
   enviadaAt?: string | null;
   motivoRechazo?: string | null;
   courseId: string;

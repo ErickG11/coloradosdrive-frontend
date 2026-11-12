@@ -61,7 +61,7 @@ function SoloLectura({ detalle }: { detalle: SolicitudAdminDetalle }) {
         Todavía es un borrador: el postulante no la ha enviado, por eso no se puede decidir.
       </p>
     );
-  if (detalle.estado === "aprobada")
+  if (detalle.estado === "aprobada" || detalle.estado === "archivada")
     return (
       <p className={styles.note}>
         Solicitud aprobada. La decisión es definitiva y el expediente queda en solo lectura.
@@ -131,6 +131,8 @@ export function DecisionPanel({
   const lock = useRef(false);
 
   if (detalle.estado !== "enviada") return <SoloLectura detalle={detalle} />;
+  if (detalle.identityRulesActive && !detalle.reviewOwned)
+    return <p role="status">Reclama la revisión desde Verificaciones antes de decidir.</p>;
 
   const motivos = accion === "devolver" ? MOTIVOS_DEVOLVER : MOTIVOS_RECHAZAR;
   const motivoActual = motivos.find((m) => m.codigo === motivo);

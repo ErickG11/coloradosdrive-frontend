@@ -16,6 +16,7 @@ import { ResultadoDecisionCard } from "./ResultadoDecisionCard";
 import type { ResultadoDecision } from "./decisionTipos";
 import { SolicitudDrawer } from "./SolicitudDrawer";
 import { SolicitudStatus } from "./SolicitudStatus";
+import { IdentityReviewPanel } from "./IdentityReviewPanel";
 import { VerificacionesPanel } from "./VerificacionesPanel";
 import styles from "./solicitudes.module.css";
 
@@ -162,6 +163,13 @@ export function SolicitudDetail({
               hidden={seccion !== "verificaciones"}
               tabIndex={0}
             >
+              <IdentityReviewPanel
+                detail={detalle}
+                onChanged={() => {
+                  setIntento((n) => n + 1);
+                  onChanged();
+                }}
+              />
               <VerificacionesPanel
                 detalle={detalle}
                 onRegistrada={(verificacion) =>
@@ -211,7 +219,7 @@ export function SolicitudDetail({
             </section>
           </>
         ) : null}
-        {detalle && detalle.estado !== "aprobada" ? (
+        {detalle && detalle.estado !== "aprobada" && detalle.estado !== "archivada" ? (
           <div className={styles.deleteZone}>
             <DeleteSolicitud
               id={detalle.id}

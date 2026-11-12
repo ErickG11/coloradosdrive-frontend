@@ -34,7 +34,17 @@ export function ExistingApplicationStatus({
     };
   }, [progress.estado]);
   const sent = progress.estado === "enviada",
-    approved = progress.estado === "aprobada";
+    approved = progress.estado === "aprobada" || progress.estado === "archivada";
+  if (progress.revokedAt)
+    return (
+      <section className={styles.form} role="status">
+        <h3>Tu acceso requiere revisión</h3>
+        <p>
+          Contacta a la escuela para recibir instrucciones. No se ha ejecutado una devolución
+          automática.
+        </p>
+      </section>
+    );
   return (
     <section className={styles.form} aria-label="Estado de tu solicitud" aria-live="polite">
       <StatusBadge

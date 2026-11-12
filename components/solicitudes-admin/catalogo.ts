@@ -22,6 +22,7 @@ export const ETIQUETA_ESTADO: Record<
   enviada: { label: "Pendiente de revisión", tone: "warning" },
   devuelta: { label: "Devuelta al postulante", tone: "info" },
   aprobada: { label: "Aprobada", tone: "success" },
+  archivada: { label: "Archivada", tone: "success" },
   rechazada: { label: "Rechazada", tone: "error" },
 };
 
@@ -29,6 +30,7 @@ export const PESTANAS: { id: TabSolicitudes; label: string }[] = [
   { id: "pendientes", label: "Pendientes" },
   { id: "devueltas", label: "Devueltas" },
   { id: "aprobadas", label: "Aprobadas" },
+  { id: "archivadas", label: "Archivadas" },
   { id: "rechazadas", label: "Rechazadas" },
   { id: "todas", label: "Todas" },
 ];

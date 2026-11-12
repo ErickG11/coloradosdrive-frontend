@@ -83,7 +83,7 @@ function Seguimiento({ progreso }: { progreso: ProgresoSolicitud }) {
     Boolean(progreso.enviadaAt),
     progreso.identidadVerificada,
     progreso.estudiosVerificados,
-    progreso.estado === "aprobada",
+    (progreso.estado === "aprobada" || progreso.estado === "archivada") && !progreso.revokedAt,
   ];
   return (
     <ol className={styles.seguimiento} aria-label="Seguimiento de tu solicitud">
@@ -298,6 +298,17 @@ function ContenidoEstado({
   onVolver,
   irAPaso,
 }: PantallasEstadoProps) {
+  if (progreso.revokedAt)
+    return (
+      <section className={formStyles.form} role="status">
+        <h2>Tu acceso requiere revisión</h2>
+        <p>
+          Contacta a la escuela para recibir instrucciones. No se ha ejecutado una devolución
+          automática.
+        </p>
+        <EnrollmentActionLink href="/">Volver al inicio</EnrollmentActionLink>
+      </section>
+    );
   switch (progreso.estado) {
     case "enviada":
       return <PantallaEnviada progreso={progreso} />;
@@ -310,6 +321,7 @@ function ContenidoEstado({
           irAPaso={irAPaso}
         />
       );
+    case "archivada":
     case "aprobada":
       return <PantallaAprobada progreso={progreso} />;
     case "rechazada":
