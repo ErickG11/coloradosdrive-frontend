@@ -14,7 +14,9 @@ export function StudentFilters({
   onSearch,
   onChange,
   onClear,
+  waitlistActive = false,
 }: {
+  waitlistActive?: boolean;
   filters: Filters;
   q: string;
   courses: Course[];
@@ -83,6 +85,8 @@ export function StudentFilters({
       id: "documentosPendientes",
       label: `Documentos pendientes: ${yesNo(filters.documentosPendientes)}`,
     });
+  if (filters.interesadoEn)
+    active.push({ id: "interesadoEn", label: `Interesados en tipo ${filters.interesadoEn}` });
   if (filters.incluirHistorial)
     active.push({ id: "incluirHistorial", label: "Historial de matrículas" });
   function remove(id: string) {
@@ -92,6 +96,17 @@ export function StudentFilters({
   }
   return (
     <section aria-label="Filtrar alumnos" className={styles.filters}>
+      {waitlistActive ? (
+        <Select
+          label="Interés en apertura"
+          value={filters.interesadoEn ?? ""}
+          onChange={(e) => onChange({ interesadoEn: e.target.value })}
+        >
+          <option value="">Todos</option>
+          <option value="A">Tipo A</option>
+          <option value="B">Tipo B</option>
+        </Select>
+      ) : null}
       <FilterChips items={quick} onSelect={selectQuick} />
       <Button
         type="button"

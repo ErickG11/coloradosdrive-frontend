@@ -2,7 +2,7 @@
 
 Alcance ajustado por el dueño durante lote 1: solo tipos y pruebas obligatorias del
 grupo autorizado. No ejecutar componentes/UI, cobertura, regresión exhaustiva ni
-lint/build completos por lote. No añadir skips. Solo lote 1 está autorizado.
+lint/build completos por lote. No añadir skips. Lotes 2–11 autorizados en pasada continua.
 
 Registro general con pruebas obligatorias, riesgos y lotes:
 [PRUEBAS_PENDIENTES backend](../../coloradosdrive-backend/docs/PRUEBAS_PENDIENTES.md).
@@ -46,3 +46,5 @@ agrupación anterior. Mantener solo pruebas obligatorias y tipos; no activar ind
 Lote 4: automatización de formulario (código/estado/cierre, habilitación, motivo, solo lectura, ayuda de extensión, edición de precios y flota) diferida; riesgo de interacción, accesibilidad y recarga visual cubierto por la guía QA manual del lote 4.
 
 Lote 5: pruebas de componentes del selector A/B, cambio con respuestas tardías, extensión individual y excepción de repetición diferidas. Riesgo: selección visual incorrecta o mensaje no anunciado. Guía manual en operations/cohortes-lote5.md.
+
+Lote 6: automatización de Avísame/WhatsApp, filtro y contadores, diálogo N=0/N>0 y reintento de correo diferida; riesgo de interacción, codificación, foco y presentación de entrega frente a cola. Guía manual en operations/cohortes-lote6.md.

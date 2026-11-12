@@ -1,4 +1,5 @@
 export interface StudentFilters {
+  interesadoEn?: string;
   courseId: string;
   cohortId: string;
   pendienteCohorte: string;
@@ -14,6 +15,9 @@ export function readStudentFilters(params: Pick<URLSearchParams, "get">): Studen
   const id = (key: string) => (uuid.test(params.get(key) ?? "") ? params.get(key)! : "");
   const page = Number(params.get("page") ?? 1);
   return {
+    interesadoEn: ["A", "B"].includes(params.get("interesadoEn") ?? "")
+      ? params.get("interesadoEn")!
+      : "",
     courseId: id("courseId"),
     cohortId: id("cohortId"),
     pendienteCohorte: boolean("pendienteCohorte"),
@@ -27,13 +31,14 @@ export function readStudentFilters(params: Pick<URLSearchParams, "get">): Studen
 export function studentFilterParams(filters: StudentFilters): URLSearchParams {
   const params = new URLSearchParams({ page: String(filters.page) });
   for (const field of [
+    "interesadoEn",
     "courseId",
     "cohortId",
     "pendienteCohorte",
     "documentosPendientes",
     "activo",
   ] as const)
-    if (filters[field] !== "") params.set(field, filters[field]);
+    if (filters[field]) params.set(field, filters[field]);
   if (filters.incluirHistorial) params.set("incluirHistorial", "true");
   return params;
 }
