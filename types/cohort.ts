@@ -8,6 +8,11 @@
 // variable de una cohorte a otra, nunca asumir un tamaño fijo.
 export interface Cohort {
   id: string;
+  codigo?: string | null;
+  habilitada?: boolean;
+  estado?: "matricula_abierta" | "matricula_cerrada_en_curso" | "terminada";
+  cierreMatricula?: string;
+  rulesActive?: boolean;
   courseId: string;
   nombre: string;
   precio: number;

@@ -72,6 +72,10 @@ export function CohortEditor({
           onCancel={onCancel}
           courses={courses}
           cohortId={cohort.id}
+          rulesState={cohort.estado}
+          codigo={cohort.codigo}
+          habilitadaInicial={cohort.habilitada}
+          cierreMatricula={cohort.cierreMatricula}
           version={cohort.updatedAt}
           alumnos={cohort.alumnos}
           initialValues={{
