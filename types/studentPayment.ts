@@ -38,6 +38,7 @@ export interface AdminPaymentData {
     created_at: string;
   }[];
   reserva: {
+    purpose?: "initial" | "plan_change";
     id: string;
     estado: "vigente" | "pago_en_curso" | "vencida" | "liberada" | "confirmada";
     enrollment_id: string;

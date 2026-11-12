@@ -4,6 +4,7 @@ export type NotificationType =
   | "intento_extra"
   | "recordatorio_practica"
   | "espera_apertura"
+  | "plan_cambiado"
   | "resultado_cancelacion"
   | "cupo_disponible"
   | "sin_practica_instructor"

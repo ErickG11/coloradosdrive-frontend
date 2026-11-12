@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { AdminPlanChangePanel } from "@/components/student-enrollment/PlanChangePanel";
 import { StudentEnrollmentAccess } from "./StudentEnrollmentAccess";
 import { AdminPaymentActions } from "@/components/student-enrollment/AdminPaymentActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -113,6 +114,14 @@ export function StudentProfile({
               .filter((e) => ["activo", "pendiente_cohorte"].includes(e.status))
               .map((enrollment) => (
                 <div key={enrollment.enrollmentId} className="mt-4">
+                  {enrollment.status === "activo" ? (
+                    <AdminPlanChangePanel
+                      studentId={student.id}
+                      enrollmentId={enrollment.enrollmentId}
+                      courseType={enrollment.courseType}
+                      onChanged={onPaymentChanged}
+                    />
+                  ) : null}
                   <p>
                     {enrollment.curso?.nombre ?? "Curso no disponible"} ·{" "}
                     {enrollment.cohorte?.nombre ?? "Sin cohorte asignada"}

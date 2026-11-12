@@ -11,7 +11,13 @@ interface ClockSnapshot extends StudentReservationSnapshot {
   receivedAt: number;
   serverMs: number;
 }
-export function useStudentReservation(onClosed: () => void, enrollmentId?: string) {
+type ReservationApi = Pick<typeof studentScheduleApi, "current" | "change">;
+export function useStudentReservation(
+  onClosed: () => void,
+  enrollmentId?: string,
+  transport: ReservationApi = studentScheduleApi,
+  enabled = true,
+) {
   const [snapshot, setSnapshot] = useState<ClockSnapshot | null>(null);
   const [monotonicNow, setMonotonicNow] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +49,7 @@ export function useStudentReservation(onClosed: () => void, enrollmentId?: strin
   );
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     let loading = false;
     async function refresh() {
@@ -51,7 +58,7 @@ export function useStudentReservation(onClosed: () => void, enrollmentId?: strin
       loading = true;
       setChecking(true);
       try {
-        const data = await studentScheduleApi.current(enrollmentId);
+        const data = await transport.current(enrollmentId);
         if (!cancelled && startedVersion === version.current) accept(data);
       } catch (err) {
         if (!cancelled && startedVersion === version.current) setError(scheduleError(err));
@@ -75,11 +82,12 @@ export function useStudentReservation(onClosed: () => void, enrollmentId?: strin
       document.removeEventListener("visibilitychange", visible);
       window.removeEventListener("focus", visible);
     };
-  }, [accept, refreshKey, enrollmentId]);
+  }, [accept, refreshKey, enrollmentId, transport, enabled]);
   useEffect(() => {
+    if (!enabled) return;
     const timer = window.setInterval(() => setMonotonicNow(performance.now()), 1000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [enabled]);
   // Reloj monotónico: cambiar la hora del equipo no prolonga el contador.
   const currentSnapshot = snapshot?.scope === enrollmentId ? snapshot : null;
   const elapsed = currentSnapshot ? Math.max(0, monotonicNow - currentSnapshot.receivedAt) : 0;
@@ -108,7 +116,7 @@ export function useStudentReservation(onClosed: () => void, enrollmentId?: strin
     version.current++;
     setAction(next);
     try {
-      accept(await studentScheduleApi.change(reservation.id, next));
+      accept(await transport.change(reservation.id, next));
     } catch (err) {
       setError(scheduleError(err));
       refetch();
@@ -128,7 +136,7 @@ export function useStudentReservation(onClosed: () => void, enrollmentId?: strin
     held,
     error,
     checking,
-    ready: currentSnapshot !== null,
+    ready: enabled && currentSnapshot !== null,
     action,
     change,
     reserved,

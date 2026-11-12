@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { PlanChangePanel } from "./PlanChangePanel";
 import { useState } from "react";
 import { Button, buttonClassName } from "@/components/ui/Button";
 import { whatsappHref } from "@/lib/content/landing";
@@ -85,6 +86,13 @@ export function EnrollmentWorkspace({
   );
   return (
     <div className={styles.workspace}>
+      {enrollment?.status === "activo" ? (
+        <PlanChangePanel
+          key={enrollment.enrollmentId}
+          enrollmentId={enrollment.enrollmentId}
+          onChanged={overview.refresh}
+        />
+      ) : null}
       {state.individualDates?.practiceStartDate ? (
         <p>
           Prácticas: {state.individualDates.practiceStartDate} —{" "}
