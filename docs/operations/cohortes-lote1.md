@@ -15,15 +15,19 @@ guía QA y ajustes de los lotes futuros están en
 ## Verificación local y QA
 
 ```sh
-npm test -- tests/types/enrollmentFoundation.test.ts
 ./node_modules/.bin/tsc --noEmit --incremental false
 ```
 
-Datos de prueba: reserva sintética legacy sin `individualDates` e instantánea sin
-evidencia con fechas/importes NULL y `guardReady=false`.
-Resultado esperado: ambas son compatibles sin inventar fechas, conceder acceso ni
-alterar el contrato de respuesta activo. Las pruebas no consultan API ni Supabase.
-Restablecimiento: no persisten datos; volver a ejecutar recrea los objetos.
+Desde el ajuste de alcance solo se conserva el chequeo de tipos en frontend para
+este lote: las dos pruebas de objetos de contrato añadidas inicialmente fueron
+retiradas por redundancia. No se modifican las nueve pruebas omitidas preexistentes.
+No hay interfaz nueva ni flujo activado que probar en lote 1. El guion backend cubre
+la consola QA local y sus datos, pasos, resultados y restablecimiento.
+En los grupos siguientes la guía manual cubrirá cada pantalla y control modificado
+cuya automatización quede diferida; no se presentará como ejecutada sin hacerlo.
+
+Pendientes, riesgos y agrupación de aprobaciones:
+[PRUEBAS_PENDIENTES.md](../PRUEBAS_PENDIENTES.md).
 
 Despliegue: publicar este código compatible solo con la autorización operativa
 correspondiente; aplicar SQL manualmente según el guion backend. Mantener todos los
