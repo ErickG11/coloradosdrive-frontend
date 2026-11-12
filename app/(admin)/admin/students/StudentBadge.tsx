@@ -4,6 +4,7 @@ const labels: Record<string, string> = {
   activo: "Activo",
   finalizado: "Finalizado",
   retirado: "Retirado",
+  anulada: "Anulada",
   pendiente_cohorte: "Pendiente de cohorte",
   pendiente_verificacion: "Pendiente de verificación",
   verificado: "Verificado",

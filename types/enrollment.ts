@@ -3,7 +3,8 @@ import type { User } from "./user";
 
 export type EnrollmentStage = "por_agendar" | "reservado" | "activa";
 
-export type EnrollmentStatus = "activo" | "finalizado" | "retirado" | "pendiente_cohorte";
+export type EnrollmentStatus =
+  "activo" | "finalizado" | "retirado" | "anulada" | "pendiente_cohorte";
 
 // Refleja la tabla `enrollments` del backend: vínculo estudiante-cohorte.
 // Un estudiante solo puede estar "activo" o "pendiente_cohorte" (inscrito

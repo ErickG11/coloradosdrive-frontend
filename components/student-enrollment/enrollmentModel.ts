@@ -24,6 +24,7 @@ export function enrollmentStatus(status: PracticeHistoryEnrollment["status"]) {
     pendiente_cohorte: { label: "Pendiente de cohorte", tone: "pending-review" },
     finalizado: { label: "Curso finalizado", tone: "scheduled" },
     retirado: { label: "Matrícula retirada", tone: "cancelled" },
+    anulada: { label: "Matrícula anulada", tone: "cancelled" },
   };
   return states[status] ?? { label: "Estado por actualizar", tone: "cancelled" as const };
 }

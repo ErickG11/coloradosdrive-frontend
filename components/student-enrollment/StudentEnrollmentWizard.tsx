@@ -1,6 +1,7 @@
 "use client";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 
+import type { IndividualEnrollmentAccess } from "@/types/individualEnrollmentAccess";
 import { EnrollmentWorkspace } from "./EnrollmentWorkspace";
 import { useRouter } from "next/navigation";
 import { useStudentPayment } from "./useStudentPayment";
@@ -17,9 +18,35 @@ import { ReservationBanner } from "./ReservationBanner";
 import { StudentSchedulePicker } from "./StudentSchedulePicker";
 const STEPS = ["Tus documentos", "Elige tu horario", "Pago"];
 export function StudentEnrollmentWizard() {
+  const choices = useFetch<IndividualEnrollmentAccess>("/estudiantes/inscripcion/matriculas");
+  const [selectedEnrollment, setSelectedEnrollment] = useState<string | null>(null);
   const { data, isLoading, error, refetch } = useFetch<StudentEnrollmentState>(
-    "/estudiantes/estado-inscripcion",
+    selectedEnrollment
+      ? `/estudiantes/estado-inscripcion/${selectedEnrollment}`
+      : "/estudiantes/estado-inscripcion",
   );
+  const selector =
+    choices.data?.active &&
+    choices.data.enrollments.filter((e) =>
+      ["activo", "pendiente_cohorte", "finalizado"].includes(e.status),
+    ).length > 1 ? (
+      <fieldset className="mb-4 flex flex-wrap gap-2">
+        <legend>Selecciona tu inscripción</legend>
+        {choices.data.enrollments
+          .filter((e) => ["activo", "pendiente_cohorte", "finalizado"].includes(e.status))
+          .map((e) => (
+            <Button
+              type="button"
+              variant="secondary"
+              key={e.id}
+              aria-pressed={(selectedEnrollment ?? data?.enrollmentId) === e.id}
+              onClick={() => setSelectedEnrollment(e.id)}
+            >
+              Tipo {e.type} · {e.status}
+            </Button>
+          ))}
+      </fieldset>
+    ) : null;
   const [selected, setSelected] = useState<number | null>(null);
   const closed = useCallback(() => {
     setSelected(1);
@@ -36,17 +63,21 @@ export function StudentEnrollmentWizard() {
     !!payment.payment && ["pendiente", "revision", "aprobado"].includes(payment.payment.estado);
   if (data?.accesoCompleto)
     return (
-      <EnrollmentWorkspace
-        state={data}
-        refreshStatus={refetch}
-        statusError={Boolean(error)}
-        payment={payment.payment}
-        reservation={reservation.reservation}
-      />
+      <>
+        {selector}
+        <EnrollmentWorkspace
+          state={data}
+          refreshStatus={refetch}
+          statusError={Boolean(error)}
+          payment={payment.payment}
+          reservation={reservation.reservation}
+        />
+      </>
     );
   if (isLoading)
     return (
       <div className={visual.surface}>
+        {selector}
         <ReservationBanner state={reservation} />
         <p role="status">Cargando tu inscripción…</p>
       </div>
@@ -54,6 +85,7 @@ export function StudentEnrollmentWizard() {
   if (error || !data)
     return (
       <div className={visual.surface}>
+        {selector}
         <ReservationBanner state={reservation} />
         <Card title="Mi inscripción" className={`${visual.surface} ${visual.active}`}>
           <p role="alert">No pudimos consultar tu inscripción.</p>
@@ -67,6 +99,13 @@ export function StudentEnrollmentWizard() {
   const step = desiredStep === 2 && !reservation.live && !paymentOpen ? 1 : desiredStep;
   return (
     <section className={visual.surface}>
+      {selector}
+      {data.individualDates?.practiceStartDate ? (
+        <p>
+          Prácticas: {data.individualDates.practiceStartDate} —{" "}
+          {data.individualDates.practiceEndDate}. Acceso hasta {data.individualDates.accessEndDate}.
+        </p>
+      ) : null}
       <header>
         <h1 className="font-display text-2xl font-bold">Mi inscripción</h1>
         <p className="mt-2 text-text-secondary">

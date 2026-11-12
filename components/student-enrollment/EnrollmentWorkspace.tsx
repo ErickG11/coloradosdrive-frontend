@@ -85,6 +85,13 @@ export function EnrollmentWorkspace({
   );
   return (
     <div className={styles.workspace}>
+      {state.individualDates?.practiceStartDate ? (
+        <p>
+          Prácticas: {state.individualDates.practiceStartDate} —{" "}
+          {state.individualDates.practiceEndDate}. Acceso hasta{" "}
+          {state.individualDates.accessEndDate}.
+        </p>
+      ) : null}
       <header className={styles.header}>
         <div>
           <h1>Mi inscripción</h1>
