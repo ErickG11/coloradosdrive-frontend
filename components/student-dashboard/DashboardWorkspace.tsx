@@ -196,12 +196,7 @@ export function DashboardWorkspace() {
           <DashboardHero
             enrollment={enrollment}
             name={overview.identity?.name ?? null}
-            cohort={
-              state.data?.enrollmentId === enrollment.enrollmentId &&
-              state.data.cohorte?.id === enrollment.cohortId
-                ? state.data.cohorte.nombre
-                : null
-            }
+            cohort={null}
             next={next?.scheduledAt ?? null}
             now={now}
             practices={practices}

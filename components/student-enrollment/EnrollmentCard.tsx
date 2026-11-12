@@ -17,7 +17,6 @@ import styles from "./enrollment-overview.module.css";
 export function EnrollmentCard({
   identity,
   enrollment,
-  cohortName,
   courseStart = null,
   courseEnd = null,
 }: {
@@ -105,9 +104,7 @@ export function EnrollmentCard({
               <EnrollmentIcon kind={enrollment.courseType === "A" ? "moto" : "car"} />
               <div>
                 <strong>{licenseLabel(enrollment.courseType)}</strong>
-                <span>
-                  {cohortName ?? (enrollment.cohortId ? "Cohorte asignada" : "Cohorte por asignar")}
-                </span>
+                <span>{enrollment.cohortId ? "Horario asignado" : "Horario por elegir"}</span>
               </div>
             </div>
             <div className={styles.cardBottom}>

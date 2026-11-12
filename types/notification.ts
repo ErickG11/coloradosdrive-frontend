@@ -15,6 +15,13 @@ export type NotificationType =
   | "documento_rechazado";
 
 export interface Notification {
+  alert?: {
+    code: string;
+    entityId: string | null;
+    severity: string;
+    lastSeenAt: string | null;
+    resolvedAt: string | null;
+  };
   attendanceEventId?: string | null;
   id: string;
   tipo: NotificationType;

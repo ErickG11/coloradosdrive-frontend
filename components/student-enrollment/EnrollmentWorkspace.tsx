@@ -48,12 +48,7 @@ export function EnrollmentWorkspace({
     reservation?.enrollmentId === enrollment?.enrollmentId && reservation?.estado === "confirmada"
       ? reservation
       : null;
-  const cohortName =
-    principal?.cohorte?.id === enrollment?.cohortId
-      ? (principal?.cohorte?.nombre ?? null)
-      : ownReservation?.cohorte?.id === enrollment?.cohortId
-        ? (ownReservation?.cohorte?.nombre ?? null)
-        : null;
+  const cohortName = null;
   const course = overview.courses.data?.find(
     (item) => item.id === enrollment?.courseId && item.tipo === enrollment.courseType,
   );

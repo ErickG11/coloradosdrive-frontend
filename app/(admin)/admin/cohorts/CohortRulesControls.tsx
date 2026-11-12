@@ -91,7 +91,7 @@ export function CohortRulesControls({
                 label={`Precio tipo ${p.tipo} (USD)`}
                 type="number"
                 min={0}
-                max={9999.99}
+                max={9999999.99}
                 step="0.01"
                 value={prices[p.tipo] ?? String(p.centavos / 100)}
                 onChange={(e) => setPrices((v) => ({ ...v, [p.tipo]: e.target.value }))}
@@ -111,7 +111,7 @@ export function CohortRulesControls({
             label="Vehículos disponibles globales"
             type="number"
             min={0}
-            max={1000}
+            max={2147483647}
             step={1}
             value={fleet}
             onChange={(e) => setFleet(e.target.value)}

@@ -134,7 +134,7 @@ export function StudentPaymentStep({ state, reservation, onBack }: Props) {
           {amount ? (
             <dl className="grid gap-3 sm:grid-cols-2">
               <div>
-                <dt>Precio de la cohorte</dt>
+                <dt>Precio del curso</dt>
                 <dd className="font-semibold">{paymentMoney(amount.subtotalCentavos)}</dd>
               </div>
               <div>

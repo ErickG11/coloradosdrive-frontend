@@ -200,6 +200,9 @@ export function AdminDashboard({
   day: string;
   today: string;
 }) {
+  const funnel = useFetch<{ active: boolean; counts?: Record<string, number> }>(
+    "/admin/dashboard/enrollment-metrics",
+  );
   const router = useRouter();
   const [navigating, startTransition] = useTransition();
   const [metric, setMetric] = useState<"enrollments" | "practices">("enrollments");
@@ -245,6 +248,32 @@ export function AdminDashboard({
           Matricular alumno <DashboardIcon name="arrow" />
         </Link>
       </header>
+      {funnel.data?.active ? (
+        <section className={styles.panel} aria-label="Embudo de inscripción">
+          <h2>Embudo desde la activación</h2>
+          <dl className="flex flex-wrap gap-5">
+            {Object.entries({
+              registered: "Registrados",
+              verified: "Verificados",
+              schedule_chosen: "Eligieron horario",
+              reserved: "Reservas",
+              paid: "Pagaron",
+              expired: "Reservas expiradas",
+            })
+              .filter(([key]) => key !== "paid" || funnel.data?.counts?.paid !== undefined)
+              .map(([key, label]) => (
+                <div key={key}>
+                  <dt>{label}</dt>
+                  <dd>{funnel.data?.counts?.[key] ?? 0}</dd>
+                </div>
+              ))}
+          </dl>
+          <p>
+            Registrados y verificados: solicitudes únicas. Reservas y expiraciones: intentos.
+            Pagaron: matrículas únicas; sin histórico anterior a la activación.
+          </p>
+        </section>
+      ) : null}
       <div className={styles.toolbar}>
         <form key={month} onSubmit={filter} className={styles.monthFilter}>
           <DashboardIcon name="calendar" />
@@ -336,7 +365,7 @@ export function AdminDashboard({
         />
         <Metric
           title="Saldo por cobrar"
-          value={usd(current?.balance ?? 0)}
+          value={summary?.financialRestricted ? "Reservado" : usd(current?.balance ?? 0)}
           note="Saldo registrado · hoy"
           icon="money"
           error={!current}

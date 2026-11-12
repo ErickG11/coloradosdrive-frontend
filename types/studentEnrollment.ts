@@ -13,7 +13,7 @@ export interface StudentEnrollmentState extends EstadoInscripcionAlumno {
   reserva: {
     expiraAt: string;
     serverNow: string;
-    cohorte: { id: string; nombre: string } | null;
+    cohorte: { id: string; nombre?: string } | null;
   } | null;
   verificaciones: {
     identidad: boolean;

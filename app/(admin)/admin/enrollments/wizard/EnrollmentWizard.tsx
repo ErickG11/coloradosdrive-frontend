@@ -180,6 +180,7 @@ export function EnrollmentWizard() {
           automatic: !course.manualOverride,
           practice: {
             ...practicePayload(form),
+            precioCentavos: practice.plan.precioCentavos,
             ...(suggestion && instructor
               ? { horaResuelta: suggestion.horaResuelta, instructorId: instructor.id }
               : {}),
@@ -306,6 +307,13 @@ export function EnrollmentWizard() {
               onNext={(p) => {
                 edit();
                 setPractice(p);
+                if (p.resolved)
+                  setCourse({
+                    ...course,
+                    cohortId: p.resolved.cohort.id,
+                    cohort: p.resolved.cohort,
+                    courseId: p.resolved.courseId,
+                  });
                 setStep(4);
               }}
             />
