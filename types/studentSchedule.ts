@@ -1,3 +1,4 @@
+import type { IndividualEnrollmentSnapshot } from "./enrollmentFoundation";
 export interface StudentScheduleInput {
   modalidad: "entre_semana" | "fin_de_semana";
   fechaInicio: string;
@@ -66,6 +67,7 @@ export interface StudentReservationPlan {
   ultimaHoraFin: string;
 }
 export interface StudentScheduleReservation {
+  individualDates?: IndividualEnrollmentSnapshot;
   id: string;
   enrollmentId: string;
   estado: "vigente" | "pago_en_curso" | "liberada" | "vencida" | "confirmada";
