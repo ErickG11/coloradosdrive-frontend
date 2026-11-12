@@ -75,7 +75,8 @@ export interface StudentScheduleReservation {
   serverNow: string;
   extensiones: number;
   puedeAmpliar: boolean;
-  cohorte: { id: string; nombre: string };
+  cohorte?: { id: string; nombre: string } | null;
+  precioCentavos?: number;
   franjas: { scheduledAt: string }[];
   plan?: StudentReservationPlan | null;
 }
@@ -87,6 +88,12 @@ export interface StudentReservationSnapshot {
 export interface StudentPlanRules {
   active: boolean;
   serverNow: string;
-  options: { modalidad: StudentScheduleInput["modalidad"]; horasPorDia: number; habilitada: boolean;
-    sesiones: number; primeraFecha: string; ultimaFecha: string }[];
+  options: {
+    modalidad: StudentScheduleInput["modalidad"];
+    horasPorDia: number;
+    habilitada: boolean;
+    sesiones: number;
+    primeraFecha: string;
+    ultimaFecha: string;
+  }[];
 }

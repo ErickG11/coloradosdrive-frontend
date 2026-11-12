@@ -10,7 +10,7 @@ interface ClockSnapshot extends StudentReservationSnapshot {
   receivedAt: number;
   serverMs: number;
 }
-export function useStudentReservation(onClosed: () => void) {
+export function useStudentReservation(onClosed: () => void, enrollmentId?: string) {
   const [snapshot, setSnapshot] = useState<ClockSnapshot | null>(null);
   const [monotonicNow, setMonotonicNow] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export function useStudentReservation(onClosed: () => void) {
       loading = true;
       setChecking(true);
       try {
-        const data = await studentScheduleApi.current();
+        const data = await studentScheduleApi.current(enrollmentId);
         if (!cancelled && startedVersion === version.current) accept(data);
       } catch (err) {
         if (!cancelled && startedVersion === version.current) setError(scheduleError(err));
@@ -74,7 +74,7 @@ export function useStudentReservation(onClosed: () => void) {
       document.removeEventListener("visibilitychange", visible);
       window.removeEventListener("focus", visible);
     };
-  }, [accept, refreshKey]);
+  }, [accept, refreshKey, enrollmentId]);
   useEffect(() => {
     const timer = window.setInterval(() => setMonotonicNow(performance.now()), 1000);
     return () => window.clearInterval(timer);
@@ -89,13 +89,13 @@ export function useStudentReservation(onClosed: () => void) {
     : 0;
   const reservation = snapshot?.reserva ?? null;
   const held = reservation?.estado === "vigente" || reservation?.estado === "pago_en_curso";
-  const live = held && remaining > 0;
+  const live = reservation?.estado === "pago_en_curso" || (held && remaining > 0);
   useEffect(() => {
-    if (!held || remaining > 0) return;
+    if (!held || reservation?.estado === "pago_en_curso" || remaining > 0) return;
     // Cero local pide confirmación al servidor. No libera ni concede acceso local.
     const timer = window.setTimeout(refetch, 100);
     return () => window.clearTimeout(timer);
-  }, [held, remaining, refetch]);
+  }, [held, remaining, refetch, reservation?.estado]);
 
   async function change(next: "ampliar" | "liberar") {
     if (!reservation || action || mutation.current) return;

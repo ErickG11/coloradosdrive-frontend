@@ -24,10 +24,11 @@ interface Props {
   onNext: () => void;
 }
 type Loaded<T> = { key: string; data?: T; error?: string } | null;
+const reloadKey = (id: string | undefined) => id ?? "none";
 const REASONS: Record<string, string> = {
   DIA_SIN_INSTRUCTOR: "Sin disponibilidad",
   SOLAPE_PROPIO: "Choca con tu agenda",
-  SIN_COHORTE_ELEGIBLE: "Sin grupo con cupo",
+  SIN_COHORTE_ELEGIBLE: "Sin horarios disponibles",
 };
 function Skeleton({ className = "" }: { className?: string }) {
   return (
@@ -71,14 +72,28 @@ function useKeyedRequest<T>(
   };
 }
 export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext }: Props) {
-  const rules = useKeyedRequest<StudentPlanRules>(state.ready ? "plan-rules" : null, (signal) => studentScheduleApi.rules(signal));
-  const minDate = guayaquilDate(1);
+  const rules = useKeyedRequest<StudentPlanRules>(state.ready ? "plan-rules" : null, (signal) =>
+    studentScheduleApi.rules(signal),
+  );
+  const minDate = rules.data?.active
+    ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(
+        new Date(rules.data.serverNow),
+      )
+    : guayaquilDate(1);
   const maxDate = guayaquilDate(365);
   const [input, setInput] = useState<StudentScheduleInput>({
     modalidad: "entre_semana",
     fechaInicio: minDate,
     horasPorDia: 3,
   });
+  const [month, setMonth] = useState(minDate.slice(0, 7));
+  const calendar = useKeyedRequest(
+    rules.data?.active && state.ready && !state.held
+      ? `${enrollmentId}|${month}|${input.modalidad}|${input.horasPorDia}|${reloadKey(state.reservation?.id)}`
+      : null,
+    (signal) =>
+      studentScheduleApi.calendar(enrollmentId, { ...input, fechaInicio: `${month}-01` }, signal),
+  );
   const [chosenHour, setChosenHour] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [reserving, setReserving] = useState(false);
@@ -143,7 +158,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
     const days: PlanDayView[] = plan?.dias.map((d) => ({ ...d, ok: true })) ?? [];
     return (
       <Card title="Tu horario reservado" className={visual.schedule}>
-        <p className="font-semibold">Grupo: {state.reservation.cohorte.nombre}</p>
+        <p className="font-semibold">Tu plan de prácticas</p>
         {plan ? (
           <p className="mt-2" aria-live="polite">
             {summarySentence({
@@ -229,7 +244,11 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
   return (
     <Card title="Elige tu horario" className={visual.schedule}>
       {rules.data ? <ScheduleDurationTable rules={rules.data} /> : null}
-      {rules.error ? <p role="status" className="text-status-warning">{rules.error}</p> : null}
+      {rules.error ? (
+        <p role="status" className="text-status-warning">
+          {rules.error}
+        </p>
+      ) : null}
       <p className="mb-5 text-text-secondary">
         Elige cuándo empiezas y a qué hora. Nosotros armamos el resto: todos los días tendrás la
         misma hora de inicio hasta completar tus horas de práctica.
@@ -250,21 +269,60 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
           ]}
           onChange={(modalidad) => update({ modalidad })}
         />
-        <Input
-          label="Fecha de inicio"
-          type="date"
-          required
-          min={minDate}
-          max={maxDate}
-          value={input.fechaInicio}
-          disabled={reserving}
-          onChange={(e) => update({ fechaInicio: e.target.value })}
-          error={
-            input.fechaInicio && !validDate
-              ? "Elige una fecha desde mañana y dentro del próximo año."
-              : undefined
-          }
-        />
+        {rules.data?.active ? (
+          <div className="grid gap-2">
+            <Input
+              label="Mes de inicio"
+              type="month"
+              min={minDate.slice(0, 7)}
+              max={maxDate.slice(0, 7)}
+              value={month}
+              disabled={reserving}
+              onChange={(e) => setMonth(e.target.value)}
+            />
+            <p className="text-sm">
+              Solo se habilitan fechas con un plan completo disponible. La reserva confirma el cupo.
+            </p>
+            {calendar.loading ? <p role="status">Consultando fechas…</p> : null}
+            {calendar.error ? <p role="alert">{calendar.error}</p> : null}
+            <div
+              className="grid grid-cols-7 gap-1"
+              role="group"
+              aria-label="Fechas de inicio disponibles"
+            >
+              {calendar.data?.dias.map((day) => (
+                <button
+                  key={day.fecha}
+                  type="button"
+                  disabled={reserving || !day.disponible}
+                  aria-pressed={input.fechaInicio === day.fecha}
+                  aria-label={dayLabel(day.fecha)}
+                  className="rounded-sm border p-2 disabled:opacity-40 aria-pressed:bg-bg-sunken"
+                  onClick={() => update({ fechaInicio: day.fecha })}
+                >
+                  {Number(day.fecha.slice(-2))}
+                </button>
+              ))}
+            </div>
+            <p aria-live="polite">Fecha seleccionada: {dayLabel(input.fechaInicio)}</p>
+          </div>
+        ) : (
+          <Input
+            label="Fecha de inicio"
+            type="date"
+            required
+            min={minDate}
+            max={maxDate}
+            value={input.fechaInicio}
+            disabled={reserving}
+            onChange={(e) => update({ fechaInicio: e.target.value })}
+            error={
+              input.fechaInicio && !validDate
+                ? "Elige una fecha desde mañana y dentro del próximo año."
+                : undefined
+            }
+          />
+        )}
         <SegmentedControl
           legend="Horas por día"
           value={input.horasPorDia}
@@ -382,11 +440,6 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
             <p className="mt-1 text-sm text-text-secondary">
               La fecha que elegiste no es de esta modalidad; empezamos el{" "}
               {dayLabel(data.fechaInicioEfectiva)}.
-            </p>
-          ) : null}
-          {data.cohorte ? (
-            <p className="mt-1 text-sm text-text-secondary">
-              Grupo: {data.cohorte.nombre} · se confirma al reservar.
             </p>
           ) : null}
           <SchedulePlanView days={days} />

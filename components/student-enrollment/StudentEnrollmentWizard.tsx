@@ -25,7 +25,7 @@ export function StudentEnrollmentWizard() {
     setSelected(1);
     refetch();
   }, [refetch]);
-  const reservation = useStudentReservation(closed);
+  const reservation = useStudentReservation(closed, data?.enrollmentId ?? undefined);
   const router = useRouter();
   const paid = useCallback(() => {
     refetch();

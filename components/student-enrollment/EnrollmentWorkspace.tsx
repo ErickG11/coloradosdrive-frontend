@@ -49,8 +49,8 @@ export function EnrollmentWorkspace({
   const cohortName =
     principal?.cohorte?.id === enrollment?.cohortId
       ? (principal?.cohorte?.nombre ?? null)
-      : ownReservation?.cohorte.id === enrollment?.cohortId
-        ? (ownReservation?.cohorte.nombre ?? null)
+      : ownReservation?.cohorte?.id === enrollment?.cohortId
+        ? (ownReservation?.cohorte?.nombre ?? null)
         : null;
   const course = overview.courses.data?.find(
     (item) => item.id === enrollment?.courseId && item.tipo === enrollment.courseType,

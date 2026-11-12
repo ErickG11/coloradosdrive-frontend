@@ -12,7 +12,14 @@ import type {
 const ROOT = "/estudiantes/inscripcion";
 const options = () => ({ signal: AbortSignal.timeout(15_000), cache: "no-store" as const });
 export const studentScheduleApi = {
-  rules: (signal: AbortSignal) => api.get<StudentPlanRules>(`${ROOT}/horario/config`, {signal,cache:"no-store"}),
+  rules: (signal: AbortSignal) =>
+    api.get<StudentPlanRules>(`${ROOT}/horario/config`, { signal, cache: "no-store" }),
+  calendar: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
+    api.post<{ serverNow: string; dias: { fecha: string; disponible: boolean }[] }>(
+      `${ROOT}/horario/calendario`,
+      { enrollmentId, ...input },
+      { signal, cache: "no-store" },
+    ),
   options: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
     api.post<StudentScheduleOptions>(
       `${ROOT}/horario/opciones`,
@@ -27,7 +34,13 @@ export const studentScheduleApi = {
     ),
   reserve: (enrollmentId: string, input: StudentScheduleSelection) =>
     api.post<StudentScheduleReservation>(`${ROOT}/reservas`, { enrollmentId, ...input }, options()),
-  current: () => api.get<StudentReservationSnapshot>(`${ROOT}/reserva`, options()),
+  current: (enrollmentId?: string) =>
+    api.get<StudentReservationSnapshot>(
+      enrollmentId
+        ? `${ROOT}/reserva/matricula/${encodeURIComponent(enrollmentId)}`
+        : `${ROOT}/reserva`,
+      options(),
+    ),
   change: (id: string, action: "ampliar" | "liberar") =>
     api.post<StudentReservationSnapshot>(
       `${ROOT}/reservas/${encodeURIComponent(id)}/${action}`,
