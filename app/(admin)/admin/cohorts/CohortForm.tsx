@@ -462,7 +462,8 @@ export function CohortForm({
           values.fechaFinCurso !== initialValues?.fechaFinCurso &&
           values.fechaFinMatricula === initialValues?.fechaFinMatricula ? (
             <p role="status">
-              ¿Extender también la matrícula? Cambiar solo el fin del curso no reabre la matrícula.
+              La matrícula está cerrada: nadie podrá inscribirse en las fechas nuevas. ¿Extender
+              también la matrícula?
             </p>
           ) : null}
           <CohortRulesControls config={rules.data} onUpdated={rules.refetch} />
