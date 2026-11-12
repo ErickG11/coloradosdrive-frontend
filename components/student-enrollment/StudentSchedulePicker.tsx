@@ -302,7 +302,8 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
                   type="button"
                   disabled={reserving || !day.disponible}
                   aria-pressed={input.fechaInicio === day.fecha}
-                  aria-label={dayLabel(day.fecha)}
+                  aria-label={`${dayLabel(day.fecha)}${day.motivo ? `: ${day.motivo}` : ""}`}
+                  title={day.motivo ?? undefined}
                   className="rounded-sm border p-2 disabled:opacity-40 aria-pressed:bg-bg-sunken"
                   onClick={() => update({ fechaInicio: day.fecha })}
                 >
@@ -310,6 +311,18 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
                 </button>
               ))}
             </div>
+            <ul
+              className="text-sm text-text-secondary"
+              aria-label="Motivos de fechas no disponibles"
+            >
+              {calendar.data?.dias
+                .filter((day) => !day.disponible && day.motivo)
+                .map((day) => (
+                  <li key={day.fecha}>
+                    {dayLabel(day.fecha)}: {day.motivo}
+                  </li>
+                ))}
+            </ul>
             <p aria-live="polite">Fecha seleccionada: {dayLabel(input.fechaInicio)}</p>
           </div>
         ) : (

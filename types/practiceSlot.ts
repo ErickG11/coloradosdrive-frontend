@@ -38,8 +38,7 @@ export interface PracticeSlotWithNames extends PracticeSlot {
 
 // La selección del estudiante no revela al instructor en franjas libres.
 export type StudentPracticeSlot =
-  | PracticeSlotWithNames
-  | Omit<PracticeSlotWithNames, "instructorId" | "instructorName">;
+  PracticeSlotWithNames | Omit<PracticeSlotWithNames, "instructorId" | "instructorName">;
 
 // El admin crea la franja sin estudiante (status inicial 'disponible' lo
 // aplica el backend, no se envía aquí).
@@ -76,7 +75,12 @@ export interface NoPracticePayload {
 }
 
 export const CANCELLATION_CATEGORIES = [
-  "salud", "trabajo", "estudios", "familiar", "transporte", "otro",
+  "salud",
+  "trabajo",
+  "estudios",
+  "familiar",
+  "transporte",
+  "otro",
 ] as const;
 export type CancellationCategory = (typeof CANCELLATION_CATEGORIES)[number];
 export type CancellationOutcome = "reprogramable" | "hora_perdida" | "falta";
@@ -106,6 +110,7 @@ export interface CancelPracticeSlotResult extends PracticeSlot {
 
 // GET /practice-slots/released-for-me omite la identidad del instructor.
 export interface ReleasedPracticeSlot {
+  conflict?: { course: string; date: string; hour: string; message: string } | null;
   id: string;
   cohortId: string;
   enrollmentId: string;
