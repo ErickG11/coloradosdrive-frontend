@@ -1,4 +1,6 @@
 "use client";
+import { WaitlistPreferences } from "./WaitlistControl";
+import { useEffect } from "react";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 
 import type { IndividualEnrollmentAccess } from "@/types/individualEnrollmentAccess";
@@ -48,7 +50,17 @@ export function StudentEnrollmentWizard() {
           ))}
       </fieldset>
     ) : null;
+  const [waiting, setWaiting] = useState<{ id: string; value: boolean } | null>(null);
+  const onWaiting = useCallback(
+    (value: boolean) => {
+      if (data?.enrollmentId) setWaiting({ id: data.enrollmentId, value });
+    },
+    [data?.enrollmentId],
+  );
   const [selected, setSelected] = useState<number | null>(null);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("paso") === "2") setSelected(1);
+  }, []);
   const closed = useCallback(() => {
     setSelected(1);
     refetch();
@@ -66,6 +78,7 @@ export function StudentEnrollmentWizard() {
     return (
       <>
         {selector}
+        <WaitlistPreferences />
         <EnrollmentWorkspace
           state={data}
           refreshStatus={refetch}
@@ -101,6 +114,10 @@ export function StudentEnrollmentWizard() {
   return (
     <section className={visual.surface}>
       <BillingPanel />
+      <WaitlistPreferences />
+      {waiting?.id === data.enrollmentId && waiting.value && !reservation.held && !paymentOpen ? (
+        <p role="status">Esperando curso</p>
+      ) : null}
       {selector}
       {data.individualDates?.practiceStartDate ? (
         <p>
@@ -129,7 +146,16 @@ export function StudentEnrollmentWizard() {
       ) : null}
       <nav aria-label="Pasos de la inscripción" className={visual.stepper}>
         <ol className="grid grid-cols-3 gap-2">
-          {STEPS.map((label, index) => (
+          {STEPS.filter(
+            (_, index) =>
+              index !== 2 ||
+              !(
+                waiting?.id === data.enrollmentId &&
+                waiting.value &&
+                !reservation.held &&
+                !paymentOpen
+              ),
+          ).map((label, index) => (
             <li key={label}>
               <Button
                 className="min-h-11 w-full"
@@ -235,6 +261,7 @@ export function StudentEnrollmentWizard() {
             key={data.enrollmentId}
             enrollmentId={data.enrollmentId}
             state={reservation}
+            onWaiting={onWaiting}
             onReserved={(result) => {
               reservation.reserved(result);
               setSelected(2);

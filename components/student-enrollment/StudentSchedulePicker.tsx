@@ -19,6 +19,7 @@ import { SegmentedControl } from "./SegmentedControl";
 import { dayLabel, guayaquilDate, plural, summarySentence } from "./scheduleFormat";
 import type { useStudentReservation } from "./useStudentReservation";
 interface Props {
+  onWaiting?: (waiting: boolean) => void;
   enrollmentId: string;
   state: ReturnType<typeof useStudentReservation>;
   onReserved: (reservation: StudentScheduleReservation) => void;
@@ -72,7 +73,13 @@ function useKeyedRequest<T>(
     error: current?.error,
   };
 }
-export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext }: Props) {
+export function StudentSchedulePicker({
+  onWaiting,
+  enrollmentId,
+  state,
+  onReserved,
+  onNext,
+}: Props) {
   const rules = useKeyedRequest<StudentPlanRules>(state.ready ? "plan-rules" : null, (signal) =>
     studentScheduleApi.rules(signal),
   );
@@ -97,6 +104,9 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
     (signal) =>
       studentScheduleApi.calendar(enrollmentId, { ...input, fechaInicio: `${month}-01` }, signal),
   );
+  useEffect(() => {
+    if (options.data) onWaiting?.(Boolean(options.data.sinCohorte));
+  }, [options.data, onWaiting]);
   const maxDate = rules.data?.active
     ? (calendar.data?.calendarEndDate ?? undefined)
     : legacyMaxDate;
@@ -235,6 +245,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
       : null;
   const data = preview.data;
   const noCohort = options.data?.sinCohorte ?? null;
+
   const days: PlanDayView[] =
     data?.dias.map((d) => ({
       fecha: d.fecha,
