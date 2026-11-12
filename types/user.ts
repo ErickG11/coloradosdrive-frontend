@@ -10,6 +10,8 @@ export function isRole(value: unknown): value is Role {
 export interface User {
   id: string;
   cedula: string;
+  documentType?: string;
+  documentNumber?: string;
   nombreCompleto: string;
   telefono: string | null;
   rol: Role;

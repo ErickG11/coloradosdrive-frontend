@@ -217,7 +217,11 @@ export function SolicitudesAdmin() {
                     </span>
                   ),
                 },
-                { key: "cedula", header: "Cédula", render: (item) => item.cedula ?? "—" },
+                {
+                  key: "cedula",
+                  header: "Cédula",
+                  render: (item) => item.documentNumber ?? item.cedula ?? "—",
+                },
                 { key: "correo", header: "Correo", render: (item) => item.correo },
                 {
                   key: "enviada",

@@ -6,6 +6,8 @@ export interface StudentData {
   mode: "new" | "existing";
   id?: string;
   cedula: string;
+  documentType?: "cedula" | "pasaporte" | "otro";
+  documentNumber?: string;
   nombreCompleto: string;
   correo: string;
   telefono: string;
@@ -96,7 +98,7 @@ export interface PracticeChoice {
   instructor: InstructorSugerido | null;
 }
 export const DOCUMENTS = [
-  { tipo: "cedula", label: "Cédula" },
+  { tipo: "cedula", label: "Documento de identidad original" },
   { tipo: "papeleta_votacion", label: "Papeleta de votación" },
   { tipo: "tipo_sangre", label: "Tipo de sangre" },
   { tipo: "titulo_bachiller", label: "Título de bachiller o certificado de décimo" },

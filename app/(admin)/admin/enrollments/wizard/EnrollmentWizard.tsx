@@ -165,7 +165,11 @@ export function EnrollmentWizard() {
               ? { mode: "existing", id: student.id }
               : {
                   mode: "new",
-                  cedula: student.cedula,
+                  cedula:
+                    student.documentType && student.documentType !== "cedula" ? "" : student.cedula,
+                  ...(student.documentType
+                    ? { documentType: student.documentType, documentNumber: student.cedula }
+                    : {}),
                   nombreCompleto: student.nombreCompleto,
                   correo: student.correo,
                   telefono: student.telefono || undefined,

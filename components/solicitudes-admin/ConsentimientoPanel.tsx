@@ -30,7 +30,12 @@ export function ConsentimientoPanel({
             <div className={styles.representative}>
               <h4>Representante legal</h4>
               <p>Nombre: {consentimiento.representanteNombre}</p>
-              <p>Cédula: {consentimiento.representanteCedula ?? "No registrada"}</p>
+              <p>
+                Documento ({consentimiento.representanteDocumentType ?? "cedula"}):{" "}
+                {consentimiento.representanteDocumentNumber ??
+                  consentimiento.representanteCedula ??
+                  "No registrado"}
+              </p>
               <p>Autorización: {consentimiento.representanteAcepta ? "Registrada" : "Pendiente"}</p>
             </div>
           ) : (
