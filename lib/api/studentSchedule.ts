@@ -18,7 +18,7 @@ export const studentScheduleApi = {
     api.post<{
       serverNow: string;
       calendarEndDate?: string | null;
-      dias: { fecha: string; disponible: boolean }[];
+      dias: { fecha: string; disponible: boolean; motivo?: string | null }[];
     }>(`${ROOT}/horario/calendario`, { enrollmentId, ...input }, { signal, cache: "no-store" }),
   options: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
     api.post<StudentScheduleOptions>(

@@ -25,7 +25,7 @@ export interface PlanChangePreview {
 }
 export interface PlanChangeCalendar {
   serverNow: string;
-  dias: { fecha: string; disponible: boolean }[];
+  dias: { fecha: string; disponible: boolean; motivo?: string | null }[];
 }
 export interface AdminReassignmentSource {
   active: boolean;

@@ -650,10 +650,14 @@ export default function StudentSchedulePage() {
                               Te quedan {slot.reprogramacionesRestantes} de 2 reprogramaciones.
                             </p>
                           </div>
+                          {slot.conflict ? (
+                            <p className={styles.hint}>{slot.conflict.message}</p>
+                          ) : null}
                           <Button
                             className={styles.primaryAction}
                             disabled={
                               pendingSlotId !== null ||
+                              Boolean(slot.conflict) ||
                               (slot.caso === "B" && (pendingLoading || pendingError !== null))
                             }
                             onClick={(event) => openSwap(slot, event.currentTarget)}

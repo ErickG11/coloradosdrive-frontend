@@ -339,13 +339,23 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
                 key={day.fecha}
                 disabled={!day.disponible || busy}
                 aria-pressed={effective.fechaInicio === day.fecha}
-                aria-label={dayLabel(day.fecha)}
+                aria-label={`${dayLabel(day.fecha)}${day.motivo ? `: ${day.motivo}` : ""}`}
+                title={day.motivo ?? undefined}
                 onClick={() => setInput((v) => ({ ...v, fechaInicio: day.fecha }))}
               >
                 {Number(day.fecha.slice(-2))}
               </button>
             ))}
           </div>
+          <ul className="text-sm text-text-secondary" aria-label="Motivos de fechas no disponibles">
+            {currentCalendar?.data?.dias
+              .filter((day) => !day.disponible && day.motivo)
+              .map((day) => (
+                <li key={day.fecha}>
+                  {dayLabel(day.fecha)}: {day.motivo}
+                </li>
+              ))}
+          </ul>
           <p>
             Inicio propuesto:{" "}
             {effective.fechaInicio ? dayLabel(effective.fechaInicio) : "Selecciona una fecha"}.
