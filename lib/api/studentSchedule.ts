@@ -1,6 +1,7 @@
 import { api } from "./client";
 import { ApiError } from "./errors";
 import type {
+  StudentPlanRules,
   StudentScheduleInput,
   StudentScheduleOptions,
   StudentSchedulePreview,
@@ -11,6 +12,7 @@ import type {
 const ROOT = "/estudiantes/inscripcion";
 const options = () => ({ signal: AbortSignal.timeout(15_000), cache: "no-store" as const });
 export const studentScheduleApi = {
+  rules: (signal: AbortSignal) => api.get<StudentPlanRules>(`${ROOT}/horario/config`, {signal,cache:"no-store"}),
   options: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
     api.post<StudentScheduleOptions>(
       `${ROOT}/horario/opciones`,
