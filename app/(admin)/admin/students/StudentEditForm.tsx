@@ -66,6 +66,12 @@ export function StudentEditForm({
   }
   return (
     <form noValidate onSubmit={(event) => void submit(event)} className="flex flex-col gap-4">
+      {student.document && student.document.type !== "cedula" ? (
+        <p>
+          Documento registrado: {student.document.type} · {student.document.number}. Su corrección
+          requiere revisión de identidad y motivo.
+        </p>
+      ) : null}
       {(Object.keys(studentFieldLabels) as ProfileField[]).map((field) => {
         const props = {
           name: `edit-${field}`,
@@ -73,7 +79,11 @@ export function StudentEditForm({
           value: draft[field],
           error: errors[field],
           maxLength: profileLimits[field],
-          disabled: busy || reload || (field === "correo" && !student.correoDisponible),
+          disabled:
+            busy ||
+            reload ||
+            (field === "correo" && !student.correoDisponible) ||
+            (field === "cedula" && Boolean(student.document && student.document.type !== "cedula")),
           onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
             setDraft((current) => ({ ...current, [field]: event.target.value }));
             setErrors((current) => ({ ...current, [field]: undefined }));

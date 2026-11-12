@@ -66,8 +66,8 @@ export function DocumentsPrint({ data }: { data: StudentEnrollmentState }) {
           <h2>Verificación en persona</h2>
           <p>
             {data.identidadPresencial.confirmada
-              ? "Cédula verificada. Tu instructor comprobó tu cédula original en persona."
-              : "Pendiente. En tu primera clase tu instructor comprobará tu cédula original. Llévala contigo."}
+              ? "Documento verificado. Tu instructor comprobó tu documento de identidad original en persona."
+              : "Pendiente. En tu primera clase tu instructor comprobará tu documento de identidad original. Llévalo contigo."}
           </p>
           {data.identidadPresencial.confirmada &&
           data.identidadPresencial.confirmadaAt &&

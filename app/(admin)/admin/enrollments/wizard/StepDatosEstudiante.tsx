@@ -4,7 +4,9 @@ import { WizardIcon } from "./WizardVisual";
 
 import { useState, type FormEvent } from "react";
 
-import { Button, Input } from "@/components/ui";
+import { useFetch } from "@/hooks/useFetch";
+import { documentError, documentLabel } from "@/components/inscripcion/documentValidation";
+import { Button, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 
@@ -15,9 +17,9 @@ interface StepDatosEstudianteProps {
   onNext: (value: StudentData) => void;
 }
 
-const CEDULA_PATTERN = /^[0-9]{10}$/;
-
 export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps) {
+  const documentConfig = useFetch<{ documentTypes?: string[] }>("/public/inscripcion/config");
+  const foreign = Boolean(documentConfig.data?.documentTypes?.includes("pasaporte"));
   const [values, setValues] = useState<StudentData>(value);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<StudentData[]>([]);
@@ -47,7 +49,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
     onNext(values);
   }
 
-  const cedulaValida = CEDULA_PATTERN.test(values.cedula);
+  const cedulaValida = !documentError(values.documentType ?? "cedula", values.cedula);
 
   return (
     <form onSubmit={handleSubmit} className={styles.studentStep} data-mode={values.mode}>
@@ -102,7 +104,8 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
             >
               <strong>{s.nombreCompleto}</strong>
               <p>
-                {s.cedula} · {s.correo}
+                {documentLabel(s.documentType ?? "cedula")}: {s.documentNumber ?? s.cedula} ·{" "}
+                {s.correo}
               </p>
               <p>
                 Matrículas vigentes:{" "}
@@ -119,13 +122,40 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
         </>
       ) : (
         <>
+          {foreign ? (
+            <Select
+              label="Tipo de documento"
+              value={values.documentType ?? "cedula"}
+              onChange={(e) =>
+                setValues((v) => ({
+                  ...v,
+                  documentType: e.target.value as StudentData["documentType"],
+                  cedula: "",
+                }))
+              }
+            >
+              <option value="cedula">Cédula</option>
+              <option value="pasaporte">Pasaporte</option>
+              <option value="otro">Otro documento</option>
+            </Select>
+          ) : null}
           <Input
-            label="Cédula"
-            placeholder="10 dígitos numéricos"
+            label={documentLabel(values.documentType ?? "cedula")}
+            placeholder={
+              (values.documentType ?? "cedula") === "cedula"
+                ? "10 dígitos numéricos"
+                : "Número de documento"
+            }
             name="cedula"
             required
-            pattern="[0-9]{10}"
-            title="10 dígitos numéricos"
+            pattern={
+              (values.documentType ?? "cedula") === "cedula" ? "[0-9]{10}" : "[A-Za-z0-9-]{3,30}"
+            }
+            title={
+              (values.documentType ?? "cedula") === "cedula"
+                ? "10 dígitos numéricos"
+                : "De 3 a 30 letras, números o guion"
+            }
             value={values.cedula}
             onChange={(event) => updateField("cedula", event.target.value)}
           />

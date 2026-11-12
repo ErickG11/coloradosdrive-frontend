@@ -151,18 +151,22 @@ export interface ConsentimientoResult {
 }
 
 export interface RepresentanteInput {
+  documentType?: "cedula" | "pasaporte" | "otro";
+  documentNumber?: string;
   nombre: string;
   cedula: string;
   acepta: true;
 }
 
 export interface DatosSolicitudInput {
+  documentType?: "cedula" | "pasaporte" | "otro";
+  documentNumber?: string;
   nombres: string;
   apellidos: string;
   cedula: string;
   fechaNacimiento: string;
   telefono: string;
-  // extranjero_sin_cedula no se registra: el servidor responde ATENCION_POR_CONTACTO.
+  // El servidor publica los tipos admitidos; sin habilitación conserva la atención por contacto.
   nacionalidadTipo: Nacionalidad;
   tipoSangre: TipoSangre;
   nivelEstudios?: Exclude<NivelEstudios, "menos_de_decimo">;
@@ -214,11 +218,19 @@ export interface ProgresoSolicitud {
     nombres: string | null;
     apellidos: string | null;
     cedula: string | null;
+    documentType?: "cedula" | "pasaporte" | "otro";
+    documentNumber?: string | null;
     fechaNacimiento: string | null;
     telefono: string | null;
     nacionalidadTipo: Nacionalidad | null;
     tipoSangre: TipoSangre | null;
-    representante: { nombre: string; cedula: string; acepta: boolean } | null;
+    representante: {
+      nombre: string;
+      cedula: string;
+      acepta: boolean;
+      documentType?: "cedula" | "pasaporte" | "otro";
+      documentNumber?: string;
+    } | null;
   };
   pasosCompletos: {
     correo: boolean;
@@ -250,6 +262,8 @@ export interface ListarSolicitudesParams {
 }
 
 export interface SolicitudAdminItem {
+  documentType?: string;
+  documentNumber?: string | null;
   id: string;
   courseId: string;
   correo: string;
@@ -311,6 +325,8 @@ export interface CertificadoAdmin {
 }
 
 export interface ConsentimientoAdmin {
+  representanteDocumentType?: string;
+  representanteDocumentNumber?: string | null;
   versionAviso: string;
   versionTerminos: string;
   aceptadoAt: string;
@@ -320,6 +336,8 @@ export interface ConsentimientoAdmin {
 }
 
 export interface SolicitudAdminDetalle extends SolicitudAdminItem {
+  documentType?: string;
+  documentNumber?: string | null;
   identityRulesActive?: boolean;
   reviewOwned?: boolean;
   updatedAt?: string;
@@ -372,6 +390,7 @@ export interface DecisionResult {
 }
 
 export interface ConfigInscripcion {
+  documentTypes?: string[];
   inscripcionesAbiertas: boolean;
 }
 

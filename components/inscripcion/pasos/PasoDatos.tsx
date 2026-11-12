@@ -1,4 +1,6 @@
 "use client";
+import { useFetch } from "@/hooks/useFetch";
+import { documentError, type DocumentType } from "../documentValidation";
 import { EnrollmentCheckbox } from "../EnrollmentCheckbox";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
@@ -25,7 +27,6 @@ import { applicantAge } from "../applicantValidation";
 import { normalizeApplicantName } from "../validation";
 import { ContactoWhatsApp } from "./ContactoWhatsApp";
 import {
-  cedulaError,
   fechaNacimientoError,
   parteNombreError,
   representanteCedulaError,
@@ -64,6 +65,7 @@ const ETIQUETA_SANGRE: Record<TipoSangre, string> = {
 };
 
 interface Valores {
+  documentType: DocumentType;
   nombres: string;
   apellidos: string;
   cedula: string;
@@ -71,6 +73,7 @@ interface Valores {
   telefono: string;
   nacionalidadTipo: Nacionalidad | "";
   tipoSangre: TipoSangre | "";
+  representanteDocumentType: DocumentType;
   representanteNombre: string;
   representanteCedula: string;
   representanteAcepta: boolean;
@@ -97,13 +100,15 @@ function valoresIniciales(progreso: ProgresoSolicitud): Valores {
   return {
     nombres: d.nombres ?? "",
     apellidos: d.apellidos ?? "",
-    cedula: d.cedula ?? "",
+    documentType: d.documentType ?? "cedula",
+    cedula: d.documentNumber ?? d.cedula ?? "",
     fechaNacimiento: d.fechaNacimiento?.slice(0, 10) ?? "",
     telefono: d.telefono ?? "",
     nacionalidadTipo: d.nacionalidadTipo ?? "",
     tipoSangre: d.tipoSangre ?? "",
+    representanteDocumentType: d.representante?.documentType ?? "cedula",
     representanteNombre: d.representante?.nombre ?? "",
-    representanteCedula: d.representante?.cedula ?? "",
+    representanteCedula: d.representante?.documentNumber ?? d.representante?.cedula ?? "",
     representanteAcepta: d.representante?.acepta ?? false,
   };
 }
@@ -120,7 +125,7 @@ function validar(valores: Valores, edadMinima: number): Errores {
   };
   asignar("nombres", parteNombreError(valores.nombres, "nombres"));
   asignar("apellidos", parteNombreError(valores.apellidos, "apellidos"));
-  asignar("cedula", cedulaError(valores.cedula));
+  asignar("cedula", documentError(valores.documentType, valores.cedula));
   asignar("fechaNacimiento", fechaNacimientoError(valores.fechaNacimiento, edadMinima));
   asignar("telefono", telefonoError(valores.telefono));
   if (!valores.nacionalidadTipo) errores.nacionalidadTipo = "Selecciona tu nacionalidad.";
@@ -129,7 +134,12 @@ function validar(valores: Valores, edadMinima: number): Errores {
     asignar("representanteNombre", representanteNombreError(valores.representanteNombre));
     asignar(
       "representanteCedula",
-      representanteCedulaError(valores.representanteCedula, valores.cedula),
+      valores.representanteDocumentType === "cedula"
+        ? representanteCedulaError(
+            valores.representanteCedula,
+            valores.documentType === "cedula" ? valores.cedula : "",
+          )
+        : documentError(valores.representanteDocumentType, valores.representanteCedula),
     );
     if (!valores.representanteAcepta)
       errores.representanteAcepta = "Se requiere la autorización del representante legal.";
@@ -167,6 +177,8 @@ export function PasoDatos({
   onVolver,
   irAPaso,
 }: PasoDatosProps) {
+  const documentConfig = useFetch<{ documentTypes?: string[] }>("/public/inscripcion/config");
+  const foreign = Boolean(documentConfig.data?.documentTypes?.includes("pasaporte"));
   const edadMinima = progreso.curso?.edadMinima ?? 18;
   const [valores, setValores] = useState<Valores>(() => valoresIniciales(progreso));
   const [tocados, setTocados] = useState<Partial<Record<keyof Valores, boolean>>>({});
@@ -182,8 +194,8 @@ export function PasoDatos({
   const tituloContacto = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    if (atencionPorContacto) tituloContacto.current?.focus();
-  }, [atencionPorContacto]);
+    if (atencionPorContacto && !foreign) tituloContacto.current?.focus();
+  }, [atencionPorContacto, foreign]);
 
   const enVivo = validar(valores, edadMinima);
   const pideRepresentante = requiereRepresentante(valores.fechaNacimiento, edadMinima);
@@ -210,7 +222,7 @@ export function PasoDatos({
 
   function elegirNacionalidad(valor: Nacionalidad | "") {
     cambiar("nacionalidadTipo", valor, true);
-    setAtencionPorContacto(valor === "extranjero_sin_cedula");
+    setAtencionPorContacto(valor === "extranjero_sin_cedula" && !foreign);
   }
 
   async function guardar(evento: FormEvent) {
@@ -232,7 +244,8 @@ export function PasoDatos({
     const datos: DatosSolicitudInput = {
       nombres: normalizeApplicantName(valores.nombres),
       apellidos: normalizeApplicantName(valores.apellidos),
-      cedula: valores.cedula,
+      cedula: valores.documentType === "cedula" ? valores.cedula : "",
+      ...(foreign ? { documentType: valores.documentType, documentNumber: valores.cedula } : {}),
       fechaNacimiento: valores.fechaNacimiento,
       telefono,
       nacionalidadTipo: valores.nacionalidadTipo,
@@ -244,7 +257,14 @@ export function PasoDatos({
         ? {
             representante: {
               nombre: normalizeApplicantName(valores.representanteNombre),
-              cedula: valores.representanteCedula,
+              cedula:
+                valores.representanteDocumentType === "cedula" ? valores.representanteCedula : "",
+              ...(foreign
+                ? {
+                    documentType: valores.representanteDocumentType,
+                    documentNumber: valores.representanteCedula,
+                  }
+                : {}),
               acepta: true as const,
             },
           }
@@ -279,7 +299,18 @@ export function PasoDatos({
     }
   }
 
-  if (atencionPorContacto) {
+  if (atencionPorContacto && documentConfig.isLoading)
+    return <p role="status">Consultando los tipos de documento disponibles…</p>;
+  if (atencionPorContacto && documentConfig.error)
+    return (
+      <div role="alert">
+        <p>{documentConfig.error}</p>
+        <Button type="button" onClick={documentConfig.refetch}>
+          Volver a consultar
+        </Button>
+      </div>
+    );
+  if (atencionPorContacto && !foreign) {
     return (
       <section className={formStyles.form} aria-labelledby="contacto-titulo">
         <h2 id="contacto-titulo" ref={tituloContacto} tabIndex={-1} className={styles.titulo}>
@@ -340,20 +371,39 @@ export function PasoDatos({
           autoComplete="family-name"
           maxLength={60}
         />
+        {foreign ? (
+          <Select
+            name="documentType"
+            label="Tipo de documento *"
+            value={valores.documentType}
+            onChange={(e) => {
+              cambiar("documentType", e.target.value as DocumentType);
+              cambiar("cedula", "");
+            }}
+          >
+            <option value="cedula">Cédula ecuatoriana</option>
+            <option value="pasaporte">Pasaporte</option>
+            <option value="otro">Otro documento</option>
+          </Select>
+        ) : null}
+        {documentConfig.error ? <p role="alert">{documentConfig.error}</p> : null}
         <Input
           name="cedula"
-          label="Cédula *"
+          label={valores.documentType === "cedula" ? "Cédula *" : "Número de documento *"}
           required
           aria-required="true"
           value={valores.cedula}
           onChange={(e) => {
-            const digitos = e.target.value.replace(/\D/g, "").slice(0, 10);
+            const digitos =
+              valores.documentType === "cedula"
+                ? e.target.value.replace(/\D/g, "").slice(0, 10)
+                : e.target.value.toUpperCase().slice(0, 30);
             cambiar("cedula", digitos, digitos.length === 10);
           }}
           onBlur={() => tocar("cedula")}
           error={errorDe("cedula")}
-          inputMode="numeric"
-          maxLength={10}
+          inputMode={valores.documentType === "cedula" ? "numeric" : "text"}
+          maxLength={valores.documentType === "cedula" ? 10 : 30}
         />
         <Input
           name="fechaNacimiento"
@@ -455,18 +505,40 @@ export function PasoDatos({
               autoComplete="off"
               maxLength={100}
             />
+            {foreign ? (
+              <Select
+                name="representanteDocumentType"
+                label="Tipo de documento del representante"
+                value={valores.representanteDocumentType}
+                onChange={(e) => {
+                  cambiar("representanteDocumentType", e.target.value as DocumentType);
+                  cambiar("representanteCedula", "");
+                }}
+              >
+                <option value="cedula">Cédula</option>
+                <option value="pasaporte">Pasaporte</option>
+                <option value="otro">Otro documento</option>
+              </Select>
+            ) : null}
             <Input
               name="representanteCedula"
-              label="Cédula del representante"
+              label={
+                valores.representanteDocumentType === "cedula"
+                  ? "Cédula del representante"
+                  : "Número de documento del representante"
+              }
               value={valores.representanteCedula}
               onChange={(e) => {
-                const digitos = e.target.value.replace(/\D/g, "").slice(0, 10);
+                const digitos =
+                  valores.representanteDocumentType === "cedula"
+                    ? e.target.value.replace(/\D/g, "").slice(0, 10)
+                    : e.target.value.toUpperCase().slice(0, 30);
                 cambiar("representanteCedula", digitos, digitos.length === 10);
               }}
               onBlur={() => tocar("representanteCedula")}
               error={errorDe("representanteCedula")}
-              inputMode="numeric"
-              maxLength={10}
+              inputMode={valores.representanteDocumentType === "cedula" ? "numeric" : "text"}
+              maxLength={valores.representanteDocumentType === "cedula" ? 10 : 30}
             />
           </div>
           <label className={formStyles.checkbox}>
@@ -482,9 +554,18 @@ export function PasoDatos({
           <FormError id="representante-error">{errorDe("representanteAcepta")}</FormError>
         </fieldset>
       ) : null}
+      {!foreign && valores.documentType !== "cedula" ? (
+        <p role="status">
+          Este tipo de documento no está habilitado en línea ahora. Contacta a la escuela.
+        </p>
+      ) : null}
       <FormError>{errorGeneral}</FormError>
       <div className={formStyles.stepActions}>
-        <Button type="submit" isLoading={ocupado}>
+        <Button
+          type="submit"
+          isLoading={ocupado}
+          disabled={!foreign && valores.documentType !== "cedula"}
+        >
           Guardar y continuar
         </Button>
         <Button type="button" variant="secondary" disabled={ocupado} onClick={onVolver}>

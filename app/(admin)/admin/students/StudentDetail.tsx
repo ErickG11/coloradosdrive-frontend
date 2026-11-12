@@ -100,7 +100,14 @@ export function StudentProfile({
           <Card title="Contacto y matrícula actual">
             <dl className="grid gap-4 text-sm sm:grid-cols-3">
               {[
-                ["Cédula", student.cedula],
+                [
+                  student.document?.type === "pasaporte"
+                    ? "Pasaporte"
+                    : student.document?.type === "otro"
+                      ? "Otro documento"
+                      : "Cédula",
+                  student.document?.number ?? student.cedula,
+                ],
                 ["Teléfono", student.telefono],
                 ["Correo", student.correoDisponible ? student.correo : "No disponible"],
               ].map(([label, value]) => (
@@ -433,7 +440,7 @@ export function StudentDetail({
               <StudentAvatar student={data} />
               <div>
                 <h2>{data.nombreCompleto}</h2>
-                <p>Cédula: {data.cedula}</p>
+                <p>Documento: {data.document?.number ?? data.cedula}</p>
                 <p>Registrado el {studentTimestamp(data.createdAt)}</p>
               </div>
               <ActiveBadge active={data.activo} />

@@ -150,7 +150,16 @@ export function PasoRevisar({
         >
           <dl className={styles.resumenDatos}>
             <Dato etiqueta="Nombres y apellidos" valor={nombre} />
-            <Dato etiqueta="Cédula" valor={datos.cedula} />
+            <Dato
+              etiqueta={
+                datos.documentType === "pasaporte"
+                  ? "Pasaporte"
+                  : datos.documentType === "otro"
+                    ? "Otro documento"
+                    : "Cédula"
+              }
+              valor={datos.documentNumber ?? datos.cedula}
+            />
             <Dato etiqueta="Fecha de nacimiento" valor={formatearFecha(datos.fechaNacimiento)} />
             <Dato etiqueta="Teléfono" valor={datos.telefono ?? "No indicado"} />
             <Dato
@@ -161,7 +170,10 @@ export function PasoRevisar({
             {datos.representante ? (
               <>
                 <Dato etiqueta="Representante legal" valor={datos.representante.nombre} />
-                <Dato etiqueta="Cédula del representante" valor={datos.representante.cedula} />
+                <Dato
+                  etiqueta={`Documento del representante (${datos.representante.documentType ?? "cedula"})`}
+                  valor={datos.representante.documentNumber ?? datos.representante.cedula}
+                />
               </>
             ) : null}
           </dl>

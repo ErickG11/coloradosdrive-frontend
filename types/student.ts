@@ -12,6 +12,7 @@ export interface MatchingEnrollment {
   etapa?: EnrollmentStage;
 }
 export interface AdminStudent {
+  document?: { type: string; number: string };
   paymentStatus?: string;
   id: string;
   cedula: string;
