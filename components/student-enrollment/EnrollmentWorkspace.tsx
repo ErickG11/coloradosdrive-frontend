@@ -1,4 +1,5 @@
 "use client";
+import { BillingPanel } from "./BillingPanel";
 import Link from "next/link";
 import { PlanChangePanel } from "./PlanChangePanel";
 import { useState } from "react";
@@ -86,6 +87,7 @@ export function EnrollmentWorkspace({
   );
   return (
     <div className={styles.workspace}>
+      <BillingPanel />
       {enrollment?.status === "activo" ? (
         <PlanChangePanel
           key={enrollment.enrollmentId}

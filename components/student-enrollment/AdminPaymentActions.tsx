@@ -1,4 +1,5 @@
 "use client";
+import { BillingPanel } from "./BillingPanel";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -84,6 +85,7 @@ export function AdminPaymentActions({
   }
   return (
     <Card title="Pago y reserva de inscripción">
+      <BillingPanel studentId={studentId} />
       {!data && !error ? <p role="status">Consultando pagos…</p> : null}
       {data?.pagos.length ? (
         <ul className="grid gap-3">

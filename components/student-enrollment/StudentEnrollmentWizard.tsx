@@ -5,6 +5,7 @@ import type { IndividualEnrollmentAccess } from "@/types/individualEnrollmentAcc
 import { EnrollmentWorkspace } from "./EnrollmentWorkspace";
 import { useRouter } from "next/navigation";
 import { useStudentPayment } from "./useStudentPayment";
+import { BillingPanel } from "./BillingPanel";
 import { StudentPaymentStep } from "./StudentPaymentStep";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -99,6 +100,7 @@ export function StudentEnrollmentWizard() {
   const step = desiredStep === 2 && !reservation.live && !paymentOpen ? 1 : desiredStep;
   return (
     <section className={visual.surface}>
+      <BillingPanel />
       {selector}
       {data.individualDates?.practiceStartDate ? (
         <p>
