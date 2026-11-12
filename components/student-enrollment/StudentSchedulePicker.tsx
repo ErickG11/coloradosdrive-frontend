@@ -1,4 +1,5 @@
 "use client";
+import { WaitlistControl } from "./WaitlistControl";
 import { ScheduleDurationTable } from "./ScheduleDurationTable";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useState } from "react";
@@ -392,10 +393,11 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
       ) : null}
       {noCohort ? (
         <div role="status" className="mt-5 rounded-sm border border-border p-4">
-          <p className="font-medium">Ningún grupo con cupo cubre esas fechas.</p>
+          <p className="font-medium">No hay horarios disponibles para esas fechas.</p>
           <p className="mt-1 text-text-secondary">
             Prueba empezar más tarde o consulta a la escuela.
           </p>
+          <WaitlistControl enrollmentId={enrollmentId} input={input} />
           {noCohort.primeraFechaPosible ? (
             <Button
               className="mt-3"

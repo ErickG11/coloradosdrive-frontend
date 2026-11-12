@@ -13,6 +13,7 @@ import {
   studentListHref,
   type StudentFilters as Filters,
 } from "@/lib/api/students";
+import { WaitlistRetry } from "./WaitlistRetry";
 import { StudentFilters } from "./StudentFilters";
 import { StudentTable } from "./StudentTable";
 import { StudentMetrics } from "./StudentMetrics";
@@ -27,6 +28,9 @@ const STUDENT_PATH = /^\/admin\/students\/([0-9a-f-]+)$/i;
 // monta este mismo listado con la ficha abierta; abrir y cerrar desde el
 // listado solo cambia la URL (sin recargar la lista).
 export function StudentsList({ initialSelected = null }: { initialSelected?: string | null }) {
+  const waitlist = useFetch<{ active: boolean; A: number; B: number }>(
+    "/admin/estudiantes/espera/resumen",
+  );
   const params = useSearchParams();
   const router = useRouter();
   const filters = readStudentFilters(params);
@@ -133,6 +137,13 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
             }
           />
           <StudentMetrics version={version} />
+          {waitlist.data?.active ? (
+            <p role="status">
+              Interesados en apertura: tipo A {waitlist.data.A} · tipo B {waitlist.data.B}
+            </p>
+          ) : null}
+          {waitlist.data?.active ? <WaitlistRetry /> : null}
+          {waitlist.error ? <p role="status">{waitlist.error}</p> : null}
           {params.get("aviso") === "alumno-eliminado" && (
             <p role="status" className="text-status-success">
               El alumno se eliminó definitivamente.
@@ -140,6 +151,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
           )}
           <StudentFilters
             filters={filters}
+            waitlistActive={waitlist.data?.active}
             q={q}
             courses={courses.data ?? []}
             cohorts={cohorts.data ?? []}

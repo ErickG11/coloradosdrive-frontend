@@ -6,7 +6,7 @@ import { CohortRulesControls, type CohortRulesConfig } from "./CohortRulesContro
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button, FormError, Input, Select } from "@/components/ui";
+import { Button, FormError, Input, Select, Modal } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { CohortStudentCounts, Course } from "@/types";
@@ -156,6 +156,58 @@ export function CohortForm({
   onSaved,
   onCancel,
 }: CohortFormProps) {
+  const [savedOffer, setSavedOffer] = useState<{
+    id: string;
+    count?: number;
+    type?: string;
+    error?: string;
+  } | null>(null);
+  const [notifying, setNotifying] = useState(false);
+  function finishSaved() {
+    setSavedOffer(null);
+    const notice: CohortSavedNotice = cohortId ? "cohorte-guardada" : "cohorte-creada";
+    if (onSaved) onSaved(notice);
+    else {
+      router.push(`/admin/cohorts?aviso=${notice}`);
+      router.refresh();
+    }
+  }
+  async function previewOffer(id: string) {
+    try {
+      const offer = await api.post<{ count: number; type?: string }>(
+        `/cohorts/${id}/espera/preview`,
+        {},
+      );
+      if (offer.count > 0) setSavedOffer({ id, ...offer });
+      else finishSaved();
+    } catch (error) {
+      setSavedOffer({
+        id,
+        error:
+          error instanceof Error
+            ? `La cohorte se guardó. ${error.message}`
+            : "La cohorte se guardó, pero no se pudo consultar el aviso. Recarga antes de notificar.",
+      });
+    }
+  }
+  async function notify() {
+    if (!savedOffer) return;
+    setNotifying(true);
+    try {
+      await api.post(`/cohorts/${savedOffer.id}/espera/notificar`, {});
+      finishSaved();
+    } catch (error) {
+      setSavedOffer({
+        ...savedOffer,
+        error:
+          error instanceof Error
+            ? error.message
+            : "No se pudo confirmar la cola. Reintenta la misma acción; no duplica el evento.",
+      });
+    } finally {
+      setNotifying(false);
+    }
+  }
   const router = useRouter();
   const rules = useFetch<CohortRulesConfig>("/cohorts/configuracion");
   const [habilitada, setHabilitada] = useState(habilitadaInicial);
@@ -262,17 +314,30 @@ export function CohortForm({
     );
 
     try {
+      let saved: { id: string };
       if (cohortId) {
-        await api.patch(`/cohorts/${cohortId}`, {
+        saved = await api.patch<{ id: string }>(`/cohorts/${cohortId}`, {
           ...body,
           updatedAt: version,
           ...(rules.data?.active ? { habilitada, reason: reason.trim() } : {}),
         });
       } else {
-        await api.post("/cohorts", {
+        saved = await api.post<{ id: string }>("/cohorts", {
           ...body,
           ...(rules.data?.active ? { habilitada, reason: reason.trim() } : {}),
         });
+      }
+      if (
+        rules.data?.active &&
+        habilitada &&
+        (!cohortId ||
+          !habilitadaInicial ||
+          values.fechaFinMatricula > (initialValues?.fechaFinMatricula ?? "") ||
+          values.fechaFinCurso > (initialValues?.fechaFinCurso ?? ""))
+      ) {
+        await previewOffer(saved.id);
+        setIsSubmitting(false);
+        return;
       }
       const notice: CohortSavedNotice = isEditMode ? "cohorte-guardada" : "cohorte-creada";
       if (onSaved) {
@@ -323,6 +388,43 @@ export function CohortForm({
       className={styles.form}
       aria-busy={isSubmitting}
     >
+      <Modal
+        isOpen={savedOffer !== null}
+        title={
+          savedOffer?.count
+            ? `¿Notificar a ${savedOffer.count} interesados del tipo ${savedOffer.type}?`
+            : "Comprobar aviso de apertura"
+        }
+        onClose={() => {
+          if (!notifying) finishSaved();
+        }}
+      >
+        <p>
+          La cohorte ya se guardó. El correo indicará que la asignación está sujeta a cupos
+          disponibles. La marca se retira después de confirmar la entrega.
+        </p>
+        {savedOffer?.error ? <p role="alert">{savedOffer.error}</p> : null}
+        <div className="mt-4 flex flex-wrap gap-3">
+          {savedOffer?.count ? (
+            <Button type="button" isLoading={notifying} onClick={() => void notify()}>
+              Notificar
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              disabled={notifying}
+              onClick={() => {
+                if (savedOffer) void previewOffer(savedOffer.id);
+              }}
+            >
+              Reintentar consulta
+            </Button>
+          )}
+          <Button type="button" variant="secondary" disabled={notifying} onClick={finishSaved}>
+            Terminar sin notificar
+          </Button>
+        </div>
+      </Modal>
       {rules.error ? <p role="alert">{rules.error}</p> : null}
       {rules.data?.active ? (
         <>
