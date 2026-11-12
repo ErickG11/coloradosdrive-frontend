@@ -180,6 +180,11 @@ export function StudentEnrollmentWizard() {
             ) : null}
           </Card>
           <Card title="Documentos para llevar">
+            {data.fechaLimite && data.documentosFisicos.some((d) => d.estado === "pendiente") ? (
+              <p>
+                Te quedan {Math.max(0, data.diasRestantes ?? 0)} días para llevar tus documentos.
+              </p>
+            ) : null}
             <p className="mb-4 text-text-secondary">
               Llévalos a la escuela; no necesitas subirlos aquí. Los pendientes no impiden elegir tu
               horario.

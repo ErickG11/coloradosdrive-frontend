@@ -88,6 +88,7 @@ export interface StudentReservationSnapshot {
 }
 
 export interface StudentPlanRules {
+  endHour?: number;
   active: boolean;
   serverNow: string;
   options: {

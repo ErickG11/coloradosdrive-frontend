@@ -97,6 +97,9 @@ export function EnrollmentWorkspace({
           {state.individualDates.accessEndDate}.
         </p>
       ) : null}
+      {state.fechaLimite && state.documentosFisicos.some((d) => d.estado === "pendiente") ? (
+        <p>Te quedan {Math.max(0, state.diasRestantes ?? 0)} días para llevar tus documentos.</p>
+      ) : null}
       <header className={styles.header}>
         <div>
           <h1>Mi inscripción</h1>
