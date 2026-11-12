@@ -46,7 +46,9 @@ export function ReservationBanner({ state }: Props) {
           </div>
           {live && reservation.estado !== "pago_en_curso" && remaining <= 120 ? (
             <p role="status" className="mt-3 text-status-warning">
-              Quedan 2 minutos o menos para continuar con el pago.
+              {reservation.purpose === "plan_change"
+                ? "Quedan 2 minutos o menos para confirmar la propuesta."
+                : "Quedan 2 minutos o menos para continuar con el pago."}
             </p>
           ) : null}
           {!live ? (
@@ -60,8 +62,9 @@ export function ReservationBanner({ state }: Props) {
         </Card>
       ) : reservation?.estado === "vencida" ? (
         <p role="status" className="rounded-sm border border-status-warning p-4">
-          Tu reserva venció y se liberaron las franjas y el cupo. Tu solicitud aprobada se conserva.
-          Elige un horario nuevamente.
+          {reservation.purpose === "plan_change"
+            ? "La propuesta venció. Tu horario original se conserva; puedes consultar otra alternativa si aún estás dentro del plazo."
+            : "Tu reserva venció y se liberaron las franjas y el cupo. Tu solicitud aprobada se conserva. Elige un horario nuevamente."}
         </p>
       ) : null}
       {state.error ? (

@@ -6,6 +6,7 @@ import { FormError } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import type { CohortDetail, Course } from "@/types";
 
+import { CohortReassignment } from "./CohortReassignment";
 import { CohortForm, type CohortSavedNotice } from "./CohortForm";
 
 // Edición de una cohorte cargada por id (GET /cohorts/:id): trae la versión
@@ -64,35 +65,39 @@ export function CohortEditor({
         {reloadNotice}
       </p>
       {courses && cohort && !isLoadingCohort && !notFound && !cohortError ? (
-        <CohortForm
-          key={reloadCount}
-          onReload={handleReload}
-          onUserActivity={() => setShowReloadNotice(false)}
-          onSaved={onSaved}
-          onCancel={onCancel}
-          courses={courses}
-          cohortId={cohort.id}
-          rulesState={cohort.estado}
-          codigo={cohort.codigo}
-          habilitadaInicial={cohort.habilitada}
-          cierreMatricula={cohort.cierreMatricula}
-          version={cohort.updatedAt}
-          alumnos={cohort.alumnos}
-          initialValues={{
-            courseId: cohort.courseId,
-            nombre: cohort.nombre,
-            precio: String(cohort.precio),
-            cupoMaximo: String(cohort.cupoMaximo),
-            fechaInicioMatricula: cohort.fechaInicioMatricula,
-            fechaFinMatricula: cohort.fechaFinMatricula,
-            fechaInicioCurso: cohort.fechaInicioCurso,
-            fechaFinCurso: cohort.fechaFinCurso,
-            tipoModalidad: cohort.tipoModalidad ?? "",
-            horariosCapacitacionTeoria: cohort.horariosCapacitacionTeoria ?? "",
-            numeroVehiculos: cohort.numeroVehiculos === null ? "" : String(cohort.numeroVehiculos),
-            numeroAulas: cohort.numeroAulas === null ? "" : String(cohort.numeroAulas),
-          }}
-        />
+        <>
+          <CohortForm
+            key={reloadCount}
+            onReload={handleReload}
+            onUserActivity={() => setShowReloadNotice(false)}
+            onSaved={onSaved}
+            onCancel={onCancel}
+            courses={courses}
+            cohortId={cohort.id}
+            rulesState={cohort.estado}
+            codigo={cohort.codigo}
+            habilitadaInicial={cohort.habilitada}
+            cierreMatricula={cohort.cierreMatricula}
+            version={cohort.updatedAt}
+            alumnos={cohort.alumnos}
+            initialValues={{
+              courseId: cohort.courseId,
+              nombre: cohort.nombre,
+              precio: String(cohort.precio),
+              cupoMaximo: String(cohort.cupoMaximo),
+              fechaInicioMatricula: cohort.fechaInicioMatricula,
+              fechaFinMatricula: cohort.fechaFinMatricula,
+              fechaInicioCurso: cohort.fechaInicioCurso,
+              fechaFinCurso: cohort.fechaFinCurso,
+              tipoModalidad: cohort.tipoModalidad ?? "",
+              horariosCapacitacionTeoria: cohort.horariosCapacitacionTeoria ?? "",
+              numeroVehiculos:
+                cohort.numeroVehiculos === null ? "" : String(cohort.numeroVehiculos),
+              numeroAulas: cohort.numeroAulas === null ? "" : String(cohort.numeroAulas),
+            }}
+          />
+          <CohortReassignment cohort={cohort} courses={courses} onChanged={handleReload} />
+        </>
       ) : null}
     </>
   );

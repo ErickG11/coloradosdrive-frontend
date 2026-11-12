@@ -67,6 +67,7 @@ export interface StudentReservationPlan {
   ultimaHoraFin: string;
 }
 export interface StudentScheduleReservation {
+  purpose?: "initial" | "plan_change";
   individualDates?: IndividualEnrollmentSnapshot;
   id: string;
   enrollmentId: string;

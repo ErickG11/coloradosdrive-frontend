@@ -41,7 +41,9 @@ export function AdminPaymentActions({
     };
   }, [studentId, reload]);
   const reservation = data?.reserva;
-  const held = reservation?.estado === "vigente" || reservation?.estado === "pago_en_curso";
+  const held =
+    reservation?.purpose !== "plan_change" &&
+    (reservation?.estado === "vigente" || reservation?.estado === "pago_en_curso");
   const unresolved = data?.pagos.some((p) => p.estado === "pendiente" || p.estado === "revision");
   async function confirm() {
     if (!reservation || !action || mutation.current) return;
