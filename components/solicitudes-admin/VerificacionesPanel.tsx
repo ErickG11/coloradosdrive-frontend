@@ -237,7 +237,7 @@ export function VerificacionesPanel({
   detalle: SolicitudAdminDetalle;
   onRegistrada: (verificacion: VerificacionSolicitud) => void;
 }) {
-  const puedeRegistrar = detalle.estado === "enviada";
+  const puedeRegistrar = detalle.estado === "enviada" && !detalle.identityRulesActive;
   return (
     <section className={styles.section} aria-labelledby="verificaciones-title">
       <h3 id="verificaciones-title">Verificaciones</h3>

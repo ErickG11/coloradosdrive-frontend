@@ -36,6 +36,21 @@ export function StudentTable({
     return /^cohorte\b/iu.test(name) ? name : `Cohorte ${name}`;
   }
   const columns: DataColumn<AdminStudent>[] = [
+    ...(students.some((s) => s.paymentStatus !== undefined)
+      ? [
+          {
+            key: "payment",
+            header: "Pago",
+            render: (student: AdminStudent) =>
+              ({
+                pagado: "Pagado",
+                pendiente: "Pendiente",
+                revision: "En revisión",
+                sin_pago: "Sin pago",
+              })[student.paymentStatus ?? ""] ?? "Sin permiso financiero",
+          },
+        ]
+      : []),
     {
       key: "name",
       header: "Nombre",

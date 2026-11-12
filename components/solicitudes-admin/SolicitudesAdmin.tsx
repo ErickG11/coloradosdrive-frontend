@@ -1,4 +1,5 @@
 "use client";
+import { RequestRetentionControls } from "./RequestRetentionControls";
 import { useEffect, useRef, useState } from "react";
 import { useFetch } from "@/hooks/useFetch";
 import { EnrollmentAvatar, EnrollmentMetric } from "@/components/inscripcion/EnrollmentVisual";
@@ -69,6 +70,7 @@ export function SolicitudesAdmin() {
 
   return (
     <div className={styles.workspace}>
+      <RequestRetentionControls />
       <div className={styles.topbar}>
         <form
           className={styles.controls}

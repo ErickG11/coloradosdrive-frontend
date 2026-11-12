@@ -36,6 +36,7 @@ export const ESTADOS_INSCRIPCION = [
   "devuelta",
   "aprobada",
   "rechazada",
+  "archivada",
 ] as const;
 export type EstadoInscripcion = (typeof ESTADOS_INSCRIPCION)[number];
 
@@ -191,6 +192,7 @@ export interface DevolucionProgreso {
 }
 
 export interface ProgresoSolicitud {
+  revokedAt?: string | null;
   identidadVerificada: boolean;
   estudiosVerificados: boolean;
   courseId: string;
@@ -237,7 +239,8 @@ export interface EnvioSolicitudResult {
 
 // --- Admin ----------------------------------------------------------------
 
-export type TabSolicitudes = "pendientes" | "devueltas" | "aprobadas" | "rechazadas" | "todas";
+export type TabSolicitudes =
+  "pendientes" | "devueltas" | "aprobadas" | "archivadas" | "rechazadas" | "todas";
 
 export interface ListarSolicitudesParams {
   page?: number;
@@ -286,6 +289,8 @@ export interface ResumenSolicitudes {
 }
 
 export interface VerificacionSolicitud {
+  mode?: string | null;
+  scanAvailable?: boolean;
   vigente?: boolean;
   id: string;
   tipo: TipoVerificacion;
@@ -315,6 +320,12 @@ export interface ConsentimientoAdmin {
 }
 
 export interface SolicitudAdminDetalle extends SolicitudAdminItem {
+  identityRulesActive?: boolean;
+  reviewOwned?: boolean;
+  updatedAt?: string;
+  archivedAt?: string | null;
+  revokedAt?: string | null;
+  revocationPaymentReview?: boolean;
   studentId?: string | null;
   telefono: string | null;
   fechaNacimiento: string | null;
@@ -357,6 +368,7 @@ export interface DecisionResult {
   cohorte?: { id: string; nombre: string } | null;
   pendienteCohorte?: boolean;
   correoEnviado?: boolean;
+  correoEncolado?: boolean;
 }
 
 export interface ConfigInscripcion {

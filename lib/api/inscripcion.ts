@@ -202,6 +202,7 @@ const ESTADO_POR_TAB: Record<TabSolicitudes, EstadoInscripcion | undefined> = {
   pendientes: "enviada",
   devueltas: "devuelta",
   aprobadas: "aprobada",
+  archivadas: "archivada",
   rechazadas: "rechazada",
   todas: undefined,
 };
