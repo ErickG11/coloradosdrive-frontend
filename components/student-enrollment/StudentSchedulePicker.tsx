@@ -81,13 +81,15 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
         new Date(rules.data.serverNow),
       )
     : guayaquilDate(1);
-  const maxDate = guayaquilDate(365);
-  const [input, setInput] = useState<StudentScheduleInput>({
+  const legacyMaxDate = guayaquilDate(365);
+  const [draft, setInput] = useState<StudentScheduleInput>({
     modalidad: "entre_semana",
-    fechaInicio: minDate,
+    fechaInicio: "",
     horasPorDia: 3,
   });
-  const [month, setMonth] = useState(minDate.slice(0, 7));
+  const input = { ...draft, fechaInicio: draft.fechaInicio || minDate };
+  const [selectedMonth, setMonth] = useState("");
+  const month = selectedMonth || minDate.slice(0, 7);
   const calendar = useKeyedRequest(
     rules.data?.active && state.ready && !state.held
       ? `${enrollmentId}|${month}|${input.modalidad}|${input.horasPorDia}|${reloadKey(state.reservation?.id)}`
@@ -95,6 +97,9 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
     (signal) =>
       studentScheduleApi.calendar(enrollmentId, { ...input, fechaInicio: `${month}-01` }, signal),
   );
+  const maxDate = rules.data?.active
+    ? (calendar.data?.calendarEndDate ?? undefined)
+    : legacyMaxDate;
   const [chosenHour, setChosenHour] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [reserving, setReserving] = useState(false);
@@ -103,8 +108,8 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
   const validDate =
     /^\d{4}-\d{2}-\d{2}$/.test(input.fechaInicio) &&
     input.fechaInicio >= minDate &&
-    input.fechaInicio <= maxDate;
-  const enabled = state.ready && !state.held && !state.error && validDate;
+    (!maxDate || input.fechaInicio <= maxDate);
+  const enabled = !!rules.data && state.ready && !state.held && !state.error && validDate;
   const optionsKey = enabled
     ? `${enrollmentId}|${input.modalidad}|${input.fechaInicio}|${String(input.horasPorDia)}|${String(reload)}`
     : null;
@@ -276,7 +281,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
               label="Mes de inicio"
               type="month"
               min={minDate.slice(0, 7)}
-              max={maxDate.slice(0, 7)}
+              max={maxDate?.slice(0, 7)}
               value={month}
               disabled={reserving}
               onChange={(e) => setMonth(e.target.value)}
@@ -442,6 +447,15 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
             <p className="mt-1 text-sm text-text-secondary">
               La fecha que elegiste no es de esta modalidad; empezamos el{" "}
               {dayLabel(data.fechaInicioEfectiva)}.
+            </p>
+          ) : null}
+          {data.precioCentavos !== undefined ? (
+            <p className="mt-3 font-semibold">
+              Precio del curso:{" "}
+              {new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(
+                data.precioCentavos / 100,
+              )}
+              . Se fija al reservar.
             </p>
           ) : null}
           <SchedulePlanView days={days} />

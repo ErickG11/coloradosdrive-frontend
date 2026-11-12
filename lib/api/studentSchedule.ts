@@ -15,11 +15,11 @@ export const studentScheduleApi = {
   rules: (signal: AbortSignal) =>
     api.get<StudentPlanRules>(`${ROOT}/horario/config`, { signal, cache: "no-store" }),
   calendar: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
-    api.post<{ serverNow: string; dias: { fecha: string; disponible: boolean }[] }>(
-      `${ROOT}/horario/calendario`,
-      { enrollmentId, ...input },
-      { signal, cache: "no-store" },
-    ),
+    api.post<{
+      serverNow: string;
+      calendarEndDate?: string | null;
+      dias: { fecha: string; disponible: boolean }[];
+    }>(`${ROOT}/horario/calendario`, { enrollmentId, ...input }, { signal, cache: "no-store" }),
   options: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
     api.post<StudentScheduleOptions>(
       `${ROOT}/horario/opciones`,

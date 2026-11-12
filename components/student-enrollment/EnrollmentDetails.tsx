@@ -106,7 +106,6 @@ export function EnrollmentDocuments({ state }: { state: StudentEnrollmentState |
 export function EnrollmentDetails({
   enrollment,
   courseName,
-  cohortName,
   identity,
   state,
   payment,
@@ -141,24 +140,6 @@ export function EnrollmentDetails({
         identity="course"
         fields={courseFields}
       />
-      <EnrollmentDataCard
-        title="Tu cohorte"
-        icon="cohort"
-        identity="cohort"
-        fields={[
-          {
-            label: "Grupo",
-            value:
-              cohortName ??
-              (enrollment.cohortId
-                ? "Cohorte asignada · nombre no disponible"
-                : "Pendiente de asignación"),
-          },
-          { label: "Estado de tu matrícula", value: enrollmentStatus(enrollment.status).label },
-        ]}
-      >
-        <p className={styles.secondary}>Consulta las fechas oficiales del curso con la escuela.</p>
-      </EnrollmentDataCard>
       <EnrollmentDataCard
         title="Tu acceso"
         icon="access"

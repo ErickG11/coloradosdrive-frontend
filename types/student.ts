@@ -84,6 +84,7 @@ export interface StudentSchedule {
   recent: StudentPractice[];
 }
 export interface StudentDetail extends Omit<AdminStudent, "matchingEnrollments"> {
+  financialRestricted?: boolean;
   status:
     | "pendiente_verificacion"
     | "verificado"

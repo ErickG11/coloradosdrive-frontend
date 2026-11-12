@@ -49,6 +49,7 @@ export interface DashboardAgenda {
   }[];
 }
 export interface AdminDashboardSummary {
+  financialRestricted?: boolean;
   generatedAt: string;
   timezone: string;
   month: string;

@@ -40,6 +40,7 @@ export interface PreviewCohort {
   fecha_fin_curso: string;
 }
 export interface CourseSelection {
+  rulesActive?: boolean;
   courseId: string;
   courseTipo: CourseType;
   courseNombre: string;
@@ -48,6 +49,7 @@ export interface CourseSelection {
   cohort?: PreviewCohort;
 }
 export interface CoursePreview {
+  rulesActive?: boolean;
   courseId: string;
   tipo: CourseType;
   suggestion: {
@@ -78,6 +80,9 @@ export const EMPTY_PRACTICE: PracticeFormData = {
   manual: false,
 };
 export interface PracticePlan {
+  rulesActive?: boolean;
+  precioCentavos?: number;
+  ultimaHoraFin?: string;
   timezone: string;
   semanas: number;
   modalidad: Modalidad;
@@ -92,6 +97,7 @@ export interface PracticePlan {
   horas: number;
 }
 export interface PracticeChoice {
+  resolved?: { cohort: PreviewCohort; courseId: string };
   form: PracticeFormData;
   plan: PracticePlan;
   suggestion: SugerirPracticaResult | null;
@@ -158,7 +164,7 @@ export interface ManualResult {
   documentosPendientes?: number;
 }
 export const HORAS_POR_DIA_MIN = 1;
-export const HORAS_POR_DIA_MAX = 16;
+export const HORAS_POR_DIA_MAX = 6;
 
 export function horasPorDiaError(value: number | ""): string | null {
   if (value === "") return "Ingresa las horas por día.";

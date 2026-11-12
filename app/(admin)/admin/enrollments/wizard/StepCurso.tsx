@@ -42,6 +42,7 @@ export function StepCurso({
       if (request !== sequence.current) return;
       setPreview(p);
       setSelection({
+        rulesActive: p.rulesActive,
         courseId: p.courseId,
         courseTipo: c.tipo,
         courseNombre: c.nombre,

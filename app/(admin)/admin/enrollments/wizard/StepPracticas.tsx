@@ -1,4 +1,6 @@
 "use client";
+import { ScheduleDurationTable } from "@/components/student-enrollment/ScheduleDurationTable";
+import type { StudentPlanRules } from "@/types/studentSchedule";
 import styles from "./enrollment.module.css";
 import { WizardIcon } from "./WizardVisual";
 import { useEffect, useRef, useState } from "react";
@@ -28,6 +30,22 @@ export function StepPracticas({
   onBack: () => void;
   onNext: (p: PracticeChoice) => void;
 }) {
+  const [rules, setRules] = useState<StudentPlanRules | null>(null);
+  const [resolved, setResolved] = useState<PracticeChoice["resolved"]>(value?.resolved);
+  useEffect(() => {
+    let alive = true;
+    api
+      .get<StudentPlanRules>(`${BASE}/rules`)
+      .then((r) => {
+        if (alive) setRules(r);
+      })
+      .catch(() => {
+        if (alive) setError("No se pudo consultar la configuración de planes.");
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [form, setForm] = useState(value?.form ?? EMPTY_PRACTICE);
   const [plan, setPlan] = useState<PracticePlan | null>(null);
   const [suggestion, setSuggestion] = useState<SugerirPracticaResult | null>(null);
@@ -67,6 +85,7 @@ export function StepPracticas({
     setForm((f) => ({ ...f, [field]: value }));
     setPlan(null);
     setSuggestion(null);
+    setResolved(undefined);
     setInstructor(null);
     setError(null);
   }
@@ -77,21 +96,24 @@ export function StepPracticas({
     setSuggestion(null);
     setInstructor(null);
     try {
-      const r = await api.post<{ plan: PracticePlan; suggestion: SugerirPracticaResult | null }>(
-        `${BASE}/practice-preview`,
-        {
-          courseType: course.courseTipo,
-          cohortId: course.cohortId,
-          automatic: !course.manualOverride,
-          practice: practicePayload(form),
-        },
-      );
+      const r = await api.post<{
+        plan: PracticePlan;
+        suggestion: SugerirPracticaResult | null;
+        resolved?: PracticeChoice["resolved"];
+      }>(`${BASE}/practice-preview`, {
+        courseType: course.courseTipo,
+        cohortId: course.cohortId,
+        automatic: !course.manualOverride,
+        practice: practicePayload(form),
+      });
       if (request !== version.current) return;
       setPlan(r.plan);
+      setResolved(r.resolved);
       setSuggestion(r.suggestion);
       if (r.suggestion?.instructoresSugeridos.length === 1)
         setInstructor(r.suggestion.instructoresSugeridos[0]);
-      if (!course.cohortId) onNext({ form, plan: r.plan, suggestion: null, instructor: null });
+      if (!course.rulesActive && !course.cohortId)
+        onNext({ form, plan: r.plan, suggestion: null, instructor: null });
     } catch (e) {
       if (request === version.current)
         setError(e instanceof ApiError ? e.message : "No se pudo consultar la sugerencia.");
@@ -102,18 +124,21 @@ export function StepPracticas({
   return (
     <div className={styles.practiceStep}>
       <p>Planificación civil: America/Guayaquil. Cada bloque dura 60 minutos.</p>
-      <Select
-        name="semanas"
-        label="Duración"
-        value={form.semanas}
-        onChange={(e) => change("semanas", Number(e.target.value) as 1 | 2 | 3)}
-      >
-        {[1, 2, 3].map((s) => (
-          <option key={s} value={s}>
-            {s} {s === 1 ? "semana" : "semanas"}
-          </option>
-        ))}
-      </Select>
+      {rules?.active ? <ScheduleDurationTable rules={rules} /> : null}
+      {!course.rulesActive && (
+        <Select
+          name="semanas"
+          label="Duración"
+          value={form.semanas}
+          onChange={(e) => change("semanas", Number(e.target.value) as 1 | 2 | 3)}
+        >
+          {[1, 2, 3].map((s) => (
+            <option key={s} value={s}>
+              {s} {s === 1 ? "semana" : "semanas"}
+            </option>
+          ))}
+        </Select>
+      )}
       <Select
         name="modalidad"
         label="Modalidad"
@@ -143,30 +168,34 @@ export function StepPracticas({
         type="number"
         required
         min={1}
-        max={16}
+        max={6}
         value={form.horasPorDia}
         error={horasError ?? undefined}
         onChange={(e) => change("horasPorDia", e.target.value === "" ? "" : Number(e.target.value))}
       />
-      <Input
-        name="fechaFin"
-        label="Fecha final"
-        type="date"
-        value={form.manual ? form.fechaFin : (plan?.fechaFinElegida ?? "")}
-        onChange={(e) => {
-          ++version.current;
-          setForm((f) => ({ ...f, manual: true, fechaFin: e.target.value }));
-          setPlan(null);
-          setSuggestion(null);
-          setInstructor(null);
-        }}
-      />
+      {!course.rulesActive && (
+        <Input
+          name="fechaFin"
+          label="Fecha final"
+          type="date"
+          value={form.manual ? form.fechaFin : (plan?.fechaFinElegida ?? "")}
+          onChange={(e) => {
+            ++version.current;
+            setForm((f) => ({ ...f, manual: true, fechaFin: e.target.value }));
+            setPlan(null);
+            setSuggestion(null);
+            setInstructor(null);
+          }}
+        />
+      )}
       <p>
-        {form.manual
-          ? "Ajuste manual: se incluyen solo los días de la modalidad dentro del rango. No cambia la tarifa."
-          : "Cálculo automático por días de práctica: 5 por semana L–V o 2 por semana S–D."}
+        {course.rulesActive
+          ? "Plan exacto de 15 horas; el servidor calcula los días efectivos y la última sesión parcial."
+          : form.manual
+            ? "Ajuste manual: se incluyen solo los días de la modalidad dentro del rango. No cambia la tarifa."
+            : "Cálculo automático por días de práctica: 5 por semana L–V o 2 por semana S–D."}
       </p>
-      {form.manual && (
+      {!course.rulesActive && form.manual && (
         <Button variant="secondary" onClick={() => change("manual", false)}>
           Restaurar cálculo automático
         </Button>
@@ -182,11 +211,15 @@ export function StepPracticas({
           )}
           <p>
             {plan.dias} días · {plan.bloques} bloques · {plan.horas} horas. Último día de práctica:{" "}
-            {plan.fechaFin}.
+            {plan.fechaFin}
+            {plan.ultimaHoraFin ? ` hasta las ${plan.ultimaHoraFin}` : ""}.
+            {plan.precioCentavos !== undefined
+              ? ` Precio: $${(plan.precioCentavos / 100).toFixed(2)}.`
+              : ""}
           </p>
         </div>
       )}
-      {!course.cohortId && (
+      {!course.rulesActive && !course.cohortId && (
         <p>
           El plan se guardará como pendiente de cohorte. Todavía no se pueden generar franjas ni
           asignar instructor.
@@ -197,7 +230,7 @@ export function StepPracticas({
           {error}
         </p>
       )}
-      {course.cohortId && (
+      {(course.rulesActive || course.cohortId) && (
         <Button
           variant="secondary"
           isLoading={busy}
@@ -250,11 +283,15 @@ export function StepPracticas({
         </Button>
         <Button
           isLoading={!course.cohortId && busy}
-          disabled={!plan || (!!course.cohortId && (!suggestion || !instructor)) || busy}
+          disabled={
+            !plan ||
+            ((course.rulesActive || !!course.cohortId) && (!suggestion || !instructor)) ||
+            busy
+          }
           onClick={() => {
-            if (!course.cohortId) void preview();
+            if (!course.rulesActive && !course.cohortId) void preview();
             else if (plan && suggestion && instructor)
-              onNext({ form, plan, suggestion, instructor });
+              onNext({ form, plan, suggestion, instructor, resolved });
           }}
         >
           Continuar

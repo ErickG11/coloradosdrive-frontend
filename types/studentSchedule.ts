@@ -25,7 +25,7 @@ export interface StudentScheduleOptions {
   horasRequeridas: number;
   fechaInicioEfectiva: string;
   ajustada: boolean;
-  cohorte: { id: string; nombre: string } | null;
+  cohorte: { id: string; nombre?: string } | null;
   sinCohorte: StudentScheduleNoCohort | null;
   horas: StudentScheduleStartOption[];
 }
@@ -40,6 +40,7 @@ export interface StudentSchedulePreviewDay {
   motivo: { codigo: "DIA_SIN_INSTRUCTOR" | "SOLAPE_PROPIO"; mensaje: string } | null;
 }
 export interface StudentSchedulePreview {
+  precioCentavos?: number;
   enrollmentId: string;
   serverNow: string;
   modalidad: StudentScheduleInput["modalidad"];
@@ -53,7 +54,7 @@ export interface StudentSchedulePreview {
   ultimaFecha: string;
   ultimaHoraFin: string;
   ultimoFin: string;
-  cohorte: { id: string; nombre: string } | null;
+  cohorte: { id: string; nombre?: string } | null;
   sinCohorte: StudentScheduleNoCohort | null;
   diasFallan: string[];
   factible: boolean;
@@ -76,7 +77,7 @@ export interface StudentScheduleReservation {
   serverNow: string;
   extensiones: number;
   puedeAmpliar: boolean;
-  cohorte?: { id: string; nombre: string } | null;
+  cohorte?: { id: string; nombre?: string } | null;
   precioCentavos?: number;
   franjas: { scheduledAt: string }[];
   plan?: StudentReservationPlan | null;

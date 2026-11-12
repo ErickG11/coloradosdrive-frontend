@@ -141,6 +141,7 @@ export function StudentProfile({
                     </p>
                   )}
                   {enrollment.status === "pendiente_cohorte" &&
+                    !student.financialRestricted &&
                     onAssignCohort &&
                     (enrollment.origen !== "solicitud" || enrollment.etapa === "activa") && (
                       <div className="mt-2 mb-4 flex flex-col items-start gap-2">
@@ -250,25 +251,31 @@ export function StudentProfile({
                       {studentTimestamp(enrollment.fechaInscripcion)}
                     </time>
                   </p>
-                  <dl className="grid gap-4 text-sm sm:grid-cols-3">
-                    {(
-                      [
-                        ["Total", enrollment.montoTotal],
-                        ["Abonado", enrollment.montoAbonado],
-                        ["Saldo", enrollment.saldo],
-                      ] as const
-                    ).map(([label, value]) => (
-                      <div key={label}>
-                        <dt className="text-text-secondary">{label}</dt>
-                        <dd className="mt-1 font-medium text-text-primary">
-                          {studentMoney(value)}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
+                  {student.financialRestricted ? (
+                    <p>Información reservada al permiso de pagos y facturas.</p>
+                  ) : (
+                    <dl className="grid gap-4 text-sm sm:grid-cols-3">
+                      {(
+                        [
+                          ["Total", enrollment.montoTotal],
+                          ["Abonado", enrollment.montoAbonado],
+                          ["Saldo", enrollment.saldo],
+                        ] as const
+                      ).map(([label, value]) => (
+                        <div key={label}>
+                          <dt className="text-text-secondary">{label}</dt>
+                          <dd className="mt-1 font-medium text-text-primary">
+                            {studentMoney(value)}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
                 </Card>
               )}
-              {show("enrollments") && student.enrollments.some((e) => e.origen === "solicitud") ? (
+              {!student.financialRestricted &&
+              show("enrollments") &&
+              student.enrollments.some((e) => e.origen === "solicitud") ? (
                 <AdminPaymentActions
                   studentId={student.id}
                   active={student.activo}
