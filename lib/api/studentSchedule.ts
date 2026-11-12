@@ -52,7 +52,7 @@ const messages: Record<string, string> = {
   HORARIO_NO_DISPONIBLE: "Ese horario ya no está libre. Elige otra hora de inicio.",
   PLAN_NO_FACTIBLE: "Ese horario ya no es posible en todos los días. Elige otra hora de inicio.",
   HORA_INICIO_INVALIDA: "Elige una hora de inicio que permita terminar a las 22:00.",
-  FECHA_INICIO_INVALIDA: "Elige una fecha de inicio desde mañana y dentro del próximo año.",
+  FECHA_INICIO_INVALIDA: "Elige una fecha de inicio desde hoy con horas futuras.",
   RESERVA_CONCURRENTE: "El horario se está actualizando. Consulta su estado antes de reintentar.",
   RESERVA_YA_EXISTE: "Ya tienes una reserva. Consulta su estado antes de elegir otra.",
   LIMITE_RESERVAS_DIARIO: "Alcanzaste el máximo de reservas de hoy. Puedes volver mañana.",

@@ -29,6 +29,9 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
       ? `/admin/estudiantes/${studentId}/matriculas/${enrollmentId}/cambio`
       : `/estudiantes/inscripcion/cambio/${enrollmentId}`;
   const meta = useFetch<PlanChangeState>(root);
+  const limits = useFetch<{ endHour?: number }>(
+    admin ? "/admin/manual-enrollments/rules" : "/estudiantes/inscripcion/horario/config",
+  );
   const [input, setInput] = useState<StudentScheduleSelection>({
     modalidad: "entre_semana",
     fechaInicio: "",
@@ -293,7 +296,10 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
                 setInput((v) => ({
                   ...v,
                   horasPorDia: Number(e.target.value),
-                  horaInicio: Math.min(v.horaInicio, 22 - Number(e.target.value)),
+                  horaInicio: Math.min(
+                    v.horaInicio,
+                    (limits.data?.endHour ?? 22) - Number(e.target.value),
+                  ),
                 }))
               }
             >
@@ -307,7 +313,7 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
               label="Hora inicial"
               type="number"
               min={6}
-              max={22 - input.horasPorDia}
+              max={(limits.data?.endHour ?? 22) - input.horasPorDia}
               step={1}
               value={input.horaInicio}
               onChange={(e) => setInput((v) => ({ ...v, horaInicio: Number(e.target.value) }))}

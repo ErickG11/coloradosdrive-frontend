@@ -80,7 +80,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
     ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(
         new Date(rules.data.serverNow),
       )
-    : guayaquilDate(1);
+    : guayaquilDate(0);
   const legacyMaxDate = guayaquilDate(365);
   const [draft, setInput] = useState<StudentScheduleInput>({
     modalidad: "entre_semana",
@@ -324,7 +324,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
             onChange={(e) => update({ fechaInicio: e.target.value })}
             error={
               input.fechaInicio && !validDate
-                ? "Elige una fecha desde mañana y dentro del próximo año."
+                ? "Elige una fecha desde hoy con horas futuras."
                 : undefined
             }
           />

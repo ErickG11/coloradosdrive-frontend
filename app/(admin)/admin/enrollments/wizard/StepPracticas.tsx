@@ -159,6 +159,7 @@ export function StepPracticas({
         name="horaDeseada"
         label="Hora deseada"
         type="time"
+        max={`${String((rules?.endHour ?? 22) - Number(form.horasPorDia || 1)).padStart(2, "0")}:00`}
         value={form.horaDeseada}
         onChange={(e) => change("horaDeseada", e.target.value)}
       />

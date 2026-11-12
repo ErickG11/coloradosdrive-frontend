@@ -20,6 +20,7 @@ export function CohortReassignment({
 }) {
   const source = useFetch<AdminReassignmentSource>(`/cohorts/${cohort.id}/reasignacion`);
   const targets = useFetch<Cohort[]>("/cohorts");
+  const limits = useFetch<{ endHour?: number }>("/admin/manual-enrollments/rules");
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false),
@@ -191,7 +192,7 @@ export function CohortReassignment({
                   label={`Hora inicial de ${e.studentName}`}
                   type="number"
                   min={6}
-                  max={22 - rows[e.id].horasPorDia}
+                  max={(limits.data?.endHour ?? 22) - rows[e.id].horasPorDia}
                   value={rows[e.id].horaInicio}
                   onChange={(v) => change(e.id, { horaInicio: Number(v.target.value) })}
                 />
