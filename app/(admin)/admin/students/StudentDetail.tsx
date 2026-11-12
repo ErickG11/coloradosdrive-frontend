@@ -1,4 +1,5 @@
 "use client";
+import { EnrollmentAdminControls } from "@/components/student-enrollment/EnrollmentAdminControls";
 import Link from "next/link";
 import { AdminPlanChangePanel } from "@/components/student-enrollment/PlanChangePanel";
 import { StudentEnrollmentAccess } from "./StudentEnrollmentAccess";
@@ -292,6 +293,11 @@ export function StudentProfile({
                       {enrollment.courseType}
                     </p>
                   )}
+                  <EnrollmentAdminControls
+                    studentId={student.id}
+                    enrollment={enrollment}
+                    onChanged={onPaymentChanged}
+                  />
                   {enrollment.documentos.length === 0 ? (
                     <p className="text-sm text-text-secondary">No hay documentos registrados.</p>
                   ) : (
