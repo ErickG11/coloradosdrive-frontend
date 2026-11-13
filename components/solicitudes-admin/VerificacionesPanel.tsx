@@ -19,6 +19,7 @@ import type {
   TipoVerificacion,
   VerificacionSolicitud,
 } from "@/types/inscripcion";
+import { ApiError } from "@/lib/api/errors";
 import { adminErrorMessage } from "./adminErrors";
 import { CertificadoPanel } from "./CertificadoPanel";
 import {
@@ -38,12 +39,6 @@ function portalPara(tipo: TipoVerificacion, detalle: SolicitudAdminDetalle) {
   if (tipo === "identidad") return ENLACE_REGISTRO_CIVIL;
   // Solo los niveles de bachiller se consultan en el portal del Ministerio por cédula.
   return detalle.nivelEstudios?.startsWith("bachiller") ? ENLACE_MINISTERIO_EDUCACION : null;
-}
-
-// Método por defecto de cada bloque: el portal oficial correspondiente.
-function metodoInicial(tipo: TipoVerificacion, detalle: SolicitudAdminDetalle): MetodoVerificacion {
-  if (tipo === "identidad") return "registro_civil_portal";
-  return portalPara(tipo, detalle) ? "ministerio_portal" : "codigo_qr_certificado";
 }
 
 // Observación automática: "Verificado en el Registro Civil" / "Verificado en el Ministerio de
@@ -80,8 +75,9 @@ function BloqueVerificacion({
 }) {
   const baseId = useId();
   const metodos = metodosParaVerificacion();
-  const [metodo, setMetodo] = useState<MetodoVerificacion>(metodoInicial(tipo, detalle)),
-    [resultado, setResultado] = useState<ResultadoVerificacion>("verificado"),
+  const [metodo, setMetodo] = useState<MetodoVerificacion | "">(""),
+    [resultado, setResultado] = useState<ResultadoVerificacion | "">(""),
+    [cambiando, setCambiando] = useState(false),
     [nota, setNota] = useState(""),
     [archivo, setArchivo] = useState<File | null>(null),
     [errores, setErrores] = useState<{ archivo?: string; nota?: string }>({}),
@@ -108,6 +104,7 @@ function BloqueVerificacion({
 
   async function registrar() {
     if (lock.current) return;
+    if (!metodo || !resultado) return;
     const nuevos: typeof errores = {};
     const presencial = metodo === "original_presencial";
     if (presencial && !archivo) nuevos.archivo = "Adjunta el escaneo presencial.";
@@ -122,22 +119,27 @@ function BloqueVerificacion({
       let creada: VerificacionSolicitud;
       if (candado.phase === "owned" && candado.token) {
         // Contrato vigente (indicador de identidad encendido): verificación con el candado.
-        const data = new FormData();
-        for (const [key, value] of Object.entries({
+        const campos = {
           token: candado.token,
           tipo,
           metodo,
           resultado,
           nota: texto,
           mode: presencial ? "presencial" : "web",
-        }))
-          data.append(key, value);
-        if (presencial && archivo) data.append("archivo", archivo);
-        creada = await api.post<VerificacionSolicitud>(
-          `/admin/solicitudes/${detalle.id}/revision/verificar`,
-          data,
-          { signal: AbortSignal.timeout(30_000) },
-        );
+        };
+        const ruta = `/admin/solicitudes/${detalle.id}/revision/verificar`;
+        if (presencial && archivo) {
+          // Solo la verificación presencial lleva archivo (multipart).
+          const data = new FormData();
+          for (const [key, value] of Object.entries(campos)) data.append(key, value);
+          data.append("archivo", archivo);
+          creada = await api.post<VerificacionSolicitud>(ruta, data, {
+            signal: AbortSignal.timeout(30_000),
+          });
+        } else {
+          // Sin archivo se envía JSON: no se manda ningún campo de archivo.
+          creada = await api.post<VerificacionSolicitud>(ruta, campos);
+        }
       } else {
         creada = await registrarVerificacion(detalle.id, {
           tipo,
@@ -147,12 +149,19 @@ function BloqueVerificacion({
         });
       }
       onRegistrada(creada);
-      setMetodo(metodoInicial(tipo, detalle));
-      setResultado("verificado");
+      setMetodo("");
+      setResultado("");
       setNota("");
       setArchivo(null);
+      setCambiando(false);
     } catch (e) {
-      setError(adminErrorMessage(e));
+      // El texto de «archivo» solo corresponde si el administrador adjuntó un escaneo; en
+      // cualquier otro caso se muestra el mensaje real del servidor.
+      setError(
+        !archivo && e instanceof ApiError && e.code?.startsWith("ARCHIVO_")
+          ? e.message
+          : adminErrorMessage(e),
+      );
     } finally {
       lock.current = false;
       setOcupado(false);
@@ -165,7 +174,8 @@ function BloqueVerificacion({
       <h4 id={`${baseId}-titulo`}>Verificación de {titulo.toLowerCase()}</h4>
       {ultima ? (
         <p className={styles.verdict} data-resultado={ultima.resultado}>
-          {ETIQUETA_RESULTADO[ultima.resultado]} · {ETIQUETA_METODO[ultima.metodo]}
+          {ETIQUETA_RESULTADO[ultima.resultado]} · {ETIQUETA_METODO[ultima.metodo]} ·{" "}
+          {formatearFecha(ultima.createdAt)}
         </p>
       ) : (
         <p className={styles.note}>Todavía sin verificar.</p>
@@ -211,7 +221,15 @@ function BloqueVerificacion({
         {copiado}
       </p>
 
-      {puedeRegistrar ? (
+      {puedeRegistrar && ultima && !cambiando ? (
+        <div className={styles.controls}>
+          <Button variant="secondary" onClick={() => setCambiando(true)}>
+            Cambiar
+          </Button>
+        </div>
+      ) : null}
+
+      {puedeRegistrar && (!ultima || cambiando) ? (
         <form
           className={styles.detail}
           onSubmit={(event) => {
@@ -225,6 +243,9 @@ function BloqueVerificacion({
             value={resultado}
             onChange={(e) => setResultado(e.target.value as ResultadoVerificacion)}
           >
+            <option value="" disabled>
+              Seleccione…
+            </option>
             {RESULTADOS.map((r) => (
               <option key={r} value={r}>
                 {ETIQUETA_RESULTADO[r]}
@@ -239,6 +260,9 @@ function BloqueVerificacion({
               setArchivo(null);
             }}
           >
+            <option value="" disabled>
+              Seleccione…
+            </option>
             {metodos.map(({ metodo: m }) => (
               <option key={m} value={m}>
                 {ETIQUETA_METODO[m]}
@@ -268,7 +292,11 @@ function BloqueVerificacion({
           </p>
           <FormError>{error}</FormError>
           <div className={styles.controls}>
-            <Button type="submit" isLoading={ocupado}>
+            <Button
+              type="submit"
+              isLoading={ocupado}
+              disabled={!resultado || !metodo || (metodo === "original_presencial" && !archivo)}
+            >
               Registrar verificación
             </Button>
           </div>
