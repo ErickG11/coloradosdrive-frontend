@@ -124,3 +124,80 @@ La guía de despliegue (Railway + Vercel, modo demostración y correo por la API
 ## 13. Dependabot
 
 Dependabot abre PR automáticos de dependencias. Antes de la defensa **no se fusionan saltos de versión mayor** (por ejemplo React o TypeScript 7). Los PR con el CI en rojo no se tocan. Solo se aceptan actualizaciones menores o de parche con el CI en verde y revisadas por el responsable.
+
+---
+
+## Estado al 13/11/2026
+
+Sección escrita solo a partir de `git log`, los archivos de migración y las indicaciones del responsable. Rama principal de trabajo: `feat/cohortes-reglas-inscripcion`, creada a partir de `main` (`origin/main` es ancestro de la rama; no hay commits de `main` que le falten). Defensa de titulación: 14 de noviembre de 2026.
+
+### Advertencias antes de continuar
+
+- **No fusionar a `main` todavía.** Muchas pruebas automáticas están desactualizadas por los cambios de esta rama (hay fallos conocidos) y la integración continua saldrá en rojo. Primero hay que actualizarlas. Falta además la prueba manual descrita en «Pendientes».
+- **Base de datos única y compartida** (Supabase, ref `qvyptmjmvrpewjynnnxs`): cualquier prueba local escribe en ella. Usa siempre alumnos de prueba y nunca datos reales.
+- Las migraciones las aplica el dueño a mano en el SQL Editor (preflight, migración, verificación y, si hace falta, rollback). No se aplican desde el repositorio. La **026** y otras se aplicaron de esa forma.
+- **El borrador `064_precio_por_tipo_curso.sql` (con sus scripts `precio-curso-064-*.sql`) NO se aplica.** Está en el repositorio solo como borrador y el manifiesto de despliegue lo excluye.
+
+### Migraciones 085 a 094
+
+| Migración | Tema | Estado en la base real |
+| --- | --- | --- |
+| 085 | Alumnos sin cohorte y orden por espera | Aplicada |
+| 086 | Plan nuevo de diez horas | Aplicada |
+| 087 | Acceso al pagar y gestión individual de cohortes | Aplicada |
+| 088 | Contrato de asistencia (`practice_plan`) | Aplicada |
+| 089 | Asistencia por bloques | Aplicada |
+| 090 | Reposición por bloques | Aplicada |
+| 091 | Avisos por bloque y compatibilidad | Aplicada |
+| 092 | Aviso de inasistencia en un solo paso | Aplicada |
+| 093 | Política de Realtime de avisos (`notifications_broadcast_v14`) | **No confirmada como aplicada.** Es idempotente y su efecto ya está en la base |
+| 094 | Materiales obligatorios previos al examen | Aplicada |
+
+Cada una tiene preflight, verificación (termina en ROLLBACK) y rollback en `docs/operations/inscripcion-NNN-*.sql`, y está en `docs/operations/cohortes-manifiesto-despliegue.json`.
+
+### Cómo arrancar
+
+- Requisito: **Node 22**.
+- Backend (puerto **3000**): `DISABLE_CRON=false npm run dev`. Con `EMAIL_PROVIDER=console` los correos se imprimen en la terminal.
+- Frontend (puerto **3001**): `npm run dev`; su `NEXT_PUBLIC_API_URL` debe apuntar al backend.
+
+### Variables de entorno (solo nombres; los valores se piden a Erick por un canal privado, nunca por GitHub)
+
+Backend: `NODE_ENV`, `DISABLE_CRON`, `PORT`, `FRONTEND_URL`, `CORS_ORIGINS`, `DEMO_MODE`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `EMAIL_PROVIDER`, `EMAIL_USER`, `EMAIL_APP_PASSWORD`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `SOLICITUD_TOKEN_SECRET`, `ENROLLMENT_RATE_HMAC_SECRET`, `ADMIN_MFA_REQUIRED`, `CAPTCHA_PROVIDER`, `TURNSTILE_SECRET_KEY`, `PAYMENT_PROVIDER`, `KUSHKI_PUBLIC_KEY`, `KUSHKI_PRIVATE_KEY`, `KUSHKI_WEBHOOK_SECRET`, `KUSHKI_MERCHANT_ID` y el resto de las que lista `.env.example`.
+Frontend: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL` (y `NEXT_PUBLIC_TURNSTILE_SITE_KEY` si se activa el captcha).
+
+### Etiquetas de respaldo y cómo volver
+
+Hay etiquetas `pre-cNN` (por ejemplo `pre-c17`, `pre-c20`, `pre-c25`, `pre-c27`; en el frontend también `pre-c15-horarios`, `pre-c19`, `pre-c22`, `pre-c23`, `pre-c24`) que marcan el estado justo antes de cada tarea, y `respaldo-antes-de-subir-2026-11-13` con el estado al entregar. Para volver a una **sin perder trabajo**: `git checkout -b rescate <etiqueta>`. Nunca uses `reset --hard` sobre trabajo ajeno.
+
+### Pendientes
+
+- Ensayo de concurrencia con dos sesiones reales (dos alumnos tomando el mismo cupo; PGlite no da dos conexiones).
+- Prueba manual en navegador de C25, C26 y C27.
+- Revisar las pantallas de C11 y C12.
+- «1 Issue» del indicador de desarrollo de Next en `/admin/content` (no se pudo reproducir sin servidor).
+- Avisos de «Contenido actualizado» con la fecha en formato técnico (se generan en `migrations/066a_contenido_api_funciones.sql`).
+- Eliminar cohortes o alumnos que tienen pagos (decisión de negocio).
+- Vista de Pagos del administrador.
+- Mover la hora de los días restantes de un alumno que ya empezó (operación B: solo administrador, todo o nada; aún no construida).
+
+### Tareas «Tarea: Cxx» en este repositorio (`git log --grep`)
+
+- **C02** — Documentos y cambio de cohorte desde la ficha del alumno.
+- **C03** — Retención de datos movida a Seguridad y verificaciones separadas en Solicitudes.
+- **C04** — Selectores de Solicitudes y falso error de archivo.
+- **C06** — Filtros de Alumnos (Sin cohorte, Esperando curso), formulario de Cohortes y Paso 2 de la inscripción.
+- **C08** — Elección del plan de prácticas rediseñada.
+- **C09** — Cohortes y asignaciones desde Matrículas.
+- **C10** — Paneles de administración y «Mi inscripción» simplificada.
+- **C11** — Interfaz de inscripción y administración reordenada (partes A a D3).
+- **C12** — «Mi inscripción» del alumno reorganizada (partes A a C).
+- **C14** — Asistencia por bloques en la interfaz del alumno, instructor y administrador (partes E y F).
+- **C15** — Diseño de Horarios de práctica restaurado con la gestión por bloque.
+- **C17** — Aviso de inasistencia en un solo paso en Horarios de práctica.
+- **C19** — Campos obligatorios del módulo de Contenido y diálogo de habilitación.
+- **C20** — Candado de exámenes por materiales previos; abrir completa el material.
+- **C22** — Medidor de la mejor nota con color por rango.
+- **C23** — Lista de alumnos compacta, panel lateral fijo y delgado, menú lateral plegable.
+- **C24** — Menú que se pliega liberando el ancho y que sigue el tema; el cambio de tema pasa junto a la campana.
+- **C25** (partes A, B+C y E) — Cabecera y contenido del panel como una sola pieza, «Cambiar horario de prácticas» y «Extender acceso».
