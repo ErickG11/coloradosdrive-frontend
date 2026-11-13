@@ -33,6 +33,9 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" | "a
 
   async function read(notification: Notification) {
     const saved = await notifications.markRead(notification);
+    if (saved && role === "estudiante" && notification.tipo === "cupo_disponible") {
+      close();router.push("/student/schedule#cupos-disponibles");return;
+    }
     if (role === "admin") {
       if (saved) close();
       return;

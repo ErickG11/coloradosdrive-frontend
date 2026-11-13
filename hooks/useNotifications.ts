@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api/client";
+import { useCurrentUserId } from "@/hooks/useCurrentUserId";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 import { ApiError } from "@/lib/api/errors";
 import type { Notification, NotificationsPage } from "@/types/notification";
 
@@ -84,6 +86,8 @@ export function useNotifications() {
   }, []);
 
   const refresh = useCallback(() => load(page.current), [load]);
+  const userId=useCurrentUserId();
+  useRealtimeChannel(userId?`user-${userId}-notifications`:null,{"notifications-updated":()=>{void refresh();}});
   useEffect(() => {
     active.current = true;
     void refresh();

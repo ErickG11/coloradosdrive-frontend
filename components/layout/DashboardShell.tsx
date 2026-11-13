@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PracticeBlockProvider } from "@/components/practice-blocks/PracticeBlockProvider";
 
 import { getUserRole } from "@/lib/supabase/getUserRole";
 import { createClient } from "@/lib/supabase/server";
@@ -29,6 +30,7 @@ export async function DashboardShell({
   const hasNotifications = role === "estudiante" || role === "instructor";
 
   return (
+    <PracticeBlockProvider key={user?.id} enabled={role === "estudiante" && !studentEnrollmentRestricted}>
     <div className="relative flex min-h-full min-w-0 flex-1 flex-col md:flex-row">
       <a href="#main-content" className="skip-link">
         Saltar al contenido
@@ -52,5 +54,6 @@ export async function DashboardShell({
         </main>
       </div>
     </div>
+    </PracticeBlockProvider>
   );
 }
