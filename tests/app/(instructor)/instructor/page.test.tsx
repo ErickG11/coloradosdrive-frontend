@@ -8,6 +8,9 @@ import { ApiError } from "@/lib/api/errors";
 import type { PracticeSlot, PracticeSlotWithNames } from "@/types";
 
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn(), patch: vi.fn() } }));
+// Parámetros de la URL que ve la agenda (?fecha=AAAA-MM-DD).
+const search = vi.hoisted(() => ({ value: "" }));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(search.value) }));
 
 const get = vi.mocked(api.get);
 const patch = vi.mocked(api.patch);
@@ -69,6 +72,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-03-10T15:00:00Z"));
+  search.value = "";
   slotQueue = [];
   slotDefault = [slot];
   blocksReply = () => Promise.resolve([]);
@@ -324,6 +328,46 @@ describe("agenda diaria del instructor", () => {
       within(screen.getByRole("dialog")).getByRole("button", { name: "Confirmar cambio" }),
     );
     expect(await screen.findByText("Asistencia guardada: No asistió")).toBeInTheDocument();
+  });
+});
+
+describe("fecha en la URL", () => {
+  const nextWeek = rangePath("2026-03-16T05:00:00.000Z", "2026-03-23T05:00:00.000Z");
+
+  it("abre la semana y el día de ?fecha", async () => {
+    search.value = "fecha=2026-03-19";
+    slotsOnce([{ ...slot, scheduledAt: "2026-03-19T15:00:00.000Z" }]);
+    render(<InstructorPage />);
+    expect(await screen.findByRole("heading", { name: "Jueves 19 de marzo" })).toBeInTheDocument();
+    expect(slotCalls()).toEqual([nextWeek]);
+    expect(get).toHaveBeenCalledWith(blocksPath("2026-03-16", "2026-03-22"));
+    expect(screen.getByText("16 - 22 de marzo, 2026")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Jueves 19 de marzo/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("article")).toHaveTextContent("10:00 – 11:00");
+  });
+
+  it.each(["fecha=2026-02-30", "fecha=19-03-2026", "fecha=2026-3-9", "fecha=hola", "fecha="])(
+    "ignora %s y abre hoy",
+    async (query) => {
+      search.value = query;
+      render(<InstructorPage />);
+      expect(await screen.findAllByText("Ana Torres")).not.toHaveLength(0);
+      expect(slotCalls()).toEqual([currentPath]);
+      expect(screen.getByRole("heading", { name: "Martes 10 de marzo" })).toBeInTheDocument();
+    },
+  );
+
+  it("cambia de día si llega otra fecha con la agenda ya abierta", async () => {
+    const { rerender } = render(<InstructorPage />);
+    await screen.findAllByText("Ana Torres");
+    search.value = "fecha=2026-03-19";
+    slotsOnce([]);
+    rerender(<InstructorPage />);
+    expect(await screen.findByRole("heading", { name: "Jueves 19 de marzo" })).toBeInTheDocument();
+    expect(slotCalls()).toEqual([currentPath, nextWeek]);
   });
 });
 

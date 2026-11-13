@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { Button, Card, StatusBadge } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { addWeeks, dayKey, formatWeekRangeLabel, getWeekDays } from "@/lib/utils/calendar";
-import { formatSchoolTime, schoolCalendarDate, schoolWeekRange } from "@/lib/utils/schoolTime";
+import {
+  formatSchoolTime,
+  parseSchoolDateKey,
+  schoolCalendarDate,
+  schoolWeekRange,
+} from "@/lib/utils/schoolTime";
 import type { PracticeSlot, PracticeSlotStatus, PracticeSlotWithNames } from "@/types";
 
 import { IdentidadPresencialControl } from "./IdentidadPresencialControl";
@@ -51,8 +57,29 @@ function formatDayLabel(day: Date): string {
   return `${weekday[0].toUpperCase()}${weekday.slice(1)} ${day.getDate()} de ${month}`;
 }
 
+// useSearchParams necesita un límite de Suspense para compilar la página.
 export default function InstructorPage() {
-  const [requestedWeek, setRequestedWeek] = useState(() => schoolCalendarDate(new Date()));
+  return (
+    <Suspense
+      fallback={
+        <p role="status" className="text-sm text-text-secondary">
+          Cargando horario…
+        </p>
+      }
+    >
+      <InstructorAgenda />
+    </Suspense>
+  );
+}
+
+function InstructorAgenda() {
+  // ?fecha=AAAA-MM-DD abre esa semana y ese día (llega desde los avisos).
+  // Si falta o no es una fecha real, se ignora y se abre hoy.
+  const fechaParam = useSearchParams()?.get("fecha") ?? null;
+  const [appliedFecha, setAppliedFecha] = useState(fechaParam);
+  const [requestedWeek, setRequestedWeek] = useState(
+    () => parseSchoolDateKey(fechaParam) ?? schoolCalendarDate(new Date()),
+  );
   const [requestId, setRequestId] = useState(0);
   const [currentDate, setCurrentDate] = useState(requestedWeek);
   const [data, setData] = useState<PracticeSlotWithNames[] | null>(null);
@@ -115,6 +142,12 @@ export default function InstructorPage() {
     setIsLoading(true);
     setRequestedWeek(date);
     setRequestId((id) => id + 1);
+  }
+  // Otro aviso puede cambiar la fecha con la agenda ya abierta.
+  if (fechaParam !== appliedFecha) {
+    setAppliedFecha(fechaParam);
+    const date = parseSchoolDateKey(fechaParam);
+    if (date) requestWeek(date);
   }
   const days = getWeekDays(currentDate);
   const groups = useMemo(() => {

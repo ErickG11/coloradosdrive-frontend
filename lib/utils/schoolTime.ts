@@ -1,4 +1,4 @@
-import { addWeeks, startOfWeek } from "@/lib/utils/calendar";
+import { addWeeks, dayKey, startOfWeek } from "@/lib/utils/calendar";
 
 // La zona horaria de la escuela se define en el backend:
 // coloradosdrive-backend-git/src/utils/schoolTimezone.ts.
@@ -30,6 +30,20 @@ export function schoolCalendarDate(instant: Date): Date {
   const part = (type: Intl.DateTimeFormatPartTypes) =>
     Number(parts.find((item) => item.type === type)?.value);
   return new Date(part("year"), part("month") - 1, part("day"));
+}
+
+// Día de la escuela (AAAA-MM-DD) en el que cae un instante; null si no es válido.
+export function schoolDateKey(iso: string): string | null {
+  const instant = new Date(iso);
+  return Number.isNaN(instant.getTime()) ? null : dayKey(schoolCalendarDate(instant));
+}
+
+// Convierte AAAA-MM-DD en fecha civil; null si no es una fecha real (2026-02-30).
+export function parseSchoolDateKey(value: string | null | undefined): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return dayKey(date) === value ? date : null;
 }
 
 // Guayaquil permanece en UTC-5. Convertimos las fechas civiles de cada lunes
