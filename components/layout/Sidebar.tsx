@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { EnrollmentBrand } from "@/components/inscripcion/EnrollmentVisual";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { XIcon } from "@/components/ui/icons";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
@@ -28,8 +28,42 @@ interface SidebarProps {
   studentEnrollmentRestricted?: boolean;
 }
 
+const COLLAPSED_KEY = "coloradosdrive:sidebar-collapsed:v1";
+// Solo el menú de escritorio se contrae; el panel móvil conserva su comportamiento.
+const SidebarCollapsed = createContext(false);
+
 export function Sidebar({ email, role, studentEnrollmentRestricted = false }: SidebarProps) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    // Preferencia por dispositivo; sin almacenamiento se queda expandido.
+    const timer = window.setTimeout(() => {
+      try {
+        if (localStorage.getItem(COLLAPSED_KEY) === "1") setCollapsed(true);
+      } catch {
+        /* El almacenamiento es opcional. */
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    // El contenido y las barras fijas que usan --sidebar-width siguen al menú.
+    const root = document.documentElement;
+    if (collapsed) root.style.setProperty("--sidebar-width", "4.5rem");
+    return () => {
+      root.style.removeProperty("--sidebar-width");
+    };
+  }, [collapsed]);
+  function toggleCollapsed() {
+    setCollapsed((value) => {
+      try {
+        localStorage.setItem(COLLAPSED_KEY, value ? "0" : "1");
+      } catch {
+        /* La preferencia no se guarda, el cambio sí se aplica. */
+      }
+      return !value;
+    });
+  }
   const summary = useSolicitudSummary(role === "admin");
   const [isOpen, setIsOpen] = useState(false);
   const drawer = useRef<HTMLElement>(null);
@@ -260,11 +294,16 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
       <aside
         aria-label="Barra lateral"
         className={cn(
-          "sticky top-0 hidden h-dvh w-[var(--sidebar-width)] min-w-0 shrink-0 flex-col border-r border-border bg-bg-surface md:flex",
+          "sticky top-0 hidden h-dvh w-[var(--sidebar-width)] min-w-0 shrink-0 flex-col border-r border-border bg-bg-surface transition-[width] duration-200 ease-out motion-reduce:transition-none md:flex",
           (role === "admin" || role === "estudiante") && styles.admin,
         )}
       >
-        <div className="flex items-center justify-between gap-1 px-4 py-4">
+        <div
+          className={cn(
+            "flex gap-1 py-4",
+            collapsed ? "flex-col items-center px-2" : "items-center justify-between px-4",
+          )}
+        >
           {role === "admin" ? (
             <Link href="/admin" aria-label="Colorados Drive · Panel" className={styles.logoLink}>
               <Image
@@ -273,7 +312,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
                 width={512}
                 height={256}
                 alt="Colorados Drive"
-                className={styles.logo}
+                className={cn(styles.logo, collapsed && styles.logoSmall)}
               />
             </Link>
           ) : role === "estudiante" ? (
@@ -283,22 +322,57 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
               width={512}
               height={256}
               alt="Colorados Drive"
-              className={styles.logo}
+              className={cn(styles.logo, collapsed && styles.logoSmall)}
             />
           ) : (
             <span className="text-base font-semibold tracking-tight text-text-primary">
-              ColoradosDrive
+              {collapsed ? "CD" : "ColoradosDrive"}
             </span>
           )}
-          <ThemeToggle />
+          <div className={cn("flex items-center", collapsed && "flex-col")}>
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
+              aria-expanded={!collapsed}
+              title={collapsed ? "Expandir menú" : "Contraer menú"}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-text-secondary transition-colors hover:bg-bg-sunken hover:text-text-primary"
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-5 w-5">
+                <rect
+                  x="3"
+                  y="4"
+                  width="14"
+                  height="12"
+                  rx="2"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path d="M8 4v12" stroke="currentColor" strokeWidth="1.5" />
+                <path
+                  d={collapsed ? "m11.5 8 2 2-2 2" : "m13.5 8-2 2 2 2"}
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
         <nav
           aria-label="Navegación principal"
-          className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-2"
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto py-2",
+            collapsed ? "px-2" : "px-3",
+          )}
         >
-          {navLinks}
+          <SidebarCollapsed.Provider value={collapsed}>{navLinks}</SidebarCollapsed.Provider>
         </nav>
-        <UserBlock email={email} role={role} />
+        <SidebarCollapsed.Provider value={collapsed}>
+          <UserBlock email={email} role={role} />
+        </SidebarCollapsed.Provider>
       </aside>
       {isOpen ? (
         <div className="fixed inset-0 z-50 md:hidden">
@@ -385,25 +459,33 @@ function SidebarLink({
   children: ReactNode;
   indicator?: ReactNode;
 }) {
+  const collapsed = useContext(SidebarCollapsed);
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      title={collapsed && typeof children === "string" ? children : undefined}
       onClick={onClick}
       className={cn(
         "relative flex min-h-11 items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors",
+        collapsed && "justify-center px-0",
         active
           ? "bg-accent-red-subtle text-brand-ink before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-brand-primary"
           : "text-text-secondary hover:bg-bg-sunken hover:text-text-primary",
       )}
     >
       <NavigationIcon section={section} className="h-5 w-5 shrink-0" />
-      <span className="min-w-0">{children}</span>
-      {indicator}
+      <span className={cn("min-w-0", collapsed && "sr-only")}>{children}</span>
+      {collapsed && indicator ? (
+        <span className="absolute right-1 top-1 scale-75">{indicator}</span>
+      ) : (
+        indicator
+      )}
     </Link>
   );
 }
 function UserBlock({ email, role }: SidebarProps) {
+  const collapsed = useContext(SidebarCollapsed);
   const initials = email
     ? email
         .split("@")[0]
@@ -414,15 +496,25 @@ function UserBlock({ email, role }: SidebarProps) {
         .toLocaleUpperCase("es")
     : "CD";
   return (
-    <div className="mt-auto border-t border-border p-3">
-      <div className="mb-2 flex min-w-0 items-center gap-2.5 rounded-sm px-1 py-2">
+    <div className={cn("mt-auto border-t border-border", collapsed ? "p-2" : "p-3")}>
+      <div
+        title={
+          collapsed
+            ? [email, role ? ROLE_LABELS[role] : null].filter(Boolean).join(" · ")
+            : undefined
+        }
+        className={cn(
+          "mb-2 flex min-w-0 items-center gap-2.5 rounded-sm px-1 py-2",
+          collapsed && "justify-center",
+        )}
+      >
         <span
           aria-hidden="true"
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-bg-sunken text-xs font-semibold text-text-secondary"
         >
           {initials}
         </span>
-        <div className="min-w-0 flex-1 text-xs leading-5">
+        <div className={cn("min-w-0 flex-1 text-xs leading-5", collapsed && "sr-only")}>
           {email ? (
             <p title={email} className="truncate font-medium text-text-primary">
               {email}
@@ -431,7 +523,7 @@ function UserBlock({ email, role }: SidebarProps) {
           <p className="text-text-secondary">{role ? ROLE_LABELS[role] : "Invitado"}</p>
         </div>
       </div>
-      <LogoutButton />
+      <LogoutButton compact={collapsed} />
     </div>
   );
 }
