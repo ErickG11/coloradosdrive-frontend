@@ -179,21 +179,8 @@
   gap: 28px;
   min-width: 0;
 }
-.heroGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: stretch;
-  min-width: 0;
-}
-.heroGrid > * {
-  min-width: 0;
-}
 .enter {
   animation: sectionIn 240ms var(--enrollment-ease) both;
-}
-.heroGrid > :nth-child(2) {
-  animation-delay: 40ms;
 }
 .content > :nth-child(2) {
   animation-delay: 80ms;
@@ -204,7 +191,7 @@
 .cardStage {
   perspective: 1100px;
   width: 100%;
-  max-width: 480px;
+  max-width: none;
   margin-inline: auto;
   height: 100%;
 }
@@ -220,7 +207,7 @@
   display: grid;
   height: 100%;
   min-height: 324px;
-  aspect-ratio: 1.6;
+  aspect-ratio: auto;
   transform-style: preserve-3d;
   transition: transform 260ms var(--enrollment-ease);
 }
@@ -405,19 +392,6 @@
   font-weight: 650;
   cursor: pointer;
   transition: transform 160ms var(--enrollment-ease);
-}
-.statusPanel {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 24px;
-  padding: 28px;
-  border-radius: 16px;
-  background: var(--color-bg-surface-raised);
-  box-shadow: var(--enrollment-shadow);
-}
-.statusPanel h2 {
-  font-size: 21px;
 }
 .hours {
   display: flex;
@@ -711,7 +685,6 @@
   gap: 28px;
 }
 .skeletonCard,
-.skeletonPanel,
 .skeletonData {
   background: var(--color-bg-sunken);
   border-radius: 16px;
@@ -720,9 +693,6 @@
 .skeletonCard {
   min-height: 324px;
   aspect-ratio: 1.6;
-}
-.skeletonPanel {
-  min-height: 324px;
 }
 .skeletonData {
   height: 260px;
@@ -760,9 +730,6 @@
   transform: scale(0.98);
 }
 @media (min-width: 768px) and (max-width: 1279px) {
-  .heroGrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .cardStage {
     margin-inline: 0;
   }
@@ -790,7 +757,6 @@
     flex-direction: column;
     gap: 14px;
   }
-  .heroGrid,
   .detailGrid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -798,7 +764,6 @@
     width: 100%;
     grid-column: auto;
   }
-  .statusPanel,
   .dataCard {
     padding: 22px;
   }
@@ -806,7 +771,7 @@
     padding-inline: 20px;
   }
   .cardStage {
-    max-width: 480px;
+    max-width: none;
   }
   .cardTilt,
   .cardFace,
@@ -908,5 +873,128 @@
   .segmented button:hover,
   .segmented button:active {
     transform: none;
+  }
+}
+
+/* C12: una tarjeta larga, seguida por una cuadrícula independiente. */
+.notices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+.noticeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-surface);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.noticeChip .icon {
+  color: var(--color-brand-ink);
+}
+.cardStage,
+.cardTilt,
+.credential {
+  height: auto;
+}
+.cardFace {
+  padding: 26px 28px 70px;
+}
+.cardFace[data-current="false"] {
+  pointer-events: none;
+}
+.cardFrontGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  flex: 1;
+  min-width: 0;
+}
+.cardIdentityPane,
+.cardAccessPane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 18px;
+}
+.cardAccessPane {
+  border-left: 1px solid var(--color-brand-border);
+  padding-left: 28px;
+}
+.cardAccessPane h2 {
+  font-size: 20px;
+}
+.cardPaymentHeading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cardPaymentHeading .icon {
+  width: 28px;
+  height: 28px;
+  color: var(--color-brand-ink);
+}
+.cardPaymentData {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-block: 20px;
+}
+.cardPaymentData dt {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 7px;
+}
+.cardPaymentData dd {
+  font-size: 18px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.cardNoPayment {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 18px;
+  flex: 1;
+  text-align: center;
+  padding: 24px 0;
+}
+.cardNoPayment .icon {
+  width: 48px;
+  height: 48px;
+  color: var(--color-brand-ink);
+}
+.flipButton {
+  z-index: 3;
+}
+.dataCard {
+  border: 1px solid var(--color-border);
+}
+@media (max-width: 767px) {
+  .cardFrontGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .cardAccessPane {
+    border-left: 0;
+    border-top: 1px solid var(--color-brand-border);
+    padding-left: 0;
+    padding-top: 24px;
+  }
+  .cardFace {
+    padding: 22px 20px 70px;
+  }
+  .cardPaymentData {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .noticeChip {
+    width: 100%;
+    align-items: flex-start;
   }
 }

@@ -9,6 +9,7 @@ import type { StudentScheduleReservation } from "@/types/studentSchedule";
 import { useEnrollmentOverview } from "./useEnrollmentOverview";
 import { enrollmentStatus, licenseLabel, shortEnrollmentId } from "./enrollmentModel";
 import { EnrollmentBadge, EnrollmentIcon, EnrollmentSkeleton } from "./EnrollmentVisual";
+import { EnrollmentNotices } from "./EnrollmentNotices";
 import { EnrollmentCard } from "./EnrollmentCard";
 import { EnrollmentDetails, EnrollmentStatusPanel } from "./EnrollmentDetails";
 import styles from "./enrollment-overview.module.css";
@@ -74,17 +75,6 @@ export function EnrollmentWorkspace({
   );
   return (
     <div className={styles.workspace}>
-      <BillingPanel />
-      {state.individualDates?.practiceStartDate ? (
-        <p>
-          Prácticas: {state.individualDates.practiceStartDate} —{" "}
-          {state.individualDates.practiceEndDate}. Acceso hasta{" "}
-          {state.individualDates.accessEndDate}.
-        </p>
-      ) : null}
-      {state.fechaLimite && state.documentosFisicos.some((d) => d.estado === "pendiente") ? (
-        <p>Te quedan {Math.max(0, state.diasRestantes ?? 0)} días para llevar tus documentos.</p>
-      ) : null}
       <header className={styles.header}>
         <div>
           <h1>Mi inscripción</h1>
@@ -97,6 +87,7 @@ export function EnrollmentWorkspace({
           />
         ) : null}
       </header>
+      <EnrollmentNotices state={state} />
       {enrollments.length > 1 ? (
         <div className={styles.segmented} role="group" aria-label="Selecciona tu matrícula">
           {enrollments.map((item) => (
@@ -162,14 +153,22 @@ export function EnrollmentWorkspace({
         </section>
       ) : (
         <div key={enrollment.enrollmentId} className={styles.content}>
-          <div className={styles.heroGrid}>
-            <div className={styles.enter}>
-              <EnrollmentCard
-                identity={overview.identity}
-                enrollment={enrollment}
-                cohortName={cohortName}
-              />
-            </div>
+          <div className={styles.enter}>
+            <EnrollmentCard
+              identity={overview.identity}
+              enrollment={enrollment}
+              cohortName={cohortName}
+              payment={ownPayment}
+            />
+          </div>
+          <EnrollmentDetails
+            enrollment={enrollment}
+            courseName={course?.nombre ?? null}
+            cohortName={cohortName}
+            identity={overview.identity}
+            state={principal}
+            hoursPerDay={ownReservation?.plan?.horasPorDia ?? null}
+          >
             <EnrollmentStatusPanel
               enrollment={enrollment}
               nextPractice={next?.scheduledAt ?? null}
@@ -182,18 +181,10 @@ export function EnrollmentWorkspace({
               }
               now={state.serverNow}
             />
-          </div>
-          <EnrollmentDetails
-            enrollment={enrollment}
-            courseName={course?.nombre ?? null}
-            cohortName={cohortName}
-            identity={overview.identity}
-            state={principal}
-            payment={ownPayment}
-            hoursPerDay={ownReservation?.plan?.horasPorDia ?? null}
-          />
+          </EnrollmentDetails>
         </div>
       )}
+      <BillingPanel />
     </div>
   );
 }
