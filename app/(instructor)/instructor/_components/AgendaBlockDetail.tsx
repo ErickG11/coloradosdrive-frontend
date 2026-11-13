@@ -13,6 +13,7 @@ import {
   type AgendaBlock,
 } from "../_lib/instructorAgenda";
 import { CourseTypeBadge } from "./CourseTypeBadge";
+import { StudentAvatar } from "./InstructorVisuals";
 import styles from "./agenda.module.css";
 
 export function AgendaBlockDetail({
@@ -37,9 +38,12 @@ export function AgendaBlockDetail({
       <p className="mb-1 text-sm text-text-secondary">
         {formatDayLabel(parseSchoolDateKey(block.date)!)}
       </p>
-      <p className="mb-4 text-xl font-semibold text-text-primary">
-        {first.studentName ?? "Sin alumno"}
-      </p>
+      <div className={styles.detailStudent}>
+        <StudentAvatar name={first.studentName} type={first.courseType} />
+        <p className="text-xl font-semibold text-text-primary">
+          {first.studentName ?? "Sin alumno"}
+        </p>
+      </div>
       <div className="mb-6 flex flex-wrap gap-2">
         <CourseTypeBadge type={first.courseType} />
         <StatusBadge status={block.status} label={STATUS_LABELS[block.status]} />

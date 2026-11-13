@@ -79,6 +79,45 @@ function desktop() {
 }
 
 describe("calendario semanal y detalle", () => {
+  it("resume hoy y la semana usando horas y alumnos distintos", async () => {
+    slotsOnce([
+      slot,
+      { ...slot, id: "next", scheduledAt: "2026-03-11T15:00:00Z" },
+      { ...slot, id: "other", studentId: "other", scheduledAt: "2026-03-12T15:00:00Z" },
+    ]);
+    render(<InstructorPage />);
+    await screen.findAllByText("Ana Torres");
+    const summary = screen.getByLabelText("Resumen de hoy y de la semana");
+    expect(within(summary).getByText("Bloques de hoy").nextElementSibling).toHaveTextContent("1");
+    expect(within(summary).getByText("Horas de esta semana").nextElementSibling).toHaveTextContent(
+      "3 h",
+    );
+    expect(within(summary).getByText("Alumnos esta semana").nextElementSibling).toHaveTextContent(
+      "2",
+    );
+    expect(screen.getByText(/Hola, Bruno/)).toBeInTheDocument();
+    expect(screen.getByText("En curso ahora")).toBeInTheDocument();
+  });
+  it("muestra la cuenta regresiva y abre el bloque destacado", async () => {
+    slotsOnce([
+      { ...slot, status: "confirmado", scheduledAt: "2026-03-10T15:25:00Z", courseType: "B" },
+    ]);
+    const user = userEvent.setup();
+    render(<InstructorPage />);
+    expect(await screen.findByText("en 25 min")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver bloque" }));
+    expect(screen.getByRole("dialog", { name: "Detalle del bloque" })).toHaveTextContent("Tipo B");
+  });
+  it("el aviso enlaza las horas pendientes de toda la semana", async () => {
+    vi.setSystemTime(new Date("2026-03-10T18:00:00Z"));
+    render(<InstructorPage />);
+    expect(await screen.findByText("1 hora por registrar")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Revisar asistencias/ })).toHaveAttribute(
+      "href",
+      "/instructor/asistencias?desde=2026-03-09&hasta=2026-03-15",
+    );
+    expect(screen.getByText("Agenda libre")).toBeInTheDocument();
+  });
   const second = {
     ...slot,
     id: "slot-2",

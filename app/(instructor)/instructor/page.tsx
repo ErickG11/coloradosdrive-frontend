@@ -17,6 +17,7 @@ import {
 import { AgendaCalendar, AgendaDayNavigation } from "./_components/AgendaCalendar";
 import { AgendaDayList } from "./_components/AgendaDayList";
 import { AgendaBlockDetail } from "./_components/AgendaBlockDetail";
+import { AgendaOverview } from "./_components/AgendaOverview";
 import styles from "./_components/agenda.module.css";
 
 const WIDE_QUERY = "(min-width: 768px)";
@@ -94,7 +95,6 @@ function InstructorAgenda() {
     <div className="flex min-w-0 flex-col gap-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="mb-1 text-sm text-text-secondary">Tu semana de prácticas</p>
           <h1 className="font-display text-2xl font-bold text-text-primary">Mi agenda</h1>
         </div>
         <div className={styles.viewToggle} role="group" aria-label="Vista de la agenda">
@@ -114,6 +114,16 @@ function InstructorAgenda() {
           </Button>
         </div>
       </header>
+      <AgendaOverview
+        blocks={blocks}
+        todayKey={todayKey}
+        now={now}
+        loaded={data !== null}
+        weekContainsToday={days.some((day) => dayKey(day) === todayKey)}
+        from={dayKey(days[0])}
+        to={dayKey(days[6])}
+        onSelect={(block) => setSelectedBlockId(block.id)}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p aria-live="polite" className="font-medium text-text-primary">

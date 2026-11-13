@@ -10,6 +10,7 @@ import {
   type AgendaBlock,
 } from "../_lib/instructorAgenda";
 import { CourseTypeBadge } from "./CourseTypeBadge";
+import { StudentAvatar, InstructorIcon } from "./InstructorVisuals";
 import styles from "./agenda.module.css";
 
 export function AgendaBlockCard({
@@ -28,6 +29,7 @@ export function AgendaBlockCard({
   return (
     <article
       className={`${styles.blockCard} ${free ? styles.freeBlock : ""}`}
+      data-course={first.courseType ?? "unknown"}
       aria-label={`Bloque ${blockTime(block)}`}
     >
       <button
@@ -40,14 +42,17 @@ export function AgendaBlockCard({
           <time dateTime={block.startsAt}>{blockTime(block)}</time>
           <span className={styles.blockState}>{STATUS_LABELS[block.status]}</span>
         </span>
-        <span className={styles.studentName}>
-          {first.studentName ?? (block.status === "sin_practica" ? "Sin alumno" : "Libre")}
+        <span className={styles.studentRow}>
+          <StudentAvatar name={first.studentName} type={first.courseType} />
+          <span className={styles.studentName}>
+            {first.studentName ?? (block.status === "sin_practica" ? "Sin alumno" : "Libre")}
+          </span>
         </span>
         <CourseTypeBadge type={first.courseType} />
       </button>
       {!compact && hasEndedHour(block, now) ? (
         <Link className={styles.attendanceLink} href={attendanceHref(block.date, block.id)}>
-          Ir a asistencias <span aria-hidden="true">→</span>
+          Ir a asistencias <InstructorIcon name="arrow" />
         </Link>
       ) : null}
     </article>

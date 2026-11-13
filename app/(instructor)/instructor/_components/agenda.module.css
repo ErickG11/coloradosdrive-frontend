@@ -9,7 +9,7 @@
 }
 .summary > div {
   min-width: 0;
-  padding: 18px 20px;
+  padding: 10px 16px;
   background: var(--color-bg-surface);
 }
 .summary dt {
@@ -230,7 +230,7 @@
 .calendarEvent .blockCard {
   height: 100%;
   overflow: auto;
-  border-left: 3px solid var(--color-brand-border);
+  border-left: 1px solid var(--course-ink, var(--color-border-strong));
 }
 .calendarEvent .freeBlock {
   border-left-color: var(--color-border-strong);
@@ -243,7 +243,7 @@
   font-size: 12px;
 }
 .calendarEvent .blockState {
-  display: none;
+  display: inline-flex;
 }
 .calendarEvent .studentName {
   font-size: 13px;
@@ -316,6 +316,238 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .blockButton {
+    transition: none;
+  }
+}
+
+[data-course="A"] {
+  --course-ink: var(--color-status-info);
+  --course-bg: var(--color-status-info-bg);
+}
+[data-course="B"] {
+  --course-ink: var(--color-status-success);
+  --course-bg: var(--color-status-success-bg);
+}
+[data-course="unknown"] {
+  --course-ink: var(--color-text-secondary);
+  --course-bg: var(--color-bg-sunken);
+}
+.overview {
+  display: grid;
+  gap: 18px;
+}
+.greeting {
+  color: var(--color-text-secondary);
+  font-size: 15px;
+}
+.weekStats {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr 1fr;
+  gap: 24px;
+  padding: 4px 0 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.weekStats > div {
+  min-width: 0;
+}
+.weekStats dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.weekStats dt svg {
+  width: 16px;
+  height: 16px;
+}
+.weekStats dd {
+  font-size: 27px;
+  font-weight: 650;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.weekStats dd span {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+.weekStats .scheduleValue {
+  font-size: 17px;
+  padding-top: 4px;
+}
+.nextPractice {
+  padding: 18px 20px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+.nextHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.nextHeading h2 {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+.nextCountdown {
+  margin-left: auto;
+  color: var(--course-ink);
+  background: var(--course-bg);
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+}
+.nextBody {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+.nextStudent {
+  flex: 1;
+  min-width: 130px;
+}
+.nextStudent strong {
+  font-size: 18px;
+}
+.nextStudent p,
+.nextEmpty {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.nextEmpty {
+  margin-top: 14px;
+}
+.avatar {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--course-bg);
+  color: var(--course-ink);
+  font-size: 12px;
+  font-weight: 650;
+}
+.studentRow,
+.detailStudent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.studentRow {
+  width: 100%;
+}
+.studentName {
+  overflow-wrap: anywhere;
+}
+.detailStudent {
+  margin: 16px 0;
+}
+.detailStudent .avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+}
+.blockCard {
+  border-color: color-mix(in srgb, var(--course-ink) 38%, var(--color-border));
+  background: var(--color-bg-surface);
+  transition:
+    border-color 160ms ease-out,
+    background-color 160ms ease-out;
+}
+.blockTop {
+  color: var(--course-ink);
+}
+.blockState {
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-sunken);
+}
+.freeBlock {
+  border-color: var(--color-border);
+  background: var(--color-bg-sunken);
+}
+.calendarEvent .blockCard {
+  background: color-mix(in srgb, var(--course-bg) 45%, var(--color-bg-surface));
+}
+.calendarEvent .avatar {
+  width: 25px;
+  height: 25px;
+  font-size: 12px;
+}
+.calendarEvent .studentRow {
+  gap: 6px;
+}
+.calendarEvent .blockTop {
+  gap: 3px;
+}
+.calendarEvent .blockState {
+  font-size: 12px;
+}
+.calendarEvent .blockButton {
+  gap: 6px;
+}
+.calendarEvent .freeBlock {
+  background: var(--color-bg-sunken);
+}
+.pendingNotice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-status-warning) 45%, var(--color-border));
+  border-radius: var(--radius-sm);
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning);
+  font-size: 14px;
+}
+.pendingNotice p {
+  flex: 1;
+}
+.pendingNotice a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.blockButton:active {
+  background: var(--course-bg);
+}
+@media (max-width: 767px) {
+  .weekStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 16px;
+  }
+  .nextPractice {
+    padding: 16px;
+  }
+  .nextBody > button {
+    width: 100%;
+  }
+  .nextCountdown {
+    max-width: 48%;
+    text-align: right;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blockCard {
     transition: none;
   }
 }
