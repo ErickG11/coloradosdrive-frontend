@@ -14,6 +14,7 @@ import type {
 import { adminErrorMessage, esConflictoDeEstado } from "./adminErrors";
 import { ETIQUETA_MOTIVO, MOTIVOS_DEVOLVER, MOTIVOS_RECHAZAR, formatearFecha } from "./catalogo";
 import type { ResultadoDecision } from "./decisionTipos";
+import { horaGuayaquil, type RequestReviewLock } from "./useRequestReview";
 import styles from "./solicitudes.module.css";
 
 type Accion = "aprobar" | "devolver" | "rechazar";
@@ -110,10 +111,12 @@ function SoloLectura({ detalle }: { detalle: SolicitudAdminDetalle }) {
 
 export function DecisionPanel({
   detalle,
+  candado,
   onDecidida,
   onConflicto,
 }: {
   detalle: SolicitudAdminDetalle;
+  candado: RequestReviewLock;
   onDecidida: (resultado: ResultadoDecision) => void;
   onConflicto: () => void;
 }) {
@@ -131,8 +134,16 @@ export function DecisionPanel({
   const lock = useRef(false);
 
   if (detalle.estado !== "enviada") return <SoloLectura detalle={detalle} />;
-  if (detalle.identityRulesActive && !detalle.reviewOwned)
-    return <p role="status">Reclama la revisión desde Verificaciones antes de decidir.</p>;
+  if (detalle.identityRulesActive && candado.phase !== "owned" && candado.phase !== "inactive")
+    return (
+      <p role="status" className={styles.note}>
+        {candado.phase === "other"
+          ? `Otro administrador está revisando esta solicitud hasta las ${horaGuayaquil(candado.until)}.`
+          : candado.phase === "error"
+            ? "No se pudo preparar la revisión. Cierra y vuelve a abrir la solicitud."
+            : "Preparando la revisión…"}
+      </p>
+    );
 
   const motivos = accion === "devolver" ? MOTIVOS_DEVOLVER : MOTIVOS_RECHAZAR;
   const motivoActual = motivos.find((m) => m.codigo === motivo);

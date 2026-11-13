@@ -1,9 +1,11 @@
 "use client";
-import { useId, useRef, useState } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { Button, buttonClassName } from "@/components/ui/Button";
 import { FormError } from "@/components/ui/FormError";
 import { Select } from "@/components/ui/Select";
+import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { api } from "@/lib/api/client";
 import { registrarVerificacion } from "@/lib/api/inscripcion";
 import {
   ENLACE_MINISTERIO_EDUCACION,
@@ -18,6 +20,7 @@ import type {
   VerificacionSolicitud,
 } from "@/types/inscripcion";
 import { adminErrorMessage } from "./adminErrors";
+import { CertificadoPanel } from "./CertificadoPanel";
 import {
   ETIQUETA_METODO,
   ETIQUETA_RESULTADO,
@@ -26,6 +29,7 @@ import {
   formatearFecha,
   metodosParaVerificacion,
 } from "./catalogo";
+import { horaGuayaquil, type RequestReviewLock } from "./useRequestReview";
 import styles from "./solicitudes.module.css";
 
 const MAX_NOTA = 1000;
@@ -36,23 +40,51 @@ function portalPara(tipo: TipoVerificacion, detalle: SolicitudAdminDetalle) {
   return detalle.nivelEstudios?.startsWith("bachiller") ? ENLACE_MINISTERIO_EDUCACION : null;
 }
 
+// Método por defecto de cada bloque: el portal oficial correspondiente.
+function metodoInicial(tipo: TipoVerificacion, detalle: SolicitudAdminDetalle): MetodoVerificacion {
+  if (tipo === "identidad") return "registro_civil_portal";
+  return portalPara(tipo, detalle) ? "ministerio_portal" : "codigo_qr_certificado";
+}
+
+// Observación automática: "Verificado en el Registro Civil" / "Verificado en el Ministerio de
+// Educación"; la nota opcional del administrador se agrega a continuación.
+function observacion(
+  resultado: ResultadoVerificacion,
+  metodo: MetodoVerificacion,
+  nota: string,
+): string {
+  const fuente =
+    metodo === "registro_civil_portal"
+      ? "en el Registro Civil"
+      : metodo === "ministerio_portal"
+        ? "en el Ministerio de Educación"
+        : `con ${ETIQUETA_METODO[metodo].toLowerCase()}`;
+  const base = `${ETIQUETA_RESULTADO[resultado]} ${fuente}`;
+  return nota.trim() ? `${base}. ${nota.trim()}`.slice(0, MAX_NOTA) : base;
+}
+
 function BloqueVerificacion({
   tipo,
   detalle,
+  candado,
   puedeRegistrar,
   onRegistrada,
+  children,
 }: {
   tipo: TipoVerificacion;
   detalle: SolicitudAdminDetalle;
+  candado: RequestReviewLock;
   puedeRegistrar: boolean;
   onRegistrada: (verificacion: VerificacionSolicitud) => void;
+  children?: ReactNode;
 }) {
   const baseId = useId();
   const metodos = metodosParaVerificacion();
-  const [metodo, setMetodo] = useState<MetodoVerificacion | "">(""),
-    [resultado, setResultado] = useState<ResultadoVerificacion | "">(""),
+  const [metodo, setMetodo] = useState<MetodoVerificacion>(metodoInicial(tipo, detalle)),
+    [resultado, setResultado] = useState<ResultadoVerificacion>("verificado"),
     [nota, setNota] = useState(""),
-    [errores, setErrores] = useState<{ metodo?: string; resultado?: string; nota?: string }>({}),
+    [archivo, setArchivo] = useState<File | null>(null),
+    [errores, setErrores] = useState<{ archivo?: string; nota?: string }>({}),
     [error, setError] = useState(""),
     [copiado, setCopiado] = useState(""),
     [ocupado, setOcupado] = useState(false);
@@ -77,25 +109,48 @@ function BloqueVerificacion({
   async function registrar() {
     if (lock.current) return;
     const nuevos: typeof errores = {};
-    if (!metodo) nuevos.metodo = "Selecciona el método usado.";
-    if (!resultado) nuevos.resultado = "Selecciona el resultado.";
+    const presencial = metodo === "original_presencial";
+    if (presencial && !archivo) nuevos.archivo = "Adjunta el escaneo presencial.";
     if (nota.length > MAX_NOTA) nuevos.nota = `La nota admite hasta ${MAX_NOTA} caracteres.`;
     setErrores(nuevos);
-    if (Object.keys(nuevos).length > 0 || !metodo || !resultado) return;
+    if (Object.keys(nuevos).length > 0) return;
     lock.current = true;
     setOcupado(true);
     setError("");
+    const texto = observacion(resultado, metodo, nota);
     try {
-      const creada = await registrarVerificacion(detalle.id, {
-        tipo,
-        metodo,
-        resultado,
-        ...(nota.trim() ? { nota: nota.trim() } : {}),
-      });
+      let creada: VerificacionSolicitud;
+      if (candado.phase === "owned" && candado.token) {
+        // Contrato vigente (indicador de identidad encendido): verificación con el candado.
+        const data = new FormData();
+        for (const [key, value] of Object.entries({
+          token: candado.token,
+          tipo,
+          metodo,
+          resultado,
+          nota: texto,
+          mode: presencial ? "presencial" : "web",
+        }))
+          data.append(key, value);
+        if (presencial && archivo) data.append("archivo", archivo);
+        creada = await api.post<VerificacionSolicitud>(
+          `/admin/solicitudes/${detalle.id}/revision/verificar`,
+          data,
+          { signal: AbortSignal.timeout(30_000) },
+        );
+      } else {
+        creada = await registrarVerificacion(detalle.id, {
+          tipo,
+          metodo,
+          resultado,
+          nota: texto,
+        });
+      }
       onRegistrada(creada);
-      setMetodo("");
-      setResultado("");
+      setMetodo(metodoInicial(tipo, detalle));
+      setResultado("verificado");
       setNota("");
+      setArchivo(null);
     } catch (e) {
       setError(adminErrorMessage(e));
     } finally {
@@ -116,6 +171,11 @@ function BloqueVerificacion({
         <p className={styles.note}>Todavía sin verificar.</p>
       )}
 
+      {tipo === "identidad" && detalle.cedula ? (
+        <p>
+          Cédula: <strong>{detalle.cedula}</strong>
+        </p>
+      ) : null}
       {portal || detalle.cedula ? (
         <div className={styles.controls}>
           {portal ? (
@@ -161,33 +221,41 @@ function BloqueVerificacion({
           noValidate
         >
           <Select
-            label="Método"
-            value={metodo}
-            error={errores.metodo}
-            onChange={(e) => setMetodo(e.target.value as MetodoVerificacion | "")}
-          >
-            <option value="">Selecciona…</option>
-            {metodos.map(({ metodo: m }) => (
-              <option key={m} value={m}>
-                {ETIQUETA_METODO[m]}
-              </option>
-            ))}
-          </Select>
-          <Select
             label="Resultado"
             value={resultado}
-            error={errores.resultado}
-            onChange={(e) => setResultado(e.target.value as ResultadoVerificacion | "")}
+            onChange={(e) => setResultado(e.target.value as ResultadoVerificacion)}
           >
-            <option value="">Selecciona…</option>
             {RESULTADOS.map((r) => (
               <option key={r} value={r}>
                 {ETIQUETA_RESULTADO[r]}
               </option>
             ))}
           </Select>
+          <Select
+            label="Método"
+            value={metodo}
+            onChange={(e) => {
+              setMetodo(e.target.value as MetodoVerificacion);
+              setArchivo(null);
+            }}
+          >
+            {metodos.map(({ metodo: m }) => (
+              <option key={m} value={m}>
+                {ETIQUETA_METODO[m]}
+              </option>
+            ))}
+          </Select>
+          {metodo === "original_presencial" ? (
+            <Input
+              label="Escaneo presencial (PDF, JPG o PNG, hasta 2 MiB)"
+              type="file"
+              accept="application/pdf,image/jpeg,image/png"
+              error={errores.archivo}
+              onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+            />
+          ) : null}
           <Textarea
-            label="Nota técnica (opcional)"
+            label="Nota (opcional)"
             value={nota}
             error={errores.nota}
             maxLength={MAX_NOTA}
@@ -206,6 +274,8 @@ function BloqueVerificacion({
           </div>
         </form>
       ) : null}
+
+      {children}
 
       {historial.length > 0 ? (
         <div className={styles.detail}>
@@ -229,34 +299,55 @@ function BloqueVerificacion({
 }
 
 // Verificaciones en la fuente (append-only). Solo se registran mientras la solicitud está
-// «enviada»; en cualquier otro estado el historial queda en solo lectura.
+// «enviada» y la revisión es del administrador; en cualquier otro caso el historial queda en
+// solo lectura.
 export function VerificacionesPanel({
   detalle,
+  candado,
   onRegistrada,
 }: {
   detalle: SolicitudAdminDetalle;
+  candado: RequestReviewLock;
   onRegistrada: (verificacion: VerificacionSolicitud) => void;
 }) {
-  const puedeRegistrar = detalle.estado === "enviada" && !detalle.identityRulesActive;
+  const puedeRegistrar =
+    detalle.estado === "enviada" &&
+    (candado.phase === "owned" || (candado.phase === "inactive" && !detalle.identityRulesActive));
   return (
     <section className={styles.section} aria-labelledby="verificaciones-title">
       <h3 id="verificaciones-title">Verificaciones</h3>
-      {puedeRegistrar ? null : (
+      {candado.phase === "other" ? (
+        <p role="status" className={styles.note}>
+          Otro administrador está revisando esta solicitud hasta las {horaGuayaquil(candado.until)}.
+        </p>
+      ) : candado.phase === "loading" ? (
+        <p role="status" className={styles.note}>
+          Preparando la revisión…
+        </p>
+      ) : candado.phase === "error" ? (
+        <p role="alert" className={styles.note}>
+          No se pudo preparar la revisión. Cierra y vuelve a abrir la solicitud.
+        </p>
+      ) : !puedeRegistrar ? (
         <p className={styles.note}>Solo se registran verificaciones en solicitudes pendientes.</p>
-      )}
+      ) : null}
       <div className={styles.documentList}>
         <BloqueVerificacion
           tipo="identidad"
           detalle={detalle}
+          candado={candado}
           puedeRegistrar={puedeRegistrar}
           onRegistrada={onRegistrada}
         />
         <BloqueVerificacion
           tipo="estudios"
           detalle={detalle}
+          candado={candado}
           puedeRegistrar={puedeRegistrar}
           onRegistrada={onRegistrada}
-        />
+        >
+          <CertificadoPanel detalle={detalle} />
+        </BloqueVerificacion>
       </div>
     </section>
   );

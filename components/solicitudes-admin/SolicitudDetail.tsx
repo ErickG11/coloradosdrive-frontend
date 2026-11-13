@@ -7,7 +7,6 @@ import { getSolicitudAdmin } from "@/lib/api/inscripcion";
 import type { SolicitudAdminDetalle, SolicitudAdminItem } from "@/types/inscripcion";
 import { adminErrorMessage } from "./adminErrors";
 import { nombreDe } from "./catalogo";
-import { CertificadoPanel } from "./CertificadoPanel";
 import { ConsentimientoPanel } from "./ConsentimientoPanel";
 import { DatosDeclarados } from "./DatosDeclarados";
 import { DecisionPanel } from "./DecisionPanel";
@@ -17,6 +16,7 @@ import type { ResultadoDecision } from "./decisionTipos";
 import { SolicitudDrawer } from "./SolicitudDrawer";
 import { SolicitudStatus } from "./SolicitudStatus";
 import { IdentityReviewPanel } from "./IdentityReviewPanel";
+import { useRequestReview } from "./useRequestReview";
 import { VerificacionesPanel } from "./VerificacionesPanel";
 import styles from "./solicitudes.module.css";
 
@@ -71,6 +71,11 @@ export function SolicitudDetail({
     if (resultado) resultadoRef.current?.focus();
   }, [resultado]);
 
+  // Candado de revisión: se adquiere al abrir la solicitud pendiente y se renueva en silencio.
+  const candado = useRequestReview(
+    item.id,
+    detalle?.estado === "enviada" && Boolean(detalle.identityRulesActive),
+  );
   const actual = detalle ?? item;
   return (
     <SolicitudDrawer
@@ -81,6 +86,7 @@ export function SolicitudDetail({
         detalle?.estado === "enviada" ? (
           <DecisionPanel
             detalle={detalle}
+            candado={candado}
             onDecidida={(decidida) => {
               setResultado(decidida);
               setDetalle((previo) => (previo ? { ...previo, estado: decidida.estado } : previo));
@@ -172,6 +178,7 @@ export function SolicitudDetail({
               />
               <VerificacionesPanel
                 detalle={detalle}
+                candado={candado}
                 onRegistrada={(verificacion) =>
                   setDetalle((previo) =>
                     previo
@@ -180,7 +187,6 @@ export function SolicitudDetail({
                   )
                 }
               />
-              <CertificadoPanel detalle={detalle} />
             </div>
 
             <div
@@ -204,6 +210,7 @@ export function SolicitudDetail({
               {detalle.estado !== "enviada" ? (
                 <DecisionPanel
                   detalle={detalle}
+                  candado={candado}
                   onDecidida={(decidida) => {
                     setResultado(decidida);
                     setDetalle((previo) =>

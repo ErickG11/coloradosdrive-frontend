@@ -1,11 +1,10 @@
 "use client";
 import { useState } from "react";
-import { Button, Input, Select, Textarea } from "@/components/ui";
+import { Button, Input, Textarea } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import type { RequestReviewState } from "@/types/requestReview";
 import type { SolicitudAdminDetalle } from "@/types/inscripcion";
-import { ETIQUETA_METODO } from "./catalogo";
 export function IdentityReviewPanel({
   detail,
   onChanged,
@@ -17,68 +16,8 @@ export function IdentityReviewPanel({
   const review = useFetch<RequestReviewState>(`${root}/revision`);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
-  const [type, setType] = useState("identidad"),
-    [method, setMethod] = useState("registro_civil_portal"),
-    [mode, setMode] = useState("web"),
-    [result, setResult] = useState("verificado"),
-    [note, setNote] = useState("");
-  const [file, setFile] = useState<File | null>(null),
-    [reason, setReason] = useState(""),
+  const [reason, setReason] = useState(""),
     [revokeConfirm, setRevokeConfirm] = useState(false);
-  async function claim() {
-    setBusy(true);
-    setMessage("");
-    try {
-      await api.post(`${root}/revision/reclamar`, {});
-      review.refetch();
-      onChanged();
-      setMessage("Revisión reclamada. Renueva antes del vencimiento para continuar.");
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "No se pudo reclamar.");
-      review.refetch();
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function verify() {
-    if (!review.data?.token || !note.trim()) {
-      setMessage("Reclama la revisión y escribe la observación.");
-      return;
-    }
-    if (mode === "presencial" && !file) {
-      setMessage("Adjunta el escaneo presencial.");
-      return;
-    }
-    setBusy(true);
-    setMessage("");
-    try {
-      const data = new FormData();
-      for (const [key, value] of Object.entries({
-        token: review.data.token,
-        tipo: type,
-        metodo: method,
-        resultado: result,
-        nota: note.trim(),
-        mode,
-      }))
-        data.append(key, value);
-      if (mode === "presencial" && file) data.append("archivo", file);
-      await api.post(`${root}/revision/verificar`, data, { signal: AbortSignal.timeout(30_000) });
-      setMessage("Verificación registrada con trazabilidad.");
-      setNote("");
-      setFile(null);
-      review.refetch();
-      onChanged();
-    } catch (e) {
-      setMessage(
-        e instanceof Error
-          ? e.message
-          : "No se pudo confirmar el resultado. Recarga antes de repetir.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
   async function revoke() {
     if (!review.data?.updatedAt || !reason.trim()) return;
     setBusy(true);
@@ -144,13 +83,19 @@ export function IdentityReviewPanel({
         </Button>
       </p>
     );
-  if (!review.data) return <p role="status">Consultando revisión…</p>;
+  if (!review.data) return null;
+  const hayContenido =
+    Boolean(review.data.archivedAt || review.data.revokedAt) ||
+    detail.verificaciones.some((v) => v.scanAvailable) ||
+    detail.estado === "aprobada" ||
+    detail.estado === "archivada" ||
+    (review.data.failedEmails ?? 0) > 0;
+  if (!hayContenido) return null;
   return (
     <section
       className="my-4 grid gap-3 rounded-sm border p-4"
-      aria-label="Revisión exclusiva y archivo"
+      aria-label="Expediente"
     >
-      <h3 className="font-medium">Revisión y trazabilidad</h3>
       {review.data.archivedAt ? (
         <p>Expediente archivado y enlazado al alumno. Se conserva la solicitud y su evidencia.</p>
       ) : null}
@@ -161,96 +106,6 @@ export function IdentityReviewPanel({
             ? "Acceso bloqueado y pago en revisión; no hay devolución automática."
             : "Cuenta desactivada y matrícula anulada."}
         </p>
-      ) : null}
-      {detail.estado === "enviada" ? (
-        <>
-          <p>
-            {review.data.owned
-              ? "Tienes la revisión temporal."
-              : "Reclama la revisión para verificar y decidir. Otro revisor no puede decidir mientras esté vigente."}
-            {review.data.until
-              ? ` Vence: ${new Date(review.data.until).toLocaleString("es-EC", { timeZone: "America/Guayaquil" })} (Guayaquil).`
-              : ""}
-          </p>
-          <Button type="button" variant="secondary" disabled={busy} onClick={() => void claim()}>
-            {review.data.owned ? "Renovar revisión" : "Reclamar revisión"}
-          </Button>
-          <fieldset className="grid gap-3" disabled={!review.data.owned || busy}>
-            <Select
-              label="Tipo de verificación"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
-              <option value="identidad">Identidad</option>
-              <option value="estudios">Estudios</option>
-            </Select>
-            <Select
-              label="Modo de verificación"
-              value={mode}
-              onChange={(e) => {
-                const next = e.target.value;
-                setMode(next);
-                setFile(null);
-                setMethod(
-                  next === "presencial"
-                    ? "original_presencial"
-                    : next === "documento_homologado"
-                      ? "revision_visual"
-                      : "registro_civil_portal",
-                );
-              }}
-            >
-              <option value="web">Web</option>
-              <option value="presencial">Presencial con escaneo</option>
-              <option value="documento_homologado">Documento homologado</option>
-            </Select>
-            <Select
-              label="Método utilizado"
-              value={method}
-              onChange={(e) => setMethod(e.target.value)}
-            >
-              {Object.entries(ETIQUETA_METODO)
-                .filter(
-                  ([key]) =>
-                    key !== "registro_civil_web_service" &&
-                    (mode === "presencial"
-                      ? key === "original_presencial"
-                      : key !== "original_presencial"),
-                )
-                .map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-            </Select>
-            <Select label="Resultado" value={result} onChange={(e) => setResult(e.target.value)}>
-              <option value="verificado">Verificado</option>
-              <option value="no_coincide">No coincide</option>
-              <option value="no_encontrado">No encontrado</option>
-            </Select>
-            <Textarea
-              label="Observación obligatoria"
-              maxLength={1000}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-            {mode === "presencial" ? (
-              <Input
-                label="Escaneo presencial (PDF, JPG o PNG, hasta 2 MiB)"
-                type="file"
-                accept="application/pdf,image/jpeg,image/png"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
-            ) : null}
-            <Button
-              type="button"
-              disabled={!note.trim() || (mode === "presencial" && !file)}
-              onClick={() => void verify()}
-            >
-              Registrar verificación
-            </Button>
-          </fieldset>
-        </>
       ) : null}
       {detail.verificaciones
         .filter((v) => v.scanAvailable)
