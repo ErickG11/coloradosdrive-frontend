@@ -400,7 +400,7 @@ export default function StudentSchedulePage() {
               </li>
               <li>
                 Reponer un bloque pendiente no usa otro cambio. Debe tener la misma duración y
-                modalidad, sin solapes y con un solo bloque por día.
+                modalidad, sin solapes y con un solo bloque por día en cada matrícula.
               </li>
               <li>
                 Elige un horario antes de tu fecha fin y con más de 5 minutos de anticipación. No
