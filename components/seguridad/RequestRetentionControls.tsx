@@ -40,7 +40,7 @@ export function RequestRetentionControls() {
   ] as const;
   return (
     <details className="my-4 rounded-sm border p-3">
-      <summary>Retención de solicitudes</summary>
+      <summary>Retención de datos</summary>
       <p>
         Valores iniciales conservan el comportamiento actual. Rechazadas vacío hereda la
         configuración vigente del servidor; aprobadas y archivadas nunca se eliminan.
