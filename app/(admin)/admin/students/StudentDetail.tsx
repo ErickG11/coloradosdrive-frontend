@@ -301,12 +301,16 @@ export function StudentProfile({
                   onChanged={onPaymentChanged}
                 />
               ) : null}
-              <details className="rounded-md border border-border bg-bg-surface p-4">
-                <summary className="cursor-pointer text-sm font-medium">
-                  Fechas individuales y excepciones
-                </summary>
-                <StudentEnrollmentAccess studentId={student.id} onChanged={onPaymentChanged} />
-              </details>
+              <StudentEnrollmentAccess
+                studentId={student.id}
+                labels={Object.fromEntries(
+                  student.enrollments.map((e) => [
+                    e.enrollmentId,
+                    `${e.curso?.nombre ?? `Tipo ${e.courseType}`} · ${e.cohorte?.nombre ?? "Sin cohorte"}`,
+                  ]),
+                )}
+                onChanged={onPaymentChanged}
+              />
             </>
           ) : null}
         </>

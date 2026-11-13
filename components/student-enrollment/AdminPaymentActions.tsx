@@ -101,7 +101,6 @@ export function AdminPaymentActions({
                       ? "Rechazado"
                       : "Pendiente"}
               </p>
-              <p className="break-all text-sm text-text-secondary">{p.id}</p>
               {p.estado === "revision" ? (
                 <p className="mt-2 text-status-warning">
                   Dinero recibido: {paymentMoney(p.recibido_centavos ?? 0)}. Revisa el caso antes de
