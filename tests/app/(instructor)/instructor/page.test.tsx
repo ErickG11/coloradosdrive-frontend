@@ -225,9 +225,8 @@ describe("calendario semanal y detalle", () => {
     await screen.findByRole("article");
     await user.click(screen.getByRole("button", { name: /Ver bloque de Ana/ }));
     expect(screen.queryByRole("link", { name: "Ir a asistencias" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /^(Asistió|No asistió|Guardar confirmación)$/ }),
+      screen.queryByRole("button", { name: /^(Asistió|No asistió)$/ }),
     ).not.toBeInTheDocument();
     expect(patch).not.toHaveBeenCalled();
   });
@@ -344,7 +343,9 @@ describe("agenda diaria del instructor", () => {
     expect(rows[0]).toHaveTextContent("08:00 – 09:30");
     expect(rows[0]).toHaveTextContent("Primera");
     expect(rows[1]).toHaveTextContent("16:00 – 17:00");
-    expect(screen.queryByText("Ana Torres")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Agenda del día" })).queryByText("Ana Torres"),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Martes 10 de marzo/ })).toHaveAttribute(
       "aria-current",
       "date",

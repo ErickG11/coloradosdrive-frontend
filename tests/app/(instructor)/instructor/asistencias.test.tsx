@@ -45,6 +45,105 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 describe("Asistencias con cron simulado", () => {
+  it("un fallo total se comunica como error y mantiene ambas horas para reintentar", async () => {
+    vi.mocked(api.patch).mockRejectedValue(new ApiError("No se pudo guardar", 403));
+    const user = userEvent.setup();
+    render(<Page />);
+    await user.click(await screen.findByRole("button", { name: "Marcar asistió" }));
+    const result = await screen.findByText(/0 horas guardadas/);
+    expect(result).toHaveAttribute("data-tone", "error");
+    expect(result).toHaveTextContent("2 horas requieren revisión");
+    expect(screen.getByRole("button", { name: "Reintentar hora 10:00" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reintentar hora 11:00" })).toBeInTheDocument();
+  });
+  it("muestra proporciones y contadores del rango y controles segmentados por hora", async () => {
+    render(<Page />);
+    await screen.findByRole("article");
+    const progress = screen.getByRole("progressbar", { name: "Proporción de pendientes" });
+    expect(progress).toHaveAttribute("aria-valuenow", "2");
+    expect(progress).toHaveAttribute("aria-valuemax", "2");
+    expect(screen.getByRole("button", { name: "Pendientes" })).toHaveAccessibleDescription(
+      "2 horas",
+    );
+    for (const hour of ["10:00", "11:00"]) {
+      const group = screen.getByRole("group", { name: `Asistencia de las ${hour}` });
+      expect(within(group).getByRole("button", { name: "Asistió" })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+      expect(within(group).getByRole("button", { name: "No asistió" })).toBeInTheDocument();
+    }
+  });
+  it("los atajos consultan Hoy, 7 días y 30 días en la zona escolar", async () => {
+    const user = userEvent.setup();
+    render(<Page />);
+    await screen.findByRole("article");
+    for (const [label, from] of [
+      ["Hoy", "2026-03-10"],
+      ["7 días", "2026-03-04"],
+      ["30 días", "2026-02-09"],
+    ]) {
+      await user.click(screen.getByRole("button", { name: label }));
+      expect(screen.getByLabelText("Desde")).toHaveValue(from);
+      expect(screen.getByLabelText("Hasta")).toHaveValue("2026-03-10");
+      await screen.findByRole("article");
+      expect(
+        vi
+          .mocked(api.get)
+          .mock.calls.some(
+            ([path]) =>
+              path.startsWith("/practice-slots?") &&
+              decodeURIComponent(path).includes(`${from}T00:00:00-05:00`),
+          ),
+      ).toBe(true);
+    }
+  });
+  it("abre el rango recibido desde el aviso semanal de la agenda", async () => {
+    query.value = "desde=2026-03-09&hasta=2026-03-15";
+    render(<Page />);
+    await screen.findByRole("article");
+    expect(screen.getByLabelText("Desde")).toHaveValue("2026-03-09");
+    expect(screen.getByLabelText("Hasta")).toHaveValue("2026-03-15");
+  });
+  it("registra y corrige una hora individual sin escribir la otra", async () => {
+    const user = userEvent.setup();
+    render(<Page />);
+    await screen.findByRole("article");
+    await user.click(
+      within(screen.getByRole("group", { name: "Asistencia de las 10:00" })).getByRole("button", {
+        name: "Asistió",
+      }),
+    );
+    await screen.findByText(/1 hora guardada/);
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Ajustar por hora" }));
+    await user.click(
+      within(screen.getByRole("group", { name: "Asistencia de las 10:00" })).getByRole("button", {
+        name: "No asistió",
+      }),
+    );
+    await user.type(
+      screen.getByLabelText("Motivo de la corrección"),
+      "Confirmé el registro original",
+    );
+    await user.click(screen.getByRole("button", { name: "Confirmar cambio" }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(api.patch).mock.calls[1]).toEqual([
+      "/practice-slots/one/attendance",
+      { attended: false, motivo: "Confirmé el registro original" },
+    ]);
+  });
+  it("en Todas coloca primero el bloque pendiente dentro de cada día", async () => {
+    rows.unshift({ ...base, id: "recorded", scheduledAt: "2026-03-10T13:00:00Z", attended: true });
+    const user = userEvent.setup();
+    render(<Page />);
+    await screen.findByRole("article");
+    await user.click(screen.getByRole("button", { name: "Todas" }));
+    const cards = screen.getAllByRole("article");
+    expect(cards[0]).toHaveAccessibleName("Ana, 10:00 – 12:00");
+    expect(cards[1]).toHaveAccessibleName("Ana, 08:00 – 09:00");
+    expect(screen.getByText("2 bloques · 3 h")).toBeInTheDocument();
+  });
   it("muestra el resultado optimista y revierte únicamente la hora rechazada", async () => {
     let reject!: (cause: unknown) => void;
     vi.mocked(api.patch).mockImplementationOnce(
@@ -55,7 +154,7 @@ describe("Asistencias con cron simulado", () => {
     );
     const user = userEvent.setup();
     render(<Page />);
-    await user.click(await screen.findByRole("button", { name: "Asistió" }));
+    await user.click(await screen.findByRole("button", { name: "Marcar asistió" }));
     expect(
       within(screen.getByRole("listitem", { name: "Hora 10:00" })).getByText("Asistió"),
     ).toBeInTheDocument();
@@ -74,6 +173,11 @@ describe("Asistencias con cron simulado", () => {
     render(<Page />);
     expect(screen.getByText("Cargando asistencias…")).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("Sin conexión");
+    expect(screen.getByRole("progressbar", { name: "Proporción de pendientes" })).toHaveAttribute(
+      "aria-valuetext",
+      "Sin datos disponibles",
+    );
+    expect(within(screen.getByLabelText("Resumen del rango")).getAllByText("—")).toHaveLength(3);
     await user.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(await screen.findByRole("article")).toBeInTheDocument();
   });
@@ -94,14 +198,16 @@ describe("Asistencias con cron simulado", () => {
       const user = userEvent.setup();
       render(<Page />);
       await user.click(
-        await screen.findByRole("button", { name: attended ? "Asistió" : "No asistió" }),
+        await screen.findByRole("button", {
+          name: attended ? "Marcar asistió" : "Marcar no asistió",
+        }),
       );
       await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(2));
       expect(vi.mocked(api.patch).mock.calls.map(([p]) => p)).toEqual([
         "/practice-slots/one/attendance",
         "/practice-slots/two/attendance",
       ]);
-      const result = await screen.findByText(/2 hora\(s\) guardada/);
+      const result = await screen.findByText(/2 horas guardadas/);
       expect(result).toHaveFocus();
       expect(screen.getByText("Todo al día")).toBeInTheDocument();
     },
@@ -113,8 +219,9 @@ describe("Asistencias con cron simulado", () => {
       .mockResolvedValueOnce({ ...rows[1], attended: true });
     const user = userEvent.setup();
     render(<Page />);
-    await user.click(await screen.findByRole("button", { name: "Asistió" }));
+    await user.click(await screen.findByRole("button", { name: "Marcar asistió" }));
     const retry = await screen.findByRole("button", { name: "Reintentar hora 11:00" });
+    expect(screen.getByText(/1 hora guardada/)).toHaveAttribute("data-tone", "warning");
     expect(
       within(screen.getByRole("listitem", { name: "Hora 10:00" })).getByText("Asistió"),
     ).toBeInTheDocument();
@@ -129,8 +236,8 @@ describe("Asistencias con cron simulado", () => {
     }) as typeof api.patch);
     const user = userEvent.setup();
     render(<Page />);
-    await user.click(await screen.findByRole("button", { name: "Asistió" }));
-    await screen.findByText(/2 hora\(s\) guardada/);
+    await user.click(await screen.findByRole("button", { name: "Marcar asistió" }));
+    await screen.findByText(/2 horas guardadas/);
     expect(api.patch).toHaveBeenCalledTimes(2);
     expect(
       vi.mocked(api.get).mock.calls.filter(([p]) => !p.includes("instructor-groups")),
@@ -150,9 +257,9 @@ describe("Asistencias con cron simulado", () => {
     vi.mocked(api.patch).mockRejectedValueOnce(new Error("timeout"));
     const user = userEvent.setup();
     render(<Page />);
-    await user.click(await screen.findByRole("button", { name: "Asistió" }));
+    await user.click(await screen.findByRole("button", { name: "Marcar asistió" }));
     await user.click(await screen.findByRole("button", { name: "Reintentar hora 10:00" }));
-    await screen.findByText(/1 hora\(s\) guardada/);
+    await screen.findByText(/1 hora guardada/);
     expect(get.mock.calls.filter(([p]) => !p.includes("instructor-groups"))).toHaveLength(3);
   });
   it("corrige ambas horas con un solo motivo y conserva el diálogo ante motivo corto", async () => {
@@ -185,7 +292,16 @@ describe("Asistencias con cron simulado", () => {
     expect(screen.getByText("Pide la corrección al administrador")).toBeInTheDocument();
     expect(screen.getByText(/Puedes corregir durante 30 min/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ajustar por hora" }));
-    expect(screen.getAllByRole("button", { name: "Cambiar asistencia" })).toHaveLength(1);
+    expect(
+      within(screen.getByRole("listitem", { name: "Hora 11:00" })).getByRole("button", {
+        name: "No asistió",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("listitem", { name: "Hora 10:00" })).queryByRole("button", {
+        name: "No asistió",
+      }),
+    ).not.toBeInTheDocument();
   });
   it("filtra alumno y registradas, valida 60 días e ignora un rango vacío sin fallar", async () => {
     rows[1] = { ...rows[1], attended: false };
@@ -206,10 +322,17 @@ describe("Asistencias con cron simulado", () => {
     query.value = "fecha=2026-03-10";
     vi.setSystemTime(new Date("2026-03-10T15:30:00Z"));
     rows = rows.map((s) => ({ ...s, status: "confirmado" }));
+    const user = userEvent.setup();
     render(<Page />);
+    expect(await screen.findByText("Todo al día")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pendientes" })).toHaveAccessibleDescription(
+      "0 horas",
+    );
+    await user.click(screen.getByRole("button", { name: "Todas" }));
     expect(await screen.findByText("En curso")).toBeInTheDocument();
     expect(screen.getByText("Próxima")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Asistió" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Marcar asistió" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ajustar por hora" })).not.toBeInTheDocument();
     expect(api.patch).not.toHaveBeenCalled();
   });
 });

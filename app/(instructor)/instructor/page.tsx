@@ -18,6 +18,7 @@ import { AgendaCalendar, AgendaDayNavigation } from "./_components/AgendaCalenda
 import { AgendaDayList } from "./_components/AgendaDayList";
 import { AgendaBlockDetail } from "./_components/AgendaBlockDetail";
 import { AgendaOverview } from "./_components/AgendaOverview";
+import { InstructorIcon } from "./_components/InstructorVisuals";
 import styles from "./_components/agenda.module.css";
 
 const WIDE_QUERY = "(min-width: 768px)";
@@ -179,7 +180,7 @@ function InstructorAgenda() {
                 aria-label={`${pending} asistencias pendientes de registrar`}
               >
                 {pending} {pending === 1 ? "hora" : "horas"}
-                <span aria-hidden="true">↗</span>
+                <InstructorIcon name="arrow" />
               </Link>
             </dd>
           </div>
