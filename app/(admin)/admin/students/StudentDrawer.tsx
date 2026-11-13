@@ -1,8 +1,8 @@
 "use client";
 import { StudentDetail } from "./StudentDetail";
-export type StudentView = "ficha" | "matriculas" | "documentos";
+export type StudentView = "ficha" | "matriculas" | "documentos" | "editar";
 export function studentView(value: string | null): StudentView {
-  return value === "matriculas" || value === "documentos" ? value : "ficha";
+  return value === "matriculas" || value === "documentos" || value === "editar" ? value : "ficha";
 }
 export function StudentDrawer({
   id,
