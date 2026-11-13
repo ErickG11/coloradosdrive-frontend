@@ -730,6 +730,14 @@ function CourseContent({
                             item.kind === "examen"
                               ? "Examen"
                               : (materials.get(item.material_id ?? "")?.kind ?? "Material");
+                          const isRequiredMaterial = (other: SubjectItem) =>
+                            other.kind === "material" && other.obligatorio;
+                          const requiredBefore = items
+                            .slice(0, index)
+                            .filter(isRequiredMaterial).length;
+                          const requiredAfter = items
+                            .slice(index + 1)
+                            .filter(isRequiredMaterial).length;
                           return (
                             <article key={item.id} className={styles.item}>
                               <div className={styles.itemTop}>
@@ -825,6 +833,26 @@ function CourseContent({
                                   </Button>
                                 </ActionMenu>
                               </div>
+                              {item.kind === "examen" &&
+                              (requiredBefore > 0 || requiredAfter > 0) ? (
+                                <div className="space-y-1 text-sm text-text-secondary">
+                                  {requiredBefore > 0 ? (
+                                    <p>
+                                      Requiere completar {requiredBefore}{" "}
+                                      {requiredBefore === 1
+                                        ? "material obligatorio"
+                                        : "materiales obligatorios"}{" "}
+                                      antes
+                                    </p>
+                                  ) : null}
+                                  {requiredAfter > 0 ? (
+                                    <p>
+                                      Hay materiales obligatorios después de este examen: no serán
+                                      requisito para rendirlo.
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
                               <div className={styles.itemMeta}>
                                 <label>
                                   <input

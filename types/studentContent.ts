@@ -23,6 +23,8 @@ export interface StudentItem extends SubjectItem {
   intentos_permitidos?: number | null;
   mejor_nota?: number | null;
   intento_en_progreso?: { id: string; deadline_at: string } | null;
+  bloqueado?: boolean;
+  prerequisitos_pendientes?: { item_id: string; titulo: string }[];
 }
 export interface StudentCatalog {
   course_id: string;
