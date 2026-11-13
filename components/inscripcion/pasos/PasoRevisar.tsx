@@ -1,4 +1,5 @@
 "use client";
+import { FlowStepIcon } from "../EnrollmentFlowFrame";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { enviarSolicitud, getProgreso, reenviarSolicitud } from "@/lib/api/inscripcion";
@@ -66,7 +67,10 @@ function Bloque({
   return (
     <section className={styles.resumenBloque}>
       <div className={styles.resumenCabecera}>
-        <h3>{titulo}</h3>
+        <h3 className="flex items-center gap-3">
+          <FlowStepIcon step={titulo === "Estudios" ? 5 : titulo === "Consentimiento" ? 3 : 4} />
+          {titulo}
+        </h3>
         <Button type="button" variant="secondary" size="sm" onClick={onEditar}>
           {accion}
         </Button>
@@ -247,7 +251,11 @@ export function PasoRevisar({
         ) : null}
       </div>
 
-      <div className={formStyles.stepActions}>
+      <p className="rounded-sm bg-bg-sunken p-3 text-sm text-text-secondary">
+        Al enviar, revisaremos tu información. Te avisaremos por correo para que continúes con tu
+        inscripción.
+      </p>
+      <div data-flow-actions className={formStyles.stepActions}>
         <Button type="button" onClick={() => void enviar()} isLoading={ocupado}>
           {reenvio ? "Reenviar solicitud" : "Enviar solicitud"}
         </Button>

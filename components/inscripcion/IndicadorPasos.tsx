@@ -1,4 +1,5 @@
 import { PASO_ESTADO, type PasoId } from "./pasos/tipos";
+import { FlowStepIcon } from "./EnrollmentFlowFrame";
 import styles from "./wizard.module.css";
 
 // Los 7 pasos del postulante; el paso 7 (estado) cierra el indicador completo.
@@ -12,7 +13,15 @@ export const ETIQUETAS_PASOS = [
   "Revisar y enviar",
 ] as const;
 
-export function IndicadorPasos({ paso }: { paso: PasoId }) {
+export function IndicadorPasos({
+  paso,
+  onNavigate,
+  minStep = 0,
+}: {
+  paso: PasoId;
+  onNavigate?: (step: PasoId) => void;
+  minStep?: number;
+}) {
   const total = ETIQUETAS_PASOS.length;
   const terminado = paso === PASO_ESTADO;
   const actual = terminado ? total : paso + 1;
@@ -35,9 +44,15 @@ export function IndicadorPasos({ paso }: { paso: PasoId }) {
             data-done={terminado || indice < paso}
           >
             <span className={styles.stepNumber} aria-hidden="true">
-              {terminado || indice < paso ? "✓" : indice + 1}
+              {terminado || indice < paso ? "✓" : <FlowStepIcon step={indice} />}
             </span>
-            {etiqueta}
+            {onNavigate && indice < paso && indice >= minStep && !terminado ? (
+              <button type="button" onClick={() => onNavigate(indice as PasoId)}>
+                {etiqueta}
+              </button>
+            ) : (
+              etiqueta
+            )}
             {terminado || indice < paso ? <span className="sr-only"> (completado)</span> : null}
           </li>
         ))}

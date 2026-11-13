@@ -1,4 +1,7 @@
 "use client";
+import { EnrollmentNextSteps } from "../EnrollmentFlowFrame";
+import { EnrollmentIcon } from "../EnrollmentVisual";
+import flowStyles from "../enrollment-flow.module.css";
 import { EnrollmentActionLink } from "@/components/inscripcion/EnrollmentActionLink";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -109,6 +112,9 @@ function PantallaEnviada({ progreso }: { progreso: ProgresoSolicitud }) {
   const fecha = formatearFechaHora(progreso.enviadaAt);
   return (
     <section className={formStyles.form} aria-labelledby="estado-titulo">
+      <span className={flowStyles.success}>
+        <EnrollmentIcon name="check" />
+      </span>
       <StatusBadge status="pendiente" label="Pendiente de revisión" tone="warning" />
       <Titulo referencia={titulo} id="estado-titulo">
         Tu solicitud está pendiente de revisión
@@ -128,6 +134,13 @@ function PantallaEnviada({ progreso }: { progreso: ProgresoSolicitud }) {
           </span>
         </div>
       ) : null}
+      <section className="rounded-md border border-border p-4">
+        <h3 className="font-semibold">Qué sigue</h3>
+        <EnrollmentNextSteps />
+        <p className="mt-4 text-sm text-text-secondary">
+          Revisa tu correo, incluida la carpeta de spam.
+        </p>
+      </section>
       <h3 className="font-semibold">Seguimiento</h3>
       <Seguimiento progreso={progreso} />
       <p className="text-sm text-text-secondary">
@@ -198,7 +211,7 @@ function PantallaDevuelta({
         </Button>
       </div>
       <FormError>{error}</FormError>
-      <div className={formStyles.stepActions}>
+      <div data-flow-actions className={formStyles.stepActions}>
         <Button type="button" onClick={() => void reenviar()} isLoading={ocupado}>
           Reenviar solicitud
         </Button>
@@ -330,7 +343,7 @@ function ContenidoEstado({
       return (
         <section className={formStyles.form}>
           <p>Tu solicitud todavía no fue enviada.</p>
-          <div className={formStyles.stepActions}>
+          <div data-flow-actions className={formStyles.stepActions}>
             <Button type="button" onClick={() => irAPaso(PASO_REVISAR)}>
               Revisar y enviar
             </Button>

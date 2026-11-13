@@ -240,3 +240,23 @@
   font-size: 13px;
   font-weight: 400;
 }
+
+.opcion {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-surface);
+  cursor: pointer;
+}
+.resumenBloque {
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-surface);
+}
+.avisoAlerta {
+  border-left: 4px solid var(--color-status-error);
+}

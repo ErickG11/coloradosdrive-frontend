@@ -1,4 +1,5 @@
 "use client";
+import { FlowStepIcon } from "../EnrollmentFlowFrame";
 import { useFetch } from "@/hooks/useFetch";
 import { documentError, type DocumentType } from "../documentValidation";
 import { EnrollmentCheckbox } from "../EnrollmentCheckbox";
@@ -321,7 +322,7 @@ export function PasoDatos({
           en línea. Escríbenos y te ayudamos a inscribirte directamente en la escuela.
         </p>
         <ContactoWhatsApp mensaje="Hola, Colorados Drive. Soy extranjero sin cédula ecuatoriana y quiero inscribirme en un curso de conducción." />
-        <div className={formStyles.stepActions}>
+        <div data-flow-actions className={formStyles.stepActions}>
           <Button type="button" variant="secondary" onClick={() => elegirNacionalidad("")}>
             Elegir otra nacionalidad
           </Button>
@@ -347,6 +348,10 @@ export function PasoDatos({
         <RequiredMark /> Campo obligatorio
       </p>
       <div className={formStyles.fieldGrid}>
+        <h3 className="col-span-full flex items-center gap-3 border-b border-border pb-3 font-semibold">
+          <FlowStepIcon step={4} />
+          Datos personales
+        </h3>
         <Input
           name="nombres"
           label="Nombres *"
@@ -418,6 +423,10 @@ export function PasoDatos({
           error={errorDe("fechaNacimiento")}
           autoComplete="bday"
         />
+        <h3 className="col-span-full flex items-center gap-3 border-b border-border pb-3 font-semibold">
+          <FlowStepIcon step={1} />
+          Contacto
+        </h3>
         <Input
           name="telefono"
           label="Teléfono *"
@@ -452,6 +461,10 @@ export function PasoDatos({
             </option>
           ))}
         </Select>
+        <h3 className="col-span-full flex items-center gap-3 border-b border-border pb-3 font-semibold">
+          <FlowStepIcon step={3} />
+          Salud
+        </h3>
         <Select
           name="tipoSangre"
           label="Tipo de sangre *"
@@ -560,7 +573,7 @@ export function PasoDatos({
         </p>
       ) : null}
       <FormError>{errorGeneral}</FormError>
-      <div className={formStyles.stepActions}>
+      <div data-flow-actions className={formStyles.stepActions}>
         <Button
           type="submit"
           isLoading={ocupado}
