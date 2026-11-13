@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { MotionConfig } from "framer-motion";
@@ -470,14 +471,10 @@ export default function StudentSchedulePage() {
                     onNavigate={navigateToDay}
                   />
                 ) : (
-                  <section className={styles.empty}>
-                    <ScheduleIcon />
-                    <h2>Aún no tienes prácticas asignadas</h2>
-                    <p>
-                      Cuando la escuela asigne tu horario, lo encontrarás aquí. Si ya te
-                      matriculaste, consulta con la escuela la fecha de inicio.
-                    </p>
-                  </section>
+                  <StudentEmptyState
+                    title="Aún no tienes prácticas asignadas"
+                    description="Cuando la escuela confirme tu horario, encontrarás aquí las fechas y tus próximas clases."
+                  />
                 )}
                 <div
                   className={styles.sectionNav}

@@ -1,4 +1,5 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 
 import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
@@ -166,27 +167,9 @@ export function CourseRoad({ progress }: { progress: CourseProgress }) {
 
 export function SubjectEmpty() {
   return (
-    <div className={styles.empty}>
-      <svg width="110" height="82" viewBox="0 0 110 82" fill="none" aria-hidden="true">
-        <path d="M5 68h100M28 64V22h54v42M35 22V13h40v9" stroke="currentColor" strokeWidth="2" />
-        <path
-          d="M41 37h28m-28 9h20m-20 9h25"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <circle
-          cx="84"
-          cy="25"
-          r="14"
-          fill="var(--color-bg-surface)"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-        <path d="M84 18v14m-7-7h14" stroke="currentColor" strokeWidth="2" />
-      </svg>
-      <h3>Estamos preparando esta parada</h3>
-      <p>Los materiales publicados aparecerán aquí. Puedes seguir explorando las otras materias.</p>
-    </div>
+    <StudentEmptyState
+      title="Esta materia aún no tiene contenido"
+      description="Los materiales publicados aparecerán aquí. Puedes seguir explorando las otras materias."
+    />
   );
 }

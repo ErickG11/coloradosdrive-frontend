@@ -1,4 +1,5 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig } from "framer-motion";
 import { Button } from "@/components/ui/Button";
@@ -182,14 +183,10 @@ export function DocumentsWorkspace() {
                   <DocumentsDeadline data={data} contactHref={schoolContactHref} />
                 </div>
               ) : (
-                <section className={styles.empty}>
-                  <DocumentIcon kind="document" />
-                  <h2>Tu escuela aún no te asignó documentos</h2>
-                  <p>
-                    Cuando la escuela prepare tu lista, aparecerá aquí lo que necesitas llevar y el
-                    estado de cada entrega.
-                  </p>
-                </section>
+                <StudentEmptyState
+                  title="Todavía no tienes documentos pendientes"
+                  description="Cuando la escuela prepare tu lista, verás aquí qué necesitas llevar y el estado de cada entrega."
+                />
               )}
               {data.identidadPresencial ? (
                 <section
