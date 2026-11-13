@@ -36,3 +36,9 @@
   filter: invert(1) hue-rotate(180deg);
   mix-blend-mode: screen;
 }
+
+/* C23-C: logo reducido con el menú contraído. */
+.logoSmall {
+  width: 48px;
+  height: 24px;
+}
