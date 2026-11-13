@@ -50,16 +50,12 @@ un enlace al panel; no mostraba credenciales ni cédula.
   `pasos.pago` no sustituye un comprobante: también es verdadero para matrículas
   manuales activas. El GET existente de pagos incluye un mecanismo de correo de
   bienvenida del backend, por eso no se incorpora otro consumidor por matrícula.
-- Ruta: el origen solicitud acredita que hubo solicitud y aprobación, sin fecha.
-  El acceso es conocido por la rama autorizada. La creación de cuenta y el pago
-  conservan sus fechas distintas. No se simulan fechas ni hitos futuros.
-  El hito de horarios necesita una reserva confirmada o franjas propias realmente
-  asignadas. `pasos.horario` no basta, porque también es verdadero para una
-  matrícula manual activa sin reservas.
+- Disposición C12: encabezado y avisos compactos con fechas en español; una tarjeta larga con identidad y acceso en el frente y último pago en el reverso; cuadrícula independiente con Tu curso, Tu acceso, Tus documentos y Lo que viene en tu curso. El formulario de facturación se conserva debajo de la cuadrícula, con sus consultas y operaciones existentes.
+- Se retiran la ruta de hitos y el acompañamiento lateral del flujo del alumno. El marco público y la creación de contraseña conservan su acompañamiento.
 
 ## Componentes reutilizables
 
-`EnrollmentCard` recibe identidad, matrícula, cohorte y vigencia opcional;
+`EnrollmentCard` recibe identidad, matrícula y último pago coincidente; ambas caras comparten una fila de grid que adopta el alto de la mayor. La mitad de acceso se apila bajo la identidad en móvil. La cara inactiva tiene `inert` y `aria-hidden`, y el botón único conserva el foco y anuncia la cara actual. Se conserva la vigencia opcional;
 la cédula opcional se enmascara por defecto y su revelado vive solo en memoria.
 El selector remonta el contenido al cambiar matrícula y vuelve a ocultarla.
 `EnrollmentDataCard`, `EnrollmentDocuments`, `EnrollmentStatusPanel`, iconos,

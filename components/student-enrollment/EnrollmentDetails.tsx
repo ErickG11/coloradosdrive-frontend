@@ -2,12 +2,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { PracticeHistoryEnrollment } from "@/types/practiceAttendance";
 import type { StudentEnrollmentState } from "@/types/studentEnrollment";
-import type { StudentPayment } from "@/types/studentPayment";
 import { documentProgress } from "@/components/student-documents/documentsModel";
 import {
   accountRole,
   courseClock,
-  enrollmentStatus,
   licenseLabel,
   longDate,
   practiceDate,
@@ -108,15 +106,15 @@ export function EnrollmentDetails({
   courseName,
   identity,
   state,
-  payment,
   hoursPerDay,
+  children,
 }: {
   enrollment: PracticeHistoryEnrollment;
   courseName: string | null;
   cohortName: string | null;
   identity: EnrollmentIdentity | null;
   state: StudentEnrollmentState | null;
-  payment: StudentPayment | null;
+  children?: ReactNode;
   hoursPerDay: number | null;
 }) {
   const courseFields: { label: string; value: ReactNode }[] = [
@@ -130,8 +128,6 @@ export function EnrollmentDetails({
       label: "Horas objetivo de prácticas",
       value: `${enrollment.horasObjetivo} h`,
     });
-  const money = (cents: number) =>
-    new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(cents / 100);
   return (
     <div className={`${styles.detailGrid} ${styles.enter}`}>
       <EnrollmentDataCard
@@ -162,33 +158,7 @@ export function EnrollmentDetails({
         </p>
       </EnrollmentDataCard>
       <EnrollmentDocuments state={state} />
-      {payment && Number.isFinite(payment.totalCentavos) ? (
-        <EnrollmentDataCard
-          title="Tu pago"
-          icon="payment"
-          identity="payment"
-          fields={[
-            {
-              label: "Estado del último pago",
-              value: {
-                aprobado: "Aprobado",
-                pendiente: "Pendiente",
-                revision: "En revisión",
-                rechazado: "Rechazado",
-              }[payment.estado],
-            },
-            { label: "Total de esta transacción", value: money(payment.totalCentavos) },
-            ...(payment.confirmedAt && longDate(payment.confirmedAt)
-              ? [{ label: "Confirmado", value: longDate(payment.confirmedAt) }]
-              : []),
-          ]}
-        >
-          <p className={styles.secondary}>
-            Este resumen corresponde al último pago. Consulta el saldo de tu matrícula con la
-            escuela.
-          </p>
-        </EnrollmentDataCard>
-      ) : null}
+      {children}
     </div>
   );
 }
@@ -213,11 +183,7 @@ export function EnrollmentStatusPanel({
 }) {
   const clock = courseClock(courseStart, courseEnd, now);
   return (
-    <section
-      className={`${styles.statusPanel} ${styles.enter}`}
-      aria-labelledby="enrollment-status-title"
-    >
-      <h2 id="enrollment-status-title">Lo que viene en tu curso</h2>
+    <EnrollmentDataCard title="Lo que viene en tu curso" icon="calendar" identity="course">
       {clock ? (
         <div className={styles.courseTime}>
           <span>{clock.label}</span>
@@ -280,6 +246,6 @@ export function EnrollmentStatusPanel({
           Consulta tus horarios para organizar tu próxima práctica.
         </p>
       ) : null}
-    </section>
+    </EnrollmentDataCard>
   );
 }
