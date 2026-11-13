@@ -807,7 +807,7 @@
 @media (min-width: 1024px) {
   .page[data-panel-open="true"] .workspace {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(480px, 40vw, 540px);
+    grid-template-columns: minmax(0, 1fr) clamp(360px, 28vw, 420px);
   }
   .page[data-panel-open="true"] .main {
     padding-inline: 16px;

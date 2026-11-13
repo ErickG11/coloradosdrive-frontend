@@ -1,12 +1,21 @@
+/* Panel en línea fijo: pegado arriba del área visible, sin hueco, con altura = lo visible.
+   --panel-top lo mantiene SidePanel con el espacio que el panel aún tiene sobre él. */
 .panel {
   position: sticky;
-  top: 80px;
+  top: 0;
   display: flex;
   flex-direction: column;
   width: 100%;
   min-width: 0;
-  height: calc(100dvh - 80px);
+  height: calc(100dvh - var(--panel-top, 0px));
+  max-height: 100dvh;
   align-self: start;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+/* En el panel delgado el contenido va en una sola columna. */
+.panel [class~="sm:grid-cols-2"] {
+  grid-template-columns: minmax(0, 1fr);
 }
 @media (max-width: 1023px) {
   .panel {
@@ -14,6 +23,7 @@
     inset: 64px 0 0;
     z-index: 40;
     height: calc(100dvh - 64px);
+    max-height: none;
     border-left: 0;
   }
 }

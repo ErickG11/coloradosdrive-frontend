@@ -762,6 +762,7 @@
 .decisionActions > button {
   flex: 0 1 auto;
   font-size: 12px;
+  white-space: nowrap;
 }
 .decisionForm {
   display: grid;
@@ -800,7 +801,7 @@
 
 @media (min-width: 1024px) {
   .reviewLayout[data-open="true"] {
-    grid-template-columns: minmax(0, 1fr) clamp(480px, 40vw, 540px);
+    grid-template-columns: minmax(0, 1fr) clamp(360px, 28vw, 420px);
     gap: 16px;
   }
   .reviewLayout[data-open="true"] :global(table) {

@@ -42,6 +42,35 @@ export function SidePanel({
     close.current = onClose;
     disabled.current = closeDisabled;
   }, [onClose, closeDisabled]);
+  // Altura = lo visible: descuenta lo que aún separa al panel del borde superior de la ventana.
+  useEffect(() => {
+    const element = panel.current;
+    const parent = element?.parentElement;
+    if (!element || !parent) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const gap = Math.min(
+        Math.max(0, parent.getBoundingClientRect().top),
+        window.innerHeight * 0.6,
+      );
+      element.style.setProperty("--panel-top", `${Math.round(gap)}px`);
+    };
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    const observer = new ResizeObserver(schedule);
+    observer.observe(document.body);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      observer.disconnect();
+    };
+  }, []);
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     panel.current?.focus({ preventScroll: true });
