@@ -220,3 +220,7 @@
     scroll-behavior: auto;
   }
 }
+
+.layout.fullWidth {
+  grid-template-columns: minmax(0, 1fr);
+}

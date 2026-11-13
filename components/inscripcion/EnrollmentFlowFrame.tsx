@@ -36,11 +36,13 @@ export function EnrollmentFlowFrame({
   step = 1,
   total = 7,
   student = false,
+  companion = true,
 }: {
   children: ReactNode;
   step?: number;
   total?: number;
   student?: boolean;
+  companion?: boolean;
 }) {
   return (
     <div className={styles.frame}>
@@ -49,47 +51,51 @@ export function EnrollmentFlowFrame({
         <Link href="/">Volver al inicio</Link>
         <ThemeToggle />
       </header>
-      <div className={styles.layout}>
-        <aside className={styles.companion} aria-label="Tu inscripción">
-          <div className={styles.intro}>
-            <span className={styles.icon}>
-              <EnrollmentIcon name="shield" />
-            </span>
-            <h2>Tu inscripción</h2>
-            <p>
-              {student
-                ? "Tu próximo paso hacia el volante."
-                : "Empieza tu camino. Te tomará unos 5 minutos."}
-            </p>
-          </div>
-          {!student ? (
+      <div className={`${styles.layout} ${!companion ? styles.fullWidth : ""}`}>
+        {companion ? (
+          <aside className={styles.companion} aria-label="Tu inscripción">
+            <div className={styles.intro}>
+              <span className={styles.icon}>
+                <EnrollmentIcon name="shield" />
+              </span>
+              <h2>Tu inscripción</h2>
+              <p>
+                {student
+                  ? "Tu próximo paso hacia el volante."
+                  : "Empieza tu camino. Te tomará unos 5 minutos."}
+              </p>
+            </div>
+            {!student ? (
+              <section>
+                <h3>Ten a la mano</h3>
+                <ul className={styles.needs}>
+                  <li>✓ Tu documento de identidad</li>
+                  <li>✓ Un correo al que puedas acceder</li>
+                  <li>✓ Certificado de estudios, si aplica</li>
+                </ul>
+              </section>
+            ) : null}
             <section>
-              <h3>Ten a la mano</h3>
-              <ul className={styles.needs}>
-                <li>✓ Tu documento de identidad</li>
-                <li>✓ Un correo al que puedas acceder</li>
-                <li>✓ Certificado de estudios, si aplica</li>
-              </ul>
+              <h3>Qué sigue</h3>
+              <EnrollmentNextSteps />
             </section>
-          ) : null}
-          <section>
-            <h3>Qué sigue</h3>
-            <EnrollmentNextSteps />
-          </section>
-          <p className={styles.security}>
-            <EnrollmentIcon name="shield" /> Tus datos se usan para gestionar tu inscripción y se
-            tratan según el aviso de privacidad.
-          </p>
-        </aside>
+            <p className={styles.security}>
+              <EnrollmentIcon name="shield" /> Tus datos se usan para gestionar tu inscripción y se
+              tratan según el aviso de privacidad.
+            </p>
+          </aside>
+        ) : null}
         <div className={styles.mobileIntro}>
           <p>
             Paso {Math.min(step, total)} de {total}
             {!student ? " · unos 5 min" : ""}
           </p>
-          <details>
-            <summary>Qué sigue</summary>
-            <EnrollmentNextSteps />
-          </details>
+          {companion ? (
+            <details>
+              <summary>Qué sigue</summary>
+              <EnrollmentNextSteps />
+            </details>
+          ) : null}
         </div>
         <div className={styles.content}>{children}</div>
       </div>

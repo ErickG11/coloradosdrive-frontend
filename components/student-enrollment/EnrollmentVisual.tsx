@@ -131,7 +131,6 @@ export function EnrollmentSkeleton() {
         <div className={styles.skeletonCard} />
         <div className={styles.skeletonPanel} />
       </div>
-      <div className={styles.skeletonRoute} />
       <div className={styles.detailGrid}>
         {[0, 1, 2, 3].map((item) => (
           <div className={styles.skeletonData} key={item} />
