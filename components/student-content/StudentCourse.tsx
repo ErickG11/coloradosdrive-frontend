@@ -14,7 +14,7 @@ import { StudentError, StudentLoading, StudentProgress } from "./StudentContentU
 import {
   CourseRoad,
   LearningIcon,
-  ScoreRing,
+  ExamScoreMeter,
   SubjectEmpty,
   subjectTone,
   visualTitle,
@@ -472,9 +472,7 @@ function CourseItem({
               </strong>
               <small>Intentos utilizados</small>
             </div>
-            {item.mejor_nota != null ? (
-              <ScoreRing value={item.mejor_nota} label="Mejor nota" />
-            ) : null}
+            <ExamScoreMeter value={item.mejor_nota} />
             {ongoing ? (
               <div>
                 <small>Tu intento sigue en curso</small>

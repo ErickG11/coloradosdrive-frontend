@@ -47,6 +47,43 @@ export function ScoreRing({
   );
 }
 
+// Medidor de la mejor nota de la tarjeta de examen: etiqueta fuera del aro y color por rango
+// calculado con el porcentaje entero que se muestra (>= 80 verde, 70–79 amarillo, <= 69 rojo).
+export function ExamScoreMeter({ value }: { value: number | string | null | undefined }) {
+  const parsed = value == null || value === "" ? null : Number(value);
+  const score = parsed !== null && Number.isFinite(parsed) ? Math.round(parsed) : null;
+  const tone = score === null ? "none" : score >= 80 ? "high" : score >= 70 ? "medium" : "low";
+  const range = { none: "sin nota", high: "rango alto", medium: "rango medio", low: "rango bajo" }[
+    tone
+  ];
+  const fill = score === null ? 0 : Math.min(100, Math.max(0, score));
+  return (
+    <div className={styles.meter} data-tone={tone}>
+      <div
+        className={styles.meterRing}
+        role="img"
+        aria-label={
+          score === null ? "Mejor nota: sin nota" : `Mejor nota: ${score} por ciento, ${range}`
+        }
+      >
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="44" className={styles.meterTrack} />
+          <circle
+            cx="50"
+            cy="50"
+            r="44"
+            className={styles.meterValue}
+            pathLength="100"
+            strokeDasharray={`${fill} 100`}
+          />
+        </svg>
+        <strong aria-hidden="true">{score === null ? "—" : `${score}%`}</strong>
+      </div>
+      <small aria-hidden="true">{score === null ? "Sin nota" : "Mejor nota"}</small>
+    </div>
+  );
+}
+
 export function CourseRoad({ progress }: { progress: CourseProgress }) {
   const reduced = useReducedMotion();
   const notify = useContentSuccess();
