@@ -2,6 +2,9 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const labels: Record<string, string> = {
   activo: "Activo",
+  por_agendar: "Por agendar",
+  reservado: "Reservado",
+  pago_pendiente: "Pago pendiente",
   finalizado: "Finalizado",
   retirado: "Retirado",
   anulada: "Anulada",
@@ -21,7 +24,7 @@ export function StudentBadge({ status }: { status: string }) {
 export function ActiveBadge({ active }: { active: boolean }) {
   return (
     <StatusBadge status={active ? "activo" : "inactivo"}>
-      {active ? "Activo" : "Desactivado"}
+      {active ? "Activo" : "Inactivo"}
     </StatusBadge>
   );
 }

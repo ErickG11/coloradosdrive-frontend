@@ -1,6 +1,7 @@
 "use client";
-import { useRef, useState } from "react";
-import { Button, Input, Modal, Select } from "@/components/ui";
+import { useEffect, useRef, useState } from "react";
+import { Button, Input, Select } from "@/components/ui";
+import { StudentCohortStep } from "./StudentCohortStep";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -23,11 +24,15 @@ export interface EnrollmentCohortManagement {
   }[];
 }
 export function StudentCohortTransfer({
+  embedded = false,
+  onBusyChange,
   studentId,
   enrollment,
   onClose,
   onChanged,
 }: {
+  embedded?: boolean;
+  onBusyChange?: (busy: boolean) => void;
   studentId: string;
   enrollment: StudentEnrollment;
   onClose: () => void;
@@ -39,6 +44,10 @@ export function StudentCohortTransfer({
   const [reason, setReason] = useState("");
   const [exception, setException] = useState(false);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
   const [message, setMessage] = useState<string | null>(null);
   const submitting = useRef(false);
   const choices =
@@ -88,9 +97,29 @@ export function StudentCohortTransfer({
     }
   }
   return (
-    <Modal
-      isOpen
-      placement="right"
+    <StudentCohortStep
+      embedded={embedded}
+      busy={busy}
+      footer={
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="secondary" disabled={busy} onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            disabled={
+              !selected ||
+              !reason.trim() ||
+              (!selected.fits && !exception) ||
+              !management.data?.transferEnabled
+            }
+            isLoading={busy}
+            onClick={() => void save()}
+          >
+            Confirmar cambio de cohorte
+          </Button>
+        </div>
+      }
       title="Cambiar de cohorte"
       onClose={() => {
         if (!submitting.current) onClose();
@@ -162,25 +191,7 @@ export function StudentCohortTransfer({
           Se conservan los horarios, las prácticas realizadas, el precio, los pagos y el acceso.
         </p>
         {message ? <p role="alert">{message}</p> : null}
-        <div className="flex flex-wrap justify-end gap-3">
-          <Button type="button" variant="secondary" disabled={busy} onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            type="button"
-            disabled={
-              !selected ||
-              !reason.trim() ||
-              (!selected.fits && !exception) ||
-              !management.data?.transferEnabled
-            }
-            isLoading={busy}
-            onClick={() => void save()}
-          >
-            Confirmar cambio de cohorte
-          </Button>
-        </div>
       </div>
-    </Modal>
+    </StudentCohortStep>
   );
 }

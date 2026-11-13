@@ -17,7 +17,7 @@ import { WaitlistRetry } from "./WaitlistRetry";
 import { StudentFilters } from "./StudentFilters";
 import { StudentTable } from "./StudentTable";
 import { StudentMetrics } from "./StudentMetrics";
-import { StudentDrawer } from "./StudentDrawer";
+import { StudentDrawer, studentView, type StudentView } from "./StudentDrawer";
 import { StudentPagination } from "./StudentPagination";
 import { StudentIcon } from "./StudentVisual";
 import styles from "./students.module.css";
@@ -34,6 +34,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
   const params = useSearchParams();
   const router = useRouter();
   const filters = readStudentFilters(params);
+  const [view, setView] = useState<StudentView>(() => studentView(params.get("vista")));
   const [selected, setSelected] = useState<string | null>(initialSelected);
   const [version, setVersion] = useState(0);
   const [q, setQ] = useState("");
@@ -46,6 +47,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
   useEffect(() => {
     function sync() {
       setSelected(window.location.pathname.match(STUDENT_PATH)?.[1] ?? null);
+      setView(studentView(new URLSearchParams(window.location.search).get("vista")));
     }
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
@@ -62,18 +64,23 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
       window.history.replaceState(
         null,
         "",
-        `/admin/students/${selected}?${studentFilterParams(next)}`,
+        `/admin/students/${selected}?${studentFilterParams(next)}&vista=${view}`,
       );
     else router.replace(studentListHref(next), { scroll: false });
   }
   function change(value: Partial<Filters>) {
     navigate(changeStudentFilter(filters, value));
   }
-  function open(event: MouseEvent<HTMLAnchorElement>, id: string) {
+  function open(event: MouseEvent<HTMLAnchorElement>, id: string, nextView: StudentView = "ficha") {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
       return;
     event.preventDefault();
-    window.history.pushState(null, "", `/admin/students/${id}?${studentFilterParams(filters)}`);
+    window.history.pushState(
+      null,
+      "",
+      `/admin/students/${id}?${studentFilterParams(filters)}&vista=${nextView}`,
+    );
+    setView(nextView);
     setSelected(id);
   }
   function close() {
@@ -224,7 +231,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
             />
           )}
         </div>
-        <StudentDrawer id={selected} onClose={close} onChanged={refresh} />
+        <StudentDrawer view={view} id={selected} onClose={close} onChanged={refresh} />
       </div>
     </div>
   );

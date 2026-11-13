@@ -2,6 +2,7 @@ import type { AdminStudent } from "@/types";
 import styles from "./students.module.css";
 
 const paths = {
+  enrollments: "M3 5h18v15H3V5Zm4-3v6m10-6v6M3 10h18M7 14h4m-4 3h8",
   users:
     "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m18 0v-2a4 4 0 0 0-3-3.87M15 3.13a4 4 0 0 1 0 7.75M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z",
   document: "M14 2H6v20h12V6l-4-4Zm0 0v5h5M9 12h6m-6 4h4",

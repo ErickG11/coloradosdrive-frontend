@@ -2,6 +2,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import StudentsPage from "@/app/(admin)/admin/students/page";
 import { StudentDetail } from "@/app/(admin)/admin/students/StudentDetail";
+import { StudentsList } from "@/app/(admin)/admin/students/StudentsWorkspace";
+import { cohortOptions } from "@/tests/fixtures/studentCohort";
 import { useFetch } from "@/hooks/useFetch";
 import type { Cohort, Course, StudentDetail as Detail, StudentList } from "@/types";
 
@@ -87,56 +89,111 @@ beforeEach(() => {
           ? ([] as Cohort[])
           : path === `/admin/estudiantes/${id}`
             ? detail
-            : path.startsWith("/admin/estudiantes?")
-              ? list
-              : null,
+            : path.endsWith("/cohortes")
+              ? cohortOptions
+              : path.endsWith("/gestion")
+                ? { documentsEnabled: true }
+                : path.startsWith("/admin/estudiantes?")
+                  ? list
+                  : null,
   })) as typeof useFetch);
 });
 
-describe("ficha en el panel lateral", () => {
-  it("separa la ficha en pestañas sin perder secciones ni acciones", () => {
+describe("C10 vistas de alumno", () => {
+  it("Ficha contiene solo Información y Prácticas, con acciones en el encabezado", () => {
     render(<StudentDetail id={id} embedded />);
-    expect(screen.queryByRole("link", { name: "Volver a Alumnos" })).not.toBeInTheDocument();
-    const tabs = within(screen.getByRole("navigation", { name: "Secciones de la ficha" }));
-    expect(tabs.getByRole("button", { name: "Información" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(screen.getByText("Contacto y matrícula actual")).toBeInTheDocument();
-    expect(screen.getByText("Requisitos para graduarse")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Asignar cohorte" })).toBeInTheDocument();
+    const tabs = within(screen.getByRole("tablist", { name: "Ficha del alumno" }));
+    expect(tabs.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "Contacto" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cuenta y acceso" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Asignar cohorte" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
-    expect(screen.queryByText("Total")).not.toBeInTheDocument();
-
-    fireEvent.click(tabs.getByRole("button", { name: "Matrículas" }));
-    expect(screen.getByText("Total")).toBeInTheDocument();
-    expect(screen.queryByText("Contacto y matrícula actual")).not.toBeInTheDocument();
-
-    fireEvent.click(tabs.getByRole("button", { name: "Documentos" }));
-    expect(screen.getByText("Entregado")).toBeInTheDocument();
-
-    fireEvent.click(tabs.getByRole("button", { name: "Prácticas" }));
+    expect(screen.getByLabelText("Más acciones del alumno")).toBeInTheDocument();
+    fireEvent.click(tabs.getByRole("tab", { name: "Prácticas" }));
     expect(screen.getByText("Horario de prácticas")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
   });
-
-  it("abre la ficha desde el listado sin perder filtros y la cierra", () => {
+  it.each([
+    ["ficha", "Ficha"],
+    ["matriculas", "Matrículas"],
+    ["documentos", "Documentos"],
+  ])("abre %s desde su acción y conserva los filtros", (view, label) => {
     navigation.params = new URLSearchParams("activo=true");
     const pushState = vi.spyOn(window.history, "pushState");
     render(<StudentsPage />);
-    expect(screen.queryByRole("region", { name: "Ficha del alumno" })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("link", { name: "Ver ficha de Alumno ficticio" }));
+    expect(screen.getByRole("columnheader", { name: "Acciones" })).toBeInTheDocument();
+    const opener = screen.getByRole("link", { name: `${label} de Alumno ficticio` });
+    expect(opener).toHaveAttribute(
+      "href",
+      `/admin/students/${id}?page=1&activo=true&vista=${view}`,
+    );
+    fireEvent.click(opener);
     expect(pushState).toHaveBeenLastCalledWith(
       null,
       "",
-      `/admin/students/${id}?page=1&activo=true`,
+      `/admin/students/${id}?page=1&activo=true&vista=${view}`,
     );
-    const drawer = within(screen.getByRole("region", { name: "Ficha del alumno" }));
-    expect(drawer.getByRole("heading", { name: "Alumno ficticio" })).toBeInTheDocument();
-
-    fireEvent.click(drawer.getByRole("button", { name: "Cerrar ficha del alumno" }));
+    const drawer = screen.getByRole("dialog", { name: "Alumno ficticio" });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Cerrar panel" }));
     expect(pushState).toHaveBeenLastCalledWith(null, "", "/admin/students?page=1&activo=true");
     pushState.mockRestore();
+  });
+  it.each([
+    ["matriculas", "Asignar cohorte"],
+    ["documentos", "Estado de Documento de identidad original"],
+  ])("recargar el enlace %s conserva la vista", (view, label) => {
+    navigation.params = new URLSearchParams(`vista=${view}`);
+    render(<StudentsList initialSelected={id} />);
+    expect(screen.getByRole("dialog", { name: "Alumno ficticio" })).toBeInTheDocument();
+    expect(
+      screen.getByRole(view === "matriculas" ? "button" : "group", { name: label }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Contacto" })).not.toBeInTheDocument();
+  });
+  it("Matrículas abre la elección dentro del mismo panel y permite volver", () => {
+    render(<StudentDetail id={id} embedded view="matriculas" />);
+    fireEvent.click(screen.getByRole("button", { name: "Asignar cohorte" }));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getByLabelText("Motivo de la asignación")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Volver a Matrículas" }));
+    expect(screen.getByRole("button", { name: "Asignar cohorte" })).toBeInTheDocument();
+  });
+  it("Matrículas permite cambiar una cohorte dentro del mismo panel", () => {
+    const original = vi.mocked(useFetch).getMockImplementation()!;
+    vi.mocked(useFetch).mockImplementation(((path: string) =>
+      path === `/admin/estudiantes/${id}`
+        ? {
+            data: {
+              ...detail,
+              enrollments: [
+                {
+                  ...detail.enrollments[0],
+                  status: "activo",
+                  cohorte: {
+                    id: "current",
+                    nombre: "Actual",
+                    fecha_inicio_curso: "2026-11-20",
+                    fecha_fin_curso: "2026-12-31",
+                  },
+                },
+              ],
+            },
+            isLoading: false,
+            error: null,
+            refetch,
+          }
+        : path.endsWith("/gestion")
+          ? {
+              data: { version: "v1", transferEnabled: true, destinations: [] },
+              isLoading: false,
+              error: null,
+              refetch,
+            }
+          : original(path)) as typeof useFetch);
+    render(<StudentDetail id={id} embedded view="matriculas" />);
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar de cohorte" }));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getByLabelText("Motivo del cambio de cohorte")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Volver a Matrículas" }));
+    expect(screen.getByRole("button", { name: "Cambiar de cohorte" })).toBeInTheDocument();
   });
 });

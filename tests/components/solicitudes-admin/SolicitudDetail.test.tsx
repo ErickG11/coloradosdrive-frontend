@@ -1,9 +1,12 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 vi.mock("@/lib/api/inscripcion", async (original) => ({
   ...(await original<typeof import("@/lib/api/inscripcion")>()),
   getSolicitudAdmin: vi.fn(),
+}));
+vi.mock("@/hooks/useFetch", () => ({
+  useFetch: () => ({ data: { active: false }, refetch: vi.fn(), isLoading: false }),
 }));
 import { getSolicitudAdmin } from "@/lib/api/inscripcion";
 import { SolicitudDetail } from "@/components/solicitudes-admin/SolicitudDetail";
@@ -59,7 +62,7 @@ beforeEach(() => {
 
 it("muestra el encabezado y las tres secciones del panel", async () => {
   render(<SolicitudDetail item={item} onClose={vi.fn()} onChanged={vi.fn()} />);
-  expect(screen.getByRole("region", { name: "Solicitud de Ana Torres" })).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Ana Torres" })).toBeInTheDocument();
   expect(await screen.findByRole("tab", { name: "Lo que declaró" })).toBeInTheDocument();
   expect(screen.getByRole("tab", { name: "Verificaciones" })).toBeInTheDocument();
   expect(screen.getByRole("tab", { name: "Consentimiento" })).toBeInTheDocument();
@@ -84,16 +87,48 @@ it("cierra con Escape y con el botón de cerrar", async () => {
   await screen.findByRole("tab", { name: "Verificaciones" });
   await user.keyboard("{Escape}");
   expect(onClose).toHaveBeenCalledTimes(1);
-  await user.click(screen.getByRole("button", { name: "Cerrar solicitud" }));
+  await user.click(screen.getByRole("button", { name: "Cerrar panel" }));
   expect(onClose).toHaveBeenCalledTimes(2);
 });
 
-// TODO(F23): pantalla de solicitudes rediseñada; reescribir contra el panel acoplado.
-// Casos retirados del panel modal anterior (ya no existen: capa con bloqueo de fondo, trampa de
-// foco, revisión documento por documento y resultado «pendiente_revision»):
-it.skip("cierra con capa, restaura foco y desbloquea fondo", () => {});
-it.skip("atrapa el foco dentro del panel en ambas direcciones", () => {});
-it.skip("acciones de documento (faltante, recibido, aprobado, rechazado)", () => {});
-it.skip("rechaza un documento inline con motivo y retira sus acciones inmediatamente", () => {});
-it.skip("conserva el resultado aprobada/rechazada en el panel y lo deja en solo lectura", () => {});
-it.skip("solicitud aprobada/rechazada bloquea solo su decisión y respeta la revisión documental", () => {});
+it("solicitud pendiente coloca eliminar en Más y las tres decisiones en el pie", async () => {
+  vi.mocked(getSolicitudAdmin).mockResolvedValue({ ...detalle, estado: "enviada" });
+  render(
+    <SolicitudDetail item={{ ...item, estado: "enviada" }} onClose={vi.fn()} onChanged={vi.fn()} />,
+  );
+  await screen.findByRole("tab", { name: "Lo que declaró" });
+  const dialog = screen.getByRole("dialog", { name: "Ana Torres" });
+  const footer = within(dialog.querySelector("footer")!);
+  expect(footer.getByRole("button", { name: "Rechazar" })).toBeEnabled();
+  expect(footer.getByRole("button", { name: "Devolver para corregir" })).toBeEnabled();
+  expect(footer.getByRole("button", { name: "Aprobar" })).toBeDisabled();
+  expect(footer.getByRole("status")).toHaveTextContent("Para aprobar falta:");
+  expect(footer.queryByRole("button", { name: "Eliminar solicitud" })).not.toBeInTheDocument();
+  const user = userEvent.setup();
+  await user.click(screen.getByLabelText("Más acciones de la solicitud"));
+  expect(screen.getByRole("button", { name: "Eliminar solicitud" })).toBeInTheDocument();
+});
+it("la aprobación conserva sus requisitos al completarse identidad y estudios", async () => {
+  vi.mocked(getSolicitudAdmin).mockResolvedValue({
+    ...detalle,
+    estado: "enviada",
+    verificaciones: [
+      {
+        id: "identity",
+        tipo: "identidad",
+        resultado: "verificado",
+        createdAt: "2026-11-13T12:00:00Z",
+      },
+      {
+        id: "studies",
+        tipo: "estudios",
+        resultado: "verificado",
+        createdAt: "2026-11-13T12:00:00Z",
+      },
+    ] as SolicitudAdminDetalle["verificaciones"],
+  });
+  render(
+    <SolicitudDetail item={{ ...item, estado: "enviada" }} onClose={vi.fn()} onChanged={vi.fn()} />,
+  );
+  expect(await screen.findByRole("button", { name: "Aprobar" })).toBeEnabled();
+});

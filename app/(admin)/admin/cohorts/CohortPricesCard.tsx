@@ -73,7 +73,10 @@ export function CohortPricesCard() {
   if (config.error) return <p role="alert">{config.error}</p>;
   if (!data?.active || !data.pricesActive) return null;
   return (
-    <section aria-label="Precios por tipo de curso" className="grid grid-cols-2 gap-3 sm:gap-4">
+    <section
+      aria-label="Precios por tipo de curso"
+      className="my-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5"
+    >
       {(["A", "B"] as const).map((tipo) => {
         const current = data.prices?.find((p) => p.tipo === tipo);
         return (

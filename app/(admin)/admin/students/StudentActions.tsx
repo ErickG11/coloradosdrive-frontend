@@ -109,30 +109,47 @@ export function StudentActions({
   }
   return (
     <>
-      <p className="text-sm text-text-secondary">
-        Estado de acceso: <strong>{student.activo ? "Activo" : "Inactivo"}</strong>
-      </p>
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="secondary"
-          disabled={disabled || busy || deletionPending}
-          onClick={() => open(student.activo ? "desactivar" : "reactivar")}
+      <details
+        className="relative"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.open = false;
+            event.currentTarget.querySelector("summary")?.focus();
+          }
+        }}
+      >
+        <summary
+          aria-label="Más acciones del alumno"
+          title="Más"
+          className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-sm border border-border text-xl"
         >
-          {student.activo ? "Desactivar" : "Reactivar"}
-        </Button>
-        <Button
-          variant="danger"
-          disabled={disabled || busy || deletionPending}
-          onClick={() => open("eliminar")}
-        >
-          Eliminar definitivamente
-        </Button>
-        {deletionPending && (
-          <Link className={buttonClassName("secondary")} href={studentDeletionsHref}>
-            Ver eliminaciones pendientes
-          </Link>
-        )}
-      </div>
+          ⋯
+        </summary>
+        <div className="absolute right-0 z-20 mt-2 grid w-64 gap-2 rounded-md border border-border bg-bg-surface p-3 shadow-elevated">
+          <Button
+            variant="secondary"
+            disabled={disabled || busy || deletionPending}
+            onClick={() => open(student.activo ? "desactivar" : "reactivar")}
+          >
+            {student.activo ? "Desactivar" : "Reactivar"}
+          </Button>
+          <Button
+            variant="ghost"
+            className="border-t border-border pt-3 !text-status-error"
+            disabled={disabled || busy || deletionPending}
+            onClick={() => open("eliminar")}
+          >
+            Eliminar definitivamente
+          </Button>
+          {deletionPending && (
+            <Link className={buttonClassName("secondary")} href={studentDeletionsHref}>
+              Ver eliminaciones pendientes
+            </Link>
+          )}
+        </div>
+      </details>
       <Modal
         isOpen={action !== null}
         onClose={close}

@@ -79,7 +79,7 @@ export function SolicitudDetail({
   const actual = detalle ?? item;
   return (
     <SolicitudDrawer
-      title={`Solicitud de ${nombreDe(actual)}`}
+      title={nombreDe(actual)}
       avatar={<EnrollmentAvatar name={nombreDe(actual)} large />}
       onClose={onClose}
       footer={
@@ -98,9 +98,42 @@ export function SolicitudDetail({
           />
         ) : undefined
       }
+      actions={
+        detalle && detalle.estado !== "aprobada" && detalle.estado !== "archivada" ? (
+          <details
+            className="relative"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector("summary")?.focus();
+              }
+            }}
+          >
+            <summary
+              aria-label="Más acciones de la solicitud"
+              title="Más"
+              className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-sm border border-border text-xl"
+            >
+              ⋯
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 w-64 rounded-md border border-border bg-bg-surface p-3 shadow-elevated">
+              <DeleteSolicitud
+                id={detalle.id}
+                cedula={detalle.cedula}
+                onDeleted={() => {
+                  onChanged();
+                  onClose();
+                }}
+              />
+            </div>
+          </details>
+        ) : undefined
+      }
       header={
         <>
-          <p>Cédula · {actual.cedula ?? "No registrada"}</p>
+          <p>Cédula · {actual.documentNumber ?? actual.cedula ?? "No registrada"}</p>
           <SolicitudStatus estado={actual.estado} />
         </>
       }
@@ -225,18 +258,6 @@ export function SolicitudDetail({
               ) : null}
             </section>
           </>
-        ) : null}
-        {detalle && detalle.estado !== "aprobada" && detalle.estado !== "archivada" ? (
-          <div className={styles.deleteZone}>
-            <DeleteSolicitud
-              id={detalle.id}
-              cedula={detalle.cedula}
-              onDeleted={() => {
-                onChanged();
-                onClose();
-              }}
-            />
-          </div>
         ) : null}
       </div>
     </SolicitudDrawer>

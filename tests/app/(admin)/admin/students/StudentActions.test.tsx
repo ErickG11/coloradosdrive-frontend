@@ -23,6 +23,7 @@ function show(active = true, pending = false) {
       onBusyChange={onBusyChange}
     />,
   );
+  fireEvent.click(screen.getByLabelText("Más acciones del alumno"));
 }
 function deletion() {
   fireEvent.click(screen.getByRole("button", { name: "Eliminar definitivamente" }));

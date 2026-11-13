@@ -8,7 +8,6 @@ export interface PlanChangeState {
   serverNow?: string;
   windowClosesAt?: string | null;
   calendarEndDate?: string | null;
-  freeRemaining?: number;
   reservation?: StudentScheduleReservation | null;
   current?: {
     practiceStartDate: string | null;
@@ -26,23 +25,4 @@ export interface PlanChangePreview {
 export interface PlanChangeCalendar {
   serverNow: string;
   dias: import("@/components/student-enrollment/PlanFields").PlanCalendarDay[];
-}
-export interface AdminReassignmentSource {
-  active: boolean;
-  serverNow?: string;
-  cohort?: { id: string; type: "A" | "B" };
-  enrollments?: {
-    id: string;
-    studentId: string;
-    studentName: string;
-    updatedAt: string;
-    practiceStartDate: string | null;
-    practiceEndDate: string | null;
-    guardReady: boolean;
-  }[];
-}
-export interface BulkReassignmentResult {
-  preview: boolean;
-  canApply: boolean;
-  plans: { enrollmentId: string; reservation: StudentScheduleReservation }[];
 }

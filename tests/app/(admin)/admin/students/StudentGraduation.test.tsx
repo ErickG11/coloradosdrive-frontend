@@ -21,9 +21,11 @@ it("muestra encabezado, pendientes primero y datos concretos del alumno con pago
   expect(screen.getByText(graduationStudent.cedula)).toBeInTheDocument();
   expect(screen.getByText(graduationStudent.correo!)).toBeInTheDocument();
   expect(screen.getByText("Faltan 4 requisitos")).toBeInTheDocument();
-  const section = screen.getByRole("region", { name: "Requisitos de Curso ficticio" });
+  const summary = screen.getByText(/Curso ficticio · 4 pendientes/);
+  fireEvent.click(summary);
+  const section = summary.closest("details")!;
   const rows = within(section).getAllByRole("listitem");
-  expect(rows.slice(0, 4).every((r) => r.textContent?.startsWith("Pendiente"))).toBe(true);
+  expect(rows.slice(0, 4).every((r) => r.textContent?.includes("Pendiente"))).toBe(true);
   expect(rows[4]).toHaveTextContent("Cumplido");
   for (const text of [
     "Saldo pendiente $70.00; abonado $30.00",

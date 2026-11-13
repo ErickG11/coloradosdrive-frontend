@@ -5,6 +5,7 @@ import { buttonClassName } from "@/components/ui/buttonStyles";
 import type { AdminStudent, Cohort } from "@/types";
 import { ActiveBadge, StudentBadge } from "./StudentBadge";
 import { StudentAvatar, StudentIcon } from "./StudentVisual";
+import type { StudentView } from "./StudentDrawer";
 import styles from "./students.module.css";
 
 export function StudentTable({
@@ -28,9 +29,13 @@ export function StudentTable({
   onRetry?: () => void;
   filtered?: boolean;
   onClear?: () => void;
-  onOpen?: (event: MouseEvent<HTMLAnchorElement>, id: string) => void;
+  onOpen?: (event: MouseEvent<HTMLAnchorElement>, id: string, view?: StudentView) => void;
 }) {
-  const href = (student: AdminStudent) => `/admin/students/${student.id}?${filterQuery}`;
+  const href = (student: AdminStudent, view: StudentView = "ficha") => {
+    const query = new URLSearchParams(filterQuery);
+    query.set("vista", view);
+    return `/admin/students/${student.id}?${query}`;
+  };
   // Como en el diseño: «Cohorte X» salvo que el nombre ya lo diga.
   function cohortLabel(cohortId: string) {
     const name = cohorts.find((cohort) => cohort.id === cohortId)?.nombre;
@@ -169,18 +174,60 @@ export function StudentTable({
     },
     {
       key: "open",
-      header: "Ficha",
-      className: "data-table__chevron",
-      mobileLabel: false,
+      header: "Acciones",
+      className: "data-table__actions",
       render: (student) => (
-        <Link
-          href={href(student)}
-          onClick={(event) => onOpen?.(event, student.id)}
-          aria-label={`Ver ficha de ${student.nombreCompleto}`}
-          className={styles.iconButton}
-        >
-          <StudentIcon name="eye" />
-        </Link>
+        <div className="flex flex-wrap items-center gap-1">
+          {(
+            [
+              ["ficha", "Ficha", "eye"],
+              ["matriculas", "Matrículas", "enrollments"],
+              ["documentos", "Documentos", "document"],
+            ] as const
+          ).map(([view, label, icon]) => (
+            <Link
+              key={view}
+              href={href(student, view)}
+              onClick={(event) => onOpen?.(event, student.id, view)}
+              aria-label={`${label} de ${student.nombreCompleto}`}
+              title={label}
+              className={styles.iconButton}
+            >
+              <StudentIcon name={icon} />
+            </Link>
+          ))}
+          <details
+            className="relative"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector("summary")?.focus();
+              }
+            }}
+          >
+            <summary
+              aria-label={`Más acciones de ${student.nombreCompleto}`}
+              title="Más"
+              className={`${styles.iconButton} cursor-pointer list-none`}
+            >
+              ⋯
+            </summary>
+            <div className="absolute right-0 z-20 grid w-52 gap-1 rounded-md border border-border bg-bg-surface p-2 shadow-elevated">
+              <Link
+                className="rounded-sm px-3 py-2 text-sm hover:bg-bg-sunken"
+                href={href(student)}
+                onClick={(event) => {
+                  event.currentTarget.closest("details")?.removeAttribute("open");
+                  onOpen?.(event, student.id, "ficha");
+                }}
+              >
+                Gestionar cuenta
+              </Link>
+            </div>
+          </details>
+        </div>
       ),
     },
   ];

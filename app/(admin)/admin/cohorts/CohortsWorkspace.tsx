@@ -315,19 +315,6 @@ export function CohortsWorkspace() {
       </Link>
     );
   }
-  function postponeLink(cohort: Cohort) {
-    return (
-      <Link
-        href={`/admin/cohorts/${cohort.id}/edit?seccion=fechas`}
-        onClick={(event) => openPanel(event, cohort.id, "dates")}
-        className={styles.edit}
-        aria-label={`Aplazar cohorte ${cohort.nombre}`}
-        title="Aplazar cohorte"
-      >
-        <CohortIcon name="clock" />
-      </Link>
-    );
-  }
   function deleteButton(cohort: Cohort) {
     return (
       <button
@@ -670,7 +657,6 @@ export function CohortsWorkspace() {
                     <header>
                       <h2>{cohort.nombre}</h2>
                       <div className="flex items-center gap-1.5">
-                        {postponeLink(cohort)}
                         {editLink(cohort)}
                         {deleteButton(cohort)}
                       </div>
@@ -755,7 +741,6 @@ export function CohortsWorkspace() {
                         <td>{statusBadge(cohort)}</td>
                         <td>
                           <div className="flex items-center gap-1.5">
-                            {postponeLink(cohort)}
                             {editLink(cohort)}
                             {deleteButton(cohort)}
                           </div>
