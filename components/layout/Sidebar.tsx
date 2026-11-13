@@ -168,19 +168,13 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
             <>
               <SidebarLink
                 href="/student/course"
-                active={pathname.startsWith("/student/course")}
+                active={
+                  pathname.startsWith("/student/course") || pathname.startsWith("/student/exams")
+                }
                 section="content"
                 onClick={closeDrawer}
               >
                 Mi curso
-              </SidebarLink>
-              <SidebarLink
-                href="/student/exams"
-                active={pathname.startsWith("/student/exams")}
-                section="exams"
-                onClick={closeDrawer}
-              >
-                Exámenes
               </SidebarLink>
               <SidebarLink
                 href="/student/schedule"

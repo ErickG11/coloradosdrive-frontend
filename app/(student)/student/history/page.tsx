@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import { useCallback, useRef, useState } from "react";
 import { Button, EmptyState } from "@/components/ui";
 import { Toast } from "@/components/inscripcion/Toast";
@@ -122,9 +123,9 @@ export default function StudentHistoryPage() {
           }
         />
       ) : !enrollment ? (
-        <EmptyState
-          title="Aún no tienes matrículas"
-          description="Tu historial aparecerá cuando tengas una matrícula."
+        <StudentEmptyState
+          title="Tu historial de asistencia empieza aquí"
+          description="Aquí verás tus horas y asistencias cuando tengas prácticas registradas."
         />
       ) : (
         <HistoryWorkspace

@@ -1,4 +1,5 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
@@ -182,15 +183,10 @@ export function DashboardWorkspace() {
         </div>
       ) : null}
       {!enrollment ? (
-        <section className={styles.empty}>
-          <EnrollmentIcon kind="flag" />
-          <h2>Tu próximo camino empieza aquí</h2>
-          <p>Cuando tengas una matrícula disponible, aquí podrás seguir tu avance.</p>
-          <Link className={styles.textLink} href="/student/inscripcion">
-            Consultar mi inscripción
-            <EnrollmentIcon kind="arrow" />
-          </Link>
-        </section>
+        <StudentEmptyState
+          title="Tu próximo camino empieza aquí"
+          description="Cuando tengas una matrícula disponible, aquí podrás seguir tu avance, tus materias y tus prácticas."
+        />
       ) : (
         <>
           <DashboardHero

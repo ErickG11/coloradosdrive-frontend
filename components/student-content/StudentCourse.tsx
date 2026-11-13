@@ -1,4 +1,5 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api/client";
@@ -67,10 +68,10 @@ export function StudentCourse({ initialCourseId = "" }: { initialCourseId?: stri
       {course ? (
         <CourseCatalog key={course.course_id} course={course} />
       ) : (
-        <p className={styles.empty}>
-          Aún no tienes un curso habilitado. Necesitas una matrícula activa con cohorte asignada.
-          Consulta con administración.
-        </p>
+        <StudentEmptyState
+          title="Todavía no hay materias disponibles para ti"
+          description="Tu curso aún no tiene contenido asignado. Te avisaremos cuando esté listo."
+        />
       )}
     </div>
   );
@@ -305,7 +306,12 @@ function CourseCatalog({ course }: { course: Course }) {
             })}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <StudentEmptyState
+          title="Todavía no hay materias disponibles para ti"
+          description="Tu curso aún no tiene contenido asignado. Te avisaremos cuando esté listo."
+        />
+      )}
     </>
   );
 }

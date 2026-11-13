@@ -1,4 +1,5 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MotionConfig } from "framer-motion";
 import { Button, EmptyState } from "@/components/ui";
@@ -147,6 +148,13 @@ export function HistoryWorkspace({
             Reintentar historial
           </Button>
         }
+      />
+    );
+  if (history.complete && entries.length === 0)
+    return (
+      <StudentEmptyState
+        title="Aún no tienes prácticas en tu historial"
+        description="Después de tus clases, aquí verás tu asistencia y las horas que vas completando."
       />
     );
   return (
