@@ -67,16 +67,24 @@ describe("Sidebar", () => {
     }
   });
 
-  it("instructor: ve Horarios de práctica (su primera pantalla real), nada de lo de admin/estudiante", () => {
+  it("instructor: ve Mi agenda (su primera pantalla real) y Cambiar contraseña, nada de lo de admin/estudiante", () => {
     renderSidebar("instructor");
 
     expect(screen.queryAllByRole("link", { name: /Cohortes/ })).toHaveLength(0);
     expect(screen.queryAllByRole("link", { name: /Exámenes/ })).toHaveLength(0);
-    const scheduleLinks = screen.getAllByRole("link", { name: /Horarios de práctica/ });
+    // El enlace usa el mismo nombre que el título de la página.
+    expect(screen.queryAllByRole("link", { name: /Horarios de práctica/ })).toHaveLength(0);
+    const scheduleLinks = screen.getAllByRole("link", { name: "Mi agenda" });
     expect(scheduleLinks.length).toBeGreaterThan(0);
     for (const link of scheduleLinks) {
       expect(link).toHaveAttribute("href", "/instructor");
     }
+    const passwordLinks = screen.getAllByRole("link", { name: "Cambiar contraseña" });
+    expect(passwordLinks.length).toBeGreaterThan(0);
+    for (const link of passwordLinks) {
+      expect(link).toHaveAttribute("href", "/instructor/change-password");
+    }
+    expect(screen.getAllByRole("link")).toHaveLength(scheduleLinks.length + passwordLinks.length);
   });
 });
 

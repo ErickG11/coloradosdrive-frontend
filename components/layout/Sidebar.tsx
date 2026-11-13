@@ -247,14 +247,24 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
         </>
       ) : null}
       {role === "instructor" ? (
-        <SidebarLink
-          href="/instructor"
-          active={isInstructorScheduleActive}
-          section="schedule"
-          onClick={closeDrawer}
-        >
-          Horarios de práctica
-        </SidebarLink>
+        <>
+          <SidebarLink
+            href="/instructor"
+            active={isInstructorScheduleActive}
+            section="schedule"
+            onClick={closeDrawer}
+          >
+            Mi agenda
+          </SidebarLink>
+          <SidebarLink
+            href="/instructor/change-password"
+            active={pathname.startsWith("/instructor/change-password")}
+            section="security"
+            onClick={closeDrawer}
+          >
+            Cambiar contraseña
+          </SidebarLink>
+        </>
       ) : null}
     </>
   );
