@@ -80,7 +80,7 @@ export function StudentEnrollmentWizard() {
     !!payment.payment && ["pendiente", "revision", "aprobado"].includes(payment.payment.estado);
   if (data?.accesoCompleto)
     return (
-      <EnrollmentFlowFrame student step={3} total={3}>
+      <EnrollmentFlowFrame companion={false} student step={3} total={3}>
         {selector}
         <WaitlistPreferences />
         <EnrollmentWorkspace
@@ -94,7 +94,7 @@ export function StudentEnrollmentWizard() {
     );
   if (isLoading)
     return (
-      <EnrollmentFlowFrame student total={3}>
+      <EnrollmentFlowFrame companion={false} student total={3}>
         <div className={visual.surface}>
           {selector}
           <ReservationBanner state={reservation} />
@@ -111,7 +111,7 @@ export function StudentEnrollmentWizard() {
     );
   if (error || !data)
     return (
-      <EnrollmentFlowFrame student total={3}>
+      <EnrollmentFlowFrame companion={false} student total={3}>
         <div className={visual.surface}>
           {selector}
           <ReservationBanner state={reservation} />
@@ -127,7 +127,7 @@ export function StudentEnrollmentWizard() {
   const desiredStep = selected ?? (reservation.held ? 2 : 0);
   const step = desiredStep === 2 && !reservation.live && !paymentOpen ? 1 : desiredStep;
   return (
-    <EnrollmentFlowFrame student total={3} step={step + 1}>
+    <EnrollmentFlowFrame companion={false} student total={3} step={step + 1}>
       <section className={`${visual.surface} ${flowStyles.flow}`}>
         <BillingPanel />
         <WaitlistPreferences />

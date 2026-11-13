@@ -7,15 +7,9 @@ import type { StudentEnrollmentState } from "@/types/studentEnrollment";
 import type { StudentPayment } from "@/types/studentPayment";
 import type { StudentScheduleReservation } from "@/types/studentSchedule";
 import { useEnrollmentOverview } from "./useEnrollmentOverview";
-import {
-  enrollmentMilestones,
-  enrollmentStatus,
-  licenseLabel,
-  shortEnrollmentId,
-} from "./enrollmentModel";
+import { enrollmentStatus, licenseLabel, shortEnrollmentId } from "./enrollmentModel";
 import { EnrollmentBadge, EnrollmentIcon, EnrollmentSkeleton } from "./EnrollmentVisual";
 import { EnrollmentCard } from "./EnrollmentCard";
-import { EnrollmentJourney } from "./EnrollmentJourney";
 import { EnrollmentDetails, EnrollmentStatusPanel } from "./EnrollmentDetails";
 import styles from "./enrollment-overview.module.css";
 
@@ -189,15 +183,6 @@ export function EnrollmentWorkspace({
               now={state.serverNow}
             />
           </div>
-          <EnrollmentJourney
-            milestones={enrollmentMilestones(enrollment, principal, overview.identity, ownPayment, {
-              reserved: Boolean(ownReservation),
-              assigned:
-                enrollment.status === "activo" &&
-                !ambiguousPractices &&
-                overview.ownSlots.some((slot) => slot.cohortId === enrollment.cohortId),
-            })}
-          />
           <EnrollmentDetails
             enrollment={enrollment}
             courseName={course?.nombre ?? null}

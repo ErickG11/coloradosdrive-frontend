@@ -62,7 +62,6 @@ un enlace al panel; no mostraba credenciales ni cédula.
 `EnrollmentCard` recibe identidad, matrícula, cohorte y vigencia opcional;
 la cédula opcional se enmascara por defecto y su revelado vive solo en memoria.
 El selector remonta el contenido al cambiar matrícula y vuelve a ocultarla.
-`EnrollmentJourney` recibe hitos reales con estado y fecha opcional.
 `EnrollmentDataCard`, `EnrollmentDocuments`, `EnrollmentStatusPanel`, iconos,
 badges y conteo se pueden reutilizar desde el próximo panel del estudiante.
 `courseClock` calcula días civiles en Guayaquil solamente con inicio y fin

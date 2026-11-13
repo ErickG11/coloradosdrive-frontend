@@ -1,6 +1,4 @@
 import type { PracticeHistoryEnrollment } from "@/types/practiceAttendance";
-import type { StudentEnrollmentState } from "@/types/studentEnrollment";
-import type { StudentPayment } from "@/types/studentPayment";
 import {
   calendarOrdinal,
   longDate,
@@ -57,67 +55,4 @@ export function courseClock(start: string | null, end: string | null, now: strin
     total,
     progress: (today - first + 1) / total,
   };
-}
-export interface EnrollmentMilestone {
-  id: string;
-  label: string;
-  icon: "send" | "check" | "access" | "calendar" | "payment" | "cohort" | "flag";
-  date?: string | null;
-  state: "complete" | "current" | "future";
-}
-export function enrollmentMilestones(
-  enrollment: PracticeHistoryEnrollment,
-  principal: StudentEnrollmentState | null,
-  identity: EnrollmentIdentity | null,
-  payment: StudentPayment | null,
-  schedule: { reserved: boolean; assigned: boolean },
-): EnrollmentMilestone[] {
-  const milestones: EnrollmentMilestone[] = [];
-  if (principal?.origen === "solicitud") {
-    milestones.push({ id: "request", label: "Solicitud enviada", icon: "send", state: "complete" });
-    milestones.push({
-      id: "approved",
-      label: "Solicitud aprobada",
-      icon: "check",
-      state: "complete",
-    });
-  }
-  if (identity?.createdAt && longDate(identity.createdAt))
-    milestones.push({
-      id: "account",
-      label: "Cuenta creada",
-      icon: "access",
-      date: identity.createdAt,
-      state: "complete",
-    });
-  // Access is known independently of the Auth account's creation date.
-  milestones.push({ id: "access", label: "Acceso habilitado", icon: "access", state: "complete" });
-  if (schedule.reserved || schedule.assigned)
-    milestones.push({
-      id: "schedule",
-      label: schedule.reserved ? "Horarios reservados" : "Horarios asignados",
-      icon: "calendar",
-      state: "complete",
-    });
-  if (payment?.estado === "aprobado")
-    milestones.push({
-      id: "payment",
-      label: "Pago registrado",
-      icon: "payment",
-      date: payment.confirmedAt,
-      state: "complete",
-    });
-  if (enrollment.cohortId)
-    milestones.push({ id: "cohort", label: "Cohorte asignada", icon: "cohort", state: "complete" });
-  const status = enrollmentStatus(enrollment.status);
-  milestones.push({
-    id: "status",
-    label: status.label,
-    icon: "flag",
-    state:
-      enrollment.status === "activo" || enrollment.status === "pendiente_cohorte"
-        ? "current"
-        : "complete",
-  });
-  return milestones;
 }
