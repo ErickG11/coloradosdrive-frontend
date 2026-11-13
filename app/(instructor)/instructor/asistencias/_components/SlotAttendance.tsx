@@ -15,9 +15,11 @@ import type { PracticeSlot, PracticeSlotWithNames } from "@/types";
 export function SlotAttendance({
   slot,
   onSaved,
+  submit,
 }: {
   slot: PracticeSlotWithNames;
   onSaved: (slot: PracticeSlot) => void;
+  submit?: (slot: PracticeSlotWithNames, attended: boolean, motivo?: string) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,10 @@ export function SlotAttendance({
     setError(null);
     setSaved(false);
     try {
+      if (submit) {
+        await submit(slot, attended);
+        return;
+      }
       const updated = await api.patch<PracticeSlot>(`/practice-slots/${slot.id}/attendance`, {
         attended,
       });
@@ -130,6 +136,7 @@ export function SlotAttendance({
           next={pendingCorrection}
           endpoint={`/practice-slots/${slot.id}/attendance`}
           onSaved={didSave}
+          save={submit ? ({ attended, motivo }) => submit(slot, attended, motivo) : undefined}
           onClose={() => setPendingCorrection(null)}
           onWindowClosed={() => setWindowDenied(true)}
           disabledReason={canCorrect ? undefined : correctionWindowMessage}

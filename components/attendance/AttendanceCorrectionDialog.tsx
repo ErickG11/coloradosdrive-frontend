@@ -21,6 +21,7 @@ export function AttendanceCorrectionDialog({
   disabledReason,
   onWindowClosed,
   onBusyChange,
+  save,
 }: {
   current: boolean | null;
   next: boolean | null;
@@ -31,6 +32,7 @@ export function AttendanceCorrectionDialog({
   disabledReason?: string;
   onWindowClosed?: () => void;
   onBusyChange?: (busy: boolean) => void;
+  save?: (input: { attended: boolean; motivo: string }) => Promise<void>;
 }) {
   const [motivo, setMotivo] = useState("");
   const [selected, setSelected] = useState(next);
@@ -79,6 +81,11 @@ export function AttendanceCorrectionDialog({
     setSaving(true);
     setError(null);
     try {
+      if (save) {
+        await save({ attended: selected, motivo: motivo.trim() });
+        if (mounted.current) onClose();
+        return;
+      }
       const result = await api.patch<PracticeSlot>(endpoint, {
         attended: selected,
         motivo: motivo.trim(),

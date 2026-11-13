@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SlotAttendance } from "@/app/(instructor)/instructor/SlotAttendance";
+import { SlotAttendance } from "@/app/(instructor)/instructor/asistencias/_components/SlotAttendance";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { correctionDeadline } from "@/lib/utils/practiceAttendance";

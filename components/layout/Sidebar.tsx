@@ -257,6 +257,14 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
             Mi agenda
           </SidebarLink>
           <SidebarLink
+            href="/instructor/asistencias"
+            active={pathname.startsWith("/instructor/asistencias")}
+            section="schedule"
+            onClick={closeDrawer}
+          >
+            Asistencias
+          </SidebarLink>
+          <SidebarLink
             href="/instructor/change-password"
             active={pathname.startsWith("/instructor/change-password")}
             section="security"

@@ -84,7 +84,20 @@ describe("Sidebar", () => {
     for (const link of passwordLinks) {
       expect(link).toHaveAttribute("href", "/instructor/change-password");
     }
-    expect(screen.getAllByRole("link")).toHaveLength(scheduleLinks.length + passwordLinks.length);
+    const attendanceLinks = screen.getAllByRole("link", { name: "Asistencias" });
+    expect(attendanceLinks.length).toBeGreaterThan(0);
+    for (const link of attendanceLinks) {
+      expect(link).toHaveAttribute("href", "/instructor/asistencias");
+      expect(
+        scheduleLinks[0].compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        link.compareDocumentPosition(passwordLinks[0]) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+    expect(screen.getAllByRole("link")).toHaveLength(
+      scheduleLinks.length + passwordLinks.length + attendanceLinks.length,
+    );
   });
 });
 
