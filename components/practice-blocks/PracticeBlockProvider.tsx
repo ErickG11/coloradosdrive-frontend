@@ -116,18 +116,3 @@ export function usePracticeBlocks() {
   if (!value) throw new Error("Falta el contexto de prácticas");
   return value;
 }
-export function PracticeAvailabilityBadge() {
-  const { options, loading, optionsError } = usePracticeBlocks();
-  const count = new Set(
-    options.map((o) => `${o.enrollmentId}:${o.startsAt}:${o.instructorId}:${o.hours}`),
-  ).size;
-  return (
-    <span
-      className="inline-flex min-w-6 items-center justify-center rounded-full bg-bg-sunken px-1.5 text-xs tabular-nums"
-      aria-label={optionsError ? "Cupos pendientes de consultar" : `${count} cupos disponibles`}
-      aria-live="polite"
-    >
-      {optionsError ? "—" : loading && !count ? "…" : count}
-    </span>
-  );
-}

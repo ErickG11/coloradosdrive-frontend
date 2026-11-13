@@ -1,468 +1,735 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Button, FormError, Modal } from "@/components/ui";
+import { MotionConfig } from "framer-motion";
+import { Button, FormError } from "@/components/ui";
+import { XIcon } from "@/components/ui/icons";
+import { Toast } from "@/components/inscripcion/Toast";
+import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { useFetch } from "@/hooks/useFetch";
-import { usePracticeBlocks } from "@/components/practice-blocks/PracticeBlockProvider";
-import type { StudentPracticeSlot } from "@/types/practiceSlot";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
+import { api } from "@/lib/api/client";
+import type { StudentPracticeSlot } from "@/types";
+import type { PracticeHistoryEnrollment, PracticeHistoryItem } from "@/types/practiceAttendance";
 import type { PracticeBlockMutation, PracticeBlockOption } from "@/types/practiceBlock";
-import { BlockDialog, TakeBlockDialog, type AgendaBlock } from "./BlockDialogs";
-import { blockDate, blockTime, blockEnd, localDay } from "./blockFormat";
-import styles from "./blocks.module.css";
+import { usePracticeBlocks } from "@/components/practice-blocks/PracticeBlockProvider";
+import { BlockDialog, ReplacementDialog, TakeBlockDialog, type AgendaBlock } from "./BlockDialogs";
+import { NextPractice, ScheduleAgenda } from "./ScheduleAgenda";
+import { PracticePlan } from "./PracticePlan";
+import { PracticeBadge, ScheduleIcon, ScheduleSkeleton } from "./ScheduleVisual";
+import {
+  dateLabel,
+  dayKey,
+  downloadCalendar,
+  friendlyError,
+  groupSlots,
+  hoursLabel,
+  instructorName,
+  isActive,
+  isPlanConfigurationError,
+  slotEnd,
+  timeLabel,
+  visualState,
+  type PracticeBlock,
+  type VisualState,
+} from "./scheduleModel";
+import { usePracticePlan } from "./usePracticePlan";
+import styles from "./schedule.module.css";
 
-function optionGroups(options: PracticeBlockOption[]) {
-  const groups = new Map<string, PracticeBlockOption[]>();
-  for (const option of options) {
-    const key = `${option.enrollmentId}:${option.startsAt}:${option.instructorId}:${option.hours}`;
-    groups.set(key, [...(groups.get(key) ?? []), option]);
-  }
-  return [...groups.values()];
-}
-function ChoiceList({
-  options,
-  onChoose,
-  disabled = false,
-}: {
-  options: PracticeBlockOption[];
-  onChoose: (choices: PracticeBlockOption[]) => void;
-  disabled?: boolean;
-}) {
-  const [limit, setLimit] = useState(24);
-  const groups = optionGroups(options);
-  const visible = groups.slice(0, limit);
-  const sections = [
-    { kind: "released", label: "Cupos liberados por otros alumnos" },
-    { kind: "instructor_free", label: "Bloques libres de tu instructor" },
-    { kind: "other_free", label: "Otros instructores disponibles" },
-  ];
-  return (
-    <div className={styles.choiceSections}>
-      {sections.map((section) => {
-        const choices = visible.filter((g) => g[0].kind === section.kind);
-        if (!choices.length) return null;
-        const days = new Map<string, PracticeBlockOption[][]>();
-        for (const group of choices) {
-          const key = localDay(group[0].startsAt);
-          days.set(key, [...(days.get(key) ?? []), group]);
-        }
-        return (
-          <section key={section.kind} className={styles.choiceSection}>
-            <h3>{section.label}</h3>
-            {[...days.values()].map((day) => (
-              <div key={localDay(day[0][0].startsAt)}>
-                <h4 className={styles.day}>{blockDate(day[0][0].startsAt)}</h4>
-                <div className={styles.choiceGrid}>
-                  {day.map((group) => {
-                    const o = group[0];
-                    return (
-                      <article key={o.id} className={styles.choice}>
-                        <p className={styles.time}>
-                          {blockTime(o.startsAt)}–{blockTime(o.endsAt)} <span>{o.hours} h</span>
-                        </p>
-                        <p>{o.instructorName}</p>
-                        <span className={styles.cost}>
-                          {o.cost === 0
-                            ? "Reponer (sin costo)"
-                            : "Cambiar (consume 1 reprogramación)"}
-                        </span>
-                        <Button
-                          variant="secondary"
-                          disabled={disabled}
-                          onClick={() => onChoose(group)}
-                        >
-                          Elegir bloque
-                        </Button>
-                      </article>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </section>
-        );
-      })}
-      {limit < groups.length ? (
-        <Button variant="ghost" onClick={() => setLimit((n) => n + 24)}>
-          Ver más horarios ({groups.length - limit})
-        </Button>
-      ) : null}
-    </div>
-  );
-}
+const historyStates: Record<PracticeHistoryItem["estado"], VisualState> = {
+  asistio: { label: "Asistió", tone: "complete", icon: "check" },
+  no_asistio: { label: "No asistió", tone: "error", icon: "cross" },
+  pendiente: { label: "Asistencia pendiente", tone: "neutral", icon: "clock" },
+  liberada: { label: "Pendiente por reponer", tone: "warning", icon: "clock" },
+  falta: { label: "Falta", tone: "error", icon: "cross" },
+  cancelada: { label: "Cancelada", tone: "neutral", icon: "cross", cancelled: true },
+};
+
 export default function StudentSchedulePage() {
-  const availability = usePracticeBlocks();
-  const { summary, options, summaryError, optionsError, loading } = availability;
   const {
     data: slots,
-    isLoading: slotsLoading,
-    error: slotsError,
+    isLoading,
+    error,
     refetch: refetchSlots,
   } = useFetch<StudentPracticeSlot[]>("/practice-slots");
-  const [now, setNow] = useState<number | null>(null);
-  const [selected, setSelected] = useState<AgendaBlock | null>(null);
+  const availability = usePracticeBlocks();
+  const { summary, options, loading: optionsLoading, summaryError, optionsError } = availability;
+  const {
+    data: enrollments,
+    error: enrollmentsError,
+    refetch: refetchEnrollments,
+  } = useFetch<{ cohortId: string | null; courseType: "A" | "B" }[]>("/estudiantes/enrollments");
+  const {
+    data: planEnrollments,
+    error: planEnrollmentsError,
+    refetch: refetchPlanEnrollments,
+  } = useFetch<PracticeHistoryEnrollment[]>("/estudiantes/practice-history/enrollments");
+  const [selectedCohort, setSelectedCohort] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "week">("list");
+  const [section, setSection] = useState<"agenda" | "available">("agenda");
+  const [planNoticeDismissed, setPlanNoticeDismissed] = useState(false);
+  const [focusedDay, setFocusedDay] = useState<{ day: string; request: number } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [configurationIssue, setConfigurationIssue] = useState(false);
+  const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
+  const [confirmationDue, setConfirmationDue] = useState(false);
+  const [noPracticeNotice, setNoPracticeNotice] = useState(false);
+  const [dialog, setDialog] = useState<{ block: AgendaBlock; cancel: boolean } | null>(null);
   const [take, setTake] = useState<PracticeBlockOption[] | null>(null);
   const [replacement, setReplacement] = useState<string | null>(null);
-  const [notice, setNotice] = useState("");
+  const [successNotice, setSuccessNotice] = useState("");
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
+  const [planReload, setPlanReload] = useState(0);
+  const dialogTrigger = useRef<HTMLButtonElement | null>(null);
+  const workspace = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
-    const tick = () => setNow(Date.now());
-    const initial = window.setTimeout(tick, 0);
-    const timer = window.setInterval(tick, 15000);
-    window.addEventListener("focus", tick);
+    const refreshTime = () => setCurrentTime(Date.now());
+    const openAvailable = () => {
+      if (window.location.hash === "#cupos-disponibles") setSection("available");
+    };
+    const initialRefresh = window.setTimeout(() => {
+      refreshTime();
+      openAvailable();
+      try {
+        if (localStorage.getItem("coloradosdrive:practice-view:v1") === "week") setView("week");
+        if (sessionStorage.getItem("coloradosdrive:practice-plan-notice:v1") === "dismissed")
+          setPlanNoticeDismissed(true);
+      } catch {
+        /* Storage is optional. */
+      }
+    }, 0);
+    const refreshInterval = window.setInterval(refreshTime, 15000);
+    window.addEventListener("focus", refreshTime);
+    window.addEventListener("hashchange", openAvailable);
     return () => {
-      window.clearTimeout(initial);
-      window.clearInterval(timer);
-      window.removeEventListener("focus", tick);
+      window.clearTimeout(initialRefresh);
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", refreshTime);
+      window.removeEventListener("hashchange", openAvailable);
     };
   }, []);
-  useEffect(() => {
-    const refresh = () => refetchSlots();
-    window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
-  }, [refetchSlots]);
-  // Cohort broadcasts refresh the shared data; refresh the agenda with the same completed snapshot.
+
+  const cohortOptions = (enrollments ?? []).filter((item) => item.cohortId !== null);
+  const cohortId =
+    cohortOptions.find((item) => item.cohortId === selectedCohort)?.cohortId ??
+    cohortOptions[0]?.cohortId ??
+    slots?.find((slot) => slot.studentId !== null)?.cohortId ??
+    null;
+  const planEnrollment = planEnrollments?.find(
+    (item) => item.status === "activo" && item.cohortId === cohortId,
+  );
+  const history = usePracticePlan(planEnrollment?.enrollmentId ?? null, slots, planReload);
+  const ownSlots = (slots ?? []).filter(
+    (slot) => slot.studentId !== null && (!cohortId || slot.cohortId === cohortId),
+  );
+  const upcoming = ownSlots.filter(
+    (slot) => isActive(slot) && (currentTime === null || slotEnd(slot) > currentTime),
+  );
+  const past = ownSlots.filter(
+    (slot) => !isActive(slot) || (currentTime !== null && slotEnd(slot) <= currentTime),
+  );
+  const blocks = groupSlots(upcoming);
+  const nextBlock = blocks[0];
+  // Los avisos de cohorte actualizan primero el resumen compartido; la agenda lo sigue.
   useEffect(() => {
     if (summary) refetchSlots();
   }, [summary, refetchSlots]);
-  const blocks = useMemo(() => {
-    const days = new Map<string, StudentPracticeSlot[]>();
-    for (const slot of slots ?? []) {
-      if (!slot.studentId || !["asignado", "confirmado", "completado"].includes(slot.status))
+
+  const userId = useCurrentUserId();
+  function refreshAll() {
+    refetchSlots();
+    void availability.refresh();
+    setPlanReload((value) => value + 1);
+  }
+  useRealtimeChannel(userId ? `user-${userId}-practice-slots` : null, {
+    "confirmation-requested": () => {
+      setConfirmationDue(true);
+      refreshAll();
+    },
+    "no-practice": () => {
+      setNoPracticeNotice(true);
+      refreshAll();
+    },
+    "slots-updated": refreshAll,
+  });
+
+  // Solo los cupos liberados por otros alumnos; los bloques libres del instructor
+  // aparecen únicamente en el selector de reposición.
+  const releasedGroups = (() => {
+    const groups = new Map<string, PracticeBlockOption[]>();
+    for (const option of options) {
+      if (
+        option.kind !== "released" ||
+        (cohortId && option.cohortId !== cohortId) ||
+        (currentTime !== null && Date.parse(option.startsAt) - currentTime <= 300000)
+      )
         continue;
-      const key = `${slot.cohortId}:${localDay(slot.scheduledAt)}`;
-      days.set(key, [...(days.get(key) ?? []), slot]);
+      const key = `${option.enrollmentId}:${option.startsAt}:${option.instructorId}:${option.hours}`;
+      groups.set(key, [...(groups.get(key) ?? []), option]);
     }
-    const result: AgendaBlock[] = [];
-    for (const day of days.values()) {
-      day.sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt));
-      const first = day[0];
-      const enrollment = summary?.enrollments.find((e) => e.cohortId === first.cohortId);
-      if (!enrollment) continue;
-      const instructor = "instructorId" in first ? first.instructorId : "";
-      const valid =
-        day.length >= 1 &&
-        day.length <= 2 &&
-        day.every(
-          (slot, index) =>
-            Date.parse(slot.scheduledAt) === Date.parse(first.scheduledAt) + index * 3600000 &&
-            "instructorId" in slot &&
-            slot.instructorId === instructor,
-        );
-      result.push({
-        enrollmentId: enrollment.id,
-        cohortId: first.cohortId,
-        date: localDay(first.scheduledAt),
-        slotIds: day.map((s) => s.id),
-        startsAt: first.scheduledAt,
-        endsAt: blockEnd(day[day.length - 1].scheduledAt, 1),
-        hours: day.length,
-        instructorId: instructor,
-        instructorName:
-          "instructorName" in first ? first.instructorName : "Instructor por confirmar",
-        confirmed: day.every((s) => s.status === "confirmado"),
-        started: now === null || Date.parse(first.scheduledAt) <= now,
-        valid,
-        status: day.every((s) => s.status === "completado")
-          ? "Realizado"
-          : day.every((s) => s.status === "confirmado")
-            ? "Confirmado"
-            : "Reservado",
+    return [...groups.values()].sort(
+      (a, b) => Date.parse(a[0].startsAt) - Date.parse(b[0].startsAt),
+    );
+  })();
+  const planSummary = summary?.enrollments.find((item) => item.cohortId === cohortId) ?? null;
+  const usedChanges = planSummary?.used ?? null;
+  const pendingBlocks = planSummary?.pending.length ?? 0;
+  const releasedLoading = optionsLoading && !options.length;
+  const invalidPlan =
+    configurationIssue ||
+    [optionsError, summaryError].some(isPlanConfigurationError) ||
+    Boolean(
+      history?.data &&
+      (history.data.summary.horasObjetivo === null || history.data.summary.horasObjetivo <= 0),
+    );
+  const listErrors = [optionsError].filter(
+    (message): message is string => Boolean(message) && !isPlanConfigurationError(message),
+  );
+  const pastHistory = (history?.data?.items ?? []).filter(
+    (item) =>
+      item.estado !== "pendiente" ||
+      (currentTime !== null &&
+        Date.parse(item.scheduledAt) + (item.durationMinutes ?? 60) * 60000 <= currentTime),
+  );
+  const historyIds = new Set(pastHistory.map((item) => item.practiceSlotId));
+  const pastOwn = past.filter((slot) => !historyIds.has(slot.id));
+
+  function changeView(value: "list" | "week") {
+    setView(value);
+    try {
+      localStorage.setItem("coloradosdrive:practice-view:v1", value);
+    } catch {
+      /* Convenience only. */
+    }
+  }
+  function navigateToDay(day: string) {
+    setSection("agenda");
+    setFocusedDay((previous) => ({ day, request: (previous?.request ?? 0) + 1 }));
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(
+        view === "list" ? `practice-day-${day}` : "practice-week",
+      );
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
       });
+      if (view === "week")
+        document
+          .getElementById(`practice-week-day-${day}`)
+          ?.scrollIntoView({ behavior: "instant", block: "nearest", inline: "center" });
+    });
+  }
+  function retry() {
+    setConfigurationIssue(false);
+    refreshAll();
+    refetchEnrollments();
+    refetchPlanEnrollments();
+  }
+  function restoreFocus(trigger: HTMLButtonElement | null) {
+    window.requestAnimationFrame(() => {
+      if (trigger?.isConnected) trigger.focus();
+      else workspace.current?.focus();
+    });
+  }
+
+  // Cada acción de la agenda opera sobre el bloque completo del día.
+  function agendaFor(block: PracticeBlock | undefined): AgendaBlock | null {
+    if (!block) return null;
+    const first = block.slots[0];
+    const enrollment = summary?.enrollments.find((item) => item.cohortId === first.cohortId);
+    if (!enrollment) return null;
+    const instructorId = "instructorId" in first ? first.instructorId : "";
+    const sameDay = upcoming.filter(
+      (slot) => slot.cohortId === first.cohortId && dayKey(slot.scheduledAt) === block.day,
+    ).length;
+    return {
+      enrollmentId: enrollment.id,
+      cohortId: first.cohortId,
+      date: block.day,
+      slotIds: block.slots.map((slot) => slot.id),
+      startsAt: first.scheduledAt,
+      endsAt: new Date(block.end).toISOString(),
+      hours: block.slots.length,
+      instructorId,
+      instructorName: instructorName(first),
+      confirmed: block.slots.every((slot) => slot.status === "confirmado"),
+      started: currentTime === null || block.start <= currentTime,
+      valid: block.slots.length <= 2 && instructorId !== "" && sameDay === block.slots.length,
+      status: "",
+    };
+  }
+  const blockOfSlot = (slotId: string) =>
+    blocks.find((block) => block.slots.some((slot) => slot.id === slotId));
+  function openDialog(
+    block: PracticeBlock | undefined,
+    cancel: boolean,
+    trigger?: HTMLButtonElement,
+  ) {
+    if (trigger) dialogTrigger.current = trigger;
+    const agenda = agendaFor(block);
+    if (!agenda) {
+      setActionError("Todavía estamos consultando tu plan. Inténtalo de nuevo en unos segundos.");
+      return;
     }
-    return result.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
-  }, [slots, summary, now]);
-  const upcoming = blocks.filter((b) => now === null || Date.parse(b.endsAt) > now);
-  const past = blocks.filter((b) => now !== null && Date.parse(b.endsAt) <= now);
-  async function done(result?: PracticeBlockMutation) {
-    setSelected(null);
-    setNotice(result?.effect ?? "Tu bloque quedó confirmado.");
-    refetchSlots();
-    await availability.refresh();
-    if (result?.result === "reprogramable" && result.block)
-      setReplacement(result.block.enrollmentId);
+    setActionError(null);
+    setDialog({ block: agenda, cancel });
   }
-  async function taken() {
-    setTake(null);
-    setNotice("Tu bloque completo quedó reservado. Consulta tu agenda actualizada.");
-    refetchSlots();
-    await availability.refresh();
+  async function handleConfirm(slotId: string) {
+    const block = blockOfSlot(slotId);
+    const agenda = agendaFor(block);
+    if (!agenda || !agenda.valid) {
+      openDialog(block, false);
+      return;
+    }
+    setActionError(null);
+    setPendingSlotId(slotId);
+    try {
+      await api.post(`/practice-slots/blocks/${agenda.enrollmentId}/${agenda.date}/confirm`);
+      setSuccessNotice("Listo, confirmaste tu asistencia. ¡Te esperamos!");
+    } catch (err) {
+      setActionError(friendlyError(err, "No se pudo confirmar tu asistencia. Inténtalo de nuevo."));
+    } finally {
+      setPendingSlotId(null);
+      refreshAll();
+    }
   }
-  function choose(group: PracticeBlockOption[]) {
+  async function handleDialogDone(result?: PracticeBlockMutation) {
+    const closed = dialog;
+    setDialog(null);
+    setActionError(null);
+    setSuccessNotice(
+      result
+        ? `Listo, avisamos que no asistirás a este bloque. ${result.effect ?? ""}`.trim()
+        : "Listo, confirmaste tu asistencia. ¡Te esperamos!",
+    );
+    restoreFocus(dialogTrigger.current);
+    refreshAll();
+    if (result?.result === "reprogramable" && closed) setReplacement(closed.block.enrollmentId);
+  }
+  function chooseOption(group: PracticeBlockOption[], trigger?: HTMLButtonElement) {
+    if (trigger) dialogTrigger.current = trigger;
+    setActionError(null);
     setReplacement(null);
     setTake(group);
   }
-  const debt = summary?.enrollments.filter((e) => e.pending.length > 0) ?? [];
+  function handleTaken() {
+    setTake(null);
+    setSuccessNotice("Listo, tu bloque completo quedó reservado.");
+    restoreFocus(dialogTrigger.current);
+    refreshAll();
+    return Promise.resolve();
+  }
+  const actions = {
+    now: currentTime,
+    pendingSlotId,
+    onConfirm: (id: string) => {
+      void handleConfirm(id);
+    },
+    onCancel: (id: string, trigger: HTMLButtonElement) => {
+      openDialog(blockOfSlot(id), true, trigger);
+    },
+  };
+
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Tu formación al volante</p>
-          <h1>Horarios de práctica</h1>
-          <p>Tu agenda, tus reposiciones y los próximos bloques disponibles.</p>
-        </div>
-        <Link href="/student/history">Ver mi asistencia</Link>
-      </header>
-      {notice ? (
-        <div className={styles.notice} role="status">
-          <p>{notice}</p>
-          <button type="button" aria-label="Cerrar aviso" onClick={() => setNotice("")}>
-            ×
-          </button>
-        </div>
-      ) : null}
-      <div className={styles.workspace}>
-        <div className={styles.main}>
-          <section aria-labelledby="agenda-heading">
-            <div className={styles.sectionHeading}>
-              <h2 id="agenda-heading">Mi agenda</h2>
-              <span>{upcoming.length} bloques próximos</span>
-            </div>
-            {slotsError ? (
-              <div className={styles.empty}>
-                <FormError>{slotsError}</FormError>
-                <Button variant="ghost" onClick={refetchSlots}>
-                  Volver a consultar
-                </Button>
-              </div>
-            ) : slotsLoading && slots === null ? (
-              <div className={styles.skeleton} role="status">
-                Cargando tu agenda…
-              </div>
-            ) : !upcoming.length ? (
-              <div className={styles.empty}>
-                <h3>Aún no tienes bloques próximos</h3>
-                <p>
-                  {debt.length
-                    ? "Tienes una reposición pendiente. Elige un bloque completo en Cupos disponibles."
-                    : "Cuando reserves tu plan, encontrarás aquí los días y horarios de tus prácticas."}
-                </p>
-              </div>
-            ) : (
-              <div className={styles.agenda}>
-                {upcoming.map((block) => (
-                  <button
-                    type="button"
-                    className={styles.agendaBlock}
-                    key={`${block.enrollmentId}:${block.date}`}
-                    onClick={() => setSelected(block)}
-                  >
-                    <div>
-                      <span className={styles.day}>{blockDate(block.startsAt)}</span>
-                      <strong className={styles.bigTime}>
-                        {blockTime(block.startsAt)}–{blockTime(block.endsAt)}
-                      </strong>
-                      <span>
-                        {block.hours} h · {block.instructorName}
-                      </span>
-                    </div>
-                    <div className={styles.blockState}>
-                      <span className={styles.pill}>{block.status}</span>
-                      <span>Opciones del día →</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {past.length ? (
-              <details className={styles.past}>
-                <summary>Bloques anteriores ({past.length})</summary>
-                {past.map((b) => (
-                  <p key={`${b.enrollmentId}:${b.date}`}>
-                    {blockDate(b.startsAt)} · {blockTime(b.startsAt)}–{blockTime(b.endsAt)} ·{" "}
-                    {b.status}
-                  </p>
-                ))}
-              </details>
-            ) : null}
-          </section>
-          <section
-            id="cupos-disponibles"
-            tabIndex={-1}
-            className={styles.available}
-            aria-labelledby="available-heading"
-          >
-            <div className={styles.sectionHeading}>
-              <div>
-                <h2 id="available-heading">Cupos disponibles</h2>
-                <p>Siempre eliges un bloque completo con un solo instructor.</p>
-              </div>
-            </div>
-            {debt.map((e) => (
-              <div className={styles.effect} key={e.id}>
-                <strong>
-                  Tienes {e.pending.length} bloque{e.pending.length === 1 ? "" : "s"} pendiente
-                  {e.pending.length === 1 ? "" : "s"} por reponer
-                </strong>
-                <p>
-                  Reponerlo no consume otra reprogramación. Tu fecha fin es el{" "}
-                  {blockDate(`${e.endDate}T12:00:00-05:00`)}.
-                </p>
-                <Button variant="secondary" onClick={() => setReplacement(e.id)}>
-                  Elegir reposición
-                </Button>
-              </div>
-            ))}
-            {optionsError ? (
-              <div className={styles.empty}>
-                <FormError>{optionsError}</FormError>
-                <Button
-                  onClick={() => {
-                    void availability.refresh();
+    <MotionConfig reducedMotion="user">
+      <div ref={workspace} tabIndex={-1} className={styles.workspace}>
+        <header className={styles.header}>
+          <div>
+            <h1>Mis prácticas</h1>
+            <p>Tu próxima hora al volante, y todo lo que viene después.</p>
+          </div>
+          <div className={styles.headerTools}>
+            {cohortOptions.length > 1 ? (
+              <label className={styles.cohortSelect}>
+                Mi cohorte
+                <select
+                  aria-label="Plan de prácticas"
+                  value={cohortId ?? ""}
+                  disabled={pendingSlotId !== null}
+                  onChange={(event) => {
+                    setSelectedCohort(event.target.value);
+                    setActionError(null);
+                    setConfigurationIssue(false);
                   }}
                 >
-                  Volver a consultar cupos
+                  {cohortOptions.map((item) => (
+                    <option key={item.cohortId} value={item.cohortId ?? ""}>
+                      Licencia {item.courseType}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : cohortOptions[0] ? (
+              <span className={styles.cohortChip}>
+                Licencia {cohortOptions[0].courseType} · Mi cohorte
+              </span>
+            ) : null}
+            <div className={styles.segmented} role="group" aria-label="Vista de la agenda">
+              <button
+                type="button"
+                aria-pressed={view === "list"}
+                onClick={() => changeView("list")}
+              >
+                Lista
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === "week"}
+                onClick={() => changeView("week")}
+              >
+                Semana
+              </button>
+            </div>
+          </div>
+        </header>
+        {invalidPlan && !planNoticeDismissed ? (
+          <div className={styles.planNotice} role="status">
+            <ScheduleIcon kind="info" />
+            <p>
+              Estamos terminando de configurar tu plan. Tus prácticas asignadas siguen disponibles.
+            </p>
+            <button
+              type="button"
+              className={styles.noticeClose}
+              aria-label="Cerrar aviso del plan durante esta sesión"
+              onClick={() => {
+                setPlanNoticeDismissed(true);
+                try {
+                  sessionStorage.setItem("coloradosdrive:practice-plan-notice:v1", "dismissed");
+                } catch {
+                  /* Dismissal still applies to this visit. */
+                }
+              }}
+            >
+              <XIcon className={styles.smallIcon} />
+            </button>
+          </div>
+        ) : null}
+        {enrollmentsError ? (
+          <div className={styles.inlineError}>
+            No pudimos consultar tu cohorte.
+            <Button variant="ghost" onClick={refetchEnrollments}>
+              Reintentar
+            </Button>
+          </div>
+        ) : null}
+        {actionError ? <FormError>{actionError}</FormError> : null}
+        <div className={styles.toast}>
+          <Toast message={successNotice} onDismiss={() => setSuccessNotice("")} />
+        </div>
+        {noPracticeNotice ? (
+          <div className={styles.planNotice}>
+            <ScheduleIcon kind="info" />
+            <p>Esta práctica ya no se realizará. Consulta tus horarios actualizados.</p>
+            <Button variant="ghost" onClick={() => setNoPracticeNotice(false)}>
+              Entendido
+            </Button>
+          </div>
+        ) : null}
+        {isLoading && slots === null ? (
+          <ScheduleSkeleton />
+        ) : error && slots === null ? (
+          <section className={styles.empty}>
+            <ScheduleIcon kind="calendar" />
+            <h2>No pudimos cargar tus prácticas</h2>
+            <p>Revisa tu conexión e inténtalo de nuevo.</p>
+            <Button variant="secondary" onClick={retry}>
+              Reintentar
+            </Button>
+          </section>
+        ) : (
+          <>
+            {error ? (
+              <div className={styles.inlineError}>
+                No pudimos actualizar tu agenda.
+                <Button variant="ghost" onClick={retry}>
+                  Reintentar
                 </Button>
               </div>
-            ) : loading && !options.length ? (
-              <div className={styles.skeleton} role="status">
-                Buscando bloques completos para ti…
-              </div>
-            ) : !options.length ? (
-              <div className={styles.empty}>
-                <h3>No hay cupos disponibles por ahora</h3>
-                <p>
-                  Tu agenda se mantiene. Esta sección se actualiza cuando alguien libera un bloque o
-                  vuelves a esta ventana.
-                </p>
-                {summary?.enrollments.some((e) => e.used === 2 && !e.pending.length) ? (
-                  <p>
-                    Ya usaste tus 2 reprogramaciones. Si necesitas recuperar una falta, habla con la
-                    escuela o con tu instructor.
-                  </p>
-                ) : null}
-              </div>
-            ) : (
-              <ChoiceList options={options} onChoose={choose} />
-            )}
-          </section>
-        </div>
-        <aside className={styles.plan} aria-labelledby="plan-heading">
-          <h2 id="plan-heading">Mi plan</h2>
-          {summaryError ? (
-            <>
-              <FormError>{summaryError}</FormError>
-              <Button
-                onClick={() => {
-                  void availability.refresh();
-                }}
-              >
-                Consultar mi plan
-              </Button>
-            </>
-          ) : !summary ? (
-            <p role="status">Consultando tu plan…</p>
-          ) : !summary.enrollments.length ? (
-            <p>No tienes una matrícula activa.</p>
-          ) : (
-            summary.enrollments.map((e) => (
-              <section key={e.id} className={styles.planEnrollment}>
-                <p className={styles.planCount}>
-                  <strong>{e.used}</strong> de 2 reprogramaciones usadas
-                </p>
-                <div className={styles.pips} aria-hidden="true">
-                  <i data-used={e.used >= 1} />
-                  <i data-used={e.used >= 2} />
+            ) : null}
+            <div className={styles.layout}>
+              <div className={styles.main}>
+                {nextBlock ? (
+                  <NextPractice
+                    block={nextBlock}
+                    actions={actions}
+                    following={blocks.slice(1)}
+                    onNavigate={navigateToDay}
+                  />
+                ) : (
+                  <StudentEmptyState
+                    title="Aún no tienes prácticas asignadas"
+                    description="Cuando la escuela confirme tu horario, encontrarás aquí las fechas y tus próximas clases."
+                  />
+                )}
+                <div
+                  className={styles.sectionNav}
+                  role="group"
+                  aria-label="Secciones de mis prácticas"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={section === "agenda"}
+                    onClick={() => setSection("agenda")}
+                  >
+                    Mi agenda
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={section === "available"}
+                    onClick={() => setSection("available")}
+                  >
+                    Cupos disponibles{" "}
+                    {!releasedLoading && !optionsError ? (
+                      <span>({releasedGroups.length})</span>
+                    ) : null}
+                  </button>
                 </div>
-                <dl className={styles.stats}>
-                  <div>
-                    <dt>Horas asistidas</dt>
-                    <dd>
-                      {e.attendedHours} de {e.targetHours} h
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Horas reservadas</dt>
-                    <dd>{e.reservedHours} h</dd>
-                  </div>
-                </dl>
-                <p className={styles.hint}>
-                  Solo la asistencia registrada cuenta para tu certificación.
-                </p>
-                {e.absences.length ? (
-                  <div className={styles.effect}>
-                    <strong>Faltas sin reponer: {e.absences.length}</strong>
-                    <p>
-                      Habla con la escuela o con tu instructor en tu siguiente práctica para
-                      recuperarlas.
+                {section === "agenda" ? (
+                  <section aria-label="Mi agenda" className={styles.agenda}>
+                    <div className={styles.agendaHeading}>
+                      <h2>Lo que viene</h2>
+                      {blocks.length ? (
+                        <Button
+                          variant="ghost"
+                          icon={<ScheduleIcon />}
+                          onClick={() => downloadCalendar(blocks)}
+                        >
+                          Exportar agenda
+                        </Button>
+                      ) : null}
+                    </div>
+                    {confirmationDue ? (
+                      <p className={styles.hint}>
+                        Tu práctica está por empezar. Puedes confirmar si deseas; si no respondes,
+                        igual te esperamos.
+                      </p>
+                    ) : null}
+                    {blocks.length || view === "week" ? (
+                      <ScheduleAgenda
+                        blocks={blocks}
+                        actions={actions}
+                        view={view}
+                        focusedDay={focusedDay}
+                        onOptions={(block, trigger) => openDialog(block, false, trigger)}
+                      />
+                    ) : (
+                      <p className={styles.emptyAgenda}>
+                        Tu agenda está al día. Aquí aparecerán tus próximas prácticas.
+                      </p>
+                    )}
+                    <details className={styles.previous}>
+                      <summary>
+                        Anteriores <span>({pastHistory.length + pastOwn.length})</span>
+                      </summary>
+                      {pastHistory.map((item) => (
+                        <div key={item.id} className={styles.pastRow}>
+                          <div>
+                            <p>
+                              {dateLabel(item.scheduledAt, {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}{" "}
+                              · {timeLabel(item.scheduledAt)}
+                            </p>
+                            {item.durationMinutes !== null ? (
+                              <span className={styles.hint}>
+                                {hoursLabel(item.durationMinutes)}
+                              </span>
+                            ) : null}
+                          </div>
+                          <PracticeBadge state={historyStates[item.estado]} />
+                        </div>
+                      ))}
+                      {pastOwn.map((slot) => (
+                        <div key={slot.id} className={styles.pastRow}>
+                          <span>
+                            {dateLabel(slot.scheduledAt, {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}{" "}
+                            · {timeLabel(slot.scheduledAt)}
+                          </span>
+                          <PracticeBadge state={visualState(slot, currentTime)} />
+                        </div>
+                      ))}
+                      {!pastHistory.length && !pastOwn.length ? (
+                        <p className={styles.hint}>
+                          Tus prácticas anteriores aparecerán aquí. El historial completo conserva
+                          también los avisos de inasistencia.
+                        </p>
+                      ) : null}
+                      <Link href="/student/history" className={styles.textLink}>
+                        Ver todo mi historial
+                        {history?.data && history.data.total > history.data.items.length
+                          ? ` (${history.data.total})`
+                          : ""}
+                      </Link>
+                    </details>
+                  </section>
+                ) : (
+                  <section
+                    id="cupos-disponibles"
+                    tabIndex={-1}
+                    className={styles.available}
+                    aria-label="Cupos disponibles"
+                  >
+                    <h2>Encuentra otro horario</h2>
+                    <p className={styles.hint}>
+                      Solo aparecen los cupos liberados por otros alumnos que puedes elegir para tu
+                      plan.
                     </p>
-                  </div>
-                ) : null}
-              </section>
-            ))
-          )}
-          <details className={styles.rules}>
-            <summary>Reglas de reprogramación</summary>
-            <ul>
-              <li>Cada día es un bloque de 1 o 2 horas consecutivas con un instructor.</li>
-              <li>
-                Tienes 2 reprogramaciones por matrícula, para siempre. Cancelar o cambiar un bloque
-                usa una.
-              </li>
-              <li>
-                Reponer un bloque pendiente no usa otro cambio. Debe tener la misma duración y
-                modalidad, sin solapes y con un solo bloque por día en cada matrícula.
-              </li>
-              <li>
-                Elige un horario antes de tu fecha fin y con más de 5 minutos de anticipación. No
-                puedes recuperar el mismo bloque que soltaste.
-              </li>
-              <li>
-                Sin un bloque pendiente puedes cambiar un día completo, si todavía te queda una
-                reprogramación.
-              </li>
-              <li>
-                Si no hay dónde reponer antes del cierre, el bloque se pierde y el aviso no consume
-                un cambio.
-              </li>
-              <li>
-                Después de usar los 2 cambios, un nuevo aviso se registra como falta. Un bloque que
-                ya empezó no se cancela en la plataforma.
-              </li>
-            </ul>
-          </details>
-        </aside>
-      </div>
-      {selected ? (
-        <BlockDialog block={selected} onClose={() => setSelected(null)} onDone={done} />
-      ) : null}
-      {replacement ? (
-        <Modal
-          isOpen
-          title="Elige el bloque para reponer"
-          onClose={() => setReplacement(null)}
-          className={styles.wideDialog}
-        >
-          {optionsError ? (
-            <FormError>{optionsError}</FormError>
-          ) : loading ? (
-            <p role="status">Actualizando los bloques disponibles…</p>
-          ) : options.some((o) => o.enrollmentId === replacement && o.cost === 0) ? (
-            <ChoiceList
-              options={options.filter((o) => o.enrollmentId === replacement && o.cost === 0)}
-              onChoose={choose}
-            />
-          ) : (
-            <div className={styles.empty}>
-              <p>No hay bloques disponibles para esta reposición en este momento.</p>
-              <Button
-                onClick={() => {
-                  void availability.refresh();
-                }}
-              >
-                Actualizar opciones
-              </Button>
+                    {listErrors.length ? (
+                      <div className={styles.inlineError}>
+                        <p>No pudimos actualizar los cupos que puedes cambiar.</p>
+                        <Button variant="ghost" onClick={retry}>
+                          Reintentar
+                        </Button>
+                      </div>
+                    ) : null}
+                    {pendingBlocks > 0 && planSummary ? (
+                      <div className={styles.planNotice} role="status">
+                        <ScheduleIcon kind="info" />
+                        <p>
+                          Tienes {pendingBlocks} bloque{pendingBlocks === 1 ? "" : "s"} pendiente
+                          {pendingBlocks === 1 ? "" : "s"} por reponer. Reponerlo no consume otra
+                          reprogramación.
+                        </p>
+                        <Button variant="ghost" onClick={() => setReplacement(planSummary.id)}>
+                          Elegir reposición
+                        </Button>
+                      </div>
+                    ) : null}
+                    {releasedLoading ? (
+                      [1, 2].map((id) => (
+                        <div key={id} className={`${styles.skeleton} ${styles.rowSkeleton}`} />
+                      ))
+                    ) : optionsError ? (
+                      <p className={styles.emptyAgenda}>
+                        {invalidPlan
+                          ? "Los cupos para cambiar de horario estarán disponibles cuando la escuela termine de configurar tu plan."
+                          : "Vuelve a intentarlo para consultar los cupos actualizados."}
+                      </p>
+                    ) : !releasedGroups.length ? (
+                      <p className={styles.emptyAgenda}>
+                        No hay cupos liberados por ahora. Tu agenda se actualiza cuando aparece uno
+                        disponible.
+                      </p>
+                    ) : (
+                      releasedGroups.map((group) => {
+                        const option = group[0];
+                        const replenish = option.cost === 0;
+                        return (
+                          <article
+                            className={styles.availableSlot}
+                            data-tone={replenish ? "warning" : "info"}
+                            key={`${option.enrollmentId}-${option.startsAt}-${option.instructorId}`}
+                          >
+                            <div>
+                              <PracticeBadge
+                                state={{
+                                  label: replenish ? "Pendiente por reponer" : "Cupo disponible",
+                                  tone: replenish ? "warning" : "info",
+                                  icon: "clock",
+                                }}
+                              />
+                              <p className={styles.panelDate}>
+                                {dateLabel(option.startsAt, {
+                                  weekday: "short",
+                                  day: "numeric",
+                                  month: "short",
+                                })}
+                              </p>
+                              <strong>
+                                {timeLabel(option.startsAt)} – {timeLabel(option.endsAt)}
+                              </strong>
+                              <p className={styles.hint}>
+                                {option.hours} h · {option.instructorName} ·{" "}
+                                {replenish
+                                  ? "Reponer (sin costo)"
+                                  : "Cambiar (consume 1 reprogramación)"}
+                              </p>
+                              <p className={styles.hint}>
+                                Te quedan {option.remaining + option.cost} de 2 reprogramaciones.
+                              </p>
+                            </div>
+                            <Button
+                              className={styles.primaryAction}
+                              disabled={pendingSlotId !== null}
+                              onClick={(event) => chooseOption(group, event.currentTarget)}
+                            >
+                              Tomar cupo
+                            </Button>
+                          </article>
+                        );
+                      })
+                    )}
+                  </section>
+                )}
+              </div>
+              <PracticePlan
+                history={history?.data ?? null}
+                assignedMinutes={ownSlots
+                  .filter((slot) => isActive(slot) || slot.status === "completado")
+                  .reduce((sum, slot) => sum + slot.durationMinutes, 0)}
+                remainingPractices={upcoming.length}
+                practiceStates={upcoming.map((slot) => visualState(slot, currentTime))}
+                usedChanges={usedChanges}
+                invalidPlan={invalidPlan}
+                loading={Boolean(planEnrollment && !history)}
+                error={
+                  history?.error ??
+                  (planEnrollmentsError ? "No pudimos cargar el avance de tu plan." : null)
+                }
+                onRetry={retry}
+              />
             </div>
-          )}
-        </Modal>
-      ) : null}
-      {take ? (
-        <TakeBlockDialog
-          key={take[0].id}
-          choices={take}
-          onClose={() => setTake(null)}
-          onDone={taken}
-        />
-      ) : null}
-    </div>
+          </>
+        )}
+        {dialog ? (
+          <BlockDialog
+            key={`${dialog.block.enrollmentId}:${dialog.block.date}`}
+            block={dialog.block}
+            startAtCancel={dialog.cancel}
+            onClose={() => {
+              setDialog(null);
+              restoreFocus(dialogTrigger.current);
+            }}
+            onDone={handleDialogDone}
+          />
+        ) : null}
+        {replacement ? (
+          <ReplacementDialog
+            options={options.filter((o) => o.enrollmentId === replacement && o.cost === 0)}
+            loading={optionsLoading}
+            error={optionsError}
+            onChoose={(group) => chooseOption(group)}
+            onRefresh={() => {
+              void availability.refresh();
+            }}
+            onClose={() => setReplacement(null)}
+          />
+        ) : null}
+        {take ? (
+          <TakeBlockDialog
+            key={take[0].id}
+            choices={take}
+            onClose={() => {
+              setTake(null);
+              restoreFocus(dialogTrigger.current);
+            }}
+            onDone={handleTaken}
+          />
+        ) : null}
+      </div>
+    </MotionConfig>
   );
 }

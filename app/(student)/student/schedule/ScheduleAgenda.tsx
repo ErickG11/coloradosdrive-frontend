@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Button, Modal } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { CheckIcon } from "@/components/ui/icons";
 import type { StudentPracticeSlot } from "@/types";
 import {
@@ -192,7 +191,7 @@ export function NextPractice({
         <p className={styles.hint}>
           Opcional: si no confirmas, igual te esperamos.
           {block.slots.length > 1
-            ? ` La confirmación corresponde a la hora de ${timeLabel(nextSlot.scheduledAt)}; cada hora se gestiona en tu agenda.`
+            ? " La confirmación y el aviso de inasistencia aplican al bloque completo del día."
             : ""}
         </p>
         <Button
@@ -261,24 +260,17 @@ export function ScheduleAgenda({
   actions,
   view,
   focusedDay,
+  onOptions,
 }: {
   blocks: PracticeBlock[];
   actions: PracticeActions;
   view: "list" | "week";
   focusedDay: { day: string; request: number } | null;
+  onOptions: (block: PracticeBlock, trigger: HTMLButtonElement) => void;
 }) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const optionsTrigger = useRef<HTMLButtonElement | null>(null);
-  const selectedSlots = blocks
-    .flatMap((block) => block.slots)
-    .filter((slot) => selectedIds.includes(slot.id));
   const dayGroups = new Map<string, PracticeBlock[]>();
   for (const block of blocks)
     dayGroups.set(block.day, [...(dayGroups.get(block.day) ?? []), block]);
-  const openOptions = (block: PracticeBlock, trigger: HTMLButtonElement) => {
-    optionsTrigger.current = trigger;
-    setSelectedIds(block.slots.map((slot) => slot.id));
-  };
   return (
     <>
       {view === "week" ? (
@@ -286,7 +278,7 @@ export function ScheduleAgenda({
           key={focusedDay?.request ?? 0}
           blocks={blocks}
           now={actions.now}
-          onSelect={openOptions}
+          onSelect={onOptions}
           focusedDay={focusedDay?.day ?? null}
         />
       ) : (
@@ -346,10 +338,7 @@ export function ScheduleAgenda({
                               key={slot.id}
                               slot={slot}
                               actions={actions}
-                              onOptions={(trigger) => {
-                                optionsTrigger.current = trigger;
-                                setSelectedIds([slot.id]);
-                              }}
+                              onOptions={(trigger) => onOptions(block, trigger)}
                             />
                           ))}
                         </AnimatePresence>
@@ -362,42 +351,6 @@ export function ScheduleAgenda({
           </AnimatePresence>
         </div>
       )}
-      {selectedSlots.length ? (
-        <Modal
-          isOpen
-          title="Opciones de práctica"
-          className={styles.sheet}
-          onClose={() => setSelectedIds([])}
-        >
-          <div className={styles.panelHours}>
-            {selectedSlots.map((slot) => (
-              <section key={slot.id} className={styles.panelHour}>
-                <p className={styles.panelDate}>
-                  {dateLabel(slot.scheduledAt, { weekday: "long", day: "numeric", month: "long" })}
-                </p>
-                <p className={styles.panelTime}>
-                  {timeLabel(slot.scheduledAt)} – {timeLabel(slotEnd(slot))}
-                </p>
-                <p className={styles.hint}>{instructorName(slot)}</p>
-                <PracticeBadge state={visualState(slot, actions.now)} />
-                <SlotControls
-                  slot={slot}
-                  actions={{
-                    ...actions,
-                    onCancel: (id, trigger) => {
-                      setSelectedIds([]);
-                      actions.onCancel(id, optionsTrigger.current ?? trigger);
-                    },
-                  }}
-                />
-              </section>
-            ))}
-          </div>
-          <p className={styles.hint}>
-            Confirmar es opcional. Solo la asistencia registrada cuenta para tu certificación.
-          </p>
-        </Modal>
-      ) : null}
     </>
   );
 }
