@@ -34,7 +34,7 @@ export function WaitlistControl({
       setMessage(
         remove
           ? "Aviso retirado."
-          : "Te avisaremos de una apertura. La marca vence a los 60 días y no guarda horarios; la asignación está sujeta a cupos disponibles.",
+          : "Listo, te avisaremos por correo.",
       );
     } catch (error) {
       setMessage(
@@ -57,17 +57,16 @@ export function WaitlistControl({
       {state.error ? <p role="alert">{state.error}</p> : null}
       {type && state.data?.types[type] ? (
         <>
-          <p role="status">
-            Tu aviso está registrado; caduca a los {state.data?.expiryDays ?? 60} días.
-          </p>
-          <Button
+          <p role="status">Listo, te avisaremos por correo.</p>
+          <p className="text-sm text-text-secondary">Estado: Esperando curso.</p>
+          <button
             type="button"
-            variant="secondary"
-            isLoading={busy}
+            className="justify-self-start text-sm underline"
+            disabled={busy}
             onClick={() => void register(true)}
           >
-            No recibir más avisos de este tipo
-          </Button>
+            Dejar de recibir avisos
+          </button>
         </>
       ) : type ? (
         <Button type="button" variant="secondary" isLoading={busy} onClick={() => void register()}>
@@ -80,6 +79,31 @@ export function WaitlistControl({
         </a>
       ) : null}
       {message ? <p role="status">{message}</p> : null}
+    </div>
+  );
+}
+
+const COURSE_NAME = { A: "Motocicletas", B: "Vehículos livianos" } as const;
+
+// Panel único cuando no hay ningún curso abierto del tipo del alumno.
+export function NoOpenCoursePanel({ enrollmentId }: { enrollmentId: string }) {
+  const state = useFetch<State>("/estudiantes/inscripcion/espera");
+  const type = state.data?.enrollments?.find((e) => e.id === enrollmentId)?.type;
+  return (
+    <div role="status" className="grid gap-2 rounded-sm border border-border p-5">
+      <h3 className="font-display text-lg font-semibold">
+        {type
+          ? `Por ahora no hay un curso abierto de ${COURSE_NAME[type]}`
+          : "Por ahora no hay un curso abierto"}
+      </h3>
+      <p className="text-text-secondary">
+        Te avisaremos por correo apenas se abra uno. Después de recibir el aviso, entra y elige tu
+        horario.
+      </p>
+      <WaitlistControl
+        enrollmentId={enrollmentId}
+        input={{ modalidad: "entre_semana", fechaInicio: "", horasPorDia: 3 }}
+      />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
-import { WaitlistControl } from "./WaitlistControl";
-import { ScheduleDurationTable } from "./ScheduleDurationTable";
+import { NoOpenCoursePanel, WaitlistControl } from "./WaitlistControl";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -16,7 +15,7 @@ import type {
 } from "@/types/studentSchedule";
 import { SchedulePlanView, type PlanDayView } from "./SchedulePlanView";
 import { SegmentedControl } from "./SegmentedControl";
-import { dayLabel, guayaquilDate, plural, summarySentence } from "./scheduleFormat";
+import { dayLabel, dayLabelLong, guayaquilDate, plural, summarySentence } from "./scheduleFormat";
 import type { useStudentReservation } from "./useStudentReservation";
 interface Props {
   onWaiting?: (waiting: boolean) => void;
@@ -32,6 +31,123 @@ const REASONS: Record<string, string> = {
   SOLAPE_PROPIO: "Choca con tu agenda",
   SIN_COHORTE_ELEGIBLE: "Sin horarios disponibles",
 };
+const WEEKDAYS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
+function monthTitle(month: string): string {
+  const text = new Intl.DateTimeFormat("es-EC", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${month}-01T12:00:00Z`));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+function shiftMonth(month: string, delta: number): string {
+  const [year, number] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, number - 1 + delta, 1)).toISOString().slice(0, 7);
+}
+interface CalendarDay {
+  fecha: string;
+  disponible: boolean;
+  motivo?: string | null;
+}
+// Calendario propio, en español. Los días pasados no se muestran; el motivo de cada día no
+// disponible aparece solo como texto emergente (al pasar el cursor o al enfocar con teclado).
+function MonthCalendar({
+  month,
+  minMonth,
+  maxMonth,
+  minDate,
+  days,
+  selected,
+  disabled,
+  onMonth,
+  onPick,
+}: {
+  month: string;
+  minMonth: string;
+  maxMonth?: string;
+  minDate: string;
+  days: CalendarDay[];
+  selected: string;
+  disabled: boolean;
+  onMonth: (month: string) => void;
+  onPick: (date: string) => void;
+}) {
+  const [year, number] = month.split("-").map(Number);
+  const total = new Date(Date.UTC(year, number, 0)).getUTCDate();
+  const offset = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
+  const byDate = new Map(days.map((d) => [d.fecha, d]));
+  const cells: (null | { fecha: string; day?: CalendarDay })[] = [
+    ...Array.from({ length: offset }, () => null),
+    ...Array.from({ length: total }, (_, i) => {
+      const fecha = `${month}-${String(i + 1).padStart(2, "0")}`;
+      return { fecha, day: byDate.get(fecha) };
+    }),
+  ];
+  return (
+    <div className="grid gap-2" role="group" aria-label="Fechas de inicio disponibles">
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          aria-label="Mes anterior"
+          disabled={month <= minMonth}
+          onClick={() => onMonth(shiftMonth(month, -1))}
+          className="min-h-10 min-w-10 rounded-sm border disabled:opacity-40"
+        >
+          ‹
+        </button>
+        <strong aria-live="polite">{monthTitle(month)}</strong>
+        <button
+          type="button"
+          aria-label="Mes siguiente"
+          disabled={Boolean(maxMonth) && month >= (maxMonth ?? "")}
+          onClick={() => onMonth(shiftMonth(month, 1))}
+          className="min-h-10 min-w-10 rounded-sm border disabled:opacity-40"
+        >
+          ›
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center text-xs text-text-secondary" aria-hidden="true">
+        {WEEKDAYS.map((w) => (
+          <span key={w}>{w}</span>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((cell, index) => {
+          if (!cell || cell.fecha < minDate) return <span key={cell?.fecha ?? `v${index}`} />;
+          const ok = Boolean(cell.day?.disponible) && !disabled;
+          const reason = cell.day?.motivo ?? null;
+          const tipId = `dia-${cell.fecha}`;
+          return (
+            <div key={cell.fecha} className="group relative">
+              <button
+                type="button"
+                aria-disabled={!ok}
+                aria-pressed={selected === cell.fecha}
+                aria-label={dayLabel(cell.fecha)}
+                aria-describedby={!ok && reason ? tipId : undefined}
+                onClick={() => {
+                  if (ok) onPick(cell.fecha);
+                }}
+                className={`w-full rounded-sm border p-2 aria-pressed:bg-bg-sunken ${ok ? "" : "cursor-not-allowed opacity-40"}`}
+              >
+                {Number(cell.fecha.slice(-2))}
+              </button>
+              {!ok && reason ? (
+                <span
+                  id={tipId}
+                  role="tooltip"
+                  className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 hidden w-44 -translate-x-1/2 rounded-sm border border-border bg-bg-surface p-2 text-xs shadow-elevated group-focus-within:block group-hover:block"
+                >
+                  {reason}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div
@@ -123,9 +239,15 @@ export function StudentSchedulePicker({
   const options = useKeyedRequest<StudentScheduleOptions>(optionsKey, (signal) =>
     studentScheduleApi.options(enrollmentId, input, signal),
   );
+  // Sin ningún curso abierto: el servidor lo indica en las opciones o en todos los días futuros.
+  const futureDays = (calendar.data?.dias ?? []).filter((d) => d.fecha >= minDate);
+  const noOpen =
+    options.data?.sinCohorte?.codigo === "SIN_CURSOS_ABIERTOS" ||
+    (futureDays.length > 0 &&
+      futureDays.every((d) => !d.disponible && /cursos abiertos/i.test(d.motivo ?? "")));
   useEffect(() => {
-    if (options.data) onWaiting?.(Boolean(options.data.sinCohorte));
-  }, [options.data, onWaiting]);
+    if (options.data || noOpen) onWaiting?.(noOpen || Boolean(options.data?.sinCohorte));
+  }, [options.data, noOpen, onWaiting]);
   const list = options.data?.horas ?? [];
   const firstFeasible = list.find((h) => h.factible)?.hora ?? null;
   // Preselecciona la primera hora factible; la elección del alumno solo vale si sigue siéndolo.
@@ -246,21 +368,17 @@ export function StudentSchedulePicker({
   const data = preview.data;
   const noCohort = options.data?.sinCohorte ?? null;
 
-  const days: PlanDayView[] =
-    data?.dias.map((d) => ({
-      fecha: d.fecha,
-      horaInicio: d.horaInicio,
-      horaFin: d.horaFin,
-      horas: d.horas,
-      ok: d.disponible,
-      motivo: d.motivo?.mensaje,
-    })) ?? [];
   const failing = data?.diasFallan ?? [];
   const alternatives = list.filter((h) => h.factible && h.hora !== previewHour);
   const failure = options.error ?? preview.error ?? null;
+  if (noOpen)
+    return (
+      <Card title="Elige tu horario" className={visual.schedule}>
+        <NoOpenCoursePanel enrollmentId={enrollmentId} />
+      </Card>
+    );
   return (
     <Card title="Elige tu horario" className={visual.schedule}>
-      {rules.data ? <ScheduleDurationTable rules={rules.data} /> : null}
       {rules.error ? (
         <p role="status" className="text-status-warning">
           {rules.error}
@@ -288,53 +406,25 @@ export function StudentSchedulePicker({
         />
         {rules.data?.active ? (
           <div className="grid gap-2">
-            <Input
-              label="Mes de inicio"
-              type="month"
-              min={minDate.slice(0, 7)}
-              max={maxDate?.slice(0, 7)}
-              value={month}
+            {noCohort?.ultimaFechaInicioPosible ? (
+              <p className="text-sm">
+                Los cursos abiertos permiten empezar hasta el{" "}
+                {dayLabelLong(noCohort.ultimaFechaInicioPosible)} con este plan.
+              </p>
+            ) : null}
+            <MonthCalendar
+              month={month}
+              minMonth={minDate.slice(0, 7)}
+              maxMonth={maxDate?.slice(0, 7)}
+              minDate={minDate}
+              days={calendar.data?.dias ?? []}
+              selected={input.fechaInicio}
               disabled={reserving}
-              onChange={(e) => setMonth(e.target.value)}
+              onMonth={setMonth}
+              onPick={(fecha) => update({ fechaInicio: fecha })}
             />
-            <p className="text-sm">
-              Solo se habilitan fechas con un plan completo disponible. La reserva confirma el cupo.
-            </p>
             {calendar.loading ? <p role="status">Consultando fechas…</p> : null}
             {calendar.error ? <p role="alert">{calendar.error}</p> : null}
-            <div
-              className="grid grid-cols-7 gap-1"
-              role="group"
-              aria-label="Fechas de inicio disponibles"
-            >
-              {calendar.data?.dias.map((day) => (
-                <button
-                  key={day.fecha}
-                  type="button"
-                  disabled={reserving || !day.disponible}
-                  aria-pressed={input.fechaInicio === day.fecha}
-                  aria-label={`${dayLabel(day.fecha)}${day.motivo ? `: ${day.motivo}` : ""}`}
-                  title={day.motivo ?? undefined}
-                  className="rounded-sm border p-2 disabled:opacity-40 aria-pressed:bg-bg-sunken"
-                  onClick={() => update({ fechaInicio: day.fecha })}
-                >
-                  {Number(day.fecha.slice(-2))}
-                </button>
-              ))}
-            </div>
-            <ul
-              className="text-sm text-text-secondary"
-              aria-label="Motivos de fechas no disponibles"
-            >
-              {calendar.data?.dias
-                .filter((day) => !day.disponible && day.motivo)
-                .map((day) => (
-                  <li key={day.fecha}>
-                    {dayLabel(day.fecha)}: {day.motivo}
-                  </li>
-                ))}
-            </ul>
-            <p aria-live="polite">Fecha seleccionada: {dayLabel(input.fechaInicio)}</p>
           </div>
         ) : (
           <Input
@@ -422,10 +512,13 @@ export function StudentSchedulePicker({
       ) : null}
       {noCohort ? (
         <div role="status" className="mt-5 rounded-sm border border-border p-4">
-          <p className="font-medium">No hay horarios disponibles para esas fechas.</p>
-          <p className="mt-1 text-text-secondary">
-            Prueba empezar más tarde o consulta a la escuela.
-          </p>
+          <p className="font-medium">{noCohort.mensaje}</p>
+          {noCohort.ultimaFechaInicioPosible &&
+          !noCohort.mensaje.includes("Última fecha de inicio") ? (
+            <p className="mt-1 text-text-secondary">
+              La última fecha de inicio posible es el {dayLabelLong(noCohort.ultimaFechaInicioPosible)}.
+            </p>
+          ) : null}
           <WaitlistControl enrollmentId={enrollmentId} input={input} />
           {noCohort.primeraFechaPosible ? (
             <Button
@@ -453,19 +546,14 @@ export function StudentSchedulePicker({
         </div>
       ) : null}
       {data ? (
-        <section className="mt-6" aria-labelledby="plan-title">
-          <h3 id="plan-title" className="font-display text-lg font-semibold">
-            Tu plan
-          </h3>
-          <p className="mt-2 font-medium" aria-live="polite" aria-atomic="true">
-            {summarySentence({
-              primerDia: data.fechaInicioEfectiva,
-              horaInicio: data.horaInicio,
-              ultimoDia: data.ultimaFecha,
-              horaFin: data.ultimaHoraFin,
-              horasTotales: data.horasTotales,
-              dias: data.dias.length,
-            })}
+        <section className="mt-6" aria-label="Resumen del plan">
+          <p className="font-medium" aria-live="polite" aria-atomic="true">
+            Tu plan: {plural(data.dias.length, "día", "días")}, del{" "}
+            {dayLabel(data.dias[0]?.fecha ?? data.fechaInicioEfectiva)} al {dayLabel(data.ultimaFecha)}
+            {(data.dias[data.dias.length - 1]?.horas ?? data.horasPorDia) < data.horasPorDia
+              ? "; la última sesión puede ser más corta"
+              : ""}
+            .
           </p>
           {data.ajustada ? (
             <p className="mt-1 text-sm text-text-secondary">
@@ -474,7 +562,7 @@ export function StudentSchedulePicker({
             </p>
           ) : null}
           {data.precioCentavos !== undefined ? (
-            <p className="mt-3 font-semibold">
+            <p className="mt-2 text-sm font-semibold">
               Precio del curso:{" "}
               {new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(
                 data.precioCentavos / 100,
@@ -482,14 +570,12 @@ export function StudentSchedulePicker({
               . Se fija al reservar.
             </p>
           ) : null}
-          <SchedulePlanView days={days} />
           {failing.length ? (
             <div role="alert" className="mt-4 text-sm text-accent-red">
               <p className="font-medium">
                 Esta hora no se puede reservar: falta disponibilidad en{" "}
                 {plural(failing.length, "día", "días")}.
               </p>
-              <p className="mt-1 text-sm">{failing.map(dayLabel).join(", ")}.</p>
               {alternatives.length ? (
                 <p className="mt-2 text-sm">
                   Prueba con: {alternatives.map((a) => a.hora).join(", ")}.
@@ -520,7 +606,7 @@ export function StudentSchedulePicker({
           }
           onClick={() => void reserve()}
         >
-          Reservar este horario
+          Continuar
         </Button>
       </div>
     </Card>
