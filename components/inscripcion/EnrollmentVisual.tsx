@@ -3,6 +3,8 @@ import Image from "next/image";
 import styles from "./enrollment-visual.module.css";
 
 const paths = {
+  calendar: "M3 5h18v16H3V5Zm4-3v6m10-6v6M3 10h18M7 14h3m4 0h3m-10 4h3",
+  payment: "M2 5h20v14H2V5Zm0 5h20M6 15h4",
   mail: "M3 5h18v14H3V5Zm0 0 9 8 9-8",
   key: "M14 8a5 5 0 1 1-4-5M10 12l-7 9m3-4 3 3",
   shield: "M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6l-9-4Zm-5 10 3 3 7-7",

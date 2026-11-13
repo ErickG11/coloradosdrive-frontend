@@ -1,4 +1,6 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
+import { EnrollmentIcon } from "@/components/inscripcion/EnrollmentVisual";
 import { useState } from "react";
 import { landingContent, whatsappHref } from "@/lib/content/landing";
 import { Button } from "@/components/ui/Button";
@@ -86,18 +88,16 @@ export function NoOpenCoursePanel({ enrollmentId }: { enrollmentId: string }) {
   const state = useFetch<State>("/estudiantes/inscripcion/espera");
   const type = state.data?.enrollments?.find((e) => e.id === enrollmentId)?.type;
   return (
-    <div role="status" className="grid gap-2 rounded-sm border border-border p-5">
-      <h3 className="font-display text-lg font-semibold">
-        {type
+    <StudentEmptyState
+      icon={<EnrollmentIcon name="calendar" />}
+      title={
+        type
           ? `Por ahora no hay un curso abierto de ${COURSE_NAME[type]}`
-          : "Por ahora no hay un curso abierto"}
-      </h3>
-      <p className="text-text-secondary">
-        Te avisaremos por correo apenas se abra uno. Después de recibir el aviso, entra y elige tu
-        horario.
-      </p>
-      <WaitlistControl enrollmentId={enrollmentId} />
-    </div>
+          : "Por ahora no hay un curso abierto"
+      }
+      description="Te avisaremos por correo apenas se abra uno. Después de recibir el aviso, entra y elige tu horario."
+      actions={<WaitlistControl enrollmentId={enrollmentId} />}
+    />
   );
 }
 

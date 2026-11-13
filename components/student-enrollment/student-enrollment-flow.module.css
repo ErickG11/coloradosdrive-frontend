@@ -1,0 +1,30 @@
+.flow {
+  gap: 24px;
+}
+.progress {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--color-bg-sunken);
+  margin-top: 14px;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--color-brand-primary);
+  border-radius: inherit;
+  transition: width 200ms ease;
+}
+@media (max-width: 767px) {
+  .flow nav[aria-label="Pasos de la inscripción"] ol {
+    display: block;
+  }
+  .flow nav[aria-label="Pasos de la inscripción"] li:not([data-current="true"]) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress > span {
+    transition: none;
+  }
+}

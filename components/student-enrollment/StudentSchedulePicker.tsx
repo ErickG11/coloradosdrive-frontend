@@ -1,4 +1,6 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
+import { EnrollmentIcon } from "@/components/inscripcion/EnrollmentVisual";
 import { NoOpenCoursePanel, WaitlistControl } from "./WaitlistControl";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useState } from "react";
@@ -23,6 +25,7 @@ interface Props {
   state: ReturnType<typeof useStudentReservation>;
   onReserved: (reservation: StudentScheduleReservation) => void;
   onNext: () => void;
+  onBack?: () => void;
 }
 type Loaded<T> = { key: string; data?: T; error?: string } | null;
 const reloadKey = (id: string | undefined) => id ?? "none";
@@ -73,6 +76,7 @@ export function StudentSchedulePicker({
   state,
   onReserved,
   onNext,
+  onBack,
 }: Props) {
   const rules = useKeyedRequest<StudentPlanRules>(state.ready ? "plan-rules" : null, (signal) =>
     studentScheduleApi.rules(signal),
@@ -347,26 +351,35 @@ export function StudentSchedulePicker({
         </p>
       ) : null}
       {noCohort ? (
-        <div role="status" className="mt-5 rounded-sm border border-border p-4">
-          <p className="font-medium">{noCohort.mensaje}</p>
-          {noCohort.ultimaFechaInicioPosible &&
-          !noCohort.mensaje.includes("Última fecha de inicio") ? (
-            <p className="mt-1 text-text-secondary">
-              La última fecha de inicio posible es el{" "}
-              {dayLabelLong(noCohort.ultimaFechaInicioPosible)}.
-            </p>
-          ) : null}
-          <WaitlistControl enrollmentId={enrollmentId} input={input} />
-          {noCohort.primeraFechaPosible ? (
-            <Button
-              className="mt-3"
-              variant="secondary"
-              onClick={() => update({ fechaInicio: noCohort.primeraFechaPosible ?? minDate })}
-            >
-              Empezar el {dayLabel(noCohort.primeraFechaPosible)}
-            </Button>
-          ) : null}
-        </div>
+        <StudentEmptyState
+          icon={<EnrollmentIcon name="calendar" />}
+          title={
+            noCohort.codigo === "SIN_COHORTE_ELEGIBLE"
+              ? "Los cursos abiertos están completos"
+              : "Aún no hay un plan disponible para estas fechas"
+          }
+          description={noCohort.mensaje}
+          actions={
+            <div className="grid gap-3">
+              {noCohort.ultimaFechaInicioPosible &&
+              !noCohort.mensaje.includes("Última fecha de inicio") ? (
+                <p className="text-sm text-text-secondary">
+                  La última fecha de inicio posible es el{" "}
+                  {dayLabelLong(noCohort.ultimaFechaInicioPosible)}.
+                </p>
+              ) : null}
+              <WaitlistControl enrollmentId={enrollmentId} input={input} />
+              {noCohort.primeraFechaPosible ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => update({ fechaInicio: noCohort.primeraFechaPosible ?? minDate })}
+                >
+                  Empezar el {dayLabel(noCohort.primeraFechaPosible)}
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
       ) : null}
       {options.data && !noCohort && !firstFeasible ? (
         <div role="status" className="mt-5 rounded-sm border border-border p-4">
@@ -389,6 +402,7 @@ export function StudentSchedulePicker({
       ) : null}
       <div
         className="sticky bottom-0 z-10 mt-6 grid items-center gap-3 border-t border-border bg-bg-surface p-3 shadow-elevated sm:grid-cols-[minmax(0,1fr)_auto]"
+        data-flow-actions
         aria-label="Resumen del plan"
       >
         <div className="min-w-0 flex-1 text-sm" aria-live="polite">
@@ -407,6 +421,11 @@ export function StudentSchedulePicker({
             </p>
           ) : null}
         </div>
+        {onBack ? (
+          <Button variant="secondary" disabled={reserving} onClick={onBack}>
+            Volver
+          </Button>
+        ) : null}
         <Button
           isLoading={reserving}
           disabled={

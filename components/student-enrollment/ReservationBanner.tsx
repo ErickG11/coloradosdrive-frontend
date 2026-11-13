@@ -1,4 +1,6 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
+import { EnrollmentIcon } from "@/components/inscripcion/EnrollmentVisual";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -61,11 +63,20 @@ export function ReservationBanner({ state }: Props) {
           ) : null}
         </Card>
       ) : reservation?.estado === "vencida" ? (
-        <p role="status" className="rounded-sm border border-status-warning p-4">
-          {reservation.purpose === "plan_change"
-            ? "La propuesta venció. Tu horario original se conserva; puedes consultar otra alternativa si aún estás dentro del plazo."
-            : "Tu reserva venció y se liberaron las franjas y el cupo. Tu solicitud aprobada se conserva. Elige un horario nuevamente."}
-        </p>
+        <StudentEmptyState
+          icon={<EnrollmentIcon name="clock" />}
+          title="Tu reserva venció"
+          description={
+            reservation.purpose === "plan_change"
+              ? "La propuesta venció. Tu horario original se conserva."
+              : "Se liberaron las franjas y el cupo. Tu solicitud aprobada se conserva."
+          }
+          actions={
+            <p className="text-sm text-text-secondary">
+              Elige un horario nuevamente para continuar.
+            </p>
+          }
+        />
       ) : null}
       {state.error ? (
         <div className="grid gap-3">
