@@ -73,9 +73,9 @@ export interface PracticeFormData {
 export const EMPTY_PRACTICE: PracticeFormData = {
   semanas: 1,
   modalidad: "entre_semana",
-  horasPorDia: 2,
+  horasPorDia: "",
   fechaInicio: "",
-  horaDeseada: "08:00",
+  horaDeseada: "",
   fechaFin: "",
   manual: false,
 };
@@ -164,12 +164,11 @@ export interface ManualResult {
   documentosPendientes?: number;
 }
 export const HORAS_POR_DIA_MIN = 1;
-export const HORAS_POR_DIA_MAX = 6;
 
 export function horasPorDiaError(value: number | ""): string | null {
   if (value === "") return "Ingresa las horas por día.";
-  if (!Number.isInteger(value) || value < HORAS_POR_DIA_MIN || value > HORAS_POR_DIA_MAX)
-    return `Las horas por día deben ser un entero entre ${HORAS_POR_DIA_MIN} y ${HORAS_POR_DIA_MAX}.`;
+  if (!Number.isInteger(value) || value < HORAS_POR_DIA_MIN)
+    return "Selecciona una opción de horas por día válida.";
   return null;
 }
 

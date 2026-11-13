@@ -15,7 +15,7 @@ export function WaitlistControl({
   enrollmentId,
 }: {
   enrollmentId: string;
-  input: StudentScheduleInput;
+  input?: StudentScheduleInput;
 }) {
   const state = useFetch<State>("/estudiantes/inscripcion/espera");
   const [busy, setBusy] = useState(false);
@@ -31,11 +31,7 @@ export function WaitlistControl({
         quitar: remove,
       });
       state.refetch();
-      setMessage(
-        remove
-          ? "Aviso retirado."
-          : "Listo, te avisaremos por correo.",
-      );
+      setMessage(remove ? "Aviso retirado." : "Listo, te avisaremos por correo.");
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -100,10 +96,7 @@ export function NoOpenCoursePanel({ enrollmentId }: { enrollmentId: string }) {
         Te avisaremos por correo apenas se abra uno. Después de recibir el aviso, entra y elige tu
         horario.
       </p>
-      <WaitlistControl
-        enrollmentId={enrollmentId}
-        input={{ modalidad: "entre_semana", fechaInicio: "", horasPorDia: 3 }}
-      />
+      <WaitlistControl enrollmentId={enrollmentId} />
     </div>
   );
 }

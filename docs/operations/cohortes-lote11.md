@@ -2,7 +2,7 @@
 
 Rama local `feat/cohortes-reglas-inscripcion`, sin push ni main. Implementación entregada; **validación final pendiente** por la instrucción posterior «no hagas pruebas de codigo saltate esa parte». No se ejecutan nuevas suites, tipos, lint ni build desde esa instrucción; no se afirma QA de navegador.
 
-La caja consume el constructor de 15 horas del servidor, presenta las 12 combinaciones, días efectivos, última sesión y precio por tipo. La elección de cohorte se actualiza con la vista previa válida del plan; una tarifa distinta exige nueva confirmación. Los campos de semanas/fin manual continúan solo en el régimen heredado. La rama nueva de calendario usa reloj/horizonte del servidor y muestra precio antes de reservar.
+La caja consume el constructor de 10 horas del servidor, presenta las opciones habilitadas del servidor, días efectivos, última sesión y precio por tipo. La elección de cohorte se actualiza con la vista previa válida del plan; una tarifa distinta exige nueva confirmación. Los campos de semanas/fin manual continúan solo en el régimen heredado. La rama nueva de calendario usa reloj/horizonte del servidor y muestra precio antes de reservar.
 
 Se retiran nombres/códigos de cohorte de ficha, resumen y panel del alumno. La ficha administrativa reserva información de pagos al permiso financiero. El embudo se incorpora al panel existente y procede del servidor; no hay pantalla ni tabla nueva. El navegador no lee ni concede los indicadores de activación.
 

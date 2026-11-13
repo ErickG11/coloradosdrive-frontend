@@ -97,6 +97,7 @@ export interface StudentPlanRules {
     modalidad: StudentScheduleInput["modalidad"];
     horasPorDia: number;
     habilitada: boolean;
+    totalHoras?: number;
     sesiones: number;
     primeraFecha: string;
     ultimaFecha: string;
