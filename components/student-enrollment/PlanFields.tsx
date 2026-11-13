@@ -1,4 +1,6 @@
 "use client";
+import { EnrollmentIcon } from "./EnrollmentVisual";
+import styles from "./enrollment-plan.module.css";
 import { useId, useState } from "react";
 import type {
   StudentPlanRules,
@@ -41,6 +43,7 @@ export function PlanFields({
   hours = [],
   disabled = false,
   loading = false,
+  appearance = "default",
 }: {
   rules: StudentPlanRules | undefined;
   value: StudentScheduleSelection;
@@ -53,8 +56,10 @@ export function PlanFields({
   hours?: StudentScheduleStartOption[];
   disabled?: boolean;
   loading?: boolean;
+  appearance?: "default" | "enrollment";
 }) {
   const id = useId();
+  const modern = appearance === "enrollment";
   const [hovered, setHovered] = useState<string | null>(null);
   const options = (rules?.options ?? []).filter(
     (o) => o.habilitada && o.modalidad === value.modalidad,
@@ -86,7 +91,7 @@ export function PlanFields({
     });
   }
   return (
-    <div className="grid min-w-0 gap-6">
+    <div className={`grid min-w-0 gap-6 ${modern ? styles.enrollment : ""}`}>
       <SegmentedControl
         legend="Modalidad"
         value={value.modalidad}
@@ -97,7 +102,7 @@ export function PlanFields({
         ]}
         onChange={changeMode}
       />
-      <fieldset className="min-w-0" disabled={disabled}>
+      <fieldset className="min-w-0" data-plan-section="hours" disabled={disabled}>
         <legend className="mb-2 font-medium">Horas por día</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           {options.map((o) => {
@@ -111,14 +116,27 @@ export function PlanFields({
             return fixed ? (
               <div
                 key={o.horasPorDia}
-                className="rounded-sm border border-brand-primary bg-bg-sunken p-4 sm:col-span-2"
+                className={`rounded-sm border border-brand-primary bg-bg-sunken p-4 sm:col-span-2 ${modern ? styles.hoursChoice : ""}`}
               >
-                {label}
+                {modern ? (
+                  <>
+                    <span className={styles.hoursIcon}>
+                      <EnrollmentIcon kind="calendar" />
+                    </span>
+                    <span>
+                      <strong>{o.horasPorDia} horas por día</strong>
+                      <small>Obligatorias en fin de semana · {detail}</small>
+                    </span>
+                  </>
+                ) : (
+                  label
+                )}
               </div>
             ) : (
               <button
                 key={o.horasPorDia}
                 type="button"
+                aria-label={label}
                 aria-pressed={value.horasPorDia === o.horasPorDia}
                 onClick={() =>
                   onChange({
@@ -131,15 +149,29 @@ export function PlanFields({
                         : -1,
                   })
                 }
-                className="min-h-20 rounded-sm border border-border-strong p-4 text-left aria-pressed:border-brand-primary aria-pressed:bg-bg-sunken focus-visible:outline-2"
+                className={`min-h-20 rounded-sm border border-border-strong p-4 text-left aria-pressed:border-brand-primary aria-pressed:bg-bg-sunken focus-visible:outline-2 ${modern ? styles.hoursChoice : ""}`}
               >
-                {label}
+                {modern ? (
+                  <>
+                    <span className={styles.hoursIcon}>
+                      <EnrollmentIcon kind="calendar" />
+                    </span>
+                    <span>
+                      <strong>
+                        {o.horasPorDia} {o.horasPorDia === 1 ? "hora" : "horas"} por día
+                      </strong>
+                      <small>{detail}</small>
+                    </span>
+                  </>
+                ) : (
+                  label
+                )}
               </button>
             );
           })}
         </div>
       </fieldset>
-      <fieldset className="min-w-0" aria-busy={loading}>
+      <fieldset className="min-w-0" data-plan-section="calendar" aria-busy={loading}>
         <legend className="mb-2 font-medium">Fecha de inicio</legend>
         <div className="max-w-lg" role="group" aria-label="Fechas de inicio disponibles">
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -204,6 +236,15 @@ export function PlanFields({
                     aria-disabled={!ok}
                     aria-pressed={value.fechaInicio === date}
                     aria-describedby={!ok ? tip : undefined}
+                    data-plan-position={
+                      modern && painted.has(date)
+                        ? start
+                          ? "start"
+                          : end
+                            ? "end"
+                            : "middle"
+                        : undefined
+                    }
                     data-plan-day={
                       painted.has(date) ? (previewing ? "preview" : "selected") : undefined
                     }
@@ -245,7 +286,7 @@ export function PlanFields({
           ) : null}
         </div>
       </fieldset>
-      <fieldset className="min-w-0" disabled={disabled}>
+      <fieldset className="min-w-0" data-plan-section="time" disabled={disabled}>
         <legend className="mb-2 font-medium">Horario</legend>
         <p className="mb-3 text-sm text-text-secondary" aria-live="polite">
           {value.horaInicio < 0
@@ -264,7 +305,7 @@ export function PlanFields({
               Number(h.hora.slice(0, 2)) + value.horasPorDia <= (rules?.endHour ?? 22),
           );
           return list.length ? (
-            <div key={group.name} className="mb-3">
+            <div key={group.name} className={`mb-3 ${modern ? styles.timeGroup : ""}`}>
               <p className="mb-2 text-sm font-medium">{group.name}</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {list.map((h) => (

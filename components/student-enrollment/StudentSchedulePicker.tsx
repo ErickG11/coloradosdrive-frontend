@@ -2,6 +2,7 @@
 import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import { EnrollmentIcon } from "@/components/inscripcion/EnrollmentVisual";
 import { NoOpenCoursePanel, WaitlistControl } from "./WaitlistControl";
+import planStyles from "./enrollment-plan.module.css";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -217,7 +218,7 @@ export function StudentSchedulePicker({
     const plan = state.reservation.plan;
     const days: PlanDayView[] = plan?.dias.map((d) => ({ ...d, ok: true })) ?? [];
     return (
-      <Card title="Tu horario reservado" className={visual.schedule}>
+      <Card title="Tu horario reservado" className={`${visual.schedule} ${planStyles.schedule}`}>
         <p className="font-semibold">Tu plan de prácticas</p>
         {plan ? (
           <p className="mt-2" aria-live="polite">
@@ -293,12 +294,12 @@ export function StudentSchedulePicker({
   const failure = options.error ?? preview.error ?? null;
   if (noOpen)
     return (
-      <Card title="Elige tu horario" className={visual.schedule}>
+      <Card title="Elige tu horario" className={`${visual.schedule} ${planStyles.schedule}`}>
         <NoOpenCoursePanel enrollmentId={enrollmentId} />
       </Card>
     );
   return (
-    <Card title="Elige tu horario" className={visual.schedule}>
+    <Card title="Elige tu horario" className={`${visual.schedule} ${planStyles.schedule}`}>
       {rules.error ? (
         <p role="status" className="text-status-warning">
           {rules.error}
@@ -310,6 +311,7 @@ export function StudentSchedulePicker({
         </p>
       ) : null}
       <PlanFields
+        appearance="enrollment"
         rules={rules.data}
         value={{ ...input, horaInicio: hour ? Number(hour.slice(0, 2)) : -1 }}
         month={month}
@@ -401,7 +403,7 @@ export function StudentSchedulePicker({
         </p>
       ) : null}
       <div
-        className="sticky bottom-0 z-10 mt-6 grid items-center gap-3 border-t border-border bg-bg-surface p-3 shadow-elevated sm:grid-cols-[minmax(0,1fr)_auto]"
+        className={`${planStyles.planSummary} sticky bottom-0 z-10 mt-6 grid items-center gap-3 border-t border-border bg-bg-surface p-3 shadow-elevated`}
         data-flow-actions
         aria-label="Resumen del plan"
       >
