@@ -1,0 +1,158 @@
+.enrollment {
+  gap: 28px;
+}
+.enrollment legend {
+  font-weight: 650;
+  font-size: 15px;
+  margin-bottom: 16px;
+}
+.hoursChoice {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-height: 112px;
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--color-bg-surface);
+  border-color: var(--color-border);
+}
+.hoursChoice[aria-pressed="true"] {
+  border-color: var(--color-brand-primary);
+  background: var(--color-brand-tint);
+}
+.hoursChoice strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.hoursChoice small {
+  display: block;
+  margin-top: 7px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+.hoursIcon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-ink);
+}
+.hoursIcon svg {
+  width: 23px;
+  height: 23px;
+}
+.enrollment [data-plan-section="calendar"],
+.enrollment [data-plan-section="time"] {
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-bg-surface);
+}
+.enrollment [data-plan-section="calendar"] legend,
+.enrollment [data-plan-section="time"] legend {
+  padding-inline: 7px;
+}
+.enrollment [aria-label="Fechas de inicio disponibles"] {
+  max-width: none;
+}
+.enrollment [data-plan-position] {
+  min-height: 56px;
+  gap: 3px;
+  border-radius: 10px;
+}
+.enrollment [data-plan-position="middle"] {
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand-border);
+  color: var(--color-brand-ink);
+}
+.enrollment [data-plan-position="end"] {
+  border: 2px solid var(--color-brand-primary);
+  background: var(--color-bg-surface);
+  color: var(--color-brand-ink);
+  font-weight: 650;
+}
+.enrollment [data-plan-position="start"] {
+  border-color: var(--color-brand-primary);
+  background: var(--color-brand-primary);
+  color: white;
+  font-weight: 650;
+}
+.enrollment [data-plan-day="preview"] {
+  border-style: dashed;
+}
+.timeGroup {
+  padding-block: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.timeGroup:last-of-type {
+  border-bottom: 0;
+}
+.timeGroup > p {
+  color: var(--color-brand-ink);
+}
+.timeGroup button {
+  border-radius: 10px;
+  min-height: 48px;
+}
+.timeGroup button[aria-pressed="true"] {
+  background: var(--color-brand-tint);
+}
+.schedule {
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+}
+.planSummary {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  border-radius: 12px 12px 0 0;
+  padding: 16px;
+}
+@media (min-width: 1024px) {
+  .enrollment {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .enrollment > :not([data-plan-section="calendar"]):not([data-plan-section="time"]) {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 1023px) {
+  .schedule .planSummary[data-flow-actions] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .planSummary > div {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 420px) {
+  .hoursChoice {
+    padding: 16px;
+  }
+  .enrollment [data-plan-section="calendar"],
+  .enrollment [data-plan-section="time"] {
+    padding: 12px;
+  }
+  .enrollment [data-plan-position] {
+    min-height: 48px;
+  }
+}
+
+.enrollment [data-plan-section="calendar"] button[aria-pressed] {
+  min-height: 56px;
+}
+@media (max-width: 420px) {
+  .enrollment [data-plan-section="calendar"] button[aria-pressed] {
+    min-height: 48px;
+  }
+}
+
+.hoursChoice:not(button) {
+  border-color: var(--color-brand-primary);
+  background: var(--color-brand-tint);
+}
