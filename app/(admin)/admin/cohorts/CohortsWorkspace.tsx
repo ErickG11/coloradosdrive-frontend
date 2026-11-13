@@ -16,12 +16,12 @@ import { Button, FormError, Select, buttonClassName } from "@/components/ui";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { useFetch } from "@/hooks/useFetch";
-import { formatMoney } from "@/lib/utils/money";
 import type { Cohort, Course } from "@/types";
 
 import { CohortCreator, CohortEditor } from "./CohortEditor";
 import type { CohortSavedNotice } from "./CohortForm";
 import { CohortMetricValue } from "./CohortMetricValue";
+import { CohortPricesCard } from "./CohortPricesCard";
 import { CohortIcon } from "./CohortVisual";
 import { DeleteCohortModal } from "./DeleteCohortModal";
 import { useCohortStudentCounts } from "./useCohortStudentCounts";
@@ -89,6 +89,16 @@ function schoolDay() {
   return ["year", "month", "day"].map((key) => parts.find((p) => p.type === key)?.value).join("-");
 }
 type Period = "current" | "upcoming" | "finished" | "unknown";
+
+// Cierre de matrícula = fin de matrícula − 5 días calendario, inclusive (reglas vigentes).
+function enrollmentOpen(cohort: Cohort, today: string): boolean {
+  if (!cohort.fechaInicioMatricula || !cohort.fechaFinMatricula || cohort.habilitada === false)
+    return false;
+  if (period(cohort, today) === "finished") return false;
+  const cutoff = new Date(`${cohort.fechaFinMatricula}T00:00:00Z`);
+  cutoff.setUTCDate(cutoff.getUTCDate() - 5);
+  return cohort.fechaInicioMatricula <= today && today <= cutoff.toISOString().slice(0, 10);
+}
 function period(cohort: Cohort, today: string): Period {
   if (!cohort.fechaInicioCurso || !cohort.fechaFinCurso) return "unknown";
   if (cohort.fechaInicioCurso > today) return "upcoming";
@@ -97,8 +107,8 @@ function period(cohort: Cohort, today: string): Period {
 }
 const periodLabels: Record<Period, string> = {
   current: "En curso",
-  upcoming: "Próxima",
-  finished: "Finalizada",
+  upcoming: "Por iniciar",
+  finished: "Terminado",
   unknown: "Sin fechas",
 };
 
@@ -339,11 +349,17 @@ export function CohortsWorkspace() {
   }
   function statusBadge(cohort: Cohort) {
     const key = period(cohort, today);
+    if (!today) return <span>—</span>;
     return (
-      <span className={styles.status} data-status={key}>
-        <span aria-hidden="true" />
-        {today ? periodLabels[key] : "—"}
-      </span>
+      <div className="flex flex-col gap-1">
+        <span className={styles.status} data-status={key}>
+          <span aria-hidden="true" />
+          Curso: {periodLabels[key]}
+        </span>
+        <span className="text-xs text-text-secondary">
+          Matrícula: {enrollmentOpen(cohort, today) ? "Abierta" : "Cerrada"}
+        </span>
+      </div>
     );
   }
   function studentCount(cohort: Cohort) {
@@ -445,6 +461,8 @@ export function CohortsWorkspace() {
           >
             {deletedMessage}
           </p>
+
+          <CohortPricesCard />
 
           <section className={styles.summary} aria-label="Resumen de cohortes">
             {metrics.map(({ key, label, icon }) => {
@@ -617,7 +635,7 @@ export function CohortsWorkspace() {
                 <p>
                   {existing.length
                     ? "Prueba con otro nombre o cambia los filtros."
-                    : "Crea una cohorte para definir el curso, el precio y sus fechas."}
+                    : "Crea una cohorte para definir el curso y sus fechas."}
                 </p>
                 {activeFilters ? (
                   <Button variant="secondary" onClick={clearFilters}>
@@ -646,10 +664,6 @@ export function CohortsWorkspace() {
                     </header>
                     {courseCell(cohort)}
                     <dl>
-                      <div>
-                        <dt>Precio</dt>
-                        <dd>{formatMoney(cohort.precio)}</dd>
-                      </div>
                       <div>
                         <dt>Alumnos en la cohorte</dt>
                         <dd>{studentCount(cohort)}</dd>
@@ -681,15 +695,14 @@ export function CohortsWorkspace() {
               >
                 <table className={styles.table}>
                   <caption className="sr-only">
-                    Listado de cohortes. El período se calcula según las fechas del curso; no indica
-                    disponibilidad de matrícula.
+                    Listado de cohortes. Cada fila indica si la matrícula está abierta o cerrada y si
+                    el curso está por iniciar, en curso o terminado.
                   </caption>
                   <thead>
                     <tr>
                       <th scope="col">Cohorte</th>
                       <th scope="col">Curso</th>
                       <th scope="col">Alumnos</th>
-                      <th scope="col">Precio</th>
                       <th scope="col">Fechas</th>
                       <th scope="col">Período</th>
                       <th scope="col">Acciones</th>
@@ -717,7 +730,6 @@ export function CohortsWorkspace() {
                         </td>
                         <td>{courseCell(cohort)}</td>
                         <td className={styles.numeric}>{studentCount(cohort)}</td>
-                        <td className={styles.numeric}>{formatMoney(cohort.precio)}</td>
                         <td>
                           <div className={styles.dateCell}>
                             <CohortIcon name="calendar" />
