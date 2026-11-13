@@ -224,6 +224,46 @@ function CourseContent({
             : subjects.some((s) => s.id === i.subject_id),
       )
     : [];
+  // Aviso de borrador con los datos que la pantalla ya tiene cargados (sin llamadas nuevas).
+  const draftState = (() => {
+    if (!access) return null;
+    const kind = access.scope.scope;
+    const scopeSubjects =
+      kind === "item"
+        ? subjects.filter((s) => s.id === accessItems[0]?.subject_id)
+        : kind === "materia"
+          ? subjects.filter((s) => s.id === access.scope.id)
+          : subjects;
+    const draftSubjects = scopeSubjects.filter((s) => !s.is_published);
+    const draftItems = accessItems.filter((i) => !itemPublished(i));
+    if (!draftSubjects.length && !draftItems.length) return null;
+    const n = draftItems.length;
+    const noun = draftItems.every((i) => i.kind === "material") ? "materiales" : "elementos";
+    const nounOne = noun === "materiales" ? "material" : "elemento";
+    const label = access.scope.title;
+    let text: string;
+    if (kind === "curso") {
+      const parts = [
+        draftSubjects.length
+          ? `${draftSubjects.length} ${draftSubjects.length === 1 ? "materia" : "materias"}`
+          : "",
+        n ? `${n} ${n === 1 ? nounOne : noun}` : "",
+      ].filter(Boolean);
+      text = `Hay ${parts.join(" y ")} en borrador. Los alumnos no los verán hasta que los publiques.`;
+    } else if (kind === "item") {
+      text = draftItems.length
+        ? `«${label}» está en borrador. Los alumnos no lo verán hasta que lo publiques.`
+        : `La materia «${draftSubjects[0].title}» está en borrador. Los alumnos no la verán hasta que la publiques.`;
+    } else if (draftSubjects.length) {
+      text = n
+        ? `«${label}» y ${n} de sus ${noun} están en borrador. Los alumnos no los verán hasta que los publiques.`
+        : `«${label}» está en borrador. Los alumnos no la verán hasta que la publiques.`;
+    } else {
+      text = `${n} de los ${noun} de «${label}» ${n === 1 ? "está" : "están"} en borrador. Los alumnos no ${n === 1 ? "lo verán hasta que lo publiques" : "los verán hasta que los publiques"}.`;
+    }
+    const target = draftSubjects[0]?.id ?? draftItems[0]?.subject_id ?? null;
+    return { text, subjectId: target };
+  })();
   async function mutate(work: () => Promise<unknown>, message: string) {
     const result = await action.run(work, message);
     if (result.ok) reload();
@@ -583,6 +623,7 @@ function CourseContent({
                           <button
                             type="button"
                             role="switch"
+                            id={`subject-publish-${s.id}`}
                             aria-checked={s.is_published}
                             aria-label={`${s.is_published ? "Despublicar" : "Publicar"} materia ${s.title}`}
                             disabled={action.busy}
@@ -1061,6 +1102,21 @@ function CourseContent({
           cohorts={cohorts}
           names={names}
           initialStudent={access.student}
+          draftNotice={draftState?.text ?? null}
+          onGoPublish={
+            draftState?.subjectId
+              ? () => {
+                  const target = draftState.subjectId!;
+                  setAccess(null);
+                  setSelected(target);
+                  window.requestAnimationFrame(() =>
+                    document.getElementById(`subject-publish-${target}`)?.scrollIntoView({
+                      block: "center",
+                    }),
+                  );
+                }
+              : undefined
+          }
           onClose={() => setAccess(null)}
           onSaved={() => {
             setAccess(null);

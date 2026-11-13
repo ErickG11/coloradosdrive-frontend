@@ -1147,3 +1147,49 @@
     transition: none !important;
   }
 }
+
+/* C19: asterisco rojo decorativo en las etiquetas de campos obligatorios del módulo. */
+.requiredFields label:has(+ input[required])::after,
+.requiredFields label:has(+ textarea[required])::after,
+.requiredFields label:has(+ div > select[required])::after {
+  content: " *";
+  content: " *" / "";
+  color: var(--color-accent-red);
+}
+/* C19: pie fijo del diálogo de habilitación y secciones. */
+.stickyFooter {
+  position: sticky;
+  bottom: -24px;
+  z-index: 1;
+  margin-inline: -24px;
+  margin-bottom: -24px;
+  padding: 16px 24px 24px;
+  background: var(--color-bg-surface);
+  border-top: 1px solid var(--color-border);
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.stickyFooter button {
+  min-height: 44px;
+  border-radius: 8px;
+}
+.ruleSection {
+  display: grid;
+  gap: 12px;
+}
+.ruleSection + .ruleSection {
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+.ruleSection h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.helpText {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
