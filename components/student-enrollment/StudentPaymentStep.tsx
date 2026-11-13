@@ -1,4 +1,7 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
+import { EnrollmentIcon } from "@/components/inscripcion/EnrollmentVisual";
+import flowStyles from "@/components/inscripcion/enrollment-flow.module.css";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -16,8 +19,9 @@ interface Props {
   state: ReturnType<typeof useStudentPayment>;
   reservation: ReturnType<typeof useStudentReservation>;
   onBack: () => void;
+  courseLabel?: string;
 }
-export function StudentPaymentStep({ state, reservation, onBack }: Props) {
+export function StudentPaymentStep({ state, reservation, onBack, courseLabel }: Props) {
   const [config, setConfig] = useState<PaymentConfiguration | null>(null);
   const [quote, setQuote] = useState<PaymentQuote | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +118,9 @@ export function StudentPaymentStep({ state, reservation, onBack }: Props) {
     <Card title="Pago" className={visual.payment} data-payment-state={current?.estado}>
       {current?.estado === "aprobado" ? (
         <div role="status">
+          <span className={flowStyles.success}>
+            <EnrollmentIcon name="check" />
+          </span>
           <h3 className="font-semibold text-status-success">
             Pago confirmado. Tu matrícula está activa.
           </h3>
@@ -134,6 +141,34 @@ export function StudentPaymentStep({ state, reservation, onBack }: Props) {
         </div>
       ) : (
         <>
+          <section
+            aria-label="Resumen del pedido"
+            className="mb-5 grid gap-3 rounded-md border border-border bg-bg-sunken p-4"
+          >
+            <h3 className="flex items-center gap-2 font-semibold">
+              <span className="h-5 w-5">
+                <EnrollmentIcon name="payment" />
+              </span>
+              Tu pedido
+            </h3>
+            <p className="text-sm">
+              {courseLabel ? `Curso Tipo ${courseLabel}` : "Tu curso de conducción"}
+            </p>
+            {reservation.reservation?.plan ? (
+              <p className="text-sm text-text-secondary">
+                Prácticas: {reservation.reservation.plan.dias[0]?.fecha} al{" "}
+                {reservation.reservation.plan.ultimaFecha} · Desde las{" "}
+                {reservation.reservation.plan.horaInicio} ·{" "}
+                {reservation.reservation.plan.totalHoras} horas
+              </p>
+            ) : null}
+            <p className="flex items-center gap-2 text-xs text-text-secondary">
+              <span className="h-4 w-4">
+                <EnrollmentIcon name="shield" />
+              </span>
+              Pago seguro. Confirma el importe antes de continuar.
+            </p>
+          </section>
           {amount ? (
             <dl className="grid gap-3 sm:grid-cols-2">
               <div>
@@ -157,16 +192,20 @@ export function StudentPaymentStep({ state, reservation, onBack }: Props) {
             <p role="status">Consultando importe…</p>
           )}
           {current?.estado === "rechazado" ? (
-            <div role="alert" className="mt-4">
-              <p>El pago fue rechazado. Tu matrícula sigue pendiente.</p>
-              <Button
-                className="mt-3"
-                disabled={!reservation.live || busy || !!state.error}
-                onClick={retry}
-              >
-                Crear otro intento
-              </Button>
-            </div>
+            <StudentEmptyState
+              title="No se pudo completar el pago"
+              description="El pago fue rechazado. Tu matrícula sigue pendiente."
+              icon={<EnrollmentIcon name="payment" />}
+              actions={
+                <Button
+                  className="mt-3"
+                  disabled={!reservation.live || busy || !!state.error}
+                  onClick={retry}
+                >
+                  Crear otro intento
+                </Button>
+              }
+            />
           ) : current?.estado === "pendiente" ? (
             <div className="mt-5">
               <p role="status" className="font-semibold">
@@ -233,22 +272,26 @@ export function StudentPaymentStep({ state, reservation, onBack }: Props) {
         </>
       )}
       {error || state.error ? (
-        <div className="mt-4">
-          <p role="alert">{error ?? state.error}</p>
-          <Button
-            className="mt-3"
-            variant="secondary"
-            disabled={busy}
-            onClick={() => {
-              setError(null);
-              setReload((v) => v + 1);
-              state.refresh();
-              reservation.refetch();
-            }}
-          >
-            Consultar estado
-          </Button>
-        </div>
+        <StudentEmptyState
+          icon={<EnrollmentIcon name="payment" />}
+          title="No pudimos confirmar el estado del pago"
+          description={error ?? state.error ?? "Consulta el estado antes de volver a intentar."}
+          actions={
+            <Button
+              className="mt-3"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => {
+                setError(null);
+                setReload((v) => v + 1);
+                state.refresh();
+                reservation.refetch();
+              }}
+            >
+              Consultar estado
+            </Button>
+          }
+        />
       ) : null}
       <div className="mt-5 flex flex-wrap gap-3">
         <Button variant="secondary" disabled={busy} onClick={onBack}>
