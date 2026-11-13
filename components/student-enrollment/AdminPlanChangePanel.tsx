@@ -1,12 +1,10 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Card, Input, Select } from "@/components/ui";
+import { Button, Card, Input } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
-import type { Cohort, Course } from "@/types";
 import type {
   PlanChangeState,
-  PlanChangePreview,
   PlanChangeCalendar,
 } from "@/types/adminPlanChange";
 import type {
@@ -19,17 +17,25 @@ import { ReservationBanner } from "./ReservationBanner";
 import { SchedulePlanView } from "./SchedulePlanView";
 import { PlanFields } from "./PlanFields";
 import type { StudentPlanRules, StudentScheduleStartOption } from "@/types/studentSchedule";
-import { summarySentence } from "./scheduleFormat";
+import { dayLabelLong, plural } from "./scheduleFormat";
 const options = () => ({ signal: AbortSignal.timeout(20_000), cache: "no-store" as const });
 const localDate = (iso: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(new Date(iso));
+const CONSULTA = "Consulta de horarios disponibles";
+const BLOCKED_CODES = new Set(["PLAN_CAMBIO_FUERA_PLAZO", "PLAN_CAMBIO_ESTADO_INVALIDO"]);
+const BLOCKED_TEXT =
+  "Este alumno ya empezó sus prácticas o faltan menos de 48 horas para la primera. El plan ya no se puede cambiar desde aquí. Si no puede asistir un día, puede usar «No podré asistir» desde su agenda.";
+interface HourInstructor {
+  scheduledAt: string;
+  instructorId: string;
+  instructorName: string;
+}
 interface Props {
   enrollmentId: string;
   studentId: string;
-  targets?: { id: string; label: string }[];
   onChanged?: () => void;
 }
-function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Props) {
+function AdminPlanChangeForm({ enrollmentId, studentId, onChanged }: Props) {
   const root = `/admin/estudiantes/${studentId}/matriculas/${enrollmentId}/cambio`;
   const meta = useFetch<PlanChangeState>(root);
   const limits = useFetch<StudentPlanRules>("/admin/manual-enrollments/rules");
@@ -41,10 +47,14 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
   });
   const [month, setMonth] = useState("");
   const [reason, setReason] = useState("");
-  const [target, setTarget] = useState("");
+  const [required, setRequired] = useState(false);
+  const [horarios, setHorarios] = useState<{
+    id: string;
+    propuesto: HourInstructor[];
+    actual: HourInstructor[];
+  } | null>(null);
   const [message, setMessage] = useState<string | null>(null),
     [busy, setBusy] = useState(false);
-  const [preview, setPreview] = useState<{ key: string; data: PlanChangePreview } | null>(null);
   const [calendar, setCalendar] = useState<{
     key: string;
     data?: PlanChangeCalendar;
@@ -92,14 +102,26 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
     ? localDate(meta.data.serverNow)
     : localDate(new Date().toISOString());
   const selectedMonth = month || minDate.slice(0, 7);
-  const key = JSON.stringify({
-    effective,
-    reason,
-    target,
-  });
+  const reviewId = pending && reservation.reservation ? reservation.reservation.id : null;
+  useEffect(() => {
+    if (!reviewId) return;
+    const abort = new AbortController();
+    void api
+      .get<{ propuesto: HourInstructor[]; actual: HourInstructor[] }>(
+        `/admin/estudiantes/${studentId}/matriculas/cambio/${reviewId}/horarios`,
+        { signal: abort.signal, cache: "no-store" },
+      )
+      .then((data) => {
+        if (!abort.signal.aborted) setHorarios({ id: reviewId, ...data });
+      })
+      .catch(() => {
+        /* Sin el detalle por instructor, el resumen sigue mostrando el plan. */
+      });
+    return () => abort.abort();
+  }, [reviewId, studentId]);
   const calendarKey =
     meta.data?.active && meta.data.canChange && !pending && selectedMonth && input.horasPorDia
-      ? `${root}|${selectedMonth}|${input.modalidad}|${input.horasPorDia}|${target}`
+      ? `${root}|${selectedMonth}|${input.modalidad}|${input.horasPorDia}`
       : null;
   useEffect(() => {
     if (!calendarKey) return;
@@ -112,7 +134,6 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
           horasPorDia: input.horasPorDia,
           horaInicio: 6,
           fechaInicio: `${selectedMonth}-01`,
-          ...(target ? { cohortId: target } : {}),
         },
         { signal: abort.signal, cache: "no-store" },
       )
@@ -138,11 +159,12 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
           });
       });
     return () => abort.abort();
-  }, [calendarKey, root, input.modalidad, input.horasPorDia, selectedMonth, target]);
+  }, [calendarKey, root, input.modalidad, input.horasPorDia, selectedMonth]);
   const currentCalendar = calendar?.key === calendarKey ? calendar : null;
+  // La consulta de horas libres no escribe nada: no necesita el motivo del cambio.
   const hourKey =
-    input.fechaInicio && input.horasPorDia && reason.trim()
-      ? `${root}|${input.modalidad}|${input.horasPorDia}|${input.fechaInicio}|${reason}|${target}|${limits.data?.endHour}`
+    input.fechaInicio && input.horasPorDia
+      ? `${root}|${input.modalidad}|${input.horasPorDia}|${input.fechaInicio}|${limits.data?.endHour}`
       : null;
   const [hourResult, setHourResult] = useState<{
     key: string;
@@ -157,8 +179,7 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
         {
           ...input,
           horaInicio: 6,
-          motivo: reason.trim(),
-          ...(target ? { cohortId: target } : {}),
+          motivo: CONSULTA,
         },
         { signal: abort.signal, cache: "no-store" },
       )
@@ -186,37 +207,28 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
     // La clave incluye todas las entradas de la consulta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hourKey]);
-  async function propose(reserve = false) {
+  async function propose() {
     if (!reason.trim()) {
-      setMessage("Escribe el motivo de la reasignación.");
+      setRequired(true);
+      setMessage(null);
+      window.requestAnimationFrame(() => document.getElementById("plan-change-reason")?.focus());
       return;
     }
     setBusy(true);
     setMessage(null);
     try {
-      const body = {
-        ...effective,
-        motivo: reason.trim(),
-        ...(target ? { cohortId: target } : {}),
-      };
-      if (reserve) {
-        const result = await api.post<StudentScheduleReservation>(
-          `${root}/reservar`,
-          body,
-          options(),
-        );
-        reservation.reserved(result);
-        meta.refetch();
-        setPreview(null);
-      } else {
-        const result = await api.post<PlanChangePreview>(`${root}/preview`, body, options());
-        setPreview({ key, data: result });
-      }
+      const result = await api.post<StudentScheduleReservation>(
+        `${root}/reservar`,
+        { ...effective, motivo: reason.trim() },
+        options(),
+      );
+      reservation.reserved(result);
+      meta.refetch();
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "No se pudo confirmar la respuesta. Consulta la propuesta antes de reintentar.",
+          : "No se pudo preparar la propuesta. Consulta el estado antes de reintentar.",
       );
       reservation.refetch();
     } finally {
@@ -230,10 +242,17 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
     setMessage(null);
     try {
       const url = `/admin/estudiantes/${studentId}/matriculas/cambio/${r.id}/confirmar`;
-      await api.post<StudentScheduleReservation>(url, {}, options());
-      setMessage(
-        "Cambio confirmado. Conservamos el importe pagado y la factura; recibirás las nuevas fechas por correo.",
+      const done = await api.post<StudentScheduleReservation & { advertencia?: string }>(
+        url,
+        {},
+        options(),
       );
+      setMessage(
+        done.advertencia
+          ? `Horario actualizado. Se avisó al alumno. ${done.advertencia}`
+          : "Horario actualizado. Se avisó al alumno y a los instructores afectados.",
+      );
+      setReason("");
       reservation.refetch();
       meta.refetch();
       onChanged?.();
@@ -259,75 +278,114 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
       </p>
     );
   if (!meta.data) return <p role="status">Consultando opciones de cambio…</p>;
-  const proposed = preview?.key === key ? preview.data : null;
-  const summary = proposed?.plan;
+  const proposedPlan = reservation.reservation?.plan ?? null;
+  const blockedText = BLOCKED_CODES.has(meta.data.reasonCode ?? "")
+    ? BLOCKED_TEXT
+    : (meta.data.reason ??
+      "El plan actual se conserva. No hay un cambio disponible en este estado.");
+  const current = meta.data.current;
+  const review = pending && reservation.reservation ? reservation.reservation : null;
+  const reviewHours = horarios && review && horarios.id === review.id ? horarios : null;
+  const currentInstructors = new Set(reviewHours?.actual.map((h) => h.instructorId) ?? []);
+  const byDay = new Map<string, HourInstructor[]>();
+  for (const hour of reviewHours?.propuesto ?? []) {
+    const day = localDate(hour.scheduledAt);
+    byDay.set(day, [...(byDay.get(day) ?? []), hour]);
+  }
+  const changes = (hours: HourInstructor[]) =>
+    currentInstructors.size > 0 && hours.some((h) => !currentInstructors.has(h.instructorId));
+  const anyChange = [...byDay.values()].some(changes);
   return (
-    <Card title="Reasignar plan del alumno" className="mt-4">
+    <Card title="Cambiar horario de prácticas" className="mt-4">
       <p>
-        Tu horario actual se conserva hasta confirmar un intercambio completo. Esta operación no
-        crea un pago ni modifica la factura.
+        Cambia el horario dentro de la cohorte actual. Para pasar a otra cohorte usa Cambiar de
+        cohorte.
       </p>
-      {meta.data.windowClosesAt ? (
-        <p className="mt-2 text-sm">
-          Plazo de cambio:{" "}
-          {new Date(meta.data.windowClosesAt).toLocaleString("es-EC", {
-            timeZone: "America/Guayaquil",
-          })}{" "}
-          (Guayaquil).
+      {current ? (
+        <p className="mt-2 text-sm text-text-secondary">
+          Plan actual: prácticas del {current.practiceStartDate ?? "—"} al{" "}
+          {current.practiceEndDate ?? "—"}.
         </p>
       ) : null}
       <ReservationBanner state={reservation} />
-      {pending && reservation.reservation ? (
+      {review ? (
         <div className="mt-3 grid gap-3">
-          {reservation.reservation.plan ? (
-            <SchedulePlanView
-              days={reservation.reservation.plan.dias.map((d) => ({ ...d, ok: true }))}
-            />
+          <section
+            aria-label="Resumen del cambio"
+            className="grid gap-2 rounded-sm border border-border p-3 text-sm"
+          >
+            <p className="font-medium">Resumen del cambio</p>
+            <p>
+              <span className="text-text-secondary">Plan actual: </span>
+              prácticas del {current?.practiceStartDate ?? "—"} al {current?.practiceEndDate ?? "—"}
+            </p>
+            {proposedPlan ? (
+              <p>
+                <span className="text-text-secondary">Plan nuevo: </span>
+                {plural(proposedPlan.dias.length, "día", "días")} desde el{" "}
+                {dayLabelLong(proposedPlan.dias[0].fecha)}, a las {proposedPlan.horaInicio},{" "}
+                {plural(proposedPlan.horasPorDia, "hora", "horas")} por día (
+                {plural(proposedPlan.totalHoras, "hora", "horas")} en total)
+              </p>
+            ) : null}
+            <p>
+              <span className="text-text-secondary">Motivo: </span>
+              {reason}
+            </p>
+            {anyChange ? (
+              <p role="status" className="font-medium">
+                Los instructores afectados recibirán un aviso.
+              </p>
+            ) : null}
+          </section>
+          {proposedPlan ? (
+            <ul className="grid gap-1 text-sm" aria-label="Horario propuesto por día">
+              {proposedPlan.dias.map((day) => {
+                const hours = byDay.get(day.fecha) ?? [];
+                const names = [...new Set(hours.map((h) => h.instructorName))];
+                return (
+                  <li
+                    key={day.fecha}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-sm border border-border px-3 py-2"
+                  >
+                    <span>
+                      {dayLabelLong(day.fecha)} · {day.horaInicio} a {day.horaFin}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      {names.length ? names.join(", ") : "Instructor por confirmar"}
+                      {changes(hours) ? (
+                        <span className="rounded-full bg-status-warning-bg px-2 py-0.5 text-xs font-semibold text-status-warning">
+                          Cambia de instructor
+                        </span>
+                      ) : null}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           ) : null}
-          {!meta.data.canChange ? <p role="alert">{meta.data.reason}</p> : null}
+          {!meta.data.canChange ? <p role="alert">{blockedText}</p> : null}
           <div className="flex flex-wrap gap-3">
-            <Button
-              type="button"
-              isLoading={busy}
-              disabled={!meta.data.canChange || !reservation.live}
-              onClick={() => void confirm()}
-            >
-              Confirmar intercambio sin cobro
-            </Button>
             <Button
               type="button"
               variant="secondary"
               disabled={busy || reservation.action !== null}
               onClick={() => void reservation.change("liberar")}
             >
-              Conservar el plan actual
+              Volver y conservar el plan actual
+            </Button>
+            <Button
+              type="button"
+              isLoading={busy}
+              disabled={!meta.data.canChange || !reservation.live}
+              onClick={() => void confirm()}
+            >
+              Confirmar cambio
             </Button>
           </div>
         </div>
       ) : meta.data.canChange ? (
         <div className="mt-4 grid gap-3">
-          <>
-            <Input
-              label="Motivo de la reasignación"
-              maxLength={500}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              disabled={busy}
-            />
-            <Select
-              label="Destino del mismo tipo"
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              disabled={busy}
-            >
-              <option value="">Asignación automática</option>
-              {targets?.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </Select>
-          </>
           <PlanFields
             rules={limits.data ?? undefined}
             value={effective}
@@ -345,39 +403,37 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
             }
           />
           {currentCalendar?.error ? <p role="alert">{currentCalendar.error}</p> : null}
+          <Input
+            id="plan-change-reason"
+            label="Motivo del cambio *"
+            maxLength={500}
+            value={reason}
+            aria-required="true"
+            error={required && !reason.trim() ? "Este campo es obligatorio." : undefined}
+            onChange={(e) => {
+              setReason(e.target.value);
+              setRequired(false);
+            }}
+            disabled={busy}
+          />
           <Button
             type="button"
             variant="secondary"
+            isLoading={busy}
             disabled={
               busy || !effective.fechaInicio || !effective.horasPorDia || effective.horaInicio < 0
             }
             onClick={() => void propose()}
           >
-            Consultar propuesta
+            Ver propuesta
           </Button>
-          {summary ? (
-            <>
-              <p>
-                {summarySentence({
-                  primerDia: summary.dias[0].fecha,
-                  horaInicio: summary.horaInicio,
-                  ultimoDia: summary.ultimaFecha,
-                  horaFin: summary.ultimaHoraFin,
-                  horasTotales: summary.totalHoras,
-                  dias: summary.dias.length,
-                })}
-              </p>
-              <SchedulePlanView days={summary.dias.map((d) => ({ ...d, ok: true }))} />
-              <Button type="button" isLoading={busy} onClick={() => void propose(true)}>
-                Reservar propuesta sin soltar el plan actual
-              </Button>
-            </>
-          ) : null}
+          <p className="text-sm text-text-secondary">
+            El horario actual se conserva hasta que confirmes el cambio.
+          </p>
         </div>
       ) : (
         <p role="status" className="mt-3">
-          {meta.data.reason ??
-            "El plan actual se conserva. No hay un cambio disponible en este estado."}
+          {blockedText}
         </p>
       )}
       {message ? (
@@ -391,27 +447,14 @@ function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Pr
 export function AdminPlanChangePanel({
   studentId,
   enrollmentId,
-  courseType,
   onChanged,
 }: {
   studentId: string;
   enrollmentId: string;
-  courseType: "A" | "B";
+  courseType?: "A" | "B";
   onChanged?: () => void;
 }) {
-  const cohorts = useFetch<Cohort[]>("/cohorts"),
-    courses = useFetch<Course[]>("/courses");
-  const targets = cohorts.data
-    ?.filter((c) =>
-      courses.data?.some((course) => course.id === c.courseId && course.tipo === courseType),
-    )
-    .map((c) => ({ id: c.id, label: `${c.nombre} · ${c.fechaInicioCurso} — ${c.fechaFinCurso}` }));
   return (
-    <AdminPlanChangeForm
-      studentId={studentId}
-      enrollmentId={enrollmentId}
-      targets={targets}
-      onChanged={onChanged}
-    />
+    <AdminPlanChangeForm studentId={studentId} enrollmentId={enrollmentId} onChanged={onChanged} />
   );
 }
