@@ -1,5 +1,5 @@
 :global(body):has(.page) {
-  --sidebar-width: 218px;
+  --sidebar-expanded: 218px;
 }
 :global(#main-content):has(.page) {
   padding: 0;
@@ -670,7 +670,7 @@
     right: 0;
     bottom: 0;
     z-index: 35;
-    width: calc(100% - var(--sidebar-width));
+    width: calc(100% - var(--sidebar-w));
     max-width: 640px;
     height: 100dvh;
     box-shadow: -12px 0 30px rgb(0 0 0 / 0.15);

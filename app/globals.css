@@ -11,7 +11,7 @@
   --space-xl: 2rem;
   --space-xxl: 3rem;
   --content-max: 82.5rem;
-  --sidebar-width: 15rem;
+  --sidebar-expanded: 15rem;
   --color-bg-canvas: #f7f8fa;
   --color-bg-surface: #ffffff;
   --color-bg-surface-raised: #ffffff;
@@ -227,6 +227,14 @@
   --font-sans: var(--font-inter);
 }
 
+/* Ancho real de la columna del menú: una sola variable que cambia con el estado.
+   Las pantallas pueden ajustar --sidebar-expanded en el body; --sidebar-w es la que se usa. */
+body {
+  --sidebar-w: var(--sidebar-expanded);
+}
+body[data-sidebar="collapsed"] {
+  --sidebar-w: 4.5rem;
+}
 html {
   min-width: 320px;
 }

@@ -47,11 +47,11 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
     return () => window.clearTimeout(timer);
   }, []);
   useEffect(() => {
-    // El contenido y las barras fijas que usan --sidebar-width siguen al menú.
-    const root = document.documentElement;
-    if (collapsed) root.style.setProperty("--sidebar-width", "4.5rem");
+    // body[data-sidebar] cambia --sidebar-w, que usan la columna, los paneles y las barras fijas.
+    if (collapsed) document.body.dataset.sidebar = "collapsed";
+    else delete document.body.dataset.sidebar;
     return () => {
-      root.style.removeProperty("--sidebar-width");
+      delete document.body.dataset.sidebar;
     };
   }, [collapsed]);
   function toggleCollapsed() {
@@ -294,72 +294,84 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
       <aside
         aria-label="Barra lateral"
         className={cn(
-          "sticky top-0 hidden h-dvh w-[var(--sidebar-width)] min-w-0 shrink-0 flex-col border-r border-border bg-bg-surface transition-[width] duration-200 ease-out motion-reduce:transition-none md:flex",
+          "sticky top-0 hidden h-dvh w-[var(--sidebar-w)] min-w-0 shrink-0 flex-col border-r border-border bg-bg-surface transition-[width] duration-200 ease-out motion-reduce:transition-none md:flex",
           (role === "admin" || role === "estudiante") && styles.admin,
         )}
       >
         <div
           className={cn(
-            "flex gap-1 py-4",
+            "flex gap-2 py-4",
             collapsed ? "flex-col items-center px-2" : "items-center justify-between px-4",
           )}
         >
-          {role === "admin" ? (
-            <Link href="/admin" aria-label="Colorados Drive · Panel" className={styles.logoLink}>
-              <Image
-                unoptimized
-                src="/images/landing/logo.webp"
-                width={512}
-                height={256}
-                alt="Colorados Drive"
-                className={cn(styles.logo, collapsed && styles.logoSmall)}
-              />
-            </Link>
-          ) : role === "estudiante" ? (
-            <Image
-              unoptimized
-              src="/images/landing/logo.webp"
-              width={512}
-              height={256}
-              alt="Colorados Drive"
-              className={cn(styles.logo, collapsed && styles.logoSmall)}
-            />
+          {role === "admin" || role === "estudiante" ? (
+            (() => {
+              const logo = collapsed ? (
+                <span className={styles.logoMark}>
+                  <Image
+                    unoptimized
+                    src="/images/landing/logo.webp"
+                    width={512}
+                    height={256}
+                    alt="Colorados Drive"
+                    className={cn(styles.logoImage, styles.logoMarkImage)}
+                  />
+                </span>
+              ) : (
+                <Image
+                  unoptimized
+                  src="/images/landing/logo.webp"
+                  width={512}
+                  height={256}
+                  alt="Colorados Drive"
+                  className={cn(styles.logo, styles.logoImage)}
+                />
+              );
+              return role === "admin" ? (
+                <Link
+                  href="/admin"
+                  aria-label="Colorados Drive · Panel"
+                  className={styles.logoLink}
+                >
+                  {logo}
+                </Link>
+              ) : (
+                logo
+              );
+            })()
           ) : (
             <span className="text-base font-semibold tracking-tight text-text-primary">
               {collapsed ? "CD" : "ColoradosDrive"}
             </span>
           )}
-          <div className={cn("flex items-center", collapsed && "flex-col")}>
-            <ThemeToggle />
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
-              aria-expanded={!collapsed}
-              title={collapsed ? "Expandir menú" : "Contraer menú"}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-text-secondary transition-colors hover:bg-bg-sunken hover:text-text-primary"
-            >
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-5 w-5">
-                <rect
-                  x="3"
-                  y="4"
-                  width="14"
-                  height="12"
-                  rx="2"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-                <path d="M8 4v12" stroke="currentColor" strokeWidth="1.5" />
-                <path
-                  d={collapsed ? "m11.5 8 2 2-2 2" : "m13.5 8-2 2 2 2"}
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Expandir menú" : "Contraer menú"}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-text-secondary transition-colors hover:bg-bg-sunken hover:text-text-primary"
+          >
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-5 w-5">
+              <rect
+                x="3"
+                y="4"
+                width="14"
+                height="12"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path d="M8 4v12" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d={collapsed ? "m11.5 8 2 2-2 2" : "m13.5 8-2 2 2 2"}
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
         <nav
           aria-label="Navegación principal"
@@ -407,7 +419,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
                     width={512}
                     height={256}
                     alt="Colorados Drive"
-                    className={styles.logo}
+                    className={cn(styles.logo, styles.logoImage)}
                   />
                 </Link>
               ) : role === "estudiante" ? (
@@ -417,7 +429,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
                   width={512}
                   height={256}
                   alt="Colorados Drive"
-                  className={styles.logo}
+                  className={cn(styles.logo, styles.logoImage)}
                 />
               ) : (
                 <span className="font-semibold text-text-primary">ColoradosDrive</span>

@@ -4,6 +4,7 @@ import { getUserRole } from "@/lib/supabase/getUserRole";
 import { createClient } from "@/lib/supabase/server";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Sidebar } from "./Sidebar";
 
 interface DashboardShellProps {
@@ -44,7 +45,13 @@ export async function DashboardShell({
             aria-label="Avisos"
             className="absolute right-16 top-2.5 z-40 flex h-11 items-center md:static md:h-16 md:shrink-0 md:justify-end md:border-b md:border-border md:bg-bg-surface md:px-6"
           >
-            <NotificationBell key={user?.id} role={role} />
+            <div className="flex items-center gap-1">
+              {/* En escritorio el tema se cambia junto a los avisos; en móvil sigue en su barra. */}
+              <span className="hidden md:flex">
+                <ThemeToggle />
+              </span>
+              <NotificationBell key={user?.id} role={role} />
+            </div>
           </header>
         ) : null}
         <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 md:p-6 xl:p-8">
