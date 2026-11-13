@@ -276,7 +276,9 @@ export function DecisionPanel({
                 setErrores((previo) => ({ ...previo, motivo: undefined, mensaje: undefined }));
               }}
             >
-              <option value="">Selecciona un motivo…</option>
+              <option value="" disabled>
+                Seleccione…
+              </option>
               {motivos.map((m) => (
                 <option key={m.codigo} value={m.codigo}>
                   {m.label}
