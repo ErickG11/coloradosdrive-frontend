@@ -68,7 +68,9 @@ function isFormField(field: string | undefined): field is keyof CohortFormValues
   return field !== undefined && Object.prototype.hasOwnProperty.call(EMPTY_VALUES, field);
 }
 
+export type CohortEditorSection = "general" | "dates";
 interface CohortFormProps {
+  initialSection?: CohortEditorSection;
   rulesState?: "matricula_abierta" | "matricula_cerrada_en_curso" | "terminada";
   codigo?: string | null;
   habilitadaInicial?: boolean;
@@ -151,7 +153,7 @@ export function CohortForm({
   courses,
   cohortId,
   rulesState,
-  codigo,
+  initialSection = "general",
   habilitadaInicial = true,
   cierreMatricula,
   version,
@@ -162,6 +164,8 @@ export function CohortForm({
   onSaved,
   onCancel,
 }: CohortFormProps) {
+  const [section, setSection] = useState<CohortEditorSection>(initialSection);
+  const [reasonRequested, setReasonRequested] = useState(false);
   const [savedOffer, setSavedOffer] = useState<{
     id: string;
     count?: number;
@@ -219,7 +223,6 @@ export function CohortForm({
   const rules = useFetch<CohortRulesConfig>("/cohorts/configuracion");
   const [habilitada, setHabilitada] = useState(habilitadaInicial);
   const [reason, setReason] = useState("");
-  const readOnly = rules.data?.active && rulesState === "terminada";
 
   const formRef = useRef<HTMLFormElement>(null);
   const isEditMode = Boolean(cohortId);
@@ -230,12 +233,53 @@ export function CohortForm({
   const [values, setValues] = useState<CohortFormValues>(initialValues ?? EMPTY_VALUES);
   const sensitiveChange =
     Boolean(initialValues) &&
-    (habilitada !== habilitadaInicial ||
-      values.cupoMaximo !== initialValues?.cupoMaximo ||
-      values.fechaInicioMatricula !== initialValues?.fechaInicioMatricula ||
-      values.fechaFinMatricula !== initialValues?.fechaFinMatricula ||
-      values.fechaInicioCurso !== initialValues?.fechaInicioCurso ||
-      values.fechaFinCurso !== initialValues?.fechaFinCurso);
+    (habilitada !== habilitadaInicial || values.cupoMaximo !== initialValues?.cupoMaximo);
+  const schoolToday = rules.data?.serverNow
+    ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(
+        new Date(rules.data.serverNow),
+      )
+    : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(new Date());
+  const courseStarted = Boolean(
+    isEditMode && initialValues && schoolToday >= initialValues.fechaInicioCurso,
+  );
+  const readOnly = Boolean(
+    isEditMode &&
+    (rulesState === "terminada" || (initialValues && schoolToday > initialValues.fechaFinCurso)),
+  );
+  const datesSection = isEditMode && section === "dates";
+  const showGeneral = !isEditMode || section === "general";
+  const submittedValues =
+    isEditMode && initialValues
+      ? datesSection
+        ? {
+            ...initialValues,
+            fechaInicioMatricula: values.fechaInicioMatricula,
+            fechaFinMatricula: values.fechaFinMatricula,
+            fechaInicioCurso: values.fechaInicioCurso,
+            fechaFinCurso: values.fechaFinCurso,
+          }
+        : {
+            ...values,
+            fechaInicioMatricula: initialValues.fechaInicioMatricula,
+            fechaFinMatricula: initialValues.fechaFinMatricula,
+            fechaInicioCurso: initialValues.fechaInicioCurso,
+            fechaFinCurso: initialValues.fechaFinCurso,
+          }
+      : values;
+  const submittedEnabled = datesSection ? habilitadaInicial : habilitada;
+  const cutoff = values.fechaFinMatricula
+    ? new Date(`${values.fechaFinMatricula}T12:00:00Z`)
+    : null;
+  if (cutoff) cutoff.setUTCDate(cutoff.getUTCDate() - 5);
+  const cutoffLabel =
+    cutoff && !Number.isNaN(cutoff.getTime())
+      ? new Intl.DateTimeFormat("es-EC", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        }).format(cutoff)
+      : "Pendiente";
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -283,20 +327,20 @@ export function CohortForm({
     const bothDates = (start: string, end: string) => start !== "" && end !== "";
     const dateErrors: FieldErrors = {};
     if (
-      bothDates(values.fechaInicioMatricula, values.fechaFinMatricula) &&
-      values.fechaFinMatricula < values.fechaInicioMatricula
+      bothDates(submittedValues.fechaInicioMatricula, submittedValues.fechaFinMatricula) &&
+      submittedValues.fechaFinMatricula < submittedValues.fechaInicioMatricula
     ) {
       dateErrors.fechaFinMatricula =
         "El fin de matrícula no puede ser anterior al inicio de matrícula.";
     }
     if (
-      bothDates(values.fechaInicioCurso, values.fechaFinCurso) &&
-      values.fechaFinCurso < values.fechaInicioCurso
+      bothDates(submittedValues.fechaInicioCurso, submittedValues.fechaFinCurso) &&
+      submittedValues.fechaFinCurso < submittedValues.fechaInicioCurso
     ) {
       dateErrors.fechaFinCurso = "El fin de curso no puede ser anterior al inicio de curso.";
     } else if (
-      bothDates(values.fechaInicioMatricula, values.fechaFinCurso) &&
-      values.fechaFinCurso < values.fechaInicioMatricula
+      bothDates(submittedValues.fechaInicioMatricula, submittedValues.fechaFinCurso) &&
+      submittedValues.fechaFinCurso < submittedValues.fechaInicioMatricula
     ) {
       // Misma regla y frase que el servidor (contrato L3b).
       dateErrors.fechaFinCurso = "El curso no puede terminar antes de que abra la matrícula.";
@@ -314,18 +358,24 @@ export function CohortForm({
     if (
       isEditMode &&
       initialValues &&
-      sameCohortData(values, initialValues) &&
-      (!rules.data?.active || habilitada === habilitadaInicial)
+      sameCohortData(submittedValues, initialValues) &&
+      (!rules.data?.active || submittedEnabled === habilitadaInicial)
     ) {
       setNoChanges(true);
       setNoChangesCount((count) => count + 1);
       return;
     }
 
+    if (datesSection && !reason.trim()) {
+      setError("Escribe el motivo del aplazamiento.");
+      return;
+    }
     setIsSubmitting(true);
 
     const body = buildBody(
-      rules.data?.active ? { ...values, precio: values.precio || "0" } : values,
+      rules.data?.active
+        ? { ...submittedValues, precio: submittedValues.precio || "0" }
+        : submittedValues,
     );
 
     try {
@@ -335,7 +385,7 @@ export function CohortForm({
           ...body,
           updatedAt: version,
           ...(rules.data?.active
-            ? { habilitada, ...(reason.trim() ? { reason: reason.trim() } : {}) }
+            ? { habilitada: submittedEnabled, ...(reason.trim() ? { reason: reason.trim() } : {}) }
             : {}),
         });
       } else {
@@ -347,11 +397,11 @@ export function CohortForm({
       }
       if (
         rules.data?.active &&
-        habilitada &&
+        submittedEnabled &&
         (!cohortId ||
           !habilitadaInicial ||
-          values.fechaFinMatricula > (initialValues?.fechaFinMatricula ?? "") ||
-          values.fechaFinCurso > (initialValues?.fechaFinCurso ?? ""))
+          submittedValues.fechaFinMatricula > (initialValues?.fechaFinMatricula ?? "") ||
+          submittedValues.fechaFinCurso > (initialValues?.fechaFinCurso ?? ""))
       ) {
         await previewOffer(saved.id);
         setIsSubmitting(false);
@@ -381,6 +431,7 @@ export function CohortForm({
         // 409 de nombre duplicado): se muestra junto a ese campo.
         pendingFocusRef.current = err.field;
         setFieldErrors({ [err.field]: err.message });
+        if (err.field.startsWith("fecha")) setSection("dates");
       } else {
         setError(err instanceof ApiError ? err.message : "No se pudo guardar la cohorte.");
       }
@@ -395,6 +446,7 @@ export function CohortForm({
       ) {
         setCanReload(true);
       }
+      if (err instanceof ApiError && err.field === "reason") setReasonRequested(true);
       setIsSubmitting(false);
     }
   }
@@ -450,14 +502,28 @@ export function CohortForm({
         </div>
       </Modal>
       {rules.error ? <p role="alert">{rules.error}</p> : null}
-      {isEditMode && rules.data?.active ? (
+      {isEditMode ? (
         <>
           <p className="text-xs text-text-secondary">
-            Código {codigo ?? "—"} · {ESTADO_TEXTO[rulesState ?? "matricula_abierta"]}
-            {cierreMatricula ? ` · Cierre de matrícula: ${cierreMatricula} a las 23:59:59` : ""}
+            {
+              ESTADO_TEXTO[
+                readOnly
+                  ? "terminada"
+                  : (rulesState ??
+                    (habilitadaInicial &&
+                    schoolToday >= values.fechaInicioMatricula &&
+                    schoolToday <= (cutoff?.toISOString().slice(0, 10) ?? "")
+                      ? "matricula_abierta"
+                      : "matricula_cerrada_en_curso"))
+              ]
+            }
+            {cierreMatricula
+              ? ` · Cierre de matrícula: ${new Intl.DateTimeFormat("es-EC", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${cierreMatricula}T12:00:00Z`))}`
+              : ""}
           </p>
           {readOnly ? <p role="status">Cohorte terminada: solo lectura.</p> : null}
-          {rulesState === "matricula_cerrada_en_curso" &&
+          {datesSection &&
+          rulesState === "matricula_cerrada_en_curso" &&
           values.fechaFinCurso !== initialValues?.fechaFinCurso &&
           values.fechaFinMatricula === initialValues?.fechaFinMatricula ? (
             <p role="status">
@@ -467,252 +533,339 @@ export function CohortForm({
           ) : null}
         </>
       ) : null}
-      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
-        <legend>
-          <span className={styles.sectionIcon}>
-            <CohortIcon name="layers" />
-          </span>
-          Información general
-        </legend>
-        <div className={styles.formGrid}>
-          <div className="flex min-w-0 flex-col gap-1">
-            <Select
-              label="Curso"
-              name="courseId"
-              error={fieldErrors.courseId}
-              required
-              disabled={courseLocked}
-              {...(courseLocked ? { "aria-describedby": "courseId-locked" } : {})}
-              value={values.courseId}
-              onChange={(event) => updateField("courseId", event.target.value)}
+      {isEditMode ? (
+        <div
+          role="tablist"
+          aria-label="Editar cohorte"
+          className="mb-4 flex gap-2 border-b border-border"
+        >
+          {(
+            [
+              ["general", "Información general"],
+              ["dates", "Aplazar cohorte"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              id={`cohort-tab-${key}`}
+              role="tab"
+              type="button"
+              aria-selected={section === key}
+              aria-controls={`cohort-section-${key}`}
+              tabIndex={section === key ? 0 : -1}
+              disabled={isSubmitting}
+              onKeyDown={(event) => {
+                if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+                  event.preventDefault();
+                  const next =
+                    event.key === "Home"
+                      ? "general"
+                      : event.key === "End"
+                        ? "dates"
+                        : section === "general"
+                          ? "dates"
+                          : "general";
+                  setSection(next);
+                  document.getElementById(`cohort-tab-${next}`)?.focus();
+                }
+              }}
+              onClick={() => {
+                setSection(key);
+                setError(null);
+              }}
+              className="min-h-11 rounded-t-sm px-3 text-sm aria-selected:border-b-2 aria-selected:border-brand-primary aria-selected:font-semibold"
             >
-              <option value="" disabled>
-                Selecciona un curso
-              </option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.nombre} (Tipo {course.tipo})
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div
+        className={!isEditMode ? "contents" : undefined}
+        id="cohort-section-general"
+        role={isEditMode ? "tabpanel" : undefined}
+        aria-labelledby={isEditMode ? "cohort-tab-general" : undefined}
+        hidden={!showGeneral}
+      >
+        <fieldset className={styles.section} disabled={readOnly || (isEditMode && !showGeneral)}>
+          <legend>
+            <span className={styles.sectionIcon}>
+              <CohortIcon name="layers" />
+            </span>
+            Información general
+          </legend>
+          <div className={styles.formGrid}>
+            <div className="flex min-w-0 flex-col gap-1">
+              <Select
+                label="Curso"
+                name="courseId"
+                error={fieldErrors.courseId}
+                required={!isEditMode || showGeneral}
+                disabled={courseLocked}
+                {...(courseLocked ? { "aria-describedby": "courseId-locked" } : {})}
+                value={values.courseId}
+                onChange={(event) => updateField("courseId", event.target.value)}
+              >
+                <option value="" disabled>
+                  Selecciona un curso
                 </option>
-              ))}
-            </Select>
-            {courseLocked && alumnos ? (
-              <p id="courseId-locked" className="text-xs text-text-secondary">
-                {`No se puede cambiar el curso porque la cohorte tiene ${count(alumnos.total, "alumno asociado", "alumnos asociados")}: ` +
-                  `${count(alumnos.activos, "activo", "activos")}, ${count(alumnos.finalizados, "finalizado", "finalizados")} ` +
-                  `y ${count(alumnos.retirados, "retirado", "retirados")}.`}
-              </p>
-            ) : null}
-          </div>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.nombre} (Tipo {course.tipo})
+                  </option>
+                ))}
+              </Select>
+              {courseLocked && alumnos ? (
+                <p id="courseId-locked" className="text-xs text-text-secondary">
+                  {`No se puede cambiar el curso porque la cohorte tiene ${count(alumnos.total, "alumno asociado", "alumnos asociados")}: ` +
+                    `${count(alumnos.activos, "activo", "activos")}, ${count(alumnos.finalizados, "finalizado", "finalizados")} ` +
+                    `y ${count(alumnos.retirados, "retirado", "retirados")}.`}
+                </p>
+              ) : null}
+            </div>
 
-          <Input
-            placeholder="Ej. Cohorte octubre 2026"
-            label="Nombre de la cohorte"
-            name="nombre"
-            error={fieldErrors.nombre}
-            required
-            maxLength={COHORT_LIMITS.nombreMaxLength}
-            value={values.nombre}
-            onChange={(event) => updateField("nombre", event.target.value)}
-          />
-        </div>
-      </fieldset>
-
-      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
-        <legend>
-          <span className={styles.sectionIcon}>
-            <CohortIcon name="money" />
-          </span>
-          {rules.data?.active ? "Capacidad" : "Precios y capacidad"}
-        </legend>
-        <div className={styles.formGrid}>
-          {rules.data?.active ? null : (
             <Input
-              placeholder="0.00 USD"
-              label="Precio"
-              name="precio"
-              error={fieldErrors.precio}
-              type="number"
-              min={COHORT_LIMITS.precioMin}
-              max={COHORT_LIMITS.precioMax}
-              step={COHORT_LIMITS.precioStep}
-              required
-              value={values.precio}
-              onChange={(event) => updateField("precio", event.target.value)}
+              placeholder="Ej. Cohorte octubre 2026"
+              label="Nombre de la cohorte"
+              name="nombre"
+              error={fieldErrors.nombre}
+              required={!isEditMode || showGeneral}
+              maxLength={COHORT_LIMITS.nombreMaxLength}
+              value={values.nombre}
+              onChange={(event) => updateField("nombre", event.target.value)}
             />
-          )}
-          <div className="flex min-w-0 flex-col gap-1">
-            <Input
-              placeholder="Ej. 20"
-              label="Cupo máximo"
-              name="cupoMaximo"
-              error={fieldErrors.cupoMaximo}
-              type="number"
-              min={COHORT_LIMITS.cupoMin}
-              max={COHORT_LIMITS.cupoMax}
-              step="1"
-              required
-              {...(activeStudents > 0 ? { "aria-describedby": "cupoMaximo-activos" } : {})}
-              value={values.cupoMaximo}
-              onChange={(event) => updateField("cupoMaximo", event.target.value)}
-            />
-            {activeStudents > 0 ? (
-              <p id="cupoMaximo-activos" className="text-xs text-text-secondary">
-                {`Alumnos activos: ${activeStudents}. El cupo máximo no puede ser menor.`}
-              </p>
-            ) : null}
           </div>
-        </div>
-      </fieldset>
+        </fieldset>
 
-      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
-        <legend>
-          <span className={styles.sectionIcon}>
-            <CohortIcon name="calendar" />
-          </span>
-          Ventana de matrícula
-        </legend>
-        <p id="enrollment-window-help" className={styles.sectionHelp}>
-          El fin de matrícula es el plazo real que se comunica al estudiante para entregar
-          documentos físicos completos.
-        </p>
-        <div className={styles.formGrid}>
-          <Input
-            label="Inicio de matrícula"
-            name="fechaInicioMatricula"
-            error={fieldErrors.fechaInicioMatricula}
-            type="date"
-            required
-            max={maxDate}
-            value={values.fechaInicioMatricula}
-            onChange={(event) => updateField("fechaInicioMatricula", event.target.value)}
-          />
-          <Input
-            label="Fin de matrícula"
-            name="fechaFinMatricula"
-            type="date"
-            required
-            max={maxDate}
-            error={fieldErrors.fechaFinMatricula}
-            value={values.fechaFinMatricula}
-            onChange={(event) => updateField("fechaFinMatricula", event.target.value)}
-          />
-        </div>
-      </fieldset>
-
-      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
-        <legend>
-          <span className={styles.sectionIcon}>
-            <CohortIcon name="car" />
-          </span>
-          Ventana de curso
-        </legend>
-        <p id="course-window-help" className={styles.sectionHelp}>
-          Todas las prácticas que elija un estudiante de esta cohorte deben caber dentro de esta
-          ventana.
-        </p>
-        <div className={styles.formGrid}>
-          <Input
-            label="Inicio de curso"
-            name="fechaInicioCurso"
-            error={fieldErrors.fechaInicioCurso}
-            type="date"
-            required
-            max={maxDate}
-            value={values.fechaInicioCurso}
-            onChange={(event) => updateField("fechaInicioCurso", event.target.value)}
-          />
-          <Input
-            label="Fin de curso"
-            name="fechaFinCurso"
-            type="date"
-            required
-            max={maxDate}
-            error={fieldErrors.fechaFinCurso}
-            value={values.fechaFinCurso}
-            onChange={(event) => updateField("fechaFinCurso", event.target.value)}
-          />
-        </div>
-      </fieldset>
-
-      <fieldset className={styles.section} disabled={Boolean(readOnly)}>
-        <legend>
-          <span className={styles.sectionIcon}>
-            <CohortIcon name="document" />
-          </span>
-          Información adicional
-          <span className={styles.optional}>ANT · opcional</span>
-        </legend>
-        <div className={styles.formGrid}>
-          <Input
-            placeholder="Ej. Presencial"
-            label="Tipo de modalidad"
-            name="tipoModalidad"
-            error={fieldErrors.tipoModalidad}
-            maxLength={COHORT_LIMITS.tipoModalidadMaxLength}
-            value={values.tipoModalidad}
-            onChange={(event) => updateField("tipoModalidad", event.target.value)}
-          />
-          <Input
-            placeholder="Ej. Lunes y miércoles, 18:00–20:00"
-            label="Horarios de capacitación teórica"
-            name="horariosCapacitacionTeoria"
-            error={fieldErrors.horariosCapacitacionTeoria}
-            maxLength={COHORT_LIMITS.horariosMaxLength}
-            value={values.horariosCapacitacionTeoria}
-            onChange={(event) => updateField("horariosCapacitacionTeoria", event.target.value)}
-          />
-          <Input
-            label="Número de vehículos"
-            name="numeroVehiculos"
-            error={fieldErrors.numeroVehiculos}
-            type="number"
-            min={COHORT_LIMITS.recursosMin}
-            max={COHORT_LIMITS.recursosMax}
-            step="1"
-            value={values.numeroVehiculos}
-            onChange={(event) => updateField("numeroVehiculos", event.target.value)}
-          />
-          <Input
-            label="Número de aulas"
-            name="numeroAulas"
-            error={fieldErrors.numeroAulas}
-            type="number"
-            min={COHORT_LIMITS.recursosMin}
-            max={COHORT_LIMITS.recursosMax}
-            step="1"
-            value={values.numeroAulas}
-            onChange={(event) => updateField("numeroAulas", event.target.value)}
-          />
-        </div>
-      </fieldset>
-
-      {isEditMode && rules.data?.active ? (
-        <fieldset className={styles.section} disabled={Boolean(readOnly)}>
-          <legend>Inscripciones</legend>
-          <label>
-            <input
-              type="checkbox"
-              checked={habilitada}
-              disabled={readOnly || isSubmitting}
-              onChange={(e) => setHabilitada(e.target.checked)}
-            />{" "}
-            Habilitada para futuras inscripciones
-          </label>
-          <p className="text-sm text-text-secondary">
-            Deshabilitar no quita acceso a quien ya pagó.
+        <fieldset className={styles.section} disabled={readOnly || (isEditMode && !showGeneral)}>
+          <legend>
+            <span className={styles.sectionIcon}>
+              <CohortIcon name="money" />
+            </span>
+            {rules.data?.active || isEditMode ? "Capacidad" : "Precios y capacidad"}
+          </legend>
+          <div className={styles.formGrid}>
+            {rules.data?.active || isEditMode ? null : (
+              <Input
+                placeholder="0.00 USD"
+                label="Precio"
+                name="precio"
+                error={fieldErrors.precio}
+                type="number"
+                min={COHORT_LIMITS.precioMin}
+                max={COHORT_LIMITS.precioMax}
+                step={COHORT_LIMITS.precioStep}
+                required={!isEditMode || showGeneral}
+                value={values.precio}
+                onChange={(event) => updateField("precio", event.target.value)}
+              />
+            )}
+            <div className="flex min-w-0 flex-col gap-1">
+              <Input
+                placeholder="Ej. 20"
+                label="Cupo máximo"
+                name="cupoMaximo"
+                error={fieldErrors.cupoMaximo}
+                type="number"
+                min={COHORT_LIMITS.cupoMin}
+                max={COHORT_LIMITS.cupoMax}
+                step="1"
+                required={!isEditMode || showGeneral}
+                {...(activeStudents > 0 ? { "aria-describedby": "cupoMaximo-activos" } : {})}
+                value={values.cupoMaximo}
+                onChange={(event) => updateField("cupoMaximo", event.target.value)}
+              />
+              {activeStudents > 0 ? (
+                <p id="cupoMaximo-activos" className="text-xs text-text-secondary">
+                  {`Alumnos activos: ${activeStudents}. El cupo máximo no puede ser menor.`}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </fieldset>
+      </div>
+      <div
+        className={!isEditMode ? "contents" : undefined}
+        id="cohort-section-dates"
+        role={isEditMode ? "tabpanel" : undefined}
+        aria-labelledby={isEditMode ? "cohort-tab-dates" : undefined}
+        hidden={isEditMode && !datesSection}
+      >
+        {datesSection && courseStarted && !readOnly ? (
+          <p className="mb-3 text-sm text-text-secondary">
+            El curso ya empezó: solo puedes ampliar el fin de curso.
           </p>
-          {sensitiveChange ? (
+        ) : null}
+        <fieldset className={styles.section} disabled={readOnly || (isEditMode && !datesSection)}>
+          <legend>
+            <span className={styles.sectionIcon}>
+              <CohortIcon name="calendar" />
+            </span>
+            Ventana de matrícula
+          </legend>
+          <p id="enrollment-window-help" className={styles.sectionHelp}>
+            El fin de matrícula es el plazo real que se comunica al estudiante para entregar
+            documentos físicos completos.
+          </p>
+          <div className={styles.formGrid}>
             <Input
-              label="Motivo del cambio (opcional)"
+              label="Inicio de matrícula"
+              name="fechaInicioMatricula"
+              error={fieldErrors.fechaInicioMatricula}
+              disabled={isEditMode && courseStarted}
+              type="date"
+              required={!isEditMode || datesSection}
+              max={maxDate}
+              value={values.fechaInicioMatricula}
+              onChange={(event) => updateField("fechaInicioMatricula", event.target.value)}
+            />
+            <Input
+              label="Fin de matrícula"
+              name="fechaFinMatricula"
+              disabled={isEditMode && courseStarted}
+              type="date"
+              required={!isEditMode || datesSection}
+              max={maxDate}
+              error={fieldErrors.fechaFinMatricula}
+              value={values.fechaFinMatricula}
+              onChange={(event) => updateField("fechaFinMatricula", event.target.value)}
+            />
+          </div>
+        </fieldset>
+
+        <fieldset className={styles.section} disabled={readOnly || (isEditMode && !datesSection)}>
+          <legend>
+            <span className={styles.sectionIcon}>
+              <CohortIcon name="car" />
+            </span>
+            Ventana de curso
+          </legend>
+          <p id="course-window-help" className={styles.sectionHelp}>
+            Todas las prácticas que elija un estudiante de esta cohorte deben caber dentro de esta
+            ventana.
+          </p>
+          <div className={styles.formGrid}>
+            <Input
+              label="Inicio de curso"
+              name="fechaInicioCurso"
+              error={fieldErrors.fechaInicioCurso}
+              disabled={isEditMode && courseStarted}
+              type="date"
+              required={!isEditMode || datesSection}
+              max={maxDate}
+              value={values.fechaInicioCurso}
+              onChange={(event) => updateField("fechaInicioCurso", event.target.value)}
+            />
+            <Input
+              label="Fin de curso"
+              name="fechaFinCurso"
+              min={isEditMode && courseStarted ? initialValues?.fechaFinCurso : undefined}
+              type="date"
+              required={!isEditMode || datesSection}
+              max={maxDate}
+              error={fieldErrors.fechaFinCurso}
+              value={values.fechaFinCurso}
+              onChange={(event) => updateField("fechaFinCurso", event.target.value)}
+            />
+          </div>
+        </fieldset>
+
+        {datesSection ? (
+          <>
+            <p className="my-3 text-sm">
+              Cierre de matrícula: {cutoffLabel}, inclusivo hasta las 23:59:59 (America/Guayaquil).
+            </p>
+            <Input
+              label="Motivo del aplazamiento"
               value={reason}
               maxLength={500}
-              onChange={(e) => setReason(e.target.value)}
+              required
               disabled={readOnly || isSubmitting}
+              onChange={(event) => setReason(event.target.value)}
             />
-          ) : null}
+          </>
+        ) : null}
+      </div>
+      <div className={!isEditMode ? "contents" : undefined} hidden={!showGeneral}>
+        <fieldset className={styles.section} disabled={readOnly || (isEditMode && !showGeneral)}>
+          <legend>
+            <span className={styles.sectionIcon}>
+              <CohortIcon name="document" />
+            </span>
+            Información adicional
+            <span className={styles.optional}>ANT · opcional</span>
+          </legend>
+          <div className={styles.formGrid}>
+            <Input
+              placeholder="Ej. Presencial"
+              label="Tipo de modalidad"
+              name="tipoModalidad"
+              error={fieldErrors.tipoModalidad}
+              maxLength={COHORT_LIMITS.tipoModalidadMaxLength}
+              value={values.tipoModalidad}
+              onChange={(event) => updateField("tipoModalidad", event.target.value)}
+            />
+            <Input
+              placeholder="Ej. Lunes y miércoles, 18:00–20:00"
+              label="Horarios de capacitación teórica"
+              name="horariosCapacitacionTeoria"
+              error={fieldErrors.horariosCapacitacionTeoria}
+              maxLength={COHORT_LIMITS.horariosMaxLength}
+              value={values.horariosCapacitacionTeoria}
+              onChange={(event) => updateField("horariosCapacitacionTeoria", event.target.value)}
+            />
+            <Input
+              label="Número de vehículos"
+              name="numeroVehiculos"
+              error={fieldErrors.numeroVehiculos}
+              type="number"
+              min={COHORT_LIMITS.recursosMin}
+              max={COHORT_LIMITS.recursosMax}
+              step="1"
+              value={values.numeroVehiculos}
+              onChange={(event) => updateField("numeroVehiculos", event.target.value)}
+            />
+            <Input
+              label="Número de aulas"
+              name="numeroAulas"
+              error={fieldErrors.numeroAulas}
+              type="number"
+              min={COHORT_LIMITS.recursosMin}
+              max={COHORT_LIMITS.recursosMax}
+              step="1"
+              value={values.numeroAulas}
+              onChange={(event) => updateField("numeroAulas", event.target.value)}
+            />
+          </div>
         </fieldset>
-      ) : null}
 
+        {isEditMode && rules.data?.active ? (
+          <fieldset className={styles.section} disabled={readOnly || (isEditMode && !showGeneral)}>
+            <legend>Inscripciones</legend>
+            <label>
+              <input
+                type="checkbox"
+                checked={habilitada}
+                disabled={readOnly || isSubmitting}
+                onChange={(e) => setHabilitada(e.target.checked)}
+              />{" "}
+              Habilitada para futuras inscripciones
+            </label>
+            <p className="text-sm text-text-secondary">
+              Deshabilitar no quita acceso a quien ya pagó.
+            </p>
+            {sensitiveChange && reasonRequested ? (
+              <Input
+                label="Motivo del cambio"
+                value={reason}
+                maxLength={500}
+                onChange={(e) => setReason(e.target.value)}
+                disabled={readOnly || isSubmitting}
+              />
+            ) : null}
+          </fieldset>
+        ) : null}
+      </div>
       {error ? <FormError className={styles.formError}>{error}</FormError> : null}
 
       {canReload ? (
@@ -745,12 +898,7 @@ export function CohortForm({
         <div>
           {/* Volver sin guardar: por simpleza no se pregunta si hay cambios. */}
           {onCancel ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onCancel}
-              disabled={isSubmitting || Boolean(readOnly)}
-            >
+            <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
               Cancelar
             </Button>
           ) : (
@@ -758,8 +906,13 @@ export function CohortForm({
               Cancelar
             </Link>
           )}
-          <Button className={styles.primary} type="submit" isLoading={isSubmitting}>
-            {isEditMode ? "Guardar cambios" : "Crear cohorte"}
+          <Button
+            className={styles.primary}
+            type="submit"
+            isLoading={isSubmitting}
+            disabled={readOnly}
+          >
+            {isEditMode ? (datesSection ? "Guardar fechas" : "Guardar cambios") : "Crear cohorte"}
           </Button>
         </div>
       </footer>

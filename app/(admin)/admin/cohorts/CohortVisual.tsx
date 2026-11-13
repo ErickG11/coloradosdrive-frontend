@@ -1,6 +1,7 @@
 import type { Course } from "@/types";
 import styles from "./cohorts.module.css";
 const paths = {
+  clock: "M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z",
   car: "m3 12 2-7h14l2 7M3 12h18v7h-3v-2H6v2H3v-7Zm3 2h2m8 0h2",
   motorcycle:
     "M7 17a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm16 0a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM3 17l6-9 4 9H3m6-9h7l3 9m-7-13h4l1 4M6 8h4",

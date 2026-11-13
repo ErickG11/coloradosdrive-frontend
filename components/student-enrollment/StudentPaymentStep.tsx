@@ -117,7 +117,10 @@ export function StudentPaymentStep({ state, reservation, onBack }: Props) {
           <h3 className="font-semibold text-status-success">
             Pago confirmado. Tu matrícula está activa.
           </h3>
-          <p className="mt-2">Ya puedes acceder a tus prácticas y a la plataforma.</p>
+          <p className="mt-2">
+            Tu matrícula pagada habilita desde ahora contenidos, exámenes y todos los módulos del
+            alumno. Tus prácticas conservan sus fechas y el acceso cierra al terminar tu período.
+          </p>
           {current.correoEnviado ? <p className="mt-2">Enviamos tu correo de bienvenida.</p> : null}
         </div>
       ) : current?.estado === "revision" ? (

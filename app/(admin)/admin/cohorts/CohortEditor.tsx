@@ -6,18 +6,19 @@ import { FormError } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import type { CohortDetail, Course } from "@/types";
 
-import { CohortReassignment } from "./CohortReassignment";
-import { CohortForm, type CohortSavedNotice } from "./CohortForm";
+import { CohortForm, type CohortSavedNotice, type CohortEditorSection } from "./CohortForm";
 
 // Edición de una cohorte cargada por id (GET /cohorts/:id): trae la versión
 // actual y los alumnos, y permite recargar ante un conflicto. La usan la
 // página /admin/cohorts/[id]/edit y el panel lateral del listado.
 export function CohortEditor({
   id,
+  initialSection = "general",
   onSaved,
   onCancel,
 }: {
   id: string;
+  initialSection?: CohortEditorSection;
   onSaved?: (notice: CohortSavedNotice) => void;
   onCancel?: () => void;
 }) {
@@ -67,7 +68,8 @@ export function CohortEditor({
       {courses && cohort && !isLoadingCohort && !notFound && !cohortError ? (
         <>
           <CohortForm
-            key={reloadCount}
+            key={`${reloadCount}:${initialSection}`}
+            initialSection={initialSection}
             onReload={handleReload}
             onUserActivity={() => setShowReloadNotice(false)}
             onSaved={onSaved}
@@ -96,7 +98,6 @@ export function CohortEditor({
               numeroAulas: cohort.numeroAulas === null ? "" : String(cohort.numeroAulas),
             }}
           />
-          <CohortReassignment cohort={cohort} courses={courses} onChanged={handleReload} />
         </>
       ) : null}
     </>

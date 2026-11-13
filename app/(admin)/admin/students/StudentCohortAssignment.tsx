@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Button, Modal, Select } from "@/components/ui";
+import { Button, Input, Modal, Select } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -37,6 +37,7 @@ export function StudentCohortAssignment({
     useFetch<StudentCohortOptions>(
       `${studentCohortPath(studentId, enrollment.enrollmentId)}/cohortes`,
     );
+  const [reason, setReason] = useState("");
   const [selection, setSelection] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
@@ -74,6 +75,7 @@ export function StudentCohortAssignment({
       isLoading ||
       error ||
       !chosen ||
+      !reason.trim() ||
       amounts?.abonoExcedeNeto ||
       failure?.blocked
     )
@@ -82,7 +84,7 @@ export function StudentCohortAssignment({
     setBusy(true);
     setFailure(null);
     try {
-      await assignStudentCohort(studentId, enrollment.enrollmentId, chosen.id);
+      await assignStudentCohort(studentId, enrollment.enrollmentId, chosen.id, reason.trim());
       onSaved();
     } catch (err) {
       const result = studentCohortError(err);
@@ -98,7 +100,7 @@ export function StudentCohortAssignment({
     }
   }
   return (
-    <Modal isOpen title="Asignar cohorte" onClose={close}>
+    <Modal isOpen placement="right" title="Asignar cohorte" onClose={close}>
       <div className="flex flex-col gap-4 text-sm text-text-primary">
         <p>
           {enrollment.curso?.nombre ?? "Curso"} · Tipo {enrollment.courseType}
@@ -108,6 +110,7 @@ export function StudentCohortAssignment({
         </p>
         {failure && (
           <p role="alert" className="text-accent-red">
+            {failure.code ? `${failure.code}: ` : ""}
             {failure.message}
           </p>
         )}
@@ -115,7 +118,10 @@ export function StudentCohortAssignment({
           <p role="status">Cargando cohortes…</p>
         ) : readFailure ? (
           <div role="alert" className="flex flex-col gap-3 text-accent-red">
-            <p>{readFailure.message}</p>
+            <p>
+              {readFailure.code ? `${readFailure.code}: ` : ""}
+              {readFailure.message}
+            </p>
             <Button variant="secondary" onClick={refresh}>
               Actualizar opciones
             </Button>
@@ -159,7 +165,8 @@ export function StudentCohortAssignment({
                 <p>
                   Ventana de matrícula: {civil(chosen.fechaInicioMatricula)} al{" "}
                   {civil(chosen.fechaFinMatricula)}. Inicio del curso:{" "}
-                  {civil(chosen.fechaInicioCurso)}.
+                  {civil(chosen.fechaInicioCurso)}
+                  {chosen.fechaFinCurso ? ` al ${civil(chosen.fechaFinCurso)}` : ""}.
                 </p>
                 <p>Cupos disponibles: {chosen.cuposDisponibles}</p>
                 <dl className="grid grid-cols-2 gap-3">
@@ -196,6 +203,14 @@ export function StudentCohortAssignment({
             Recargar ficha
           </Button>
         )}
+        <Input
+          label="Motivo de la asignación"
+          value={reason}
+          maxLength={500}
+          required
+          disabled={busy}
+          onChange={(event) => setReason(event.target.value)}
+        />
         <div className="flex flex-wrap justify-end gap-3">
           <Button variant="secondary" disabled={busy} onClick={close}>
             Cancelar
@@ -206,6 +221,8 @@ export function StudentCohortAssignment({
               isLoading ||
               !!error ||
               !chosen ||
+              !reason.trim() ||
+              !reason.trim() ||
               amounts?.abonoExcedeNeto ||
               failure?.blocked
             }

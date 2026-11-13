@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Button, Input, Modal } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
+import { CohortIcon } from "./CohortVisual";
+import styles from "./cohorts.module.css";
 
 export interface CohortRulesConfig {
   active: boolean;
@@ -11,121 +13,139 @@ export interface CohortRulesConfig {
   pricesActive?: boolean;
   capacityActive?: boolean;
 }
-
-function usd(centavos: number): string {
-  const value = centavos / 100;
-  return `$${Number.isInteger(value) ? value : value.toFixed(2)}`;
-}
-
-// Precios por tipo de curso: tarjeta compacta sobre la lista; se editan en un modal pequeño.
-// Misma API que antes (PATCH /cohorts/configuracion/precio, un tipo por llamada).
 export function CohortPricesCard() {
   const config = useFetch<CohortRulesConfig>("/cohorts/configuracion");
-  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<"A" | "B" | null>(null);
+  const [price, setPrice] = useState("");
   const [reason, setReason] = useState("");
-  const [prices, setPrices] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const data = config.data;
-  if (!data?.active || !data.pricesActive) return null;
-  const list = data.prices ?? [];
-
   function close() {
-    if (busy) return;
-    setOpen(false);
-    setMessage(null);
-    setReason("");
-    setPrices({});
-  }
-
-  async function save() {
-    const changes: { tipo: "A" | "B"; centavos: number }[] = [];
-    for (const p of list) {
-      const raw = prices[p.tipo];
-      if (raw === undefined) continue;
-      const value = Number(raw);
-      if (
-        !raw.trim() ||
-        !Number.isFinite(value) ||
-        value < 0 ||
-        Math.abs(value * 100 - Math.round(value * 100)) > 1e-7
-      ) {
-        setMessage("Escribe un precio válido.");
-        return;
-      }
-      if (Math.round(value * 100) !== p.centavos)
-        changes.push({ tipo: p.tipo, centavos: Math.round(value * 100) });
+    if (!busy) {
+      setSelected(null);
+      setMessage(null);
+      setReason("");
+      setPrice("");
     }
-    if (!changes.length) {
-      setMessage("No hay cambios que guardar.");
+  }
+  async function save() {
+    const value = Number(price),
+      centavos = Math.round(value * 100);
+    if (
+      !selected ||
+      !price.trim() ||
+      !Number.isFinite(value) ||
+      value < 0 ||
+      centavos > 999999 ||
+      Math.abs(value * 100 - centavos) > 1e-7
+    ) {
+      setMessage("Escribe un precio válido con hasta dos decimales.");
       return;
     }
     if (!reason.trim()) {
       setMessage("Escribe el motivo del cambio.");
       return;
     }
+    if (data?.prices?.find((p) => p.tipo === selected)?.centavos === centavos) {
+      setMessage("No hay cambios que guardar.");
+      return;
+    }
     setBusy(true);
     setMessage(null);
     try {
-      for (const change of changes)
-        await api.patch("/cohorts/configuracion/precio", { ...change, motivo: reason.trim() });
+      await api.patch("/cohorts/configuracion/precio", {
+        tipo: selected,
+        centavos,
+        motivo: reason.trim(),
+      });
       config.refetch();
-      setBusy(false);
-      setOpen(false);
+      setSelected(null);
       setReason("");
-      setPrices({});
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "No se pudo guardar el precio.");
+      setPrice("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo guardar el precio.");
       config.refetch();
+    } finally {
       setBusy(false);
     }
   }
-
+  if (config.error) return <p role="alert">{config.error}</p>;
+  if (!data?.active || !data.pricesActive) return null;
   return (
-    <section
-      aria-label="Precios por tipo de curso"
-      className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-bg-surface p-4"
-    >
-      <p>
-        <strong>Precios por tipo de curso:</strong>{" "}
-        {list.length ? list.map((p) => `Tipo ${p.tipo} ${usd(p.centavos)}`).join(" · ") : "—"}
-      </p>
-      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
-        Editar precios
-      </Button>
-      <Modal isOpen={open} title="Editar precios" onClose={close}>
-        <fieldset className="grid gap-3" disabled={busy}>
-          {list.map((p) => (
-            <Input
-              key={p.tipo}
-              label={`Precio tipo ${p.tipo} (USD)`}
-              type="number"
-              min={0}
-              max={9999999.99}
-              step="0.01"
-              value={prices[p.tipo] ?? String(p.centavos / 100)}
-              onChange={(e) => setPrices((v) => ({ ...v, [p.tipo]: e.target.value }))}
-            />
-          ))}
+    <section aria-label="Precios por tipo de curso" className="grid grid-cols-2 gap-3 sm:gap-4">
+      {(["A", "B"] as const).map((tipo) => {
+        const current = data.prices?.find((p) => p.tipo === tipo);
+        return (
+          <div className={styles.summaryItem} key={tipo}>
+            <span className={styles.summaryIcon}>
+              <CohortIcon name={tipo === "A" ? "motorcycle" : "car"} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <strong>{current ? `$${(current.centavos / 100).toFixed(2)}` : "—"}</strong>
+              <span>Precio Tipo {tipo}</span>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!current}
+              aria-label={`Editar precio Tipo ${tipo}`}
+              onClick={() => {
+                setSelected(tipo);
+                setPrice(String((current?.centavos ?? 0) / 100));
+                setReason("");
+                setMessage(null);
+              }}
+            >
+              Editar
+            </Button>
+          </div>
+        );
+      })}
+      <Modal
+        isOpen={selected !== null}
+        title={`Editar precio Tipo ${selected ?? ""}`}
+        onClose={close}
+      >
+        <form
+          className="grid gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save();
+          }}
+        >
+          <Input
+            label="Nuevo precio (USD)"
+            type="number"
+            min={0}
+            max={9999.99}
+            step="0.01"
+            value={price}
+            disabled={busy}
+            required
+            onChange={(event) => setPrice(event.target.value)}
+          />
           <Input
             label="Motivo del cambio"
             value={reason}
             maxLength={500}
-            onChange={(e) => setReason(e.target.value)}
+            disabled={busy}
+            required
+            onChange={(event) => setReason(event.target.value)}
           />
           <p className="text-sm text-text-secondary">
             Las reservas y pagos anteriores conservan su importe.
           </p>
-          {message ? <p role="status">{message}</p> : null}
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" isLoading={busy} onClick={() => void save()}>
-              Guardar
-            </Button>
-            <Button type="button" variant="secondary" onClick={close}>
+          {message ? <p role="alert">{message}</p> : null}
+          <div className="flex flex-wrap justify-end gap-3">
+            <Button type="button" variant="secondary" disabled={busy} onClick={close}>
               Cancelar
             </Button>
+            <Button type="submit" isLoading={busy}>
+              Guardar precio
+            </Button>
           </div>
-        </fieldset>
+        </form>
       </Modal>
     </section>
   );

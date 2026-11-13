@@ -23,7 +23,8 @@ import type { CohortSavedNotice } from "./CohortForm";
 import { CohortMetricValue } from "./CohortMetricValue";
 import { CohortPricesCard } from "./CohortPricesCard";
 import { CohortIcon } from "./CohortVisual";
-import { DeleteCohortModal } from "./DeleteCohortModal";
+import { CancelCohortModal } from "./CancelCohortModal";
+import type { CohortEditorSection } from "./CohortForm";
 import { useCohortStudentCounts } from "./useCohortStudentCounts";
 import styles from "./cohorts.module.css";
 
@@ -146,27 +147,20 @@ export function CohortsWorkspace() {
   const isLoading = (isLoadingCohorts && !cohorts) || (isLoadingCourses && !courses);
   const error = cohortsError ?? coursesError;
   const coursesById = new Map((courses ?? []).map((course) => [course.id, course]));
+  const [editorSection, setEditorSection] = useState<CohortEditorSection>("general");
   const [toDelete, setToDelete] = useState<Cohort | null>(null);
   const [deletedMessage, setDeletedMessage] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
   // Ids eliminados en esta pantalla: la fila desaparece al instante, sin
   // esperar a que vuelva la lista del servidor.
-  const [removedIds, setRemovedIds] = useState<string[]>([]);
   const deletedRef = useRef<HTMLParagraphElement>(null);
   const deleteTrigger = useRef<HTMLButtonElement | null>(null);
-  const existing = (cohorts ?? []).filter((cohort) => !removedIds.includes(cohort.id));
+  const existing = cohorts ?? [];
 
   // Al cerrar el modal el foco se pierde: pasa al mensaje de éxito.
   useEffect(() => {
     if (deletedMessage) deletedRef.current?.focus();
   }, [deletedMessage]);
-
-  function handleDeleted(cohort: Cohort, message: string) {
-    setToDelete(null);
-    setRemovedIds((ids) => [...ids, cohort.id]);
-    setDeletedMessage(message);
-    refetchCohorts();
-  }
 
   // El período depende de la fecha de la escuela; se calcula en el cliente.
   const [today, setToday] = useState("");
@@ -270,13 +264,18 @@ export function CohortsWorkspace() {
     document.addEventListener("keydown", escape);
     return () => document.removeEventListener("keydown", escape);
   }, [panel, mobilePanel, closePanel]);
-  function openPanel(event: MouseEvent<HTMLAnchorElement>, next: string) {
+  function openPanel(
+    event: MouseEvent<HTMLAnchorElement>,
+    next: string,
+    section: CohortEditorSection = "general",
+  ) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
       return;
     event.preventDefault();
     trigger.current = event.currentTarget;
     setDeletedMessage(null);
     setSavedNotice(null);
+    setEditorSection(section);
     setPanel(next);
   }
   function saved(notice: CohortSavedNotice) {
@@ -316,13 +315,26 @@ export function CohortsWorkspace() {
       </Link>
     );
   }
+  function postponeLink(cohort: Cohort) {
+    return (
+      <Link
+        href={`/admin/cohorts/${cohort.id}/edit?seccion=fechas`}
+        onClick={(event) => openPanel(event, cohort.id, "dates")}
+        className={styles.edit}
+        aria-label={`Aplazar cohorte ${cohort.nombre}`}
+        title="Aplazar cohorte"
+      >
+        <CohortIcon name="clock" />
+      </Link>
+    );
+  }
   function deleteButton(cohort: Cohort) {
     return (
       <button
         type="button"
         className={`${styles.edit} ${styles.delete}`}
-        aria-label={`Eliminar ${cohort.nombre}`}
-        title={`Eliminar ${cohort.nombre}`}
+        aria-label={`Cancelar cohorte ${cohort.nombre}`}
+        title="Cancelar cohorte"
         onClick={(event) => askDelete(cohort, event.currentTarget)}
       >
         <TrashIcon className="h-4 w-4" />
@@ -462,8 +474,6 @@ export function CohortsWorkspace() {
             {deletedMessage}
           </p>
 
-          <CohortPricesCard />
-
           <section className={styles.summary} aria-label="Resumen de cohortes">
             {metrics.map(({ key, label, icon }) => {
               const value =
@@ -502,6 +512,8 @@ export function CohortsWorkspace() {
               );
             })}
           </section>
+
+          <CohortPricesCard />
 
           <div className={styles.filters} aria-label="Filtros de cohortes" role="group">
             <div className={styles.search}>
@@ -658,6 +670,7 @@ export function CohortsWorkspace() {
                     <header>
                       <h2>{cohort.nombre}</h2>
                       <div className="flex items-center gap-1.5">
+                        {postponeLink(cohort)}
                         {editLink(cohort)}
                         {deleteButton(cohort)}
                       </div>
@@ -695,8 +708,8 @@ export function CohortsWorkspace() {
               >
                 <table className={styles.table}>
                   <caption className="sr-only">
-                    Listado de cohortes. Cada fila indica si la matrícula está abierta o cerrada y si
-                    el curso está por iniciar, en curso o terminado.
+                    Listado de cohortes. Cada fila indica si la matrícula está abierta o cerrada y
+                    si el curso está por iniciar, en curso o terminado.
                   </caption>
                   <thead>
                     <tr>
@@ -742,6 +755,7 @@ export function CohortsWorkspace() {
                         <td>{statusBadge(cohort)}</td>
                         <td>
                           <div className="flex items-center gap-1.5">
+                            {postponeLink(cohort)}
                             {editLink(cohort)}
                             {deleteButton(cohort)}
                           </div>
@@ -838,7 +852,13 @@ export function CohortsWorkspace() {
               {panel === "new" ? (
                 <CohortCreator onSaved={saved} onCancel={closePanel} />
               ) : (
-                <CohortEditor key={panel} id={panel} onSaved={saved} onCancel={closePanel} />
+                <CohortEditor
+                  key={`${panel}:${editorSection}`}
+                  id={panel}
+                  initialSection={editorSection}
+                  onSaved={saved}
+                  onCancel={closePanel}
+                />
               )}
             </div>
           </aside>
@@ -846,12 +866,15 @@ export function CohortsWorkspace() {
       </div>
 
       {toDelete ? (
-        <DeleteCohortModal
+        <CancelCohortModal
           cohort={toDelete}
-          courseLabel={courseLabel(coursesById.get(toDelete.courseId))}
           onClose={cancelDelete}
-          onDeleted={(message) => handleDeleted(toDelete, message)}
-          onGone={refetchCohorts}
+          onCancelled={(message) => {
+            setToDelete(null);
+            setDeletedMessage(message);
+            refetchCohorts();
+          }}
+          onReload={refetchCohorts}
         />
       ) : null}
     </div>

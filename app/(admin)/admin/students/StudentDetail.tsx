@@ -22,6 +22,7 @@ import { StudentAvatar } from "./StudentVisual";
 import { studentActionError } from "@/lib/api/studentActions";
 import { ApiError } from "@/lib/api/errors";
 import { formatMoney } from "@/lib/utils/money";
+import { StudentCohortTransfer } from "./StudentCohortTransfer";
 import { StudentCohortAssignment } from "./StudentCohortAssignment";
 import type { StudentEnrollment } from "@/types/student";
 import styles from "./students.module.css";
@@ -141,7 +142,8 @@ export function StudentProfile({
                         : "Horario reservado temporalmente; pago pendiente."}
                     </p>
                   )}
-                  {enrollment.status === "pendiente_cohorte" &&
+                  {section !== "all" &&
+                    enrollment.status === "pendiente_cohorte" &&
                     !student.financialRestricted &&
                     onAssignCohort &&
                     (enrollment.origen !== "solicitud" || enrollment.etapa === "activa") && (
@@ -246,6 +248,38 @@ export function StudentProfile({
                       {enrollment.cohorte?.nombre ?? "Sin cohorte"}
                     </span>
                   </div>
+                  {!student.financialRestricted && onAssignCohort ? (
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      {enrollment.status === "pendiente_cohorte" ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          disabled={
+                            assignmentDisabled ||
+                            !student.activo ||
+                            (enrollment.origen === "solicitud" && enrollment.etapa !== "activa")
+                          }
+                          onClick={() => onAssignCohort?.(enrollment)}
+                        >
+                          Asignar cohorte
+                        </Button>
+                      ) : enrollment.cohorte && enrollment.status === "activo" ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          disabled={assignmentDisabled || !student.activo}
+                          onClick={() => onAssignCohort?.(enrollment)}
+                        >
+                          Cambiar de cohorte
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {!student.activo && enrollment.status === "pendiente_cohorte" ? (
+                    <p className="mb-3 text-sm text-text-secondary">
+                      Reactiva al alumno primero para asignar cohorte.
+                    </p>
+                  ) : null}
                   <p className="mb-4 text-sm text-text-secondary">
                     Fecha de inscripción:{" "}
                     <time dateTime={enrollment.fechaInscripcion}>
@@ -515,24 +549,39 @@ export function StudentDetail({
             }
           />
           {embedded && <div className={styles.accountActions}>{actions}</div>}
-          {assigning && (
-            <StudentCohortAssignment
+          {assigning && assigning.cohorte ? (
+            <StudentCohortTransfer
               key={assigning.enrollmentId}
               studentId={id}
               enrollment={assigning}
               onClose={() => setAssigning(null)}
-              onReload={() => {
+              onChanged={() => {
                 setAssigning(null);
-                refetch();
-              }}
-              onDeletionPending={() => setDeletionPending(true)}
-              onSaved={() => {
-                setAssigning(null);
-                setActionNotice("La cohorte se asignó correctamente.");
+                setActionNotice("La cohorte se cambió correctamente.");
                 refetch();
                 onChanged?.();
               }}
             />
+          ) : (
+            assigning && (
+              <StudentCohortAssignment
+                key={assigning.enrollmentId}
+                studentId={id}
+                enrollment={assigning}
+                onClose={() => setAssigning(null)}
+                onReload={() => {
+                  setAssigning(null);
+                  refetch();
+                }}
+                onDeletionPending={() => setDeletionPending(true)}
+                onSaved={() => {
+                  setAssigning(null);
+                  setActionNotice("La cohorte se asignó correctamente.");
+                  refetch();
+                  onChanged?.();
+                }}
+              />
+            )
           )}
           {confirmingIdentity && (
             <StudentIdentityConfirmation
