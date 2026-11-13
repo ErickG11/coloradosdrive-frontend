@@ -81,7 +81,8 @@ export function ContentConfirm({
       className={styles.dialog}
     >
       <form
-        className="space-y-4"
+        className={`space-y-4 ${styles.requiredFields}`}
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           if (confirmation === "ELIMINAR" && !busy) onConfirm();
@@ -98,6 +99,7 @@ export function ContentConfirm({
           onChange={(e) => setConfirmation(e.target.value)}
           disabled={busy}
           required
+          aria-required="true"
         />
         <FormError>{error}</FormError>
         <div className={styles.formFooter}>

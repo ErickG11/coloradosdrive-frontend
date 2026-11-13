@@ -10,6 +10,7 @@ import { contentApi } from "@/lib/api/content";
 import { ContentInputError, contentErrorMessage } from "@/lib/utils/content";
 import type { CourseMaterial } from "@/types/content";
 import { useContentMutation } from "./useContentResource";
+import { useRequiredFields } from "./useRequiredFields";
 import styles from "./admin-content.module.css";
 export function MaterialEditor({
   material,
@@ -29,8 +30,19 @@ export function MaterialEditor({
   const [body, setBody] = useState(material?.body ?? "");
   const [file, setFile] = useState<File | null>(null);
   const action = useContentMutation();
+  const required = useRequiredFields();
+  const needsFile = !material && kind === "archivo";
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (
+      !required.check([
+        { id: "material-title", empty: title.trim() === "" },
+        ...(needsFile ? [{ id: "material-file", empty: !file }] : []),
+        ...(kind === "enlace" ? [{ id: "material-url", empty: url.trim() === "" }] : []),
+        ...(kind === "texto" ? [{ id: "material-body", empty: body.trim() === "" }] : []),
+      ])
+    )
+      return;
     const result = await action.run(
       async () => {
         if (!material && kind === "archivo") {
@@ -116,14 +128,20 @@ export function MaterialEditor({
         Prepara un archivo, enlace o texto para el temario. Publicarlo y habilitarlo son pasos
         independientes.
       </p>
-      <form className="space-y-4" onSubmit={submit}>
+      <form className={`space-y-4 ${styles.requiredFields}`} noValidate onSubmit={submit}>
         <fieldset disabled={action.busy} className="space-y-4">
           <Input
+            id="material-title"
             label="Título"
             required
+            aria-required="true"
+            error={required.errors["material-title"]}
             maxLength={120}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              required.clear("material-title");
+            }}
           />
           <Textarea
             label="Descripción"
@@ -151,9 +169,15 @@ export function MaterialEditor({
                 <Input
                   label="Archivo (máximo 10 MB)"
                   type="file"
+                  id="material-file"
                   accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                   required
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  aria-required="true"
+                  error={required.errors["material-file"]}
+                  onChange={(e) => {
+                    setFile(e.target.files?.[0] ?? null);
+                    required.clear("material-file");
+                  }}
                 />
                 <p className="text-sm text-text-secondary">
                   Hasta 50 subidas por administrador y día. Las subidas fallidas después de reservar
@@ -163,22 +187,34 @@ export function MaterialEditor({
             )
           ) : kind === "enlace" ? (
             <Input
+              id="material-url"
               label="Enlace HTTPS"
               type="url"
               pattern="https://.*"
               required
+              aria-required="true"
+              error={required.errors["material-url"]}
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                required.clear("material-url");
+              }}
             />
           ) : (
             <>
               <Textarea
+                id="material-body"
                 label="Texto plano"
                 rows={9}
                 required
+                aria-required="true"
+                error={required.errors["material-body"]}
                 maxLength={20000}
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={(e) => {
+                  setBody(e.target.value);
+                  required.clear("material-body");
+                }}
               />
               <p className="text-sm text-text-secondary">
                 {body.length}/20 000 caracteres. El contenido se muestra como texto, sin ejecutar

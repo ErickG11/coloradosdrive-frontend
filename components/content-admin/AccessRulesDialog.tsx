@@ -9,8 +9,8 @@ import { FormError } from "@/components/ui/FormError";
 import { contentApi } from "@/lib/api/content";
 import {
   buildAccessPayload,
-  contentDate,
   contentErrorMessage,
+  friendlyDate,
   ruleState,
   ruleToDraft,
 } from "@/lib/utils/content";
@@ -24,8 +24,9 @@ import type {
 import type { Cohort } from "@/types/cohort";
 import { ContentLoad } from "./ContentUI";
 import { useContentMutation } from "./useContentResource";
-import { AdminChip, ContentTabs } from "./AdminContentUI";
-import { AccessDraftPreview } from "./AccessDraftPreview";
+import { AdminChip, ContentBanner, ContentTabs } from "./AdminContentUI";
+import { useDraftChecks } from "./AccessDraftPreview";
+import { useRequiredFields } from "./useRequiredFields";
 import styles from "./admin-content.module.css";
 
 type Person = { id: string; nombreCompleto: string; cohortId: string };
@@ -75,14 +76,14 @@ function initialDraft(
     return {
       draft: { ...ruleToDraft(source[0]), targetType: type, targetId: id },
       warning: inherited.length
-        ? "Se precargó la regla de su cohorte. Al guardar, todos estos valores serán propios del alumno y reemplazarán a los de la cohorte."
-        : "Se cargaron los valores actuales del objetivo.",
+        ? "Se cargó la habilitación de su cohorte. Al guardar, será propia del alumno y reemplazará a la de la cohorte."
+        : "Ya tiene una habilitación guardada; se cargaron sus valores.",
     };
   return {
     draft: { ...empty, targetType: type, targetId: id },
     warning: source.length
-      ? "Las reglas del alcance son diferentes o faltan en algunos elementos. Define explícitamente los valores que reemplazarán a todas; no se mezclan ni se heredan automáticamente."
-      : "Sin regla previa. Define la habilitación completa.",
+      ? "Este contenido tiene habilitaciones distintas. Lo que definas aquí reemplazará a todas."
+      : "",
   };
 }
 export function AccessRulesDialog({
@@ -91,6 +92,8 @@ export function AccessRulesDialog({
   cohorts,
   names,
   initialStudent,
+  draftNotice,
+  onGoPublish,
   onClose,
   onSaved,
 }: {
@@ -99,6 +102,9 @@ export function AccessRulesDialog({
   cohorts: Cohort[];
   names: Map<string, string>;
   initialStudent?: { id: string; attempts: number };
+  /** Aviso cuando la materia o sus materiales siguen en borrador (datos que la pantalla ya carga). */
+  draftNotice?: string | null;
+  onGoPublish?: () => void;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -113,6 +119,10 @@ export function AccessRulesDialog({
   const [warning, setWarning] = useState("");
   const [info, setInfo] = useState("");
   const [preview, setPreview] = useState<AccessPayload | null>(null);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [today] = useState(() => new Date().toISOString());
+  const required = useRequiredFields();
+  const checks = useDraftChecks(draft);
   const action = useContentMutation();
   const itemKey = items.map((i) => i.id).join(",");
   useEffect(() => {
@@ -146,6 +156,7 @@ export function AccessRulesDialog({
     };
   }, [itemKey, scope.courseId, initialStudent, revision]);
   function choose(type: AccessDraft["targetType"], id: string) {
+    required.clear("access-target");
     setPreview(null);
     setInfo("");
     const value = initialDraft(resource?.rules ?? [], items, resource?.people ?? [], type, id);
@@ -155,10 +166,21 @@ export function AccessRulesDialog({
   function edit(rule: AccessRule, block = false) {
     setPreview(null);
     setDraft({ ...ruleToDraft(rule), ...(block ? { enabled: false, closes: "" } : {}) });
-    setWarning("Se cargó la regla existente. Guardar reemplaza todos sus valores.");
+    setWarning("Se cargó la habilitación existente. Al guardar se reemplazan sus valores.");
+    setStep(1);
+  }
+  function next() {
+    if (!required.check([{ id: "access-target", empty: draft.targetId === "" }])) return;
+    setStep(2);
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (step === 1) {
+      next();
+      return;
+    }
+    if (!required.check([{ id: "access-extra", empty: scope.hasExams && draft.extra.trim() === "" }]))
+      return;
     try {
       setPreview(buildAccessPayload(scope, draft));
       action.setError(null);
@@ -184,38 +206,68 @@ export function AccessRulesDialog({
         .toLocaleLowerCase("es")
         .includes(search.trim().toLocaleLowerCase("es")) || person.id === draft.targetId,
   );
+  const targetPhrase = (name: string | undefined) =>
+    !name
+      ? ""
+      : draft.targetType === "cohorte"
+        ? `la cohorte ${name}`
+        : `el alumno ${name}`;
   const targetName =
     draft.targetType === "cohorte"
       ? cohorts.find((c) => c.id === draft.targetId)?.nombre
       : (resource?.people.find((p) => p.id === draft.targetId)?.nombreCompleto ??
         names.get(draft.targetId));
+  const step3 = Boolean(preview);
+  const stepNo = step3 ? 3 : step;
+  const attemptsText = draft.attempts === "" ? "los del examen" : draft.attempts;
+  const summary = (() => {
+    if (!preview) return "";
+    const who = targetPhrase(targetName) || "el destinatario elegido";
+    if (!preview.habilitado) return `Se bloqueará el acceso a «${scope.title}» para ${who}.`;
+    const todayKey = (value: string) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(new Date(value));
+    const from = preview.opens_at
+      ? `desde ${todayKey(preview.opens_at) === todayKey(today) ? "hoy, " : "el "}${friendlyDate(preview.opens_at)}`
+      : "desde ahora";
+    const until = preview.closes_at
+      ? `hasta el ${friendlyDate(preview.closes_at)}`
+      : "sin límite de fecha";
+    return `«${scope.title}» quedará disponible para ${who} ${from}, ${until}.`;
+  })();
+  const notice = draftNotice ? (
+    <ContentBanner>
+      <p>{draftNotice}</p>
+      {onGoPublish ? (
+        <Button type="button" variant="secondary" size="sm" disabled={action.busy} onClick={onGoPublish}>
+          Ir a publicar
+        </Button>
+      ) : null}
+    </ContentBanner>
+  ) : null;
   return (
     <Modal
       isOpen
       onClose={() => {
         if (!action.busy) onClose();
       }}
-      title={<span className="[overflow-wrap:anywhere]">Habilitar · {scope.title}</span>}
+      title={<span className="[overflow-wrap:anywhere]">Habilitar «{scope.title}»</span>}
       className={`${styles.dialog} max-w-4xl`}
     >
       <div className={styles.ruleSteps}>
-        <span>
-          <i>1</i>Alcance definido
+        <span data-active={stepNo === 1}>
+          <i>1</i>Para quién
         </span>
-        <span data-active={!preview}>
-          <i>2</i>Destinatario y fechas
+        <span data-active={stepNo === 2}>
+          <i>2</i>Cuándo
         </span>
-        <span data-active={Boolean(preview)}>
-          <i>3</i>Revisar y aplicar
+        <span data-active={stepNo === 3}>
+          <i>3</i>Revisar
         </span>
       </div>
       <p className={styles.dialogDescription}>
-        Alcance: {scope.scope === "item" ? "elemento" : scope.scope}. Fechas de America/Guayaquil
-        (UTC−5). La materia y el contenido deben estar publicados para permitir acceso.{" "}
-        {scope.scope !== "item"
-          ? "Los intentos y minutos solo se aplicarán a los exámenes del alcance."
-          : ""}
+        Elige quién puede ver este contenido y desde cuándo.
       </p>
+      {notice}
       <ContentLoad
         loading={!resource}
         error={resource?.error ?? null}
@@ -224,200 +276,286 @@ export function AccessRulesDialog({
           setRevision((r) => r + 1);
         }}
       >
-        <form className="space-y-4" onSubmit={submit}>
-          <fieldset disabled={action.busy || Boolean(preview)} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="mb-2 text-sm font-medium text-text-secondary">Destinatario</p>
-                <ContentTabs
-                  segmented
-                  label="Destinatario de la habilitación"
-                  value={draft.targetType}
-                  onChange={(value) => {
-                    if (value !== draft.targetType) choose(value, "");
-                  }}
-                  items={[
-                    { value: "cohorte", label: "Cohorte" },
-                    { value: "estudiante", label: "Estudiante" },
-                  ]}
-                />
-              </div>
-              {draft.targetType === "cohorte" ? (
-                <Select
-                  label="Cohorte"
-                  required
-                  value={draft.targetId}
-                  onChange={(e) => choose("cohorte", e.target.value)}
-                >
-                  <option value="">Seleccionar cohorte</option>
-                  {cohorts.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
-              ) : (
-                <div className="space-y-2">
-                  <Input
-                    label="Buscar alumno por nombre"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <Select
-                    label="Alumno"
-                    value={draft.targetId}
-                    required
-                    onChange={(e) => choose("estudiante", e.target.value)}
-                  >
-                    <option value="">Seleccionar alumno</option>
-                    {draft.targetId && !available.some((p) => p.id === draft.targetId) ? (
-                      <option value={draft.targetId}>
-                        {names.get(draft.targetId) ?? "Alumno actual (revalidar matrícula)"}
-                      </option>
+        <form className={`space-y-4 ${styles.requiredFields}`} noValidate onSubmit={submit}>
+          <fieldset disabled={action.busy || step3} className="space-y-4">
+            {step === 1 && !step3 ? (
+              <section className={styles.ruleSection} aria-labelledby="access-who">
+                <h3 id="access-who">Para quién</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-text-secondary">Destinatario</p>
+                    <ContentTabs
+                      segmented
+                      label="Destinatario de la habilitación"
+                      value={draft.targetType}
+                      onChange={(value) => {
+                        if (value !== draft.targetType) choose(value, "");
+                      }}
+                      items={[
+                        { value: "cohorte", label: "Cohorte" },
+                        { value: "estudiante", label: "Estudiante" },
+                      ]}
+                    />
+                  </div>
+                  {draft.targetType === "cohorte" ? (
+                    <Select
+                      id="access-target"
+                      label="Cohorte"
+                      required
+                      aria-required="true"
+                      error={required.errors["access-target"]}
+                      value={draft.targetId}
+                      onChange={(e) => choose("cohorte", e.target.value)}
+                    >
+                      <option value="">Seleccionar cohorte</option>
+                      {cohorts.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <div className="space-y-2">
+                      <Input
+                        label="Buscar alumno por nombre"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                      <Select
+                        id="access-target"
+                        label="Alumno"
+                        value={draft.targetId}
+                        required
+                        aria-required="true"
+                        error={required.errors["access-target"]}
+                        onChange={(e) => choose("estudiante", e.target.value)}
+                      >
+                        <option value="">Seleccionar alumno</option>
+                        {draft.targetId && !available.some((p) => p.id === draft.targetId) ? (
+                          <option value={draft.targetId}>
+                            {names.get(draft.targetId) ?? "Alumno actual (revalidar matrícula)"}
+                          </option>
+                        ) : null}
+                        {available.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nombreCompleto}
+                          </option>
+                        ))}
+                      </Select>
+                      {!available.length ? (
+                        <p className="text-sm text-text-secondary">
+                          No hay alumnos activos con cohorte que coincidan.
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+                {targetName ? (
+                  <p className={styles.helpText}>
+                    {draft.targetType === "cohorte"
+                      ? `Lo verán los alumnos de la cohorte «${targetName}».`
+                      : `Lo verá el alumno «${targetName}».`}
+                  </p>
+                ) : null}
+                {draft.targetType === "estudiante" ? (
+                  <p className="rounded-md border border-status-warning p-3 text-sm">
+                    La habilitación del alumno reemplaza a la de su cohorte: no hereda fechas,
+                    intentos ni minutos. {warning}
+                  </p>
+                ) : warning ? (
+                  <p className="text-sm text-text-secondary">{warning}</p>
+                ) : null}
+                <div>
+                  <label className="flex min-h-11 items-center gap-2">
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      checked={draft.enabled}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          enabled: e.target.checked,
+                          closes: e.target.checked ? draft.closes : "",
+                        })
+                      }
+                    />
+                    Acceso habilitado
+                  </label>
+                  <p className={styles.helpText}>
+                    Desactívalo para bloquear el acceso a este contenido.
+                  </p>
+                </div>
+              </section>
+            ) : null}
+            {step === 2 && !step3 ? (
+              <>
+                <section className={styles.ruleSection} aria-labelledby="access-when">
+                  <h3 id="access-when">Cuándo</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      label="Disponible desde (opcional)"
+                      type="datetime-local"
+                      value={draft.opens}
+                      onChange={(e) => setDraft({ ...draft, opens: e.target.value })}
+                    />
+                    <Input
+                      label="Disponible hasta (opcional)"
+                      aria-describedby="access-close-feedback"
+                      type="datetime-local"
+                      disabled={!draft.enabled}
+                      value={draft.enabled ? draft.closes : ""}
+                      onChange={(e) => setDraft({ ...draft, closes: e.target.value })}
+                    />
+                  </div>
+                  <p className={styles.helpText}>
+                    Si los dejas vacíos, estará disponible sin límite de fecha. Hora de Ecuador.
+                  </p>
+                  <div id="access-close-feedback">
+                    {checks.past || checks.reversed ? (
+                      <p role="alert" className="text-sm text-status-error">
+                        {checks.past
+                          ? "El cierre debe ser una fecha futura."
+                          : "El cierre debe ser posterior a la apertura."}
+                      </p>
                     ) : null}
-                    {available.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombreCompleto}
-                      </option>
-                    ))}
-                  </Select>
-                  {!available.length ? (
+                  </div>
+                  {!draft.enabled ? (
                     <p className="text-sm text-text-secondary">
-                      No hay alumnos activos con cohorte que coincidan.
+                      El bloqueo se aplicará sin fecha de cierre, aunque la habilitación anterior
+                      ya haya vencido.
                     </p>
                   ) : null}
-                </div>
-              )}
-            </div>
-            {draft.targetType === "estudiante" ? (
-              <p className="rounded-md border border-status-warning p-3 text-sm">
-                La regla del alumno reemplaza a la de su cohorte: no hereda ventanas, intentos ni
-                minutos. {warning}
-              </p>
-            ) : warning ? (
-              <p className="text-sm text-text-secondary">{warning}</p>
+                </section>
+                {scope.hasExams ? (
+                  <section className={styles.ruleSection} aria-labelledby="access-exams">
+                    <h3 id="access-exams">Exámenes</h3>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Input
+                          label="Intentos permitidos"
+                          aria-describedby="access-attempts-feedback"
+                          type="number"
+                          min={1}
+                          max={20}
+                          step={1}
+                          value={draft.attempts}
+                          onChange={(e) => setDraft({ ...draft, attempts: e.target.value })}
+                        />
+                        <p
+                          id="access-attempts-feedback"
+                          className={`text-sm ${checks.attempts ? "text-status-error" : "text-text-secondary"}`}
+                        >
+                          {checks.attempts
+                            ? "El máximo de intentos debe ser un entero entre 1 y 20."
+                            : "Intentos permitidos (1 a 20). Déjalo vacío para usar los intentos que ya tiene el examen."}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Input
+                          id="access-extra"
+                          label="Minutos extra"
+                          aria-describedby="access-minutes-feedback"
+                          type="number"
+                          min={0}
+                          max={180}
+                          step={1}
+                          required
+                          aria-required="true"
+                          error={required.errors["access-extra"]}
+                          value={draft.extra}
+                          onChange={(e) => {
+                            setDraft({ ...draft, extra: e.target.value });
+                            required.clear("access-extra");
+                          }}
+                        />
+                        <p
+                          id="access-minutes-feedback"
+                          className={`text-sm ${checks.minutes ? "text-status-error" : "text-text-secondary"}`}
+                        >
+                          {checks.minutes
+                            ? "Los minutos extra deben ser un entero entre 0 y 180."
+                            : "Minutos extra (0 a 180). No afectan a un intento que ya empezó."}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                ) : null}
+                <details className={styles.ruleSection} open={draft.note !== "" || undefined}>
+                  <summary className="cursor-pointer text-sm font-medium">
+                    Agregar una nota (opcional)
+                  </summary>
+                  <div className="mt-3">
+                    <Textarea
+                      label="Nota administrativa"
+                      maxLength={300}
+                      value={draft.note}
+                      onChange={(e) => setDraft({ ...draft, note: e.target.value })}
+                    />
+                  </div>
+                </details>
+              </>
             ) : null}
-            <label className="flex min-h-11 items-center gap-2">
-              <input
-                type="checkbox"
-                checked={draft.enabled}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    enabled: e.target.checked,
-                    closes: e.target.checked ? draft.closes : "",
-                  })
-                }
-              />
-              Habilitar (desmarca para bloquear)
-            </label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="Apertura opcional · hora de Ecuador"
-                type="datetime-local"
-                value={draft.opens}
-                onChange={(e) => setDraft({ ...draft, opens: e.target.value })}
-              />
-              <Input
-                label="Cierre opcional · hora de Ecuador"
-                aria-describedby="access-close-feedback"
-                type="datetime-local"
-                disabled={!draft.enabled}
-                value={draft.enabled ? draft.closes : ""}
-                onChange={(e) => setDraft({ ...draft, closes: e.target.value })}
-              />
-            </div>
-            {!draft.enabled ? (
-              <p className="text-sm text-text-secondary">
-                El bloqueo se enviará sin cierre, incluso si la regla anterior ya venció.
-              </p>
-            ) : null}
-            {scope.hasExams ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Intentos (vacío = heredar del examen)"
-                  aria-describedby="access-attempts-feedback"
-                  type="number"
-                  min={1}
-                  max={20}
-                  step={1}
-                  value={draft.attempts}
-                  onChange={(e) => setDraft({ ...draft, attempts: e.target.value })}
-                />
-                <Input
-                  label="Minutos extra"
-                  aria-describedby="access-minutes-feedback"
-                  type="number"
-                  min={0}
-                  max={180}
-                  step={1}
-                  required
-                  value={draft.extra}
-                  onChange={(e) => setDraft({ ...draft, extra: e.target.value })}
-                />
-              </div>
-            ) : null}
-            <Textarea
-              label="Nota administrativa (opcional)"
-              maxLength={300}
-              value={draft.note}
-              onChange={(e) => setDraft({ ...draft, note: e.target.value })}
-            />
           </fieldset>
-          {!preview ? (
-            <AccessDraftPreview draft={draft} scope={scope} targetName={targetName} />
-          ) : null}
           <FormError>{action.error}</FormError>
           {info ? <p role="status">{info}</p> : null}
           {preview ? (
-            <section className={styles.preview} aria-label="Vista previa">
-              <p>
-                <strong>{preview.habilitado ? "Habilitar" : "Bloquear"}</strong> {scope.title} para{" "}
-                <strong>{targetName ?? "el destinatario seleccionado"}</strong>. Alcance:{" "}
-                {scope.scope === "item" ? "elemento" : scope.scope} ({items.length}{" "}
-                {items.length === 1 ? "elemento" : "elementos"}).
-              </p>
-              <p>
-                Apertura: {preview.opens_at ? contentDate(preview.opens_at) : "Ya abierto"}. Cierre:{" "}
-                {preview.closes_at ? contentDate(preview.closes_at) : "Sin cierre"}.
-              </p>
+            <section className={styles.preview} aria-label="Resumen de la habilitación">
+              <p>{summary}</p>
               {scope.hasExams ? (
                 <p>
-                  Intentos: {preview.max_attempts ?? "Valor del examen"}. Minutos extra:{" "}
-                  {preview.extra_minutes}.
+                  Intentos permitidos: {attemptsText}. Minutos extra: {preview.extra_minutes}.
                 </p>
               ) : null}
+              {draftNotice ? <p className="font-medium">{draftNotice}</p> : null}
               <p className="text-sm text-text-secondary">
                 No cambia los plazos de intentos ya iniciados. Un definitivo aprobado no se repite.
               </p>
-              <div className={styles.formFooter}>
+            </section>
+          ) : null}
+          <div className={styles.stickyFooter}>
+            {preview ? (
+              <>
                 <Button
                   type="button"
                   variant="secondary"
                   disabled={action.busy}
                   onClick={() => setPreview(null)}
                 >
-                  Volver a editar
+                  Volver
                 </Button>
                 <Button type="button" isLoading={action.busy} onClick={() => void apply()}>
-                  Confirmar aplicación
+                  Aplicar habilitación
                 </Button>
-              </div>
-            </section>
-          ) : (
-            <div className={styles.formFooter}>
-              <Button type="button" variant="secondary" disabled={action.busy} onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={!items.length}>
-                Revisar antes de aplicar
-              </Button>
-            </div>
-          )}
+              </>
+            ) : step === 1 ? (
+              <>
+                <Button type="button" variant="secondary" disabled={action.busy} onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={!items.length}>
+                  Siguiente
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={action.busy}
+                  onClick={() => setStep(1)}
+                >
+                  Volver
+                </Button>
+                <Button type="submit" disabled={!items.length}>
+                  Revisar
+                </Button>
+              </>
+            )}
+          </div>
         </form>
         {scope.scope === "item" ? (
           <section className="mt-6 space-y-3">
-            <h3 className="font-semibold">Reglas existentes</h3>
+            <h3 className="font-semibold">Habilitaciones existentes</h3>
             {resource?.rules.length ? (
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
@@ -425,7 +563,7 @@ export function AccessRulesDialog({
                   <thead>
                     <tr>
                       <th>Destinatario</th>
-                      <th>Ventana · Guayaquil</th>
+                      <th>Disponibilidad</th>
                       <th>Intentos / extra</th>
                       <th>Estado</th>
                       <th>Acciones</th>
@@ -442,9 +580,9 @@ export function AccessRulesDialog({
                           <small className="block text-text-secondary">{rule.target_type}</small>
                         </td>
                         <td>
-                          {rule.opens_at ? contentDate(rule.opens_at) : "Ya abierto"}
+                          {rule.opens_at ? `Desde ${friendlyDate(rule.opens_at)}` : "Desde ahora"}
                           <br />
-                          {rule.closes_at ? contentDate(rule.closes_at) : "Sin cierre"}
+                          {rule.closes_at ? `Hasta ${friendlyDate(rule.closes_at)}` : "Sin límite de fecha"}
                         </td>
                         <td>
                           {rule.max_attempts ?? "Examen"} / +{rule.extra_minutes} min
@@ -492,12 +630,12 @@ export function AccessRulesDialog({
               </div>
             ) : (
               <p className="text-sm text-text-secondary">
-                Aún no hay reglas. Sin regla, no hay acceso.
+                Aún no hay habilitaciones. Sin habilitación, no hay acceso.
               </p>
             )}
             <p className="text-xs text-text-secondary">
-              Estado informativo según el reloj del navegador; el servidor es la autoridad. Las
-              reglas bloqueadas no se eliminan.
+              El estado se calcula con la hora de tu navegador. Las habilitaciones bloqueadas no se
+              eliminan.
             </p>
           </section>
         ) : null}
