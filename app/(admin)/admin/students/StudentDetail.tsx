@@ -696,6 +696,7 @@ export function StudentDetail({
       closeDisabled={
         editing || saving || actionBusy || attendanceBusy || confirmingIdentity || cohortBusy
       }
+      headerScrolls={!assigning && view !== "editar"}
       bodyClassName={assigning ? "!overflow-hidden !p-0" : undefined}
       onClose={() => {
         if (assigning) setAssigning(null);
