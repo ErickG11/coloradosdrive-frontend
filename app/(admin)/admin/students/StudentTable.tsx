@@ -11,6 +11,7 @@ export function StudentTable({
   students,
   cohorts,
   filterQuery,
+  waiting = false,
   isLoading = false,
   error,
   onRetry,
@@ -21,6 +22,7 @@ export function StudentTable({
   students: AdminStudent[];
   cohorts: Cohort[];
   filterQuery: string;
+  waiting?: boolean;
   isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
@@ -66,6 +68,13 @@ export function StudentTable({
             >
               {student.nombreCompleto}
             </Link>
+            {waiting ? (
+              <div>
+                <StatusBadge status="esperando_curso" tone="info">
+                  Esperando curso
+                </StatusBadge>
+              </div>
+            ) : null}
           </div>
         </div>
       ),

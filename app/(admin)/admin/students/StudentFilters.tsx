@@ -15,8 +15,10 @@ export function StudentFilters({
   onChange,
   onClear,
   waitlistActive = false,
+  waitlistSummary,
 }: {
   waitlistActive?: boolean;
+  waitlistSummary?: { A: number; B: number } | null;
   filters: Filters;
   q: string;
   courses: Course[];
@@ -36,15 +38,22 @@ export function StudentFilters({
     {
       id: "all",
       label: "Todos",
-      selected: !filters.activo && !filters.pendienteCohorte && !filters.documentosPendientes,
+      selected:
+        !filters.activo &&
+        !filters.pendienteCohorte &&
+        !filters.documentosPendientes &&
+        !filters.interesadoEn,
     },
     { id: "active", label: "Activos", selected: filters.activo === "true" },
     { id: "inactive", label: "Desactivados", selected: filters.activo === "false" },
     {
       id: "cohort",
-      label: "Pendientes de cohorte",
+      label: "Sin cohorte",
       selected: filters.pendienteCohorte === "true",
     },
+    ...(waitlistActive
+      ? [{ id: "waiting", label: "Esperando curso", selected: Boolean(filters.interesadoEn) }]
+      : []),
     {
       id: "documents",
       label: "Documentos pendientes",
@@ -52,11 +61,17 @@ export function StudentFilters({
     },
   ];
   function selectQuick(id: string) {
-    if (id === "all") onChange({ activo: "", pendienteCohorte: "", documentosPendientes: "" });
+    if (id === "all") onChange({
+        activo: "",
+        pendienteCohorte: "",
+        documentosPendientes: "",
+        interesadoEn: "",
+      });
     if (id === "active") onChange({ activo: filters.activo === "true" ? "" : "true" });
     if (id === "inactive") onChange({ activo: filters.activo === "false" ? "" : "false" });
     if (id === "cohort")
       onChange({ pendienteCohorte: filters.pendienteCohorte === "true" ? "" : "true" });
+    if (id === "waiting") onChange({ interesadoEn: filters.interesadoEn ? "" : "A" });
     if (id === "documents")
       onChange({ documentosPendientes: filters.documentosPendientes === "true" ? "" : "true" });
   }
@@ -78,7 +93,7 @@ export function StudentFilters({
   if (filters.pendienteCohorte)
     active.push({
       id: "pendienteCohorte",
-      label: `Pendientes de cohorte: ${yesNo(filters.pendienteCohorte)}`,
+      label: `Sin cohorte: ${yesNo(filters.pendienteCohorte)}`,
     });
   if (filters.documentosPendientes)
     active.push({
@@ -86,7 +101,7 @@ export function StudentFilters({
       label: `Documentos pendientes: ${yesNo(filters.documentosPendientes)}`,
     });
   if (filters.interesadoEn)
-    active.push({ id: "interesadoEn", label: `Interesados en tipo ${filters.interesadoEn}` });
+    active.push({ id: "interesadoEn", label: `Esperando curso: tipo ${filters.interesadoEn}` });
   if (filters.incluirHistorial)
     active.push({ id: "incluirHistorial", label: "Historial de matrículas" });
   function remove(id: string) {
@@ -96,18 +111,25 @@ export function StudentFilters({
   }
   return (
     <section aria-label="Filtrar alumnos" className={styles.filters}>
-      {waitlistActive ? (
-        <Select
-          label="Interés en apertura"
-          value={filters.interesadoEn ?? ""}
-          onChange={(e) => onChange({ interesadoEn: e.target.value })}
-        >
-          <option value="">Todos</option>
-          <option value="A">Tipo A</option>
-          <option value="B">Tipo B</option>
-        </Select>
-      ) : null}
-      <FilterChips items={quick} onSelect={selectQuick} />
+      <div className="flex flex-wrap items-center gap-3">
+        <FilterChips items={quick} onSelect={selectQuick} />
+        {waitlistActive && filters.interesadoEn ? (
+          <Select
+            name="waitlistType"
+            label="Tipo"
+            value={filters.interesadoEn}
+            onChange={(e) => onChange({ interesadoEn: e.target.value })}
+          >
+            <option value="A">Tipo A</option>
+            <option value="B">Tipo B</option>
+          </Select>
+        ) : null}
+        {waitlistActive && waitlistSummary ? (
+          <span className="text-sm text-text-secondary" role="status">
+            Interesados en apertura: tipo A {waitlistSummary.A} · tipo B {waitlistSummary.B}
+          </span>
+        ) : null}
+      </div>
       <Button
         type="button"
         variant="secondary"
@@ -164,7 +186,7 @@ export function StudentFilters({
           <div className="relative z-20 mt-3 grid gap-4 rounded-md border border-border bg-bg-surface p-4 shadow-elevated md:absolute md:right-0 md:w-80">
             {(
               [
-                ["pendienteCohorte", "Pendientes de cohorte"],
+                ["pendienteCohorte", "Sin cohorte"],
                 ["documentosPendientes", "Documentos pendientes"],
                 ["activo", "Estado de la cuenta"],
               ] as const

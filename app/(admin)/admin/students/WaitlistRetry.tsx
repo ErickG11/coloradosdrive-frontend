@@ -28,9 +28,9 @@ export function WaitlistRetry() {
     }
   }
   return (
-    <details className="mb-3">
-      <summary>Reintentar avisos de apertura fallidos</summary>
-      <div className="mt-3 grid gap-2">
+    <div className="grid gap-2 p-3">
+      <p className="font-medium">Reintentar avisos de apertura fallidos</p>
+      <div className="grid gap-2">
         <Select label="Tipo de aviso" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="A">A</option>
           <option value="B">B</option>
@@ -46,6 +46,6 @@ export function WaitlistRetry() {
         </Button>
         {message ? <p role="status">{message}</p> : null}
       </div>
-    </details>
+    </div>
   );
 }

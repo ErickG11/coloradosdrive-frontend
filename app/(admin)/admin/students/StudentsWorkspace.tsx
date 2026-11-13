@@ -98,6 +98,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
     filters.courseId ||
     filters.cohortId ||
     filters.pendienteCohorte ||
+    filters.interesadoEn ||
     filters.documentosPendientes ||
     filters.activo ||
     filters.incluirHistorial,
@@ -127,6 +128,18 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
             description="Consulta sus cuentas, cursos y cohortes."
             actions={
               <>
+                {waitlist.data?.active ? (
+                  <details className="relative">
+                    <summary
+                      className={buttonClassName("secondary", "md", "cursor-pointer list-none")}
+                    >
+                      Más acciones
+                    </summary>
+                    <div className="absolute right-0 z-20 mt-2 w-80 rounded-md border border-border bg-bg-surface shadow-elevated">
+                      <WaitlistRetry />
+                    </div>
+                  </details>
+                ) : null}
                 <Link className={buttonClassName("secondary")} href="/admin/students/deletions">
                   Eliminaciones pendientes
                 </Link>
@@ -137,12 +150,6 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
             }
           />
           <StudentMetrics version={version} />
-          {waitlist.data?.active ? (
-            <p role="status">
-              Interesados en apertura: tipo A {waitlist.data.A} · tipo B {waitlist.data.B}
-            </p>
-          ) : null}
-          {waitlist.data?.active ? <WaitlistRetry /> : null}
           {waitlist.error ? <p role="status">{waitlist.error}</p> : null}
           {params.get("aviso") === "alumno-eliminado" && (
             <p role="status" className="text-status-success">
@@ -152,6 +159,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
           <StudentFilters
             filters={filters}
             waitlistActive={waitlist.data?.active}
+            waitlistSummary={waitlist.data?.active ? waitlist.data : null}
             q={q}
             courses={courses.data ?? []}
             cohorts={cohorts.data ?? []}
@@ -200,6 +208,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
             students={list.data?.items ?? []}
             cohorts={cohorts.data ?? []}
             filterQuery={studentFilterParams(filters).toString()}
+            waiting={Boolean(filters.interesadoEn)}
             isLoading={list.isLoading}
             error={list.error}
             onRetry={list.refetch}
