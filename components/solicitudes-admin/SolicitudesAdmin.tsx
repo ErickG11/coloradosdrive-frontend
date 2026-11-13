@@ -109,63 +109,63 @@ export function SolicitudesAdmin() {
         </form>
         <span>Colorados Drive · Administración</span>
       </div>
-      <header className={styles.moduleHeader}>
-        <div>
-          <h1 ref={titulo} tabIndex={-1}>
-            Solicitudes de inscripción
-          </h1>
-          {data ? <span className={styles.totalBadge}>{data.total}</span> : null}
-          <p className={styles.lead}>
-            Revisa a quienes se inscriben en línea: verifica su identidad y estudios en la fuente y
-            decide.
-          </p>
-        </div>
-        <InscripcionesSwitch
-          abiertas={resumen ? resumen.inscripcionesAbiertas : null}
-          onChanged={(abiertas) =>
-            setResumen((previo) =>
-              previo ? { ...previo, inscripcionesAbiertas: abiertas } : previo,
-            )
-          }
-        />
-      </header>
-      {fallo && !resumen ? (
-        <FormError>
-          No se pudo consultar el resumen del día. Se reintentará automáticamente.
-        </FormError>
-      ) : null}
-      <section className={styles.metrics} aria-label="Resumen de solicitudes">
-        <EnrollmentMetric label="Pendientes" value={resumen?.pendientes ?? "…"} icon="users" />
-        <EnrollmentMetric
-          label="Devueltas"
-          value={resumen?.devueltas ?? "…"}
-          icon="document"
-          tone="neutral"
-        />
-        <EnrollmentMetric
-          label="Más de 48 h"
-          value={resumen?.conMasDe48h ?? "…"}
-          icon="clock"
-          tone="warning"
-        />
-        <EnrollmentMetric
-          label="Estado de las inscripciones"
-          value={resumen ? (resumen.inscripcionesAbiertas ? "Abiertas" : "Cerradas") : "…"}
-          icon="check"
-          tone={resumen?.inscripcionesAbiertas ? "success" : "neutral"}
-        />
-      </section>
-      <MedidoresDiarios resumen={resumen} />
-      {resumen && resumen.conMasDe48h > 0 ? (
-        <p className={styles.overdueNote}>
-          {resumen.conMasDe48h === 1
-            ? "1 solicitud lleva más de 48 h esperando revisión."
-            : `${resumen.conMasDe48h} solicitudes llevan más de 48 h esperando revisión.`}
-        </p>
-      ) : null}
-
       <div className={styles.reviewLayout} data-open={Boolean(seleccionada)}>
         <div className={styles.reviewList}>
+          <header className={styles.moduleHeader}>
+            <div>
+              <h1 ref={titulo} tabIndex={-1}>
+                Solicitudes de inscripción
+              </h1>
+              {data ? <span className={styles.totalBadge}>{data.total}</span> : null}
+              <p className={styles.lead}>
+                Revisa a quienes se inscriben en línea: verifica su identidad y estudios en la
+                fuente y decide.
+              </p>
+            </div>
+            <InscripcionesSwitch
+              abiertas={resumen ? resumen.inscripcionesAbiertas : null}
+              onChanged={(abiertas) =>
+                setResumen((previo) =>
+                  previo ? { ...previo, inscripcionesAbiertas: abiertas } : previo,
+                )
+              }
+            />
+          </header>
+          {fallo && !resumen ? (
+            <FormError>
+              No se pudo consultar el resumen del día. Se reintentará automáticamente.
+            </FormError>
+          ) : null}
+          <section className={styles.metrics} aria-label="Resumen de solicitudes">
+            <EnrollmentMetric label="Pendientes" value={resumen?.pendientes ?? "…"} icon="users" />
+            <EnrollmentMetric
+              label="Devueltas"
+              value={resumen?.devueltas ?? "…"}
+              icon="document"
+              tone="neutral"
+            />
+            <EnrollmentMetric
+              label="Más de 48 h"
+              value={resumen?.conMasDe48h ?? "…"}
+              icon="clock"
+              tone="warning"
+            />
+            <EnrollmentMetric
+              label="Estado de las inscripciones"
+              value={resumen ? (resumen.inscripcionesAbiertas ? "Abiertas" : "Cerradas") : "…"}
+              icon="check"
+              tone={resumen?.inscripcionesAbiertas ? "success" : "neutral"}
+            />
+          </section>
+          <MedidoresDiarios resumen={resumen} />
+          {resumen && resumen.conMasDe48h > 0 ? (
+            <p className={styles.overdueNote}>
+              {resumen.conMasDe48h === 1
+                ? "1 solicitud lleva más de 48 h esperando revisión."
+                : `${resumen.conMasDe48h} solicitudes llevan más de 48 h esperando revisión.`}
+            </p>
+          ) : null}
+
           <SolicitudesTabs
             activa={tab}
             conteos={conteos}
@@ -205,7 +205,7 @@ export function SolicitudesAdmin() {
                 {
                   key: "nombre",
                   header: "Postulante",
-                  render: (item) => (
+                  render: (item: SolicitudAdminItem) => (
                     <span className={styles.person}>
                       <EnrollmentAvatar name={nombreDe(item)} />
                       <span>{nombreDe(item)}</span>
@@ -218,23 +218,28 @@ export function SolicitudesAdmin() {
                 {
                   key: "cedula",
                   header: "Cédula",
-                  render: (item) => item.documentNumber ?? item.cedula ?? "—",
+                  render: (item: SolicitudAdminItem) => item.documentNumber ?? item.cedula ?? "—",
                 },
-                { key: "correo", header: "Correo", render: (item) => item.correo },
+                {
+                  key: "correo",
+                  header: "Correo",
+                  render: (item: SolicitudAdminItem) => item.correo,
+                },
                 {
                   key: "enviada",
                   header: "Fecha de envío",
-                  render: (item) => (item.enviadaAt ? formatearFecha(item.enviadaAt) : "—"),
+                  render: (item: SolicitudAdminItem) =>
+                    item.enviadaAt ? formatearFecha(item.enviadaAt) : "—",
                 },
                 {
                   key: "estado",
                   header: "Estado",
-                  render: (item) => <SolicitudStatus estado={item.estado} />,
+                  render: (item: SolicitudAdminItem) => <SolicitudStatus estado={item.estado} />,
                 },
                 {
                   key: "detalle",
                   header: "Revisión",
-                  render: (item) => (
+                  render: (item: SolicitudAdminItem) => (
                     <Button
                       variant="secondary"
                       ref={(button) => {
@@ -251,7 +256,9 @@ export function SolicitudesAdmin() {
                     </Button>
                   ),
                 },
-              ]}
+              ].filter(
+                (column) => !seleccionada || !["cedula", "correo", "enviada"].includes(column.key),
+              )}
             />
           </div>
           <Pagination
