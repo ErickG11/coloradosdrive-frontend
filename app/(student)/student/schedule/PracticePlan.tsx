@@ -163,12 +163,12 @@ export function PracticePlan({
       <details className={styles.rules}>
         <summary>Reglas de reprogramación</summary>
         <ul>
-          <li>Cada día es un bloque de 1 o 2 horas seguidas con un instructor. Se confirma, se cancela y se cambia completo.</li>
-          <li>Tienes máximo 2 reprogramaciones por matrícula, para siempre. Cada bloque que cancelas o cambias usa una.</li>
-          <li>Si ya usaste las 2, un nuevo aviso se registra como falta: la hora no se repone. Habla con la escuela o con tu instructor en tu siguiente práctica.</li>
-          <li>Reponer un bloque pendiente no usa otra reprogramación. Debe tener la misma duración y modalidad, antes de tu fecha fin, sin cruzarse con otra práctica y con un solo bloque por día en cada matrícula.</li>
-          <li>Si no hay horarios libres para reponer, la hora se pierde y no cuenta como reprogramación.</li>
-          <li>Un bloque que ya empezó no se cancela en la plataforma. Elige un cambio con más de 5 minutos de anticipación.</li>
+          <li>Cada día es un bloque de 1 o 2 horas seguidas con tu instructor. Se confirma, se avisa y se cambia completo.</li>
+          <li>Si no puedes asistir, lo resuelves en un solo paso: cambias a otra hora libre de tu instructor ese mismo día, o avisas que no puedes ese día.</li>
+          <li>Tienes máximo 2 cambios de hora por matrícula, para siempre. Solo el mismo día y con tu mismo instructor. Cada cambio usa una reprogramación.</li>
+          <li>Si no puedes ese día, se registra como falta: no usa una reprogramación y esa hora no se repone sola. Para reponerla en otra fecha, habla con la escuela o con tu instructor en tu siguiente práctica.</li>
+          <li>También puedes tomar un cupo que otro alumno liberó, solo si es del mismo día que uno de tus bloques y con tu mismo instructor. Cuenta como un cambio.</li>
+          <li>Un bloque que ya empezó no se avisa en la plataforma. El cambio normal cierra 5 minutos antes.</li>
         </ul>
         <p>La vista previa te explica la consecuencia antes de confirmar.</p>
       </details>
