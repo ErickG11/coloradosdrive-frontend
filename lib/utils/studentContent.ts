@@ -1,5 +1,5 @@
 import { ApiError } from "@/lib/api/errors";
-import { contentDate, contentErrorMessage } from "./content";
+import { contentErrorMessage, friendlyDate } from "./content";
 import type { StudentItem } from "@/types/studentContent";
 
 export const AUTO_SEND_MARGIN_MS = 10_000;
@@ -39,11 +39,11 @@ export function accessLabel(access: StudentItem["access"]): string {
     case "no_habilitado":
       return "Aún no disponible";
     case "programado":
-      return `Se abre el ${contentDate(access.opens_at)}`;
+      return `Se abre el ${friendlyDate(access.opens_at, true)}`;
     case "cerrado":
-      return `Cerró el ${contentDate(access.closes_at)}`;
+      return `Cerró el ${friendlyDate(access.closes_at, true)}`;
     case "abierto":
-      return access.closes_at ? `Cierra el ${contentDate(access.closes_at)}` : "Disponible";
+      return access.closes_at ? `Cierra el ${friendlyDate(access.closes_at, true)}` : "Disponible";
   }
 }
 export function studentContentError(error: unknown): string {
@@ -59,6 +59,9 @@ export function studentContentError(error: unknown): string {
         return "Ya aprobaste este examen definitivo y no puedes repetirlo.";
       case "EXAM_NOT_PUBLISHED":
         return "Este examen no está publicado. Vuelve al curso para revisar el contenido disponible.";
+      case "MATERIALES_PENDIENTES":
+      case "MARCA_NO_REVERSIBLE":
+        return error.message;
       case "ITEM_NO_HABILITADO":
         return "Este contenido todavía no está habilitado para ti.";
     }

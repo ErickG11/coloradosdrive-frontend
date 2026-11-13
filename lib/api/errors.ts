@@ -2,7 +2,11 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;
   readonly field?: string;
-  readonly detalles?: { faltantes?: string[]; cantidad?: number };
+  readonly detalles?: {
+    faltantes?: string[];
+    cantidad?: number;
+    pendientes?: { item_id: string; titulo: string }[];
+  };
 
   constructor(
     message: string,
@@ -10,7 +14,11 @@ export class ApiError extends Error {
     metadata?: {
       code?: string;
       field?: string;
-      detalles?: { faltantes?: string[]; cantidad?: number };
+      detalles?: {
+        faltantes?: string[];
+        cantidad?: number;
+        pendientes?: { item_id: string; titulo: string }[];
+      };
     },
   ) {
     super(message);

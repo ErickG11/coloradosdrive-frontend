@@ -7,7 +7,7 @@ import type { QuestionImage as ImageValue, AttemptQuestionImage } from "@/types/
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { ownCatalog, ownExamContext } from "@/lib/api/studentContent";
-import { contentDate } from "@/lib/utils/content";
+import { friendlyDate } from "@/lib/utils/content";
 import {
   accessLabel,
   countdown,
@@ -125,6 +125,9 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
         ["ATTEMPTS_EXHAUSTED", "ALREADY_PASSED"].includes(failure.code ?? "")
       )
         setDenied(true);
+      // Datos desactualizados: se vuelve a consultar el estado del examen y sus requisitos.
+      if (failure instanceof ApiError && failure.code === "MATERIALES_PENDIENTES")
+        setRevision((value) => value + 1);
     } finally {
       lock.current = false;
       setBusy(false);
@@ -174,6 +177,7 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
   const allowed =
     !refreshing &&
     !denied &&
+    !item.bloqueado &&
     (Boolean(ongoing) || (item.access.estado === "abierto" && left && !passedDefinitive));
   return (
     <div className={`${styles.examPage} space-y-5`}>
@@ -198,8 +202,8 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
         </p>
         {ongoing ? (
           <p className="text-sm">
-            Intento en curso. Límite: {contentDate(ongoing.deadline_at)}. Cerrar esta ventana no
-            detiene el tiempo.
+            Intento en curso. Límite: {friendlyDate(ongoing.deadline_at, true)}. Cerrar esta ventana
+            no detiene el tiempo.
           </p>
         ) : null}
         {result ? (
@@ -235,11 +239,13 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
           <p className="text-sm text-text-secondary">
             {refreshing
               ? "Actualizando disponibilidad de intentos…"
-              : passedDefinitive
-                ? "Ya aprobaste este definitivo y no se puede repetir."
-                : denied || !left
-                  ? "No hay más intentos disponibles por ahora."
-                  : "No puedes iniciar un intento mientras el examen no esté abierto."}
+              : item.bloqueado
+                ? `Antes de rendir este examen, completa: ${(item.prerequisitos_pendientes ?? []).map((entry) => entry.titulo).join(", ")}.`
+                : passedDefinitive
+                  ? "Ya aprobaste este definitivo y no se puede repetir."
+                  : denied || !left
+                    ? "No hay más intentos disponibles por ahora."
+                    : "No puedes iniciar un intento mientras el examen no esté abierto."}
           </p>
         )}
         {item.completado && !type && allowed && !ongoing ? (
@@ -273,7 +279,7 @@ function ExamResult({ result, images }: { result: Result; images: Images }) {
           {result.passed === null ? "Consultando estado" : result.passed ? "Aprobado" : "Reprobado"}
         </strong>
         {result.scorePercent == null ? <p>Pendiente de finalizar</p> : null}
-        {result.completedAt ? <p>Finalizado: {contentDate(result.completedAt)}</p> : null}
+        {result.completedAt ? <p>Finalizado: {friendlyDate(result.completedAt, true)}</p> : null}
       </div>
       {result.answers?.some((answer) => "pointsEarned" in answer) ? (
         <div className={styles.resultPoints}>
@@ -630,7 +636,7 @@ function AttemptForm({
         </p>
       </header>
       <p className={styles.attemptDetails}>
-        Límite: {contentDate(attempt.deadlineAt)}. Cerrar o salir no detiene el tiempo. Envío
+        Límite: {friendlyDate(attempt.deadlineAt, true)}. Cerrar o salir no detiene el tiempo. Envío
         automático unos 10 segundos antes del límite.
       </p>
       {error ? <StudentError error={error} /> : null}
