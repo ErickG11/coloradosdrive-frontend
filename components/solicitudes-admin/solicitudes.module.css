@@ -797,3 +797,34 @@
 .decisionActions > button.dangerOutline:hover {
   background: var(--color-status-error-bg);
 }
+
+@media (min-width: 1024px) {
+  .reviewLayout[data-open="true"] {
+    grid-template-columns: minmax(0, 1fr) clamp(480px, 40vw, 540px);
+    gap: 16px;
+  }
+  .reviewLayout[data-open="true"] :global(table) {
+    table-layout: fixed;
+  }
+  .reviewLayout[data-open="true"] :is(th, td) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    padding-inline: 8px;
+  }
+  .reviewLayout[data-open="true"] .person {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .reviewLayout[data-open="true"] .reviewList {
+    min-width: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .reviewLayout[data-open="true"] .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .reviewLayout[data-open="true"] .moduleHeader {
+    flex-wrap: wrap;
+  }
+}
