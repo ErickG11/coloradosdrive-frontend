@@ -1,14 +1,13 @@
 "use client";
-import { useEffect, useId, useRef, type ReactNode } from "react";
-import { XIcon } from "@/components/ui/icons";
-import styles from "./solicitudes.module.css";
-
+import type { ReactNode } from "react";
+import { SidePanel } from "@/components/ui/SidePanel";
 export function SolicitudDrawer({
   title,
   avatar,
   header,
   children,
   footer,
+  actions,
   onClose,
 }: {
   title: string;
@@ -16,47 +15,20 @@ export function SolicitudDrawer({
   header: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  actions?: ReactNode;
   onClose: () => void;
 }) {
-  const panel = useRef<HTMLElement>(null),
-    titleId = useId();
-  useEffect(() => {
-    panel.current?.focus();
-    panel.current?.scrollIntoView({ block: "nearest" });
-  }, []);
   return (
-    <aside
+    <SidePanel
       id="solicitud-panel"
-      ref={panel}
-      role="region"
-      aria-labelledby={titleId}
-      tabIndex={-1}
-      className={styles.drawer}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.stopPropagation();
-          onClose();
-        }
-      }}
+      title={title}
+      avatar={avatar}
+      header={header}
+      actions={actions}
+      footer={footer}
+      onClose={onClose}
     >
-      <header className={styles.drawerHeader}>
-        {avatar}
-        <div className={styles.drawerTitle}>
-          <span className={styles.eyebrow}>Revisión de inscripción</span>
-          <h2 id={titleId}>{title}</h2>
-          {header}
-        </div>
-        <button
-          type="button"
-          className={styles.closeButton}
-          onClick={onClose}
-          aria-label="Cerrar solicitud"
-        >
-          <XIcon className="h-5 w-5" />
-        </button>
-      </header>
-      <div className={styles.drawerBody}>{children}</div>
-      {footer ? <footer className={styles.drawerFooter}>{footer}</footer> : null}
-    </aside>
+      {children}
+    </SidePanel>
   );
 }

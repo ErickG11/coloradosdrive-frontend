@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Button, Input, Modal, Select } from "@/components/ui";
+import { useEffect, useRef, useState } from "react";
+import { Button, Input, Select } from "@/components/ui";
+import { StudentCohortStep } from "./StudentCohortStep";
 import { useFetch } from "@/hooks/useFetch";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -15,6 +16,8 @@ import type { StudentEnrollment } from "@/types/student";
 import type { StudentCohortOptions } from "@/types/studentCohort";
 
 interface Props {
+  embedded?: boolean;
+  onBusyChange?: (busy: boolean) => void;
   studentId: string;
   enrollment: StudentEnrollment;
   onClose: () => void;
@@ -26,6 +29,8 @@ const money = formatMoney;
 const civil = (date: string) => date.split("-").reverse().join("/");
 
 export function StudentCohortAssignment({
+  embedded = false,
+  onBusyChange,
   studentId,
   enrollment,
   onClose,
@@ -40,6 +45,10 @@ export function StudentCohortAssignment({
   const [reason, setReason] = useState("");
   const [selection, setSelection] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
   const submitting = useRef(false);
   const [failure, setFailure] = useState<ReturnType<typeof studentCohortError> | null>(null);
   const selectedId = selection ?? data?.suggestion.cohortId ?? "";
@@ -100,7 +109,33 @@ export function StudentCohortAssignment({
     }
   }
   return (
-    <Modal isOpen placement="right" title="Asignar cohorte" onClose={close}>
+    <StudentCohortStep
+      embedded={embedded}
+      title="Asignar cohorte"
+      onClose={close}
+      busy={busy}
+      footer={
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button variant="secondary" disabled={busy} onClick={close}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={
+              busy ||
+              isLoading ||
+              !!error ||
+              !chosen ||
+              !reason.trim() ||
+              amounts?.abonoExcedeNeto ||
+              failure?.blocked
+            }
+            onClick={() => void save()}
+          >
+            {busy ? "Asignando…" : "Confirmar asignación"}
+          </Button>
+        </div>
+      }
+    >
       <div className="flex flex-col gap-4 text-sm text-text-primary">
         <p>
           {enrollment.curso?.nombre ?? "Curso"} · Tipo {enrollment.courseType}
@@ -211,27 +246,7 @@ export function StudentCohortAssignment({
           disabled={busy}
           onChange={(event) => setReason(event.target.value)}
         />
-        <div className="flex flex-wrap justify-end gap-3">
-          <Button variant="secondary" disabled={busy} onClick={close}>
-            Cancelar
-          </Button>
-          <Button
-            disabled={
-              busy ||
-              isLoading ||
-              !!error ||
-              !chosen ||
-              !reason.trim() ||
-              !reason.trim() ||
-              amounts?.abonoExcedeNeto ||
-              failure?.blocked
-            }
-            onClick={() => void save()}
-          >
-            {busy ? "Asignando…" : "Confirmar asignación"}
-          </Button>
-        </div>
       </div>
-    </Modal>
+    </StudentCohortStep>
   );
 }

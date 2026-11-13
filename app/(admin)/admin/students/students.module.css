@@ -105,7 +105,7 @@
   align-items: start;
 }
 .page[data-panel-open="true"] .workspace {
-  grid-template-columns: minmax(0, 1fr) 440px;
+  grid-template-columns: minmax(0, 1fr);
 }
 .main {
   min-width: 0;
@@ -793,4 +793,12 @@
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* C10: el panel vive sobre la página; el listado conserva todo su ancho. */
+.page[data-panel-open="true"] .workspace {
+  display: block;
+}
+.page[data-panel-open="true"] .main {
+  visibility: visible;
 }

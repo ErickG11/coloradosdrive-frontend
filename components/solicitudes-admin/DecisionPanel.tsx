@@ -24,9 +24,9 @@ const MAX_MENSAJE = 300;
 const MAX_NOTA = 1000;
 
 const ACCIONES: { id: Accion; label: string }[] = [
-  { id: "aprobar", label: "Aprobar" },
-  { id: "devolver", label: "Devolver" },
   { id: "rechazar", label: "Rechazar" },
+  { id: "devolver", label: "Devolver para corregir" },
+  { id: "aprobar", label: "Aprobar" },
 ];
 
 // Requisitos que el servidor exige para aprobar. Es una guía visible para el admin: el
@@ -380,9 +380,8 @@ export function DecisionPanel({
         {ACCIONES.map((item) => (
           <Button
             key={item.id}
-            variant={
-              item.id === "aprobar" ? "primary" : item.id === "rechazar" ? "danger" : "secondary"
-            }
+            variant={item.id === "aprobar" ? "primary" : "secondary"}
+            className={item.id === "rechazar" ? styles.dangerOutline : undefined}
             disabled={ocupado || (item.id === "aprobar" && faltan.length > 0)}
             aria-describedby={
               item.id === "aprobar" && faltan.length > 0 ? `${baseId}-faltantes` : undefined

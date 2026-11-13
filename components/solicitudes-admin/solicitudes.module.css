@@ -754,12 +754,13 @@
   background: var(--color-bg-surface);
 }
 .decisionActions {
+  justify-content: flex-end;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 .decisionActions > button {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   font-size: 12px;
 }
 .decisionForm {
@@ -777,7 +778,7 @@
 }
 @media (min-width: 1280px) {
   .reviewLayout[data-open="true"] {
-    grid-template-columns: minmax(0, 1fr) minmax(390px, 44%);
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 1279px) {
@@ -786,4 +787,13 @@
     top: auto;
     height: min(820px, calc(100dvh - 24px));
   }
+}
+
+.decisionActions > button.dangerOutline {
+  border-color: var(--color-status-error);
+  color: var(--color-status-error);
+  background: var(--color-bg-surface);
+}
+.decisionActions > button.dangerOutline:hover {
+  background: var(--color-status-error-bg);
 }

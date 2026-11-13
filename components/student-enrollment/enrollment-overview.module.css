@@ -760,16 +760,7 @@
   font-size: 19px;
   font-variant-numeric: tabular-nums;
 }
-.quickActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding-top: 4px;
-}
-.quickActions > :is(a, button) {
-  min-width: 0;
-  font-size: 14px;
-}
+
 .whatsapp {
   color: var(--color-avatar-1);
 }
@@ -971,13 +962,7 @@
   .milestones strong {
     font-size: 14px;
   }
-  .quickActions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .quickActions > a {
-    width: 100%;
-  }
+
   .segmented {
     width: 100%;
   }

@@ -4,7 +4,11 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import type { Cohort, Course } from "@/types";
-import type { PlanChangeState, PlanChangePreview, PlanChangeCalendar } from "@/types/planChange";
+import type {
+  PlanChangeState,
+  PlanChangePreview,
+  PlanChangeCalendar,
+} from "@/types/adminPlanChange";
 import type {
   StudentScheduleSelection,
   StudentScheduleReservation,
@@ -21,19 +25,14 @@ const localDate = (iso: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(new Date(iso));
 interface Props {
   enrollmentId: string;
-  studentId?: string;
+  studentId: string;
   targets?: { id: string; label: string }[];
   onChanged?: () => void;
 }
-export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }: Props) {
-  const admin = Boolean(studentId),
-    root = studentId
-      ? `/admin/estudiantes/${studentId}/matriculas/${enrollmentId}/cambio`
-      : `/estudiantes/inscripcion/cambio/${enrollmentId}`;
+function AdminPlanChangeForm({ enrollmentId, studentId, targets, onChanged }: Props) {
+  const root = `/admin/estudiantes/${studentId}/matriculas/${enrollmentId}/cambio`;
   const meta = useFetch<PlanChangeState>(root);
-  const limits = useFetch<StudentPlanRules>(
-    admin ? "/admin/manual-enrollments/rules" : "/estudiantes/inscripcion/horario/config",
-  );
+  const limits = useFetch<StudentPlanRules>("/admin/manual-enrollments/rules");
   const [input, setInput] = useState<StudentScheduleSelection>({
     modalidad: "entre_semana",
     fechaInicio: "",
@@ -95,8 +94,8 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
   const selectedMonth = month || minDate.slice(0, 7);
   const key = JSON.stringify({
     effective,
-    reason: admin ? reason : "",
-    target: admin ? target : "",
+    reason,
+    target,
   });
   const calendarKey =
     meta.data?.active && meta.data.canChange && !pending && selectedMonth && input.horasPorDia
@@ -113,7 +112,7 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
           horasPorDia: input.horasPorDia,
           horaInicio: 6,
           fechaInicio: `${selectedMonth}-01`,
-          ...(admin && target ? { cohortId: target } : {}),
+          ...(target ? { cohortId: target } : {}),
         },
         { signal: abort.signal, cache: "no-store" },
       )
@@ -139,10 +138,10 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
           });
       });
     return () => abort.abort();
-  }, [calendarKey, root, input.modalidad, input.horasPorDia, selectedMonth, admin, target]);
+  }, [calendarKey, root, input.modalidad, input.horasPorDia, selectedMonth, target]);
   const currentCalendar = calendar?.key === calendarKey ? calendar : null;
   const hourKey =
-    input.fechaInicio && input.horasPorDia && (!admin || reason.trim())
+    input.fechaInicio && input.horasPorDia && reason.trim()
       ? `${root}|${input.modalidad}|${input.horasPorDia}|${input.fechaInicio}|${reason}|${target}|${limits.data?.endHour}`
       : null;
   const [hourResult, setHourResult] = useState<{
@@ -158,7 +157,8 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
         {
           ...input,
           horaInicio: 6,
-          ...(admin ? { motivo: reason.trim(), ...(target ? { cohortId: target } : {}) } : {}),
+          motivo: reason.trim(),
+          ...(target ? { cohortId: target } : {}),
         },
         { signal: abort.signal, cache: "no-store" },
       )
@@ -187,7 +187,7 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hourKey]);
   async function propose(reserve = false) {
-    if (admin && !reason.trim()) {
+    if (!reason.trim()) {
       setMessage("Escribe el motivo de la reasignación.");
       return;
     }
@@ -196,7 +196,8 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
     try {
       const body = {
         ...effective,
-        ...(admin ? { motivo: reason.trim(), ...(target ? { cohortId: target } : {}) } : {}),
+        motivo: reason.trim(),
+        ...(target ? { cohortId: target } : {}),
       };
       if (reserve) {
         const result = await api.post<StudentScheduleReservation>(
@@ -228,9 +229,7 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
     setBusy(true);
     setMessage(null);
     try {
-      const url = studentId
-        ? `/admin/estudiantes/${studentId}/matriculas/cambio/${r.id}/confirmar`
-        : `/estudiantes/inscripcion/cambio/reserva/${r.id}/confirmar`;
+      const url = `/admin/estudiantes/${studentId}/matriculas/cambio/${r.id}/confirmar`;
       await api.post<StudentScheduleReservation>(url, {}, options());
       setMessage(
         "Cambio confirmado. Conservamos el importe pagado y la factura; recibirás las nuevas fechas por correo.",
@@ -263,7 +262,7 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
   const proposed = preview?.key === key ? preview.data : null;
   const summary = proposed?.plan;
   return (
-    <Card title={admin ? "Reasignar plan del alumno" : "Cambiar mi plan"} className="mt-4">
+    <Card title="Reasignar plan del alumno" className="mt-4">
       <p>
         Tu horario actual se conserva hasta confirmar un intercambio completo. Esta operación no
         crea un pago ni modifica la factura.
@@ -274,7 +273,7 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
           {new Date(meta.data.windowClosesAt).toLocaleString("es-EC", {
             timeZone: "America/Guayaquil",
           })}{" "}
-          (Guayaquil).{!admin ? ` Cambios disponibles: ${meta.data.freeRemaining ?? 0}.` : ""}
+          (Guayaquil).
         </p>
       ) : null}
       <ReservationBanner state={reservation} />
@@ -307,30 +306,28 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
         </div>
       ) : meta.data.canChange ? (
         <div className="mt-4 grid gap-3">
-          {admin ? (
-            <>
-              <Input
-                label="Motivo de la reasignación"
-                maxLength={500}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                disabled={busy}
-              />
-              <Select
-                label="Destino del mismo tipo"
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                disabled={busy}
-              >
-                <option value="">Asignación automática</option>
-                {targets?.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
-                  </option>
-                ))}
-              </Select>
-            </>
-          ) : null}
+          <>
+            <Input
+              label="Motivo de la reasignación"
+              maxLength={500}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              disabled={busy}
+            />
+            <Select
+              label="Destino del mismo tipo"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              disabled={busy}
+            >
+              <option value="">Asignación automática</option>
+              {targets?.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </Select>
+          </>
           <PlanFields
             rules={limits.data ?? undefined}
             value={effective}
@@ -410,7 +407,7 @@ export function AdminPlanChangePanel({
     )
     .map((c) => ({ id: c.id, label: `${c.nombre} · ${c.fechaInicioCurso} — ${c.fechaFinCurso}` }));
   return (
-    <PlanChangePanel
+    <AdminPlanChangeForm
       studentId={studentId}
       enrollmentId={enrollmentId}
       targets={targets}

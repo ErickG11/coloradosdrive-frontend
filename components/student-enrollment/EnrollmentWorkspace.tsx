@@ -1,7 +1,5 @@
 "use client";
 import { BillingPanel } from "./BillingPanel";
-import Link from "next/link";
-import { PlanChangePanel } from "./PlanChangePanel";
 import { useState } from "react";
 import { Button, buttonClassName } from "@/components/ui/Button";
 import { whatsappHref } from "@/lib/content/landing";
@@ -83,13 +81,6 @@ export function EnrollmentWorkspace({
   return (
     <div className={styles.workspace}>
       <BillingPanel />
-      {enrollment?.status === "activo" ? (
-        <PlanChangePanel
-          key={enrollment.enrollmentId}
-          enrollmentId={enrollment.enrollmentId}
-          onChanged={overview.refresh}
-        />
-      ) : null}
       {state.individualDates?.practiceStartDate ? (
         <p>
           Prácticas: {state.individualDates.practiceStartDate} —{" "}
@@ -218,29 +209,6 @@ export function EnrollmentWorkspace({
           />
         </div>
       )}
-      <nav className={styles.quickActions} aria-label="Acciones de tu inscripción">
-        <Link className={buttonClassName("primary")} href="/student/schedule">
-          <EnrollmentIcon kind="calendar" />
-          Ir a mis horarios
-        </Link>
-        <Link className={buttonClassName("secondary")} href="/student/documents">
-          <EnrollmentIcon kind="document" />
-          Ver mis documentos
-        </Link>
-        <Link className={buttonClassName("secondary")} href="/student/change-password">
-          <EnrollmentIcon kind="access" />
-          Cambiar contraseña
-        </Link>
-        <a
-          href={contactHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonClassName("secondary")}
-        >
-          <EnrollmentIcon kind="whatsapp" className={`${styles.icon} ${styles.whatsapp}`} />
-          Contactar a la escuela
-        </a>
-      </nav>
     </div>
   );
 }

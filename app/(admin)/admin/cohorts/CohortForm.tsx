@@ -223,6 +223,7 @@ export function CohortForm({
   const rules = useFetch<CohortRulesConfig>("/cohorts/configuracion");
   const [habilitada, setHabilitada] = useState(habilitadaInicial);
   const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState<string | undefined>();
 
   const formRef = useRef<HTMLFormElement>(null);
   const isEditMode = Boolean(cohortId);
@@ -367,9 +368,10 @@ export function CohortForm({
     }
 
     if (datesSection && !reason.trim()) {
-      setError("Escribe el motivo del aplazamiento.");
+      setReasonError("Escribe el motivo del aplazamiento.");
       return;
     }
+    setReasonError(undefined);
     setIsSubmitting(true);
 
     const body = buildBody(
@@ -504,7 +506,7 @@ export function CohortForm({
       {rules.error ? <p role="alert">{rules.error}</p> : null}
       {isEditMode ? (
         <>
-          <p className="text-xs text-text-secondary">
+          <p className={`${styles.panelInset} text-xs text-text-secondary`}>
             {
               ESTADO_TEXTO[
                 readOnly
@@ -521,12 +523,19 @@ export function CohortForm({
               ? ` · Cierre de matrícula: ${new Intl.DateTimeFormat("es-EC", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${cierreMatricula}T12:00:00Z`))}`
               : ""}
           </p>
-          {readOnly ? <p role="status">Cohorte terminada: solo lectura.</p> : null}
+          {readOnly ? (
+            <p className={styles.panelInset} role="status">
+              Cohorte terminada: solo lectura.
+            </p>
+          ) : null}
           {datesSection &&
           rulesState === "matricula_cerrada_en_curso" &&
           values.fechaFinCurso !== initialValues?.fechaFinCurso &&
           values.fechaFinMatricula === initialValues?.fechaFinMatricula ? (
-            <p role="status">
+            <p
+              className={`${styles.panelInset} rounded-sm border border-border bg-bg-sunken p-3 text-sm`}
+              role="status"
+            >
               La matrícula está cerrada: nadie podrá inscribirse en las fechas nuevas. ¿Extender
               también la matrícula?
             </p>
@@ -685,14 +694,14 @@ export function CohortForm({
         </fieldset>
       </div>
       <div
-        className={!isEditMode ? "contents" : undefined}
+        className={!isEditMode ? "contents" : styles.datesPanel}
         id="cohort-section-dates"
         role={isEditMode ? "tabpanel" : undefined}
         aria-labelledby={isEditMode ? "cohort-tab-dates" : undefined}
         hidden={isEditMode && !datesSection}
       >
         {datesSection && courseStarted && !readOnly ? (
-          <p className="mb-3 text-sm text-text-secondary">
+          <p className="rounded-sm border border-border bg-bg-sunken p-3 text-sm text-text-secondary">
             El curso ya empezó: solo puedes ampliar el fin de curso.
           </p>
         ) : null}
@@ -772,16 +781,20 @@ export function CohortForm({
 
         {datesSection ? (
           <>
-            <p className="my-3 text-sm">
+            <p className="rounded-sm border border-status-info bg-status-info-bg p-3 text-sm text-status-info">
               Cierre de matrícula: {cutoffLabel}, inclusivo hasta las 23:59:59 (America/Guayaquil).
             </p>
             <Input
               label="Motivo del aplazamiento"
+              error={reasonError}
               value={reason}
               maxLength={500}
               required
               disabled={readOnly || isSubmitting}
-              onChange={(event) => setReason(event.target.value)}
+              onChange={(event) => {
+                setReason(event.target.value);
+                setReasonError(undefined);
+              }}
             />
           </>
         ) : null}

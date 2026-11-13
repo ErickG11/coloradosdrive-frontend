@@ -194,19 +194,17 @@ describe("C09 cohortes", () => {
       }),
     );
   });
-  it("muestra tres acciones accesibles por fila y el reloj abre Aplazar cohorte", async () => {
+  it("muestra lápiz y papelera y retira el reloj redundante", async () => {
     const user = userEvent.setup();
     render(<CohortsWorkspace />);
-    expect(screen.getByRole("link", { name: "Aplazar cohorte Cohorte C09" })).toHaveAttribute(
-      "href",
-      "/admin/cohorts/cohort-a/edit?seccion=fechas",
-    );
+    expect(
+      screen.queryByRole("link", { name: "Aplazar cohorte Cohorte C09" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Editar Cohorte C09" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Cancelar cohorte Cohorte C09" }),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "Aplazar cohorte Cohorte C09" }));
-    // El editor carga datos por id; la intención se conserva también en la URL sin JavaScript.
+    await user.click(screen.getByRole("link", { name: "Editar Cohorte C09" }));
     expect(screen.getByRole("region", { name: "Editar cohorte" })).toBeInTheDocument();
     expect(screen.queryByText("Reasignar o cancelar")).not.toBeInTheDocument();
   });
