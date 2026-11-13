@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useFetch } from "@/hooks/useFetch";
-import { CohortRulesControls, type CohortRulesConfig } from "./CohortRulesControls";
+import type { CohortRulesConfig } from "./CohortPricesCard";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
@@ -44,6 +44,12 @@ const EMPTY_VALUES: CohortFormValues = {
   numeroVehiculos: "",
   numeroAulas: "",
 };
+
+const ESTADO_TEXTO = {
+  matricula_abierta: "Matrícula abierta",
+  matricula_cerrada_en_curso: "Matrícula cerrada",
+  terminada: "Terminada",
+} as const;
 
 type FieldErrors = Partial<Record<keyof CohortFormValues, string>>;
 
@@ -222,6 +228,14 @@ export function CohortForm({
   const courseLocked = isEditMode && (alumnos?.total ?? 0) > 0;
   const activeStudents = isEditMode ? (alumnos?.activos ?? 0) : 0;
   const [values, setValues] = useState<CohortFormValues>(initialValues ?? EMPTY_VALUES);
+  const sensitiveChange =
+    Boolean(initialValues) &&
+    (habilitada !== habilitadaInicial ||
+      values.cupoMaximo !== initialValues?.cupoMaximo ||
+      values.fechaInicioMatricula !== initialValues?.fechaInicioMatricula ||
+      values.fechaFinMatricula !== initialValues?.fechaFinMatricula ||
+      values.fechaInicioCurso !== initialValues?.fechaInicioCurso ||
+      values.fechaFinCurso !== initialValues?.fechaFinCurso);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -320,12 +334,15 @@ export function CohortForm({
         saved = await api.patch<{ id: string }>(`/cohorts/${cohortId}`, {
           ...body,
           updatedAt: version,
-          ...(rules.data?.active ? { habilitada, reason: reason.trim() } : {}),
+          ...(rules.data?.active
+            ? { habilitada, ...(reason.trim() ? { reason: reason.trim() } : {}) }
+            : {}),
         });
       } else {
+        // La cohorte nace habilitada y el motivo de creación es automático.
         saved = await api.post<{ id: string }>("/cohorts", {
           ...body,
-          ...(rules.data?.active ? { habilitada, reason: reason.trim() } : {}),
+          ...(rules.data?.active ? { habilitada: true, reason: "Creación de cohorte" } : {}),
         });
       }
       if (
@@ -433,30 +450,12 @@ export function CohortForm({
         </div>
       </Modal>
       {rules.error ? <p role="alert">{rules.error}</p> : null}
-      {rules.data?.active ? (
+      {isEditMode && rules.data?.active ? (
         <>
-          <p>
-            Código: {codigo ?? "Se genera al guardar"} · Estado: {rulesState ?? "Nueva cohorte"}
-            {cierreMatricula ? ` · Cierre: ${cierreMatricula} a las 23:59:59` : ""}
+          <p className="text-xs text-text-secondary">
+            Código {codigo ?? "—"} · {ESTADO_TEXTO[rulesState ?? "matricula_abierta"]}
+            {cierreMatricula ? ` · Cierre de matrícula: ${cierreMatricula} a las 23:59:59` : ""}
           </p>
-          <label>
-            <input
-              type="checkbox"
-              checked={habilitada}
-              disabled={readOnly || isSubmitting}
-              onChange={(e) => setHabilitada(e.target.checked)}
-            />{" "}
-            Habilitada para futuras inscripciones
-          </label>
-          <p>Deshabilitar no quita acceso a quien ya pagó.</p>
-          <Input
-            label="Motivo de la edición"
-            value={reason}
-            maxLength={500}
-            required
-            onChange={(e) => setReason(e.target.value)}
-            disabled={readOnly || isSubmitting}
-          />
           {readOnly ? <p role="status">Cohorte terminada: solo lectura.</p> : null}
           {rulesState === "matricula_cerrada_en_curso" &&
           values.fechaFinCurso !== initialValues?.fechaFinCurso &&
@@ -466,7 +465,6 @@ export function CohortForm({
               también la matrícula?
             </p>
           ) : null}
-          <CohortRulesControls config={rules.data} onUpdated={rules.refetch} />
         </>
       ) : null}
       <fieldset className={styles.section} disabled={Boolean(readOnly)}>
@@ -524,23 +522,24 @@ export function CohortForm({
           <span className={styles.sectionIcon}>
             <CohortIcon name="money" />
           </span>
-          Precios y capacidad
+          {rules.data?.active ? "Capacidad" : "Precios y capacidad"}
         </legend>
         <div className={styles.formGrid}>
-          <Input
-            placeholder="0.00 USD"
-            label={rules.data?.active ? "Precio histórico de cohorte (informativo)" : "Precio"}
-            disabled={Boolean(rules.data?.active)}
-            name="precio"
-            error={fieldErrors.precio}
-            type="number"
-            min={COHORT_LIMITS.precioMin}
-            max={COHORT_LIMITS.precioMax}
-            step={COHORT_LIMITS.precioStep}
-            required={!rules.data?.active}
-            value={rules.data?.active ? values.precio || "0" : values.precio}
-            onChange={(event) => updateField("precio", event.target.value)}
-          />
+          {rules.data?.active ? null : (
+            <Input
+              placeholder="0.00 USD"
+              label="Precio"
+              name="precio"
+              error={fieldErrors.precio}
+              type="number"
+              min={COHORT_LIMITS.precioMin}
+              max={COHORT_LIMITS.precioMax}
+              step={COHORT_LIMITS.precioStep}
+              required
+              value={values.precio}
+              onChange={(event) => updateField("precio", event.target.value)}
+            />
+          )}
           <div className="flex min-w-0 flex-col gap-1">
             <Input
               placeholder="Ej. 20"
@@ -686,6 +685,33 @@ export function CohortForm({
           />
         </div>
       </fieldset>
+
+      {isEditMode && rules.data?.active ? (
+        <fieldset className={styles.section} disabled={Boolean(readOnly)}>
+          <legend>Inscripciones</legend>
+          <label>
+            <input
+              type="checkbox"
+              checked={habilitada}
+              disabled={readOnly || isSubmitting}
+              onChange={(e) => setHabilitada(e.target.checked)}
+            />{" "}
+            Habilitada para futuras inscripciones
+          </label>
+          <p className="text-sm text-text-secondary">
+            Deshabilitar no quita acceso a quien ya pagó.
+          </p>
+          {sensitiveChange ? (
+            <Input
+              label="Motivo del cambio (opcional)"
+              value={reason}
+              maxLength={500}
+              onChange={(e) => setReason(e.target.value)}
+              disabled={readOnly || isSubmitting}
+            />
+          ) : null}
+        </fieldset>
+      ) : null}
 
       {error ? <FormError className={styles.formError}>{error}</FormError> : null}
 
