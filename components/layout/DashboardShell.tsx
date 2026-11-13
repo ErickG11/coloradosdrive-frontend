@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { PracticeBlockProvider } from "@/components/practice-blocks/PracticeBlockProvider";
 
 import { getUserRole } from "@/lib/supabase/getUserRole";
 import { createClient } from "@/lib/supabase/server";
@@ -30,33 +29,28 @@ export async function DashboardShell({
   const hasNotifications = role === "estudiante" || role === "instructor" || role === "admin";
 
   return (
-    <PracticeBlockProvider
-      key={user?.id}
-      enabled={role === "estudiante" && !studentEnrollmentRestricted}
-    >
-      <div className="relative flex min-h-full min-w-0 flex-1 flex-col md:flex-row">
-        <a href="#main-content" className="skip-link">
-          Saltar al contenido
-        </a>
-        <Sidebar
-          email={user?.email ?? null}
-          role={role}
-          studentEnrollmentRestricted={studentEnrollmentRestricted}
-        />
-        <div className="flex min-w-0 flex-1 flex-col">
-          {hasNotifications ? (
-            <header
-              aria-label="Avisos"
-              className="absolute right-16 top-2.5 z-40 flex h-11 items-center md:static md:h-16 md:shrink-0 md:justify-end md:border-b md:border-border md:bg-bg-surface md:px-6"
-            >
-              <NotificationBell key={user?.id} role={role} />
-            </header>
-          ) : null}
-          <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 md:p-6 xl:p-8">
-            <div className="mx-auto w-full min-w-0 max-w-[var(--content-max)]">{children}</div>
-          </main>
-        </div>
+    <div className="relative flex min-h-full min-w-0 flex-1 flex-col md:flex-row">
+      <a href="#main-content" className="skip-link">
+        Saltar al contenido
+      </a>
+      <Sidebar
+        email={user?.email ?? null}
+        role={role}
+        studentEnrollmentRestricted={studentEnrollmentRestricted}
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        {hasNotifications ? (
+          <header
+            aria-label="Avisos"
+            className="absolute right-16 top-2.5 z-40 flex h-11 items-center md:static md:h-16 md:shrink-0 md:justify-end md:border-b md:border-border md:bg-bg-surface md:px-6"
+          >
+            <NotificationBell key={user?.id} role={role} />
+          </header>
+        ) : null}
+        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 md:p-6 xl:p-8">
+          <div className="mx-auto w-full min-w-0 max-w-[var(--content-max)]">{children}</div>
+        </main>
       </div>
-    </PracticeBlockProvider>
+    </div>
   );
 }

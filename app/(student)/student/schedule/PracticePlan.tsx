@@ -13,7 +13,7 @@ export function PracticePlan({
   assignedMinutes,
   remainingPractices,
   practiceStates,
-  remainingChanges,
+  usedChanges,
   invalidPlan,
   loading,
   error,
@@ -23,7 +23,7 @@ export function PracticePlan({
   assignedMinutes: number;
   remainingPractices: number;
   practiceStates: VisualState[];
-  remainingChanges: number | null;
+  usedChanges: number | null;
   invalidPlan: boolean;
   loading: boolean;
   error: string | null;
@@ -137,14 +137,14 @@ export function PracticePlan({
           <div>
             <dt>Reprogramaciones</dt>
             <dd>
-              {remainingChanges !== null ? (
+              {usedChanges !== null ? (
                 <>
                   <span className={styles.pips} aria-hidden="true">
                     {[0, 1].map((index) => (
-                      <i key={index} data-available={index < remainingChanges || undefined} />
+                      <i key={index} data-available={index >= usedChanges || undefined} />
                     ))}
                   </span>
-                  Te quedan {remainingChanges} de 2
+                  {usedChanges} de 2 usadas
                 </>
               ) : (
                 <span className={styles.unknownCount}>
@@ -163,11 +163,12 @@ export function PracticePlan({
       <details className={styles.rules}>
         <summary>Reglas de reprogramación</summary>
         <ul>
-          <li>Hasta 2 reprogramaciones por matrícula.</li>
-          <li>Elige un motivo y explícalo en al menos 10 caracteres.</li>
-          <li>El cambio normal cierra 5 minutos antes de la práctica.</li>
-          <li>El nuevo horario debe estar dentro de la fecha fin de tu plan.</li>
-          <li>No puedes retomar un cupo que tú liberaste.</li>
+          <li>Cada día es un bloque de 1 o 2 horas seguidas con un instructor. Se confirma, se cancela y se cambia completo.</li>
+          <li>Tienes máximo 2 reprogramaciones por matrícula, para siempre. Cada bloque que cancelas o cambias usa una.</li>
+          <li>Si ya usaste las 2, un nuevo aviso se registra como falta: la hora no se repone. Habla con la escuela o con tu instructor en tu siguiente práctica.</li>
+          <li>Reponer un bloque pendiente no usa otra reprogramación. Debe tener la misma duración y modalidad, antes de tu fecha fin, sin cruzarse con otra práctica y con un solo bloque por día en cada matrícula.</li>
+          <li>Si no hay horarios libres para reponer, la hora se pierde y no cuenta como reprogramación.</li>
+          <li>Un bloque que ya empezó no se cancela en la plataforma. Elige un cambio con más de 5 minutos de anticipación.</li>
         </ul>
         <p>La vista previa te explica la consecuencia antes de confirmar.</p>
       </details>

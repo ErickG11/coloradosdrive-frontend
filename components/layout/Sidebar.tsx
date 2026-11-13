@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { PracticeAvailabilityBadge } from "@/components/practice-blocks/PracticeBlockProvider";
 import Image from "next/image";
 import { EnrollmentBrand } from "@/components/inscripcion/EnrollmentVisual";
 import { usePathname } from "next/navigation";
@@ -178,7 +177,6 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
                 Mi curso
               </SidebarLink>
               <SidebarLink
-                indicator={<PracticeAvailabilityBadge />}
                 href="/student/schedule"
                 active={pathname.startsWith("/student/schedule")}
                 section="schedule"
