@@ -1,7 +1,10 @@
 "use client";
 
+import { EnrollmentFlowFrame, FlowStepIcon } from "./EnrollmentFlowFrame";
+import { PasswordGuidance } from "./PasswordGuidance";
+import { EnrollmentIcon } from "./EnrollmentVisual";
+import flowStyles from "./enrollment-flow.module.css";
 import Link from "next/link";
-import { EnrollmentBrand } from "./EnrollmentVisual";
 import visual from "./enrollment-surface.module.css";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -134,116 +137,123 @@ export function CrearContrasena() {
   }
 
   return (
-    <main className={visual.passwordPage}>
-      <div className={`${visual.surface} ${visual.passwordPanel}`}>
-        <EnrollmentBrand />
-        <Card className="flex flex-col gap-5 md:p-8">
-          {view === "loading" ? (
-            <p role="status" className="text-sm text-text-secondary">
-              Cargando…
-            </p>
-          ) : null}
+    <main>
+      <EnrollmentFlowFrame step={1} total={1} student>
+        <div className={visual.surface}>
+          <Card className="flex flex-col gap-5 md:p-8">
+            {view === "loading" ? (
+              <p role="status" className="text-sm text-text-secondary">
+                Cargando…
+              </p>
+            ) : null}
 
-          {view === "ready" && !done ? (
-            <>
-              <header className="flex flex-col gap-2">
+            {view === "ready" && !done ? (
+              <>
+                <header className="flex flex-col gap-3">
+                  <FlowStepIcon step={2} />
+                  <h1 ref={headingRef} tabIndex={-1} className={TITLE_CLASS}>
+                    Crea tu contraseña
+                  </h1>
+                  <p className="text-sm text-text-secondary">
+                    Tu solicitud fue aprobada. Elige una contraseña de al menos {MIN_LENGTH}{" "}
+                    caracteres para entrar a tu cuenta.
+                  </p>
+                </header>
+                <form
+                  onSubmit={(e) => void handleSubmit(e)}
+                  noValidate
+                  className="flex flex-col gap-4"
+                >
+                  <Input
+                    ref={passwordRef}
+                    name="newPassword"
+                    label="Contraseña"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    value={password}
+                    error={passwordError ?? undefined}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setPasswordError(null);
+                    }}
+                  />
+                  <PasswordGuidance value={password} minimum={MIN_LENGTH} />
+                  <Input
+                    name="confirmPassword"
+                    label="Confirmar contraseña"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    value={confirm}
+                    error={confirmError ?? undefined}
+                    onChange={(e) => {
+                      setConfirm(e.target.value);
+                      setConfirmError(null);
+                    }}
+                  />
+                  <FormError>{error}</FormError>
+                  <Button type="submit" isLoading={busy} className="min-h-11">
+                    Crear mi contraseña
+                  </Button>
+                </form>
+              </>
+            ) : null}
+
+            {view === "ready" && done ? (
+              <>
+                <span className={flowStyles.success}>
+                  <EnrollmentIcon name="check" />
+                </span>
                 <h1 ref={headingRef} tabIndex={-1} className={TITLE_CLASS}>
-                  Crea tu contraseña
+                  Contraseña creada
+                </h1>
+                <p role="status" className="text-sm text-text-secondary">
+                  Ya puedes iniciar sesión con tu correo y tu nueva contraseña.
+                </p>
+                <Button
+                  className="min-h-11"
+                  onClick={() => {
+                    router.replace("/login");
+                    router.refresh();
+                  }}
+                >
+                  Iniciar sesión
+                </Button>
+              </>
+            ) : null}
+
+            {view === "expired" || view === "invalid" ? (
+              <>
+                <FlowStepIcon step={2} />
+                <h1 ref={headingRef} tabIndex={-1} className={TITLE_CLASS}>
+                  {view === "expired" ? "Este enlace ya no es válido" : "Enlace no válido"}
                 </h1>
                 <p className="text-sm text-text-secondary">
-                  Tu solicitud fue aprobada. Elige una contraseña de al menos {MIN_LENGTH}{" "}
-                  caracteres para entrar a tu cuenta.
+                  {view === "expired"
+                    ? "El enlace venció o ya fue usado. Los enlaces son de un solo uso."
+                    : "El enlace está incompleto o es incorrecto."}{" "}
+                  Escríbenos para que te enviemos uno nuevo. Si ya creaste tu contraseña, inicia
+                  sesión.
                 </p>
-              </header>
-              <form
-                onSubmit={(e) => void handleSubmit(e)}
-                noValidate
-                className="flex flex-col gap-4"
-              >
-                <Input
-                  ref={passwordRef}
-                  name="newPassword"
-                  label="Contraseña"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={password}
-                  error={passwordError ?? undefined}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setPasswordError(null);
-                  }}
-                />
-                <Input
-                  name="confirmPassword"
-                  label="Confirmar contraseña"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={confirm}
-                  error={confirmError ?? undefined}
-                  onChange={(e) => {
-                    setConfirm(e.target.value);
-                    setConfirmError(null);
-                  }}
-                />
-                <FormError>{error}</FormError>
-                <Button type="submit" isLoading={busy} className="min-h-11">
-                  Crear mi contraseña
-                </Button>
-              </form>
-            </>
-          ) : null}
-
-          {view === "ready" && done ? (
-            <>
-              <h1 ref={headingRef} tabIndex={-1} className={TITLE_CLASS}>
-                Contraseña creada
-              </h1>
-              <p role="status" className="text-sm text-text-secondary">
-                Ya puedes iniciar sesión con tu correo y tu nueva contraseña.
-              </p>
-              <Button
-                className="min-h-11"
-                onClick={() => {
-                  router.replace("/login");
-                  router.refresh();
-                }}
-              >
-                Iniciar sesión
-              </Button>
-            </>
-          ) : null}
-
-          {view === "expired" || view === "invalid" ? (
-            <>
-              <h1 ref={headingRef} tabIndex={-1} className={TITLE_CLASS}>
-                {view === "expired" ? "Este enlace ya no es válido" : "Enlace no válido"}
-              </h1>
-              <p className="text-sm text-text-secondary">
-                {view === "expired"
-                  ? "El enlace venció o ya fue usado. Los enlaces son de un solo uso."
-                  : "El enlace está incompleto o es incorrecto."}{" "}
-                Escríbenos para que te enviemos uno nuevo. Si ya creaste tu contraseña, inicia
-                sesión.
-              </p>
-              <a
-                href={whatsappHref(
-                  "Hola, Colorados Drive. Mi enlace para crear la contraseña no funciona. ¿Me pueden enviar uno nuevo?",
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonClassName("primary", "md", "min-h-11")}
-              >
-                Pedir un enlace nuevo por WhatsApp
-              </a>
-              <Link href="/login" className={buttonClassName("secondary", "md", "min-h-11")}>
-                Iniciar sesión
-              </Link>
-            </>
-          ) : null}
-        </Card>
-      </div>
+                <a
+                  href={whatsappHref(
+                    "Hola, Colorados Drive. Mi enlace para crear la contraseña no funciona. ¿Me pueden enviar uno nuevo?",
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={buttonClassName("primary", "md", "min-h-11")}
+                >
+                  Pedir un enlace nuevo por WhatsApp
+                </a>
+                <Link href="/login" className={buttonClassName("secondary", "md", "min-h-11")}>
+                  Iniciar sesión
+                </Link>
+              </>
+            ) : null}
+          </Card>
+        </div>
+      </EnrollmentFlowFrame>
     </main>
   );
 }
