@@ -213,6 +213,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
             )}
           <StudentTable
             compact={Boolean(selected)}
+            selectedId={selected}
             students={list.data?.items ?? []}
             cohorts={cohorts.data ?? []}
             filterQuery={studentFilterParams(filters).toString()}

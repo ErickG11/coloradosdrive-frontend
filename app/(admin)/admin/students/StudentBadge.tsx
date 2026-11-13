@@ -18,12 +18,16 @@ const labels: Record<string, string> = {
   pendiente: "Pendiente",
   no_aplica: "No aplica",
 };
-export function StudentBadge({ status }: { status: string }) {
-  return <StatusBadge status={status}>{labels[status] ?? status}</StatusBadge>;
-}
-export function ActiveBadge({ active }: { active: boolean }) {
+export function StudentBadge({ status, className }: { status: string; className?: string }) {
   return (
-    <StatusBadge status={active ? "activo" : "inactivo"}>
+    <StatusBadge status={status} className={className}>
+      {labels[status] ?? status}
+    </StatusBadge>
+  );
+}
+export function ActiveBadge({ active, className }: { active: boolean; className?: string }) {
+  return (
+    <StatusBadge status={active ? "activo" : "inactivo"} className={className}>
       {active ? "Activo" : "Inactivo"}
     </StatusBadge>
   );
