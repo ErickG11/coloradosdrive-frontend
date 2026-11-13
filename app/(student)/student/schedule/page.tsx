@@ -13,9 +13,9 @@ import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 import { api } from "@/lib/api/client";
 import type { StudentPracticeSlot } from "@/types";
 import type { PracticeHistoryEnrollment, PracticeHistoryItem } from "@/types/practiceAttendance";
-import type { PracticeBlockMutation, PracticeBlockOption } from "@/types/practiceBlock";
+import type { PracticeBlockOption, PracticeBlockResolution } from "@/types/practiceBlock";
 import { usePracticeBlocks } from "@/components/practice-blocks/PracticeBlockProvider";
-import { BlockDialog, ReplacementDialog, TakeBlockDialog, type AgendaBlock } from "./BlockDialogs";
+import { BlockDialog, TakeBlockDialog, type AgendaBlock } from "./BlockDialogs";
 import { NextPractice, ScheduleAgenda } from "./ScheduleAgenda";
 import { PracticePlan } from "./PracticePlan";
 import { PracticeBadge, ScheduleIcon, ScheduleSkeleton } from "./ScheduleVisual";
@@ -42,7 +42,7 @@ const historyStates: Record<PracticeHistoryItem["estado"], VisualState> = {
   asistio: { label: "Asistió", tone: "complete", icon: "check" },
   no_asistio: { label: "No asistió", tone: "error", icon: "cross" },
   pendiente: { label: "Asistencia pendiente", tone: "neutral", icon: "clock" },
-  liberada: { label: "Pendiente por reponer", tone: "warning", icon: "clock" },
+  liberada: { label: "Hora liberada", tone: "warning", icon: "clock" },
   falta: { label: "Falta", tone: "error", icon: "cross" },
   cancelada: { label: "Cancelada", tone: "neutral", icon: "cross", cancelled: true },
 };
@@ -76,9 +76,8 @@ export default function StudentSchedulePage() {
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
   const [confirmationDue, setConfirmationDue] = useState(false);
   const [noPracticeNotice, setNoPracticeNotice] = useState(false);
-  const [dialog, setDialog] = useState<{ block: AgendaBlock; cancel: boolean } | null>(null);
-  const [take, setTake] = useState<PracticeBlockOption[] | null>(null);
-  const [replacement, setReplacement] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<AgendaBlock | null>(null);
+  const [take, setTake] = useState<PracticeBlockOption | null>(null);
   const [successNotice, setSuccessNotice] = useState("");
   const [currentTime, setCurrentTime] = useState<number | null>(null);
   const [planReload, setPlanReload] = useState(0);
@@ -176,7 +175,6 @@ export default function StudentSchedulePage() {
   })();
   const planSummary = summary?.enrollments.find((item) => item.cohortId === cohortId) ?? null;
   const usedChanges = planSummary?.used ?? null;
-  const pendingBlocks = planSummary?.pending.length ?? 0;
   const releasedLoading = optionsLoading && !options.length;
   const invalidPlan =
     configurationIssue ||
@@ -266,11 +264,7 @@ export default function StudentSchedulePage() {
   }
   const blockOfSlot = (slotId: string) =>
     blocks.find((block) => block.slots.some((slot) => slot.id === slotId));
-  function openDialog(
-    block: PracticeBlock | undefined,
-    cancel: boolean,
-    trigger?: HTMLButtonElement,
-  ) {
+  function openDialog(block: PracticeBlock | undefined, trigger?: HTMLButtonElement) {
     if (trigger) dialogTrigger.current = trigger;
     const agenda = agendaFor(block);
     if (!agenda) {
@@ -278,13 +272,13 @@ export default function StudentSchedulePage() {
       return;
     }
     setActionError(null);
-    setDialog({ block: agenda, cancel });
+    setDialog(agenda);
   }
   async function handleConfirm(slotId: string) {
     const block = blockOfSlot(slotId);
     const agenda = agendaFor(block);
     if (!agenda || !agenda.valid) {
-      openDialog(block, false);
+      openDialog(block);
       return;
     }
     setActionError(null);
@@ -299,28 +293,21 @@ export default function StudentSchedulePage() {
       refreshAll();
     }
   }
-  async function handleDialogDone(result?: PracticeBlockMutation) {
-    const closed = dialog;
+  async function handleDialogDone(result: PracticeBlockResolution) {
     setDialog(null);
     setActionError(null);
-    setSuccessNotice(
-      result
-        ? `Listo, avisamos que no asistirás a este bloque. ${result.effect ?? ""}`.trim()
-        : "Listo, confirmaste tu asistencia. ¡Te esperamos!",
-    );
+    setSuccessNotice(result.effect);
     restoreFocus(dialogTrigger.current);
     refreshAll();
-    if (result?.result === "reprogramable" && closed) setReplacement(closed.block.enrollmentId);
   }
   function chooseOption(group: PracticeBlockOption[], trigger?: HTMLButtonElement) {
     if (trigger) dialogTrigger.current = trigger;
     setActionError(null);
-    setReplacement(null);
-    setTake(group);
+    setTake(group[0]);
   }
   function handleTaken() {
     setTake(null);
-    setSuccessNotice("Listo, tu bloque completo quedó reservado.");
+    setSuccessNotice("Listo, cambiaste tu bloque por el cupo liberado.");
     restoreFocus(dialogTrigger.current);
     refreshAll();
     return Promise.resolve();
@@ -332,7 +319,7 @@ export default function StudentSchedulePage() {
       void handleConfirm(id);
     },
     onCancel: (id: string, trigger: HTMLButtonElement) => {
-      openDialog(blockOfSlot(id), true, trigger);
+      openDialog(blockOfSlot(id), trigger);
     },
   };
 
@@ -517,7 +504,7 @@ export default function StudentSchedulePage() {
                         actions={actions}
                         view={view}
                         focusedDay={focusedDay}
-                        onOptions={(block, trigger) => openDialog(block, false, trigger)}
+                        onOptions={(block, trigger) => openDialog(block, trigger)}
                       />
                     ) : (
                       <p className={styles.emptyAgenda}>
@@ -584,27 +571,14 @@ export default function StudentSchedulePage() {
                   >
                     <h2>Encuentra otro horario</h2>
                     <p className={styles.hint}>
-                      Solo aparecen los cupos liberados por otros alumnos que puedes elegir para tu
-                      plan.
+                      Solo aparecen los cupos liberados por otros alumnos el mismo día de uno de tus
+                      bloques y con tu mismo instructor.
                     </p>
                     {listErrors.length ? (
                       <div className={styles.inlineError}>
                         <p>No pudimos actualizar los cupos que puedes cambiar.</p>
                         <Button variant="ghost" onClick={retry}>
                           Reintentar
-                        </Button>
-                      </div>
-                    ) : null}
-                    {pendingBlocks > 0 && planSummary ? (
-                      <div className={styles.planNotice} role="status">
-                        <ScheduleIcon kind="info" />
-                        <p>
-                          Tienes {pendingBlocks} bloque{pendingBlocks === 1 ? "" : "s"} pendiente
-                          {pendingBlocks === 1 ? "" : "s"} por reponer. Reponerlo no consume otra
-                          reprogramación.
-                        </p>
-                        <Button variant="ghost" onClick={() => setReplacement(planSummary.id)}>
-                          Elegir reposición
                         </Button>
                       </div>
                     ) : null}
@@ -626,18 +600,17 @@ export default function StudentSchedulePage() {
                     ) : (
                       releasedGroups.map((group) => {
                         const option = group[0];
-                        const replenish = option.cost === 0;
                         return (
                           <article
                             className={styles.availableSlot}
-                            data-tone={replenish ? "warning" : "info"}
+                            data-tone="info"
                             key={`${option.enrollmentId}-${option.startsAt}-${option.instructorId}`}
                           >
                             <div>
                               <PracticeBadge
                                 state={{
-                                  label: replenish ? "Pendiente por reponer" : "Cupo disponible",
-                                  tone: replenish ? "warning" : "info",
+                                  label: "Cupo disponible",
+                                  tone: "info",
                                   icon: "clock",
                                 }}
                               />
@@ -652,13 +625,15 @@ export default function StudentSchedulePage() {
                                 {timeLabel(option.startsAt)} – {timeLabel(option.endsAt)}
                               </strong>
                               <p className={styles.hint}>
-                                {option.hours} h · {option.instructorName} ·{" "}
-                                {replenish
-                                  ? "Reponer (sin costo)"
-                                  : "Cambiar (consume 1 reprogramación)"}
+                                {option.hours} h · {option.instructorName}
                               </p>
                               <p className={styles.hint}>
-                                Te quedan {option.remaining + option.cost} de 2 reprogramaciones.
+                                Cambiar tu bloque{" "}
+                                {option.sourceStartsAt
+                                  ? `${timeLabel(option.sourceStartsAt)} – ${timeLabel(Date.parse(option.sourceStartsAt) + option.hours * 3600000)}`
+                                  : ""}{" "}
+                                por {timeLabel(option.startsAt)} – {timeLabel(option.endsAt)} ·
+                                consume 1 reprogramación; te quedará {option.remaining}.
                               </p>
                             </div>
                             <Button
@@ -696,9 +671,8 @@ export default function StudentSchedulePage() {
         )}
         {dialog ? (
           <BlockDialog
-            key={`${dialog.block.enrollmentId}:${dialog.block.date}`}
-            block={dialog.block}
-            startAtCancel={dialog.cancel}
+            key={`${dialog.enrollmentId}:${dialog.date}`}
+            block={dialog}
             onClose={() => {
               setDialog(null);
               restoreFocus(dialogTrigger.current);
@@ -706,22 +680,10 @@ export default function StudentSchedulePage() {
             onDone={handleDialogDone}
           />
         ) : null}
-        {replacement ? (
-          <ReplacementDialog
-            options={options.filter((o) => o.enrollmentId === replacement && o.cost === 0)}
-            loading={optionsLoading}
-            error={optionsError}
-            onChoose={(group) => chooseOption(group)}
-            onRefresh={() => {
-              void availability.refresh();
-            }}
-            onClose={() => setReplacement(null)}
-          />
-        ) : null}
         {take ? (
           <TakeBlockDialog
-            key={take[0].id}
-            choices={take}
+            key={take.id}
+            option={take}
             onClose={() => {
               setTake(null);
               restoreFocus(dialogTrigger.current);

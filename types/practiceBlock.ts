@@ -67,3 +67,31 @@ export interface AdminPracticeAbsence {
     absences: { id: string; date: string; startsAt: string; hours: number }[];
   }[];
 }
+export interface PracticeBlockFreeHour {
+  startsAt: string;
+  endsAt: string;
+  hours: number;
+  instructorId: string;
+  instructorName: string;
+}
+export interface PracticeBlockResolutionPreview {
+  block: PracticeBlock;
+  started: boolean;
+  late: boolean;
+  used: number;
+  remaining: number;
+  canMove: boolean;
+  moveReason: string | null;
+  freeHours: PracticeBlockFreeHour[];
+  effectMove: string;
+  effectAbsence: string;
+}
+export interface PracticeBlockResolution extends Record<string, unknown> {
+  cohortId: string;
+  block: PracticeBlock;
+  action: "mover" | "falta";
+  result: "reprogramado" | "falta";
+  used: number;
+  remaining: number;
+  effect: string;
+}
