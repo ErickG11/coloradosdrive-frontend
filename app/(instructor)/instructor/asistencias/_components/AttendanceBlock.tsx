@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { AttendanceCorrectionDialog } from "@/components/attendance/AttendanceCorrectionDialog";
@@ -6,8 +6,10 @@ import { attendanceLabel, correctionDeadline } from "@/lib/utils/practiceAttenda
 import { formatSchoolTime } from "@/lib/utils/schoolTime";
 import { blockTime, slotEnd, type AgendaBlock, type AgendaSlot } from "../../_lib/instructorAgenda";
 import { CourseTypeBadge } from "../../_components/CourseTypeBadge";
+import { InstructorIcon, StudentAvatar } from "../../_components/InstructorVisuals";
 import { SlotAttendance } from "./SlotAttendance";
 import { correctable, registrable, type Failure } from "../useAttendance";
+import styles from "../attendance.module.css";
 
 export function AttendanceBlock({
   block,
@@ -36,57 +38,114 @@ export function AttendanceBlock({
   const recorded = block.slots.filter((s) => s.attended !== null);
   const canCorrectBlock =
     recorded.length === block.slots.length && recorded.every((s) => correctable(s, now));
+  const hasFailure = block.slots.some((s) => failures[s.id]);
+  const stateLabel = hasFailure
+    ? "Requiere revisión"
+    : recorded.length === block.slots.length
+      ? "Registrada"
+      : pending.length
+        ? "Pendiente"
+        : "Programada";
   return (
     <article
-      className="min-w-0 rounded-md border border-border bg-bg-surface p-4 sm:p-5 [&_button]:!min-h-11"
+      className={styles.block}
+      data-course={first.courseType ?? "unknown"}
+      data-state={
+        hasFailure ? "error" : recorded.length === block.slots.length ? "recorded" : "pending"
+      }
       aria-label={`${first.studentName ?? "Alumno"}, ${blockTime(block)}`}
     >
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="break-words font-semibold">{first.studentName ?? "Alumno"}</h3>
-          <p className="text-sm text-text-secondary">
+      <header className={styles.blockHeader}>
+        <StudentAvatar name={first.studentName} type={first.courseType} />
+        <div className={styles.blockStudent}>
+          <h3>{first.studentName ?? "Alumno"}</h3>
+          <p>
+            <InstructorIcon name="clock" />
             {blockTime(block)} · {block.minutes / 60} h
           </p>
         </div>
-        <CourseTypeBadge type={first.courseType} />
+        <div className={styles.blockBadges}>
+          <CourseTypeBadge type={first.courseType} />
+          <span className={styles.blockStatus}>{stateLabel}</span>
+        </div>
       </header>
-      <ul className="mb-4 divide-y divide-border">
+      <ul className={styles.hours}>
         {block.slots.map((s) => {
           const failure = failures[s.id];
           const ended = slotEnd(s) <= now;
-          const label =
-            Date.parse(s.scheduledAt) > now
+          const label = failure?.uncertain
+            ? "Por verificar"
+            : Date.parse(s.scheduledAt) > now
               ? "Próxima"
               : !ended
                 ? "En curso"
                 : s.status !== "completado"
                   ? "Esperando cierre de la hora"
                   : attendanceLabel(s.attended);
-          const remaining = Math.max(0, correctionDeadline(s.scheduledAt, s.durationMinutes) - now);
+          const remaining = Math.max(
+            0,
+            Math.ceil((correctionDeadline(s.scheduledAt, s.durationMinutes) - now) / 60000),
+          );
+          const remainingText =
+            remaining < 60
+              ? `${remaining} min`
+              : `${Math.floor(remaining / 60)} h${remaining % 60 ? ` ${remaining % 60} min` : ""}`;
           return (
-            <li key={s.id} className="py-3" aria-label={`Hora ${formatSchoolTime(s.scheduledAt)}`}>
-              <div className="flex flex-wrap justify-between gap-2 text-sm">
-                <span>
+            <li
+              key={s.id}
+              className={styles.hour}
+              aria-label={`Hora ${formatSchoolTime(s.scheduledAt)}`}
+              data-attended={s.attended === null ? "pending" : String(s.attended)}
+            >
+              <div className={styles.hourInfo}>
+                <time dateTime={s.scheduledAt}>
                   {formatSchoolTime(s.scheduledAt)} –{" "}
                   {formatSchoolTime(new Date(slotEnd(s)).toISOString())}
+                </time>
+                <span
+                  className={`${styles.stateChip} ${s.attended === true ? styles.assisted : s.attended === false ? styles.missed : styles.pending}`}
+                >
+                  {label}
                 </span>
-                <span>{label}</span>
+                {registrable(s, now) && s.attended !== null ? (
+                  <p className={styles.deadline}>
+                    {correctable(s, now)
+                      ? `Puedes corregir durante ${remainingText} más`
+                      : "Pide la corrección al administrador"}
+                  </p>
+                ) : null}
               </div>
-              {registrable(s, now) && s.attended !== null ? (
-                <p className="mt-1 text-xs text-text-secondary">
-                  {correctable(s, now)
-                    ? `Puedes corregir durante ${Math.ceil(remaining / 60000)} min más`
-                    : "Pide la corrección al administrador"}
-                </p>
+              {(individual || s.attended === null) && registrable(s, now) && !failure ? (
+                <div
+                  className={styles.hourControls}
+                  role="group"
+                  aria-label={`Asistencia de las ${formatSchoolTime(s.scheduledAt)}`}
+                >
+                  <SlotAttendance
+                    slot={s}
+                    compact
+                    disabled={busy}
+                    onSaved={() => {}}
+                    submit={(slot, attended, motivo) => run([slot], attended, motivo)}
+                  />
+                </div>
               ) : null}
               {failure ? (
-                <div className="mt-2 rounded-sm bg-status-error-bg p-3 text-sm text-status-error">
-                  <p role="alert">
-                    {failure.message} Hora {formatSchoolTime(s.scheduledAt)} sin guardar.
-                  </p>
+                <div className={styles.failure}>
+                  <div>
+                    <InstructorIcon name="alert" />
+                    <p role="alert">
+                      <strong>
+                        {failure.uncertain
+                          ? "Resultado por verificar"
+                          : `Hora ${formatSchoolTime(s.scheduledAt)} sin guardar`}
+                      </strong>
+                      <span>{failure.message}</span>
+                    </p>
+                  </div>
                   <Button
                     variant="secondary"
-                    className="mt-2 !min-h-11"
+                    className="!min-h-11"
                     disabled={busy}
                     onClick={() =>
                       void run([failure.slot], failure.attended, failure.motivo, failure.uncertain)
@@ -96,60 +155,60 @@ export function AttendanceBlock({
                   </Button>
                 </div>
               ) : null}
-              {individual && registrable(s, now) && !failure ? (
-                <div className="mt-3">
-                  <SlotAttendance
-                    slot={s}
-                    onSaved={() => {}}
-                    submit={(slot, attended, motivo) => run([slot], attended, motivo)}
-                  />
-                </div>
-              ) : null}
             </li>
           );
         })}
       </ul>
-      <div className="flex flex-wrap gap-2">
-        {pending.length ? (
-          <>
-            <Button className="!min-h-11" disabled={busy} onClick={() => void run(pending, true)}>
-              Asistió
-            </Button>
+      <footer className={styles.blockActions}>
+        <div className={styles.primaryActions}>
+          {pending.length ? (
+            <>
+              <Button className="!min-h-11" disabled={busy} onClick={() => void run(pending, true)}>
+                <InstructorIcon name="check" />
+                Marcar asistió
+              </Button>
+              <Button
+                variant="secondary"
+                className="!min-h-11"
+                disabled={busy}
+                onClick={() => void run(pending, false)}
+              >
+                Marcar no asistió
+              </Button>
+            </>
+          ) : null}
+          {canCorrectBlock ? (
             <Button
               variant="secondary"
               className="!min-h-11"
               disabled={busy}
-              onClick={() => void run(pending, false)}
+              onClick={() => setCorrecting(true)}
             >
-              No asistió
+              Corregir bloque
             </Button>
-          </>
-        ) : null}
-        {canCorrectBlock ? (
+          ) : null}
+        </div>
+        {block.slots.some(
+          (s) => registrable(s, now) && (s.attended === null || correctable(s, now)),
+        ) ? (
           <Button
             variant="secondary"
             className="!min-h-11"
             disabled={busy}
-            onClick={() => setCorrecting(true)}
+            aria-expanded={individual}
+            onClick={() => setIndividual(!individual)}
           >
-            Corregir bloque
+            Ajustar por hora
           </Button>
         ) : null}
-        <Button
-          variant="ghost"
-          className="!min-h-11"
-          disabled={busy}
-          aria-expanded={individual}
-          onClick={() => setIndividual(!individual)}
-        >
-          Ajustar por hora
-        </Button>
-      </div>
+      </footer>
       {correcting ? (
         <AttendanceCorrectionDialog
           title="Corregir asistencia del bloque"
           current={
-            recorded.every((s) => s.attended === recorded[0].attended) ? recorded[0].attended : null
+            recorded.length && recorded.every((s) => s.attended === recorded[0].attended)
+              ? recorded[0].attended
+              : null
           }
           next={null}
           endpoint=""

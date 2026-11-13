@@ -320,15 +320,21 @@
   }
 }
 
-[data-course="A"] {
+.avatar[data-course="A"],
+.blockCard[data-course="A"],
+.nextPractice[data-course="A"] {
   --course-ink: var(--color-status-info);
   --course-bg: var(--color-status-info-bg);
 }
-[data-course="B"] {
+.avatar[data-course="B"],
+.blockCard[data-course="B"],
+.nextPractice[data-course="B"] {
   --course-ink: var(--color-status-success);
   --course-bg: var(--color-status-success-bg);
 }
-[data-course="unknown"] {
+.avatar[data-course="unknown"],
+.blockCard[data-course="unknown"],
+.nextPractice[data-course="unknown"] {
   --course-ink: var(--color-text-secondary);
   --course-bg: var(--color-bg-sunken);
 }

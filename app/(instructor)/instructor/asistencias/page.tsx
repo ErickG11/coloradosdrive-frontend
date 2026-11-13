@@ -1,12 +1,14 @@
-"use client";
+﻿"use client";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, EmptyState, Input } from "@/components/ui";
 import { addDays, dayKey } from "@/lib/utils/calendar";
 import { parseSchoolDateKey, schoolCalendarDate } from "@/lib/utils/schoolTime";
-import { buildAgendaBlocks, formatDayLabel } from "../_lib/instructorAgenda";
+import { buildAgendaBlocks, formatDayLabel, type AgendaBlock } from "../_lib/instructorAgenda";
+import { InstructorIcon } from "../_components/InstructorVisuals";
 import { AttendanceBlock } from "./_components/AttendanceBlock";
 import { registrable, useAttendance } from "./useAttendance";
+import styles from "./attendance.module.css";
 
 export default function AttendancePage() {
   return (
@@ -18,28 +20,33 @@ export default function AttendancePage() {
 function AttendanceWorkspace() {
   const params = useSearchParams();
   const fecha = params?.get("fecha") ?? null;
+  const linkedFrom = params?.get("desde") ?? null;
+  const linkedTo = params?.get("hasta") ?? null;
+  const rangeKey = `${fecha}|${linkedFrom}|${linkedTo}`;
   const today = schoolCalendarDate(new Date());
   const initial = parseSchoolDateKey(fecha);
-  const [from, setFrom] = useState(() => dayKey(initial ?? addDays(today, -6)));
-  const [to, setTo] = useState(() => dayKey(initial ?? today));
+  const [from, setFrom] = useState(() =>
+    dayKey(parseSchoolDateKey(linkedFrom) ?? initial ?? addDays(today, -6)),
+  );
+  const [to, setTo] = useState(() => dayKey(parseSchoolDateKey(linkedTo) ?? initial ?? today));
   const [tab, setTab] = useState("Pendientes");
   const [search, setSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
-  const applied = useRef(fecha);
+  const applied = useRef(rangeKey);
   const status = useRef<HTMLParagraphElement>(null);
   const span = (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000 + 1;
   const valid = !!parseSchoolDateKey(from) && !!parseSchoolDateKey(to) && span >= 1 && span <= 60;
   const state = useAttendance(from, to, valid);
   useEffect(() => {
-    if (applied.current !== fecha) {
-      applied.current = fecha;
-      const date = parseSchoolDateKey(fecha);
-      if (date) {
-        setFrom(dayKey(date));
-        setTo(dayKey(date));
-      }
+    if (applied.current === rangeKey) return;
+    applied.current = rangeKey;
+    const start = parseSchoolDateKey(linkedFrom) ?? parseSchoolDateKey(fecha);
+    const end = parseSchoolDateKey(linkedTo) ?? parseSchoolDateKey(fecha);
+    if (start && end) {
+      setFrom(dayKey(start));
+      setTo(dayKey(end));
     }
-  }, [fecha]);
+  }, [rangeKey, linkedFrom, linkedTo, fecha]);
   useEffect(() => {
     const refresh = () => setNow(Date.now());
     const timer = window.setInterval(refresh, 30000);
@@ -66,6 +73,17 @@ function AttendanceWorkspace() {
     totals.filter((s) => s.attended === true).length,
     totals.filter((s) => s.attended === false).length,
   ];
+  const total = totals.length;
+  const tabCounts = [
+    counts[0],
+    counts[1] + counts[2],
+    state.slots.filter((s) => s.studentId !== null).length,
+  ];
+  const hasData = valid && !state.loading && !state.error;
+  const priority = (b: AgendaBlock) =>
+    b.slots.some((s) => state.failures[s.id] || (registrable(s, now) && s.attended === null))
+      ? 0
+      : 1;
   const filtered = blocks
     .filter(
       (b) =>
@@ -79,107 +97,206 @@ function AttendanceWorkspace() {
         b.slots.some((s) => state.failures[s.id]) ||
         tab === "Todas" ||
         (tab === "Pendientes"
-          ? b.slots.some((s) => s.attended === null)
+          ? b.slots.some((s) => registrable(s, now) && s.attended === null)
           : b.slots.some((s) => s.attended !== null)),
-    );
-  const dates = [...new Set(filtered.map((b) => b.date))].sort().reverse();
+    )
+    .sort((a, b) => priority(a) - priority(b) || Date.parse(a.startsAt) - Date.parse(b.startsAt));
+  const dates = [...new Set(filtered.map((b) => b.date))].sort(
+    (a, b) =>
+      Math.min(...filtered.filter((x) => x.date === a).map(priority)) -
+        Math.min(...filtered.filter((x) => x.date === b).map(priority)) || b.localeCompare(a),
+  );
+  function shortcut(days: number) {
+    const date = schoolCalendarDate(new Date());
+    setFrom(dayKey(addDays(date, 1 - days)));
+    setTo(dayKey(date));
+  }
   return (
-    <div className="flex min-w-0 flex-col gap-5">
-      <header>
-        <h1 className="font-display text-2xl font-bold">Asistencias</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Registro por hora, organizado por bloques · Hora de Ecuador
-        </p>
+    <div className={styles.workspace}>
+      <header className={styles.header}>
+        <div>
+          <h1>Asistencias</h1>
+          <p>Tu registro de prácticas, hora por hora.</p>
+        </div>
+        <span className={styles.timezone}>
+          <InstructorIcon name="clock" />
+          America/Guayaquil
+        </span>
       </header>
-      <dl aria-label="Resumen del rango" className="grid gap-3 sm:grid-cols-3">
+      <dl aria-label="Resumen del rango" className={styles.metrics} aria-busy={state.loading}>
         {["Pendientes", "Asistidas", "Faltas"].map((label, i) => (
-          <div key={label} className="rounded-md border border-border bg-bg-surface p-4">
-            <dt className="text-sm text-text-secondary">{label}</dt>
-            <dd className="mt-1 text-2xl font-semibold">
-              {counts[i]} <span className="text-xs font-normal">horas</span>
+          <div
+            key={label}
+            className={`${styles.metric} ${[styles.pending, styles.assisted, styles.missed][i]}`}
+          >
+            <dt>
+              <InstructorIcon name={i === 0 ? "clock" : i === 1 ? "check" : "alert"} />
+              {label}
+            </dt>
+            <dd>
+              {hasData ? counts[i] : "—"}
+              <span>horas</span>
             </dd>
+            <div
+              role="progressbar"
+              aria-label={`Proporción de ${label.toLocaleLowerCase("es")}`}
+              aria-valuenow={hasData ? counts[i] : 0}
+              aria-valuemin={0}
+              aria-valuemax={Math.max(1, total)}
+              aria-valuetext={
+                hasData ? `${counts[i]} de ${total} horas terminadas` : "Sin datos disponibles"
+              }
+              className={styles.progress}
+            >
+              <span
+                style={{
+                  width: `${hasData && total ? (counts[i] / total) * 100 : 0}%`,
+                }}
+              />
+            </div>
           </div>
         ))}
       </dl>
-      <fieldset disabled={state.busy} className="grid min-w-0 gap-3 sm:grid-cols-3">
-        <legend className="sr-only">Filtrar asistencias</legend>
-        <Input
-          label="Desde"
-          type="date"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          className="!min-h-11"
-        />
-        <Input
-          label="Hasta"
-          type="date"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          className="!min-h-11"
-        />
-        <Input
-          label="Buscar alumno"
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="!min-h-11"
-        />
-      </fieldset>
-      {!valid ? <p role="alert">Selecciona un rango válido de 1 a 60 días.</p> : null}
-      <div role="group" aria-label="Estado de asistencia" className="flex flex-wrap gap-2">
-        {["Pendientes", "Registradas", "Todas"].map((label) => (
-          <Button
-            key={label}
-            variant={tab === label ? "primary" : "secondary"}
+      <div className={styles.filterBar}>
+        <div role="group" aria-label="Estado de asistencia" className={styles.tabs}>
+          {["Pendientes", "Registradas", "Todas"].map((label, i) => (
+            <Button
+              key={label}
+              variant="ghost"
+              className="!min-h-11"
+              aria-label={label}
+              aria-describedby={`attendance-tab-count-${i}`}
+              disabled={state.busy}
+              aria-pressed={tab === label}
+              onClick={() => setTab(label)}
+            >
+              {label}
+              <span aria-hidden="true">{hasData ? tabCounts[i] : "—"}</span>
+              <span id={`attendance-tab-count-${i}`} className="sr-only">
+                {hasData ? `${tabCounts[i]} horas` : "Sin datos disponibles"}
+              </span>
+            </Button>
+          ))}
+        </div>
+        <fieldset disabled={state.busy} className={styles.dateFields}>
+          <legend className="sr-only">Rango de fechas</legend>
+          <Input
+            label="Desde"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
             className="!min-h-11"
+          />
+          <span aria-hidden="true">–</span>
+          <Input
+            label="Hasta"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="!min-h-11"
+          />
+        </fieldset>
+        <div role="group" aria-label="Atajos de fechas" className={styles.shortcuts}>
+          {[
+            [1, "Hoy"],
+            [7, "7 días"],
+            [30, "30 días"],
+          ].map(([days, label]) => (
+            <Button
+              key={days}
+              variant="ghost"
+              className="!min-h-11"
+              disabled={state.busy}
+              onClick={() => shortcut(Number(days))}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+        <div className={styles.search}>
+          <InstructorIcon name="search" />
+          <Input
+            label="Buscar alumno"
+            type="search"
+            placeholder="Buscar alumno…"
             disabled={state.busy}
-            aria-pressed={tab === label}
-            onClick={() => setTab(label)}
-          >
-            {label}
-          </Button>
-        ))}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="!min-h-11"
+          />
+        </div>
       </div>
-      <p role="status" tabIndex={-1} ref={status} className="text-sm text-text-secondary">
+      {!valid ? (
+        <p role="alert" className={styles.rangeError}>
+          Selecciona un rango válido de 1 a 60 días.
+        </p>
+      ) : null}
+      <p
+        role="status"
+        tabIndex={-1}
+        ref={status}
+        className={styles.result}
+        data-visible={state.busy || !!state.message}
+        data-tone={
+          state.busy
+            ? "saving"
+            : state.outcome?.failed
+              ? state.outcome.saved
+                ? "warning"
+                : "error"
+              : "success"
+        }
+      >
         {state.busy ? "Guardando por hora…" : state.message}
       </p>
       {valid && state.loading ? (
-        <div role="status">
+        <div role="status" className={styles.loading}>
           Cargando asistencias…
-          <div aria-hidden="true" className="mt-3 grid gap-3">
+          <div aria-hidden="true" className={styles.skeletons}>
             {[0, 1].map((i) => (
-              <div key={i} className="h-32 rounded-md border border-border bg-bg-sunken" />
+              <div key={i}>
+                <span />
+                <span />
+                <span />
+              </div>
             ))}
           </div>
         </div>
       ) : null}
       {valid && state.error ? (
-        <div role="alert">
+        <div role="alert" className={styles.error}>
+          <InstructorIcon name="alert" />
           <p>{state.error}</p>
-          <Button variant="secondary" className="mt-2 !min-h-11" onClick={() => void state.load()}>
+          <Button variant="secondary" className="!min-h-11" onClick={() => void state.load()}>
             Reintentar
           </Button>
         </div>
       ) : null}
       {valid && state.blocksFailed ? (
-        <p className="text-sm text-status-warning">
+        <p className={styles.fallback}>
           No se pudieron agrupar los bloques. Se muestran las horas por separado.
         </p>
       ) : null}
       {valid && !state.loading && !state.error && !filtered.length ? (
         <EmptyState
           title="Todo al día"
-          description="No hay asistencias que coincidan con estos filtros."
+          description="No hay horas pendientes con estos filtros. Puedes revisar las registradas o consultar otro rango."
         />
       ) : null}
       {valid && !state.loading && !state.error
-        ? dates.map((date) => (
-            <section key={date} aria-label={date} className="min-w-0">
-              <h2 className="mb-3 font-semibold">{formatDayLabel(parseSchoolDateKey(date)!)}</h2>
-              <div className="grid gap-3">
-                {filtered
-                  .filter((b) => b.date === date)
-                  .map((block) => (
+        ? dates.map((date) => {
+            const dayBlocks = filtered.filter((b) => b.date === date);
+            return (
+              <section key={date} aria-label={date} className={styles.day}>
+                <header className={styles.dayHeader}>
+                  <h2>{formatDayLabel(parseSchoolDateKey(date)!)}</h2>
+                  <span>
+                    {dayBlocks.length} {dayBlocks.length === 1 ? "bloque" : "bloques"} ·{" "}
+                    {dayBlocks.reduce((n, b) => n + b.minutes / 60, 0)} h
+                  </span>
+                </header>
+                <div className={styles.blockList}>
+                  {dayBlocks.map((block) => (
                     <AttendanceBlock
                       key={block.id}
                       block={block}
@@ -189,9 +306,10 @@ function AttendanceWorkspace() {
                       run={state.run}
                     />
                   ))}
-              </div>
-            </section>
-          ))
+                </div>
+              </section>
+            );
+          })
         : null}
     </div>
   );

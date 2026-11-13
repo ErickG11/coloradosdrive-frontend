@@ -11,15 +11,20 @@ import {
   correctionWindowMessage,
 } from "@/lib/utils/practiceAttendance";
 import type { PracticeSlot, PracticeSlotWithNames } from "@/types";
+import styles from "../attendance.module.css";
 
 export function SlotAttendance({
   slot,
   onSaved,
   submit,
+  compact = false,
+  disabled = false,
 }: {
   slot: PracticeSlotWithNames;
   onSaved: (slot: PracticeSlot) => void;
   submit?: (slot: PracticeSlotWithNames, attended: boolean, motivo?: string) => Promise<void>;
+  compact?: boolean;
+  disabled?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,7 +54,7 @@ export function SlotAttendance({
     setSaved(true);
   }
   async function save(attended: boolean) {
-    if (busy.current) return;
+    if (busy.current || disabled) return;
     busy.current = true;
     setSaving(true);
     setError(null);
@@ -78,16 +83,30 @@ export function SlotAttendance({
   }
   return (
     <div className="flex flex-col gap-2">
-      <p role={saved ? "status" : undefined} className="text-sm text-text-secondary">
-        {saved ? "Asistencia guardada: " : "Asistencia: "}
-        {attendanceLabel(slot.attended)}
-      </p>
-      {slot.attended === null || (editing && canCorrect) ? (
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" disabled={saving} onClick={() => choose(true)}>
+      {!compact || saved ? (
+        <p role={saved ? "status" : undefined} className="text-sm text-text-secondary">
+          {saved ? "Asistencia guardada: " : "Asistencia: "}
+          {attendanceLabel(slot.attended)}
+        </p>
+      ) : null}
+      {slot.attended === null || (editing && canCorrect) || (compact && canCorrect) ? (
+        <div className={compact ? styles.segmented : "flex flex-wrap gap-2"}>
+          <Button
+            size="sm"
+            variant={compact ? "ghost" : "primary"}
+            aria-pressed={compact ? slot.attended === true : undefined}
+            disabled={saving || disabled}
+            onClick={() => choose(true)}
+          >
             Asistió
           </Button>
-          <Button size="sm" variant="secondary" disabled={saving} onClick={() => choose(false)}>
+          <Button
+            size="sm"
+            variant={compact ? "ghost" : "secondary"}
+            aria-pressed={compact ? slot.attended === false : undefined}
+            disabled={saving || disabled}
+            onClick={() => choose(false)}
+          >
             No asistió
           </Button>
           {editing ? (

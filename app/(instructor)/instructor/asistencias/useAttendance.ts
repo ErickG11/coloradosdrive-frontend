@@ -33,6 +33,7 @@ export function useAttendance(from: string, to: string, valid: boolean) {
   const [failures, setFailures] = useState<Record<string, Failure>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [outcome, setOutcome] = useState<{ saved: number; failed: number } | null>(null);
   const lock = useRef(false);
   const generation = useRef(0);
   const path = valid
@@ -43,6 +44,8 @@ export function useAttendance(from: string, to: string, valid: boolean) {
     const version = ++generation.current;
     setLoading(true);
     setError("");
+    setMessage("");
+    setOutcome(null);
     try {
       const [rows, groups] = await Promise.all([
         api.get<AgendaSlot[]>(path),
@@ -170,9 +173,22 @@ export function useAttendance(from: string, to: string, valid: boolean) {
     }
     lock.current = false;
     setBusy(false);
+    setOutcome({ saved, failed });
     setMessage(
-      `${saved} hora(s) guardada(s); ${failed} hora(s) sin guardar. Revisa el resultado de cada hora.`,
+      `${saved} ${saved === 1 ? "hora guardada" : "horas guardadas"}. ${failed ? `${failed} ${failed === 1 ? "hora requiere" : "horas requieren"} revisión.` : "Todo quedó guardado."}`,
     );
   }
-  return { slots, definitions, loading, error, blocksFailed, failures, busy, message, load, run };
+  return {
+    slots,
+    definitions,
+    loading,
+    error,
+    blocksFailed,
+    failures,
+    busy,
+    message,
+    outcome,
+    load,
+    run,
+  };
 }
