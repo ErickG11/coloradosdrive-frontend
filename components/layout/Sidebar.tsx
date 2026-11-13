@@ -168,13 +168,19 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
             <>
               <SidebarLink
                 href="/student/course"
-                active={
-                  pathname.startsWith("/student/exams") || pathname.startsWith("/student/course")
-                }
+                active={pathname.startsWith("/student/course")}
                 section="content"
                 onClick={closeDrawer}
               >
                 Mi curso
+              </SidebarLink>
+              <SidebarLink
+                href="/student/exams"
+                active={pathname.startsWith("/student/exams")}
+                section="exams"
+                onClick={closeDrawer}
+              >
+                Exámenes
               </SidebarLink>
               <SidebarLink
                 href="/student/schedule"
@@ -199,6 +205,14 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
                 onClick={closeDrawer}
               >
                 Mi historial de asistencia
+              </SidebarLink>
+              <SidebarLink
+                href="/student/change-password"
+                active={pathname.startsWith("/student/change-password")}
+                section="security"
+                onClick={closeDrawer}
+              >
+                Cambiar contraseña
               </SidebarLink>
             </>
           )}

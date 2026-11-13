@@ -6,10 +6,15 @@ export function studentCohortPath(studentId: string, enrollmentId: string) {
   return `/admin/estudiantes/${studentId}/matriculas/${enrollmentId}`;
 }
 
-export function assignStudentCohort(studentId: string, enrollmentId: string, cohortId: string) {
+export function assignStudentCohort(
+  studentId: string,
+  enrollmentId: string,
+  cohortId: string,
+  motivo: string,
+) {
   return api.post<StudentCohortResult>(
     `${studentCohortPath(studentId, enrollmentId)}/asignar-cohorte`,
-    { cohortId },
+    { cohortId, motivo },
   );
 }
 
@@ -34,6 +39,7 @@ export function studentCohortError(error: unknown) {
   };
   const uncertain = code === "UNCONFIRMED" || !(error instanceof ApiError) || error.status === 503;
   return {
+    code,
     message: uncertain ? messages.UNCONFIRMED : (code && messages[code]) || error.message,
     refreshOptions: code === "COHORT_CHANGED",
     blocked:
