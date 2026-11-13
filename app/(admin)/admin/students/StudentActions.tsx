@@ -109,25 +109,12 @@ export function StudentActions({
   }
   return (
     <>
-      <details
-        className="relative"
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            event.stopPropagation();
-            event.currentTarget.open = false;
-            event.currentTarget.querySelector("summary")?.focus();
-          }
-        }}
-      >
-        <summary
-          aria-label="Más acciones del alumno"
-          title="Más"
-          className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-sm border border-border text-xl"
-        >
-          ⋯
-        </summary>
-        <div className="absolute right-0 z-20 mt-2 grid w-64 gap-2 rounded-md border border-border bg-bg-surface p-3 shadow-elevated">
+      <section className="grid gap-3 border-t border-border pt-6" aria-label="Gestionar cuenta">
+        <h3 className="font-display text-lg font-semibold">Gestionar cuenta</h3>
+        <p className="text-sm text-text-secondary">
+          Desactivar es reversible. Eliminar borra definitivamente la cuenta y sus datos.
+        </p>
+        <div className="flex flex-wrap gap-3">
           <Button
             variant="secondary"
             disabled={disabled || busy || deletionPending}
@@ -149,7 +136,7 @@ export function StudentActions({
             </Link>
           )}
         </div>
-      </details>
+      </section>
       <Modal
         isOpen={action !== null}
         onClose={close}

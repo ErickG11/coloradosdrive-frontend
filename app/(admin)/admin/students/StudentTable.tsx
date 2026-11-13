@@ -19,7 +19,9 @@ export function StudentTable({
   filtered = false,
   onClear,
   onOpen,
+  compact = false,
 }: {
+  compact?: boolean;
   students: AdminStudent[];
   cohorts: Cohort[];
   filterQuery: string;
@@ -183,6 +185,7 @@ export function StudentTable({
               ["ficha", "Ficha", "eye"],
               ["matriculas", "Matrículas", "enrollments"],
               ["documentos", "Documentos", "document"],
+              ["editar", "Editar", "edit"],
             ] as const
           ).map(([view, label, icon]) => (
             <Link
@@ -196,44 +199,17 @@ export function StudentTable({
               <StudentIcon name={icon} />
             </Link>
           ))}
-          <details
-            className="relative"
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                event.stopPropagation();
-                event.currentTarget.open = false;
-                event.currentTarget.querySelector("summary")?.focus();
-              }
-            }}
-          >
-            <summary
-              aria-label={`Más acciones de ${student.nombreCompleto}`}
-              title="Más"
-              className={`${styles.iconButton} cursor-pointer list-none`}
-            >
-              ⋯
-            </summary>
-            <div className="absolute right-0 z-20 grid w-52 gap-1 rounded-md border border-border bg-bg-surface p-2 shadow-elevated">
-              <Link
-                className="rounded-sm px-3 py-2 text-sm hover:bg-bg-sunken"
-                href={href(student)}
-                onClick={(event) => {
-                  event.currentTarget.closest("details")?.removeAttribute("open");
-                  onOpen?.(event, student.id, "ficha");
-                }}
-              >
-                Gestionar cuenta
-              </Link>
-            </div>
-          </details>
         </div>
       ),
     },
   ];
   return (
     <DataTable
-      columns={columns}
+      columns={
+        compact
+          ? columns.filter((column) => !["cedula", "phone", "requirements"].includes(column.key))
+          : columns
+      }
       rows={students}
       getRowKey={(student) => student.id}
       caption="Alumnos y matrículas coincidentes"

@@ -500,7 +500,24 @@ export function StudentDetail({
               ))}
             </div>
           ) : null}
-          {!assigning ? (
+          {!assigning && view === "editar" ? (
+            <div className="grid gap-6">
+              <StudentEditForm
+                student={data}
+                onBusyChange={setSaving}
+                onDeletionPending={() => setDeletionPending(true)}
+                onCancel={() => onClose?.()}
+                onReload={refetch}
+                onSaved={() => {
+                  setSuccess(true);
+                  refetch();
+                  onChanged?.();
+                }}
+              />
+              {accountActions}
+            </div>
+          ) : null}
+          {!assigning && view !== "editar" ? (
             <div
               id="student-profile-panel"
               role={view === "ficha" ? "tabpanel" : undefined}
@@ -644,6 +661,15 @@ export function StudentDetail({
   if (!embedded) return content;
   return (
     <SidePanel
+      context={
+        view === "editar"
+          ? "EDITAR ALUMNO"
+          : view === "matriculas"
+            ? "MATRÍCULAS"
+            : view === "documentos"
+              ? "DOCUMENTOS"
+              : "FICHA DEL ALUMNO"
+      }
       className={styles.page}
       title={data?.nombreCompleto ?? "Alumno"}
       avatar={data ? <StudentAvatar student={data} /> : undefined}
@@ -660,31 +686,6 @@ export function StudentDetail({
           <>
             <ActiveBadge active={data.activo} />
             {data.status ? <StudentBadge status={data.status} /> : null}
-            <span className="text-sm text-text-secondary">
-              {view === "matriculas"
-                ? "Matrículas"
-                : view === "documentos"
-                  ? "Documentos"
-                  : "Ficha del alumno"}
-            </span>
-          </>
-        ) : undefined
-      }
-      actions={
-        data && !assigning ? (
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={actionBusy || deletionPending || confirmingIdentity || attendanceBusy}
-              onClick={() => {
-                setSuccess(false);
-                setEditing(true);
-              }}
-            >
-              Editar
-            </Button>
-            {accountActions}
           </>
         ) : undefined
       }

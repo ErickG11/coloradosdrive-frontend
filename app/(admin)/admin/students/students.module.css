@@ -802,3 +802,47 @@
 .page[data-panel-open="true"] .main {
   visibility: visible;
 }
+
+/* C11: columna complementaria, compacta y sin ocultar la tabla. */
+@media (min-width: 1024px) {
+  .page[data-panel-open="true"] .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(480px, 40vw, 540px);
+  }
+  .page[data-panel-open="true"] .main {
+    padding-inline: 16px;
+  }
+  .page[data-panel-open="true"] .filters {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .page[data-panel-open="true"] .filters > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .page[data-panel-open="true"] .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .page[data-panel-open="true"] :global(.data-table) table {
+    table-layout: fixed;
+  }
+  .page[data-panel-open="true"] :global(.data-table) :is(th, td) {
+    padding: 10px 6px;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .page[data-panel-open="true"] .courseBadges {
+    min-width: 0;
+  }
+  .page[data-panel-open="true"] .studentIdentity {
+    flex-wrap: wrap;
+  }
+  .page[data-panel-open="true"] .iconButton {
+    width: 30px;
+    min-width: 30px;
+  }
+  .page[data-panel-open="true"] .main :is(select, summary) {
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
