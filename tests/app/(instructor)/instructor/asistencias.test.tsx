@@ -4,10 +4,8 @@ import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import Page from "@/app/(instructor)/instructor/asistencias/page";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import { confirmarIdentidadPresencial } from "@/lib/api/inscripcion";
 import type { PracticeSlotWithNames } from "@/types";
 vi.mock("@/lib/api/client", () => ({ api: { get: vi.fn(), patch: vi.fn() } }));
-vi.mock("@/lib/api/inscripcion", () => ({ confirmarIdentidadPresencial: vi.fn() }));
 const query = vi.hoisted(() => ({ value: "" }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(query.value) }));
 const base: PracticeSlotWithNames = {
@@ -204,18 +202,14 @@ describe("Asistencias con cron simulado", () => {
     await user.type(screen.getByLabelText("Desde"), "2025-01-01");
     expect(screen.getByRole("alert")).toHaveTextContent("1 a 60 días");
   });
-  it("permite confirmar cédula antes del fin sin ofrecer asistencia futura ni en curso", async () => {
+  it("no ofrece asistencia futura ni en curso", async () => {
     query.value = "fecha=2026-03-10";
     vi.setSystemTime(new Date("2026-03-10T15:30:00Z"));
-    rows = rows.map((s) => ({ ...s, status: "confirmado", identidadPresencialPendiente: true }));
-    const user = userEvent.setup();
+    rows = rows.map((s) => ({ ...s, status: "confirmado" }));
     render(<Page />);
     expect(await screen.findByText("En curso")).toBeInTheDocument();
     expect(screen.getByText("Próxima")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Asistió" })).not.toBeInTheDocument();
-    await user.click(screen.getByLabelText("Confirmé la cédula original"));
-    await user.click(screen.getByRole("button", { name: "Guardar confirmación" }));
-    expect(confirmarIdentidadPresencial).toHaveBeenCalledTimes(1);
     expect(api.patch).not.toHaveBeenCalled();
   });
 });

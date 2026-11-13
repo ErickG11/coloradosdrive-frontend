@@ -73,11 +73,6 @@ export function AgendaBlockDetail({
           </li>
         ))}
       </ul>
-      {block.identityPending ? (
-        <Link href={attendanceHref(block.date, block.id)} className={`${styles.identityLink} mb-4`}>
-          Primer día: confirmar cédula
-        </Link>
-      ) : null}
       {hasEndedHour(block, now) ? (
         <Link
           href={attendanceHref(block.date, block.id)}

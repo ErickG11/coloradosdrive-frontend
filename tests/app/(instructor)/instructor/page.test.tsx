@@ -174,21 +174,16 @@ describe("calendario semanal y detalle", () => {
     expect(trigger).toHaveFocus();
   });
 
-  it("no ofrece asistencia en horas futuras ni controles para guardar; deja la insignia de cédula", async () => {
+  it("no ofrece asistencia en horas futuras ni controles para guardar", async () => {
     slotsOnce([
       {
         ...slot,
         status: "confirmado",
-        identidadPresencialPendiente: true,
       } as PracticeSlotWithNames,
     ]);
     const user = userEvent.setup();
     render(<InstructorPage />);
     await screen.findByRole("article");
-    expect(screen.getByRole("link", { name: "Primer día: confirmar cédula" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("/instructor/asistencias?fecha=2026-03-10"),
-    );
     await user.click(screen.getByRole("button", { name: /Ver bloque de Ana/ }));
     expect(screen.queryByRole("link", { name: "Ir a asistencias" })).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();

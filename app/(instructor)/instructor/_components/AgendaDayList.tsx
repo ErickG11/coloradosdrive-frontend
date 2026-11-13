@@ -45,11 +45,6 @@ export function AgendaBlockCard({
         </span>
         <CourseTypeBadge type={first.courseType} />
       </button>
-      {block.identityPending ? (
-        <Link className={styles.identityLink} href={attendanceHref(block.date, block.id)}>
-          Primer día: confirmar cédula
-        </Link>
-      ) : null}
       {!compact && hasEndedHour(block, now) ? (
         <Link className={styles.attendanceLink} href={attendanceHref(block.date, block.id)}>
           Ir a asistencias <span aria-hidden="true">→</span>

@@ -13,7 +13,7 @@ export const STATUS_LABELS: Record<PracticeSlotStatus, string> = {
   completado: "Realizada",
   sin_practica: "Sin alumno",
 };
-export type AgendaSlot = PracticeSlotWithNames & { identidadPresencialPendiente?: boolean };
+export type AgendaSlot = PracticeSlotWithNames;
 export type BlockDefinition = { id: string; slotIds: string[] };
 export type AgendaBlock = {
   id: string;
@@ -23,7 +23,6 @@ export type AgendaBlock = {
   endsAt: string;
   minutes: number;
   status: PracticeSlotStatus;
-  identityPending: boolean;
 };
 
 export function readBlocks(value: unknown): BlockDefinition[] | null {
@@ -122,9 +121,6 @@ export function buildAgendaBlocks(
         endsAt: new Date(end).toISOString(),
         minutes: (end - Date.parse(first.scheduledAt)) / 60_000,
         status,
-        identityPending: group.some(
-          (slot) => slot.studentId !== null && slot.identidadPresencialPendiente === true,
-        ),
       };
     })
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));

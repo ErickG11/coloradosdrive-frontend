@@ -7,7 +7,6 @@ import { formatSchoolTime } from "@/lib/utils/schoolTime";
 import { blockTime, slotEnd, type AgendaBlock, type AgendaSlot } from "../../_lib/instructorAgenda";
 import { CourseTypeBadge } from "../../_components/CourseTypeBadge";
 import { SlotAttendance } from "./SlotAttendance";
-import { IdentidadPresencialControl } from "./IdentidadPresencialControl";
 import { correctable, registrable, type Failure } from "../useAttendance";
 
 export function AttendanceBlock({
@@ -37,7 +36,6 @@ export function AttendanceBlock({
   const recorded = block.slots.filter((s) => s.attended !== null);
   const canCorrectBlock =
     recorded.length === block.slots.length && recorded.every((s) => correctable(s, now));
-  const identity = block.slots.find((s) => s.identidadPresencialPendiente);
   return (
     <article
       className="min-w-0 rounded-md border border-border bg-bg-surface p-4 sm:p-5 [&_button]:!min-h-11"
@@ -52,11 +50,6 @@ export function AttendanceBlock({
         </div>
         <CourseTypeBadge type={first.courseType} />
       </header>
-      {identity ? (
-        <div className="mb-4 rounded-sm bg-status-warning-bg p-3">
-          <IdentidadPresencialControl key={identity.studentId} slot={identity} />
-        </div>
-      ) : null}
       <ul className="mb-4 divide-y divide-border">
         {block.slots.map((s) => {
           const failure = failures[s.id];

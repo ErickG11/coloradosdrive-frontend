@@ -79,7 +79,7 @@ function AttendanceWorkspace() {
         b.slots.some((s) => state.failures[s.id]) ||
         tab === "Todas" ||
         (tab === "Pendientes"
-          ? b.identityPending || b.slots.some((s) => s.attended === null)
+          ? b.slots.some((s) => s.attended === null)
           : b.slots.some((s) => s.attended !== null)),
     );
   const dates = [...new Set(filtered.map((b) => b.date))].sort().reverse();

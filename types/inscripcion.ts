@@ -421,8 +421,3 @@ export interface EstadoInscripcionAlumno {
   diasRestantes: number | null;
   identidadPresencial: { confirmada: boolean; confirmadaAt: string | null } | null;
 }
-
-export interface IdentidadPresencialInput {
-  cedulaOriginalVista: true;
-  certificadoOriginalVisto?: boolean;
-}
