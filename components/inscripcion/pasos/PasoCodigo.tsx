@@ -52,6 +52,7 @@ export function PasoCodigo({
   const [solicitudPendiente, setSolicitudPendiente] = useState<string | null>(null);
   const bloqueo = useRef(false);
   const campoRef = useRef<HTMLInputElement>(null);
+  const campos = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     if (espera <= 0) return;
@@ -133,7 +134,9 @@ export function PasoCodigo({
 
   function alPegar(event: ClipboardEvent<HTMLInputElement>) {
     event.preventDefault();
-    setCodigo(soloDigitos(event.clipboardData.getData("text")));
+    const pasted = soloDigitos(event.clipboardData.getData("text"));
+    setCodigo(pasted);
+    campos.current[Math.min(pasted.length, 5)]?.focus();
     setErrorCodigo("");
   }
 
@@ -143,26 +146,54 @@ export function PasoCodigo({
         Si <strong>{correo.trim()}</strong> puede inscribirse, recibirás un código de 6 dígitos. Si
         no llega en unos minutos, revisa tu carpeta de spam.
       </p>
-      <Input
-        ref={campoRef}
-        label="Código de verificación"
-        value={codigo}
-        onChange={(e) => {
-          setCodigo(soloDigitos(e.target.value));
-          setErrorCodigo("");
-        }}
-        onPaste={alPegar}
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        maxLength={LONGITUD_CODIGO}
-        className={styles.codeInput}
-        disabled={solicitudPendiente !== null}
-        error={errorCodigo || undefined}
-        aria-describedby="codigo-ayuda"
-        helpId="codigo-ayuda"
-        help="Puedes pegar el código completo."
-        required
-      />
+      <fieldset aria-describedby="codigo-ayuda">
+        <legend className="mb-3 text-sm font-semibold">Código de verificación</legend>
+        <div className={styles.otp}>
+          {Array.from({ length: LONGITUD_CODIGO }, (_, index) => (
+            <Input
+              key={index}
+              ref={(element) => {
+                campos.current[index] = element;
+                if (index === 0) campoRef.current = element;
+              }}
+              aria-label={`Dígito ${index + 1} del código`}
+              value={codigo[index] ?? ""}
+              onChange={(event) => {
+                const value = soloDigitos(event.target.value);
+                setCodigo(
+                  value.length > 1
+                    ? value
+                    : soloDigitos(codigo.slice(0, index) + value + codigo.slice(index + 1)),
+                );
+                setErrorCodigo("");
+                if (value) campos.current[Math.min(index + 1, 5)]?.focus();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Backspace" && !codigo[index] && index > 0)
+                  campos.current[index - 1]?.focus();
+                if (event.key === "ArrowLeft" && index > 0) campos.current[index - 1]?.focus();
+                if (event.key === "ArrowRight" && index < 5) campos.current[index + 1]?.focus();
+              }}
+              onPaste={alPegar}
+              inputMode="numeric"
+              autoComplete={index === 0 ? "one-time-code" : "off"}
+              maxLength={6}
+              disabled={solicitudPendiente !== null || ocupado}
+              aria-invalid={Boolean(errorCodigo)}
+              required
+            />
+          ))}
+        </div>
+        <p id="codigo-ayuda" className="mt-3 text-sm text-text-secondary">
+          Puedes pegar el código completo.
+        </p>
+        {errorCodigo ? (
+          <p role="alert" className="mt-2 text-sm text-status-error">
+            {errorCodigo}
+          </p>
+        ) : null}
+      </fieldset>
+
       {aviso ? (
         <p role="status" className={`${styles.notice} ${styles.noticeSuccess}`}>
           {aviso}
@@ -174,7 +205,7 @@ export function PasoCodigo({
           {errorGeneral}
         </p>
       ) : null}
-      <div className={styles.actions}>
+      <div data-flow-actions className={styles.actions}>
         <Button type="submit" isLoading={ocupado}>
           {solicitudPendiente ? "Reintentar" : "Verificar código"}
         </Button>

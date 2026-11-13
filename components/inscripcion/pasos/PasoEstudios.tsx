@@ -1,4 +1,5 @@
 "use client";
+import { EnrollmentIcon } from "../EnrollmentVisual";
 import { useId, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { Button } from "@/components/ui/Button";
@@ -235,6 +236,9 @@ export function PasoEstudios({
                 onChange={() => elegirNivel(opcion.nivel)}
                 aria-describedby={`${id}-${opcion.nivel}`}
               />
+              <span className="h-7 w-7 shrink-0 text-brand-ink">
+                <EnrollmentIcon name="study" />
+              </span>
               <div>
                 <strong>{opcion.titulo}</strong>
                 <span id={`${id}-${opcion.nivel}`}>{opcion.ayuda}</span>
@@ -361,6 +365,19 @@ export function PasoEstudios({
                   type="button"
                   variant="ghost"
                   disabled={ocupado}
+                  onClick={() => {
+                    setArchivo(null);
+                    setErrorArchivo("");
+                  }}
+                >
+                  Quitar archivo
+                </Button>
+              ) : null}
+              {archivo?.estado === "error" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={ocupado}
                   onClick={() => void subir(archivo.preparado)}
                 >
                   Reintentar
@@ -377,7 +394,7 @@ export function PasoEstudios({
       ) : null}
 
       <FormError>{errorGeneral}</FormError>
-      <div className={formStyles.stepActions}>
+      <div data-flow-actions className={formStyles.stepActions}>
         <Button
           type="button"
           onClick={() => void continuar()}

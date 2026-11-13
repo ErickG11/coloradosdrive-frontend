@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 
+import { EnrollmentIcon } from "../EnrollmentVisual";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/inscripcion/EnrollmentField";
 import { FormError } from "@/components/ui/FormError";
@@ -82,33 +83,46 @@ export function PasoCorreo({
 
   return (
     <form className={styles.form} onSubmit={enviar} noValidate>
-      <Input
-        ref={campoRef}
-        label="Correo electrónico"
-        type="email"
-        autoComplete="email"
-        inputMode="email"
-        maxLength={254}
-        value={correo}
-        onChange={(e) => {
-          onCorreoChange(e.target.value);
-          setErrorCampo("");
-        }}
-        onBlur={() => {
-          if (correo.trim() && !correoValido(correo)) {
-            setErrorCampo("Ingresa un correo electrónico válido de hasta 254 caracteres.");
-          }
-        }}
-        error={errorCampo || undefined}
-        aria-describedby="correo-ayuda"
-        helpId="correo-ayuda"
-        help="Te enviaremos un código de 6 dígitos para confirmar que el correo es tuyo."
-        required
-      />
+      <div className="relative">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-10 h-5 w-5 text-text-secondary"
+        >
+          <EnrollmentIcon name="mail" />
+        </span>
+        <Input
+          className="pr-12"
+          ref={campoRef}
+          label="Correo electrónico"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          maxLength={254}
+          value={correo}
+          onChange={(e) => {
+            onCorreoChange(e.target.value);
+            setErrorCampo("");
+          }}
+          onBlur={() => {
+            if (correo.trim() && !correoValido(correo)) {
+              setErrorCampo("Ingresa un correo electrónico válido de hasta 254 caracteres.");
+            }
+          }}
+          error={errorCampo || undefined}
+          aria-describedby="correo-ayuda"
+          helpId="correo-ayuda"
+          help="Te enviaremos un código de 6 dígitos para confirmar que el correo es tuyo."
+          required
+        />
+      </div>
+      <p className="rounded-sm bg-bg-sunken p-3 text-xs leading-relaxed text-text-secondary">
+        Solo usaremos tu correo para verificar tu solicitud y avisarte cómo avanza. No compartas tu
+        código.
+      </p>
       <CaptchaSlot />
       {derivar ? <ContactoWhatsApp /> : null}
       <FormError>{errorEnvio}</FormError>
-      <div className={styles.actions}>
+      <div data-flow-actions className={styles.actions}>
         <Button type="button" variant="ghost" disabled={enviando} onClick={onVolver}>
           Volver a requisitos
         </Button>

@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 
 import { EnrollmentCheckbox } from "../EnrollmentCheckbox";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/inscripcion/EnrollmentField";
+import { EnrollmentIcon } from "../EnrollmentVisual";
 import type { InscripcionConfig } from "@/types/inscripcion";
 
 import { ContactoWhatsApp } from "../ContactoWhatsApp";
@@ -34,7 +34,7 @@ export function PasoRequisitos({
   const [errorCurso, setErrorCurso] = useState("");
   const [incumplidas, setIncumplidas] = useState<Casilla[]>([]);
   const avisoRef = useRef<HTMLDivElement>(null);
-  const cursoRef = useRef<HTMLSelectElement>(null);
+  const cursoRef = useRef<HTMLInputElement>(null);
 
   const curso = config.cursos.find((item) => item.id === courseId);
 
@@ -63,26 +63,42 @@ export function PasoRequisitos({
 
   return (
     <form className={styles.form} onSubmit={continuar} noValidate>
-      <Select
-        ref={cursoRef}
-        label="Curso"
-        value={courseId}
-        onChange={(e) => {
-          onCourseChange(e.target.value);
-          setMarcadas({ edad: false, estudios: false, documentos: false });
-          setErrorCurso("");
-          setIncumplidas([]);
-        }}
-        error={errorCurso || undefined}
-        required
-      >
-        <option value="">Selecciona un curso</option>
-        {config.cursos.map((item) => (
-          <option key={item.id} value={item.id}>
-            Tipo {item.tipo} — {item.nombre}
-          </option>
-        ))}
-      </Select>
+      <fieldset>
+        <legend className="mb-3 text-sm font-semibold">Elige tu curso</legend>
+        <div className={styles.courseChoices}>
+          {config.cursos.map((item, index) => (
+            <label key={item.id} className={styles.courseChoice}>
+              <span className="flex items-center justify-between gap-2">
+                <span className="h-9 w-9 text-brand-ink">
+                  <EnrollmentIcon name={item.tipo === "A" ? "moto" : "car"} />
+                </span>
+                <input
+                  ref={index === 0 ? cursoRef : undefined}
+                  type="radio"
+                  name="curso"
+                  value={item.id}
+                  checked={courseId === item.id}
+                  required
+                  onChange={() => {
+                    onCourseChange(item.id);
+                    setMarcadas({ edad: false, estudios: false, documentos: false });
+                    setErrorCurso("");
+                    setIncumplidas([]);
+                  }}
+                />
+              </span>
+              <strong>{item.tipo === "A" ? "Motocicletas" : "Vehículos livianos"}</strong>
+              <span className="text-sm">Tipo {item.tipo}</span>
+              <p>{item.edadMinima} años cumplidos · Décimo año aprobado</p>
+            </label>
+          ))}
+        </div>
+        {errorCurso ? (
+          <p role="alert" className="mt-2 text-sm text-status-error">
+            {errorCurso}
+          </p>
+        ) : null}
+      </fieldset>
 
       <fieldset className={styles.requirementList}>
         <legend className="sr-only">Confirma que cumples los requisitos</legend>
@@ -100,7 +116,9 @@ export function PasoRequisitos({
               <span className={styles.requirementCopy}>
                 <span className="font-medium">
                   {casilla === "edad"
-                    ? `Edad mínima: ${curso?.edadMinima ?? "—"} años cumplidos`
+                    ? curso
+                      ? `Edad mínima: ${curso.edadMinima} años cumplidos`
+                      : "Elige un curso para consultar la edad mínima"
                     : casilla === "estudios"
                       ? "Estudios mínimos: décimo año aprobado"
                       : "Puedo llevar mis documentos originales a la escuela"}
@@ -150,7 +168,7 @@ export function PasoRequisitos({
         </div>
       ) : null}
 
-      <div className={styles.actions}>
+      <div data-flow-actions className={styles.actions}>
         <Button type="submit">Continuar</Button>
       </div>
     </form>

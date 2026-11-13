@@ -1,11 +1,8 @@
 "use client";
-import { EnrollmentActionLink } from "@/components/inscripcion/EnrollmentActionLink";
 
-import { EnrollmentBrand } from "./EnrollmentVisual";
-import visual from "./enrollment-surface.module.css";
+import { EnrollmentFlowFrame, FlowStepIcon } from "./EnrollmentFlowFrame";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -204,65 +201,65 @@ export function InscripcionWizard({ initialCourseId = "" }: { initialCourseId?: 
   }
 
   return (
-    <main className={`${styles.page} ${visual.surface} ${visual.publicPage}`}>
-      <div className={styles.top}>
-        <EnrollmentBrand />
-        <EnrollmentActionLink href="/">Volver al inicio</EnrollmentActionLink>
-        <ThemeToggle />
-      </div>
-      <header>
-        <span className={styles.eyebrow}>Colorados Drive</span>
-        <h1 className={styles.title}>Solicitar inscripción</h1>
-        {config?.demo ? (
-          <StatusBadge status="demo" tone="warning" label="Modo demostración" />
-        ) : null}
-      </header>
-
-      {config === null ? (
-        errorConfig ? (
-          <Card className={styles.panel}>
-            <FormError>{errorConfig}</FormError>
-            <div className={styles.actions}>
-              <Button
-                onClick={() => {
-                  setErrorConfig("");
-                  setIntento((n) => n + 1);
-                }}
-              >
-                Reintentar
-              </Button>
-            </div>
-          </Card>
-        ) : (
-          <p role="status">Cargando información de inscripción…</p>
-        )
-      ) : cerrado ? (
-        <Card
-          className={styles.panel}
-          title={
-            <span ref={tituloRef} tabIndex={-1} className={styles.panelTitle}>
-              Inscripciones cerradas
-            </span>
-          }
-        >
-          <InscripcionesCerradas />
-        </Card>
-      ) : (
-        <>
-          <IndicadorPasos paso={paso} />
+    <main>
+      <EnrollmentFlowFrame step={paso + 1}>
+        <header>
+          <h1 className={styles.title}>Solicitar inscripción</h1>
+          {config?.demo ? (
+            <StatusBadge status="demo" tone="warning" label="Modo demostración" />
+          ) : null}
+        </header>
+        {config === null ? (
+          errorConfig ? (
+            <Card className={styles.panel}>
+              <FormError>{errorConfig}</FormError>
+              <div className={styles.actions}>
+                <Button
+                  onClick={() => {
+                    setErrorConfig("");
+                    setIntento((n) => n + 1);
+                  }}
+                >
+                  Reintentar
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <p role="status">Cargando información de inscripción…</p>
+          )
+        ) : cerrado ? (
           <Card
             className={styles.panel}
             title={
               <span ref={tituloRef} tabIndex={-1} className={styles.panelTitle}>
-                {TITULOS[paso]}
+                Inscripciones cerradas
               </span>
             }
           >
-            <p className={styles.help}>{AYUDAS[paso]}</p>
-            {renderPaso(config)}
+            <InscripcionesCerradas />
           </Card>
-        </>
-      )}
+        ) : (
+          <>
+            <IndicadorPasos
+              paso={paso}
+              onNavigate={irAPaso}
+              minStep={solicitudId ? PRIMER_PASO_VERIFICADO : 0}
+            />
+            <Card
+              key={paso}
+              className={styles.panel}
+              title={
+                <span ref={tituloRef} tabIndex={-1} className={styles.panelTitle}>
+                  <FlowStepIcon step={paso} /> {TITULOS[paso]}
+                </span>
+              }
+            >
+              <p className={styles.help}>{AYUDAS[paso]}</p>
+              {renderPaso(config)}
+            </Card>
+          </>
+        )}
+      </EnrollmentFlowFrame>
     </main>
   );
 }

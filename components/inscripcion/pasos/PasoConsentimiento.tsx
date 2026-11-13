@@ -187,7 +187,7 @@ export function PasoConsentimiento({
       </fieldset>
 
       <FormError>{errorGeneral}</FormError>
-      <div className={styles.actions}>
+      <div data-flow-actions className={styles.actions}>
         {yaAceptado ? (
           <Button type="button" variant="secondary" onClick={onAvanzar} disabled={enviando}>
             Continuar sin cambios
