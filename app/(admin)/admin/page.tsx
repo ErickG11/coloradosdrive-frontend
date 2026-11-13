@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { RecentPracticeAbsences } from "@/components/admin-dashboard/RecentPracticeAbsences";
 
 import { AdminDashboard } from "@/components/admin-dashboard/AdminDashboard";
 
@@ -31,5 +32,10 @@ export default async function AdminPage({
     new Date(`${params.day}T12:00:00Z`).toISOString().slice(0, 10) === params.day;
   const day =
     validDay && params.day ? params.day : month === today.slice(0, 7) ? today : `${month}-01`;
-  return <AdminDashboard month={month} day={day} today={today} />;
+  return (
+    <>
+      <AdminDashboard month={month} day={day} today={today} />
+      <RecentPracticeAbsences />
+    </>
+  );
 }

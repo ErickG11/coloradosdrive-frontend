@@ -1,4 +1,5 @@
 "use client";
+import { StudentAbsences } from "./StudentAbsences";
 import { EnrollmentAdminControls } from "@/components/student-enrollment/EnrollmentAdminControls";
 import Link from "next/link";
 import { AdminPlanChangePanel } from "@/components/student-enrollment/AdminPlanChangePanel";
@@ -163,12 +164,15 @@ export function StudentProfile({
         </>
       ) : null}
       {show("practices") ? (
-        <StudentSchedule
-          key={student.id}
-          schedule={student.practiceSchedule}
-          onAttendanceChanged={onAttendanceChanged}
-          onBusyChange={onAttendanceBusyChange}
-        />
+        <>
+          <StudentAbsences studentId={student.id} />
+          <StudentSchedule
+            key={student.id}
+            schedule={student.practiceSchedule}
+            onAttendanceChanged={onAttendanceChanged}
+            onBusyChange={onAttendanceBusyChange}
+          />
+        </>
       ) : null}
       {show("enrollments") || show("documents") ? (
         <>

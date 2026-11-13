@@ -14,7 +14,7 @@ import styles from "./blocks.module.css";
 function optionGroups(options: PracticeBlockOption[]) {
   const groups = new Map<string, PracticeBlockOption[]>();
   for (const option of options) {
-    const key = `${option.enrollmentId}:${option.startsAt}:${option.instructorId}`;
+    const key = `${option.enrollmentId}:${option.startsAt}:${option.instructorId}:${option.hours}`;
     groups.set(key, [...(groups.get(key) ?? []), option]);
   }
   return [...groups.values()];
