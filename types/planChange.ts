@@ -25,7 +25,7 @@ export interface PlanChangePreview {
 }
 export interface PlanChangeCalendar {
   serverNow: string;
-  dias: { fecha: string; disponible: boolean; motivo?: string | null }[];
+  dias: import("@/components/student-enrollment/PlanFields").PlanCalendarDay[];
 }
 export interface AdminReassignmentSource {
   active: boolean;

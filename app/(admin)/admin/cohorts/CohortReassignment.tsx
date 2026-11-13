@@ -5,7 +5,7 @@ import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import type { CohortDetail, Cohort, Course } from "@/types";
 import type { AdminReassignmentSource, BulkReassignmentResult } from "@/types/planChange";
-import type { StudentScheduleSelection } from "@/types/studentSchedule";
+import type { StudentPlanRules, StudentScheduleSelection } from "@/types/studentSchedule";
 import { SchedulePlanView } from "@/components/student-enrollment/SchedulePlanView";
 
 type Row = StudentScheduleSelection & { cohortId: string; enrollmentId: string; updatedAt: string };
@@ -20,7 +20,7 @@ export function CohortReassignment({
 }) {
   const source = useFetch<AdminReassignmentSource>(`/cohorts/${cohort.id}/reasignacion`);
   const targets = useFetch<Cohort[]>("/cohorts");
-  const limits = useFetch<{ endHour?: number }>("/admin/manual-enrollments/rules");
+  const limits = useFetch<StudentPlanRules>("/admin/manual-enrollments/rules");
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false),
@@ -130,7 +130,7 @@ export function CohortReassignment({
                         updatedAt: e.updatedAt,
                         cohortId: "",
                         modalidad: "entre_semana",
-                        horasPorDia: 3,
+                        horasPorDia: 0,
                         horaInicio: 6,
                         fechaInicio: e.practiceStartDate ?? "",
                       },
@@ -172,7 +172,20 @@ export function CohortReassignment({
                 <Select
                   label={`Modalidad de ${e.studentName}`}
                   value={rows[e.id].modalidad}
-                  onChange={(v) => change(e.id, { modalidad: v.target.value as Row["modalidad"] })}
+                  onChange={(v) => {
+                    const modalidad = v.target.value as Row["modalidad"];
+                    const options =
+                      limits.data?.options.filter(
+                        (o) => o.habilitada && o.modalidad === modalidad,
+                      ) ?? [];
+                    change(e.id, {
+                      modalidad,
+                      horasPorDia:
+                        modalidad === "fin_de_semana" && options.length === 1
+                          ? options[0].horasPorDia
+                          : 0,
+                    });
+                  }}
                 >
                   <option value="entre_semana">Entre semana</option>
                   <option value="fin_de_semana">Fin de semana</option>
@@ -182,11 +195,14 @@ export function CohortReassignment({
                   value={rows[e.id].horasPorDia}
                   onChange={(v) => change(e.id, { horasPorDia: Number(v.target.value) })}
                 >
-                  {[1, 2, 3, 4, 5, 6].map((h) => (
-                    <option key={h} value={h}>
-                      {h}
-                    </option>
-                  ))}
+                  <option value={0}>Seleccione…</option>
+                  {limits.data?.options
+                    .filter((o) => o.habilitada && o.modalidad === rows[e.id].modalidad)
+                    .map((o) => (
+                      <option key={o.horasPorDia} value={o.horasPorDia}>
+                        {o.horasPorDia}
+                      </option>
+                    ))}
                 </Select>
                 <Input
                   label={`Hora inicial de ${e.studentName}`}
@@ -207,7 +223,7 @@ export function CohortReassignment({
           disabled={
             !payload.changes.length ||
             !reason.trim() ||
-            payload.changes.some((r) => !r.cohortId || !r.fechaInicio)
+            payload.changes.some((r) => !r.cohortId || !r.fechaInicio || !r.horasPorDia)
           }
           onClick={() => void send(false)}
         >

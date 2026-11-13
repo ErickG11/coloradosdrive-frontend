@@ -1,5 +1,5 @@
 "use client";
-import { ScheduleDurationTable } from "@/components/student-enrollment/ScheduleDurationTable";
+import { PlanFields, type PlanCalendarDay } from "@/components/student-enrollment/PlanFields";
 import type { StudentPlanRules } from "@/types/studentSchedule";
 import styles from "./enrollment.module.css";
 import { WizardIcon } from "./WizardVisual";
@@ -30,6 +30,8 @@ export function StepPracticas({
   onBack: () => void;
   onNext: (p: PracticeChoice) => void;
 }) {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null);
   const [rules, setRules] = useState<StudentPlanRules | null>(null);
   const [resolved, setResolved] = useState<PracticeChoice["resolved"]>(value?.resolved);
   useEffect(() => {
@@ -50,14 +52,79 @@ export function StepPracticas({
   const [plan, setPlan] = useState<PracticePlan | null>(null);
   const [suggestion, setSuggestion] = useState<SugerirPracticaResult | null>(null);
   const [instructor, setInstructor] = useState<InstructorSugerido | null>(null);
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState<string | null>(null);
+
   const version = useRef(0);
+  const [month, setMonth] = useState("");
+  const [calendar, setCalendar] = useState<{
+    key: string;
+    dias: PlanCalendarDay[];
+    error?: string;
+  } | null>(null);
+  const minDate = rules?.serverNow
+    ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(
+        new Date(rules.serverNow),
+      )
+    : new Date().toISOString().slice(0, 10);
+  const shownMonth = month || minDate.slice(0, 7);
+  const calendarKey =
+    rules?.active && form.horasPorDia
+      ? `${course.courseTipo}|${shownMonth}|${form.modalidad}|${form.horasPorDia}`
+      : null;
+  useEffect(() => {
+    if (!calendarKey) return;
+    const abort = new AbortController();
+    void api
+      .post<{ dias: PlanCalendarDay[] }>(
+        `${BASE}/calendar`,
+        {
+          courseType: course.courseTipo,
+          fechaInicio: `${shownMonth}-01`,
+          modalidad: form.modalidad,
+          horasPorDia: form.horasPorDia,
+        },
+        { signal: abort.signal, cache: "no-store" },
+      )
+      .then((r) => {
+        if (!abort.signal.aborted) {
+          setCalendar({ key: calendarKey, dias: r.dias });
+          const selected = r.dias.find((d) => d.fecha === form.fechaInicio);
+          if (selected && !selected.disponible)
+            setForm((current) =>
+              current.fechaInicio === form.fechaInicio &&
+              current.horasPorDia === form.horasPorDia &&
+              current.modalidad === form.modalidad
+                ? { ...current, fechaInicio: "", horaDeseada: "" }
+                : current,
+            );
+          else if (
+            selected?.horas &&
+            form.horaDeseada &&
+            !selected.horas.some((h) => h.hora === form.horaDeseada && h.factible)
+          )
+            setForm((current) =>
+              current.horaDeseada === form.horaDeseada ? { ...current, horaDeseada: "" } : current,
+            );
+        }
+      })
+      .catch((e) => {
+        if (!abort.signal.aborted)
+          setCalendar({
+            key: calendarKey,
+            dias: [],
+            error: e instanceof Error ? e.message : "No se pudo consultar el calendario.",
+          });
+      });
+    return () => abort.abort();
+    // La clave incluye todas las entradas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calendarKey]);
+  const currentCalendar = calendar?.key === calendarKey ? calendar : null;
   const horasError = horasPorDiaError(form.horasPorDia);
   // Se consulta la misma regla del servidor para automático y manual. Se
   // descartan respuestas antiguas cuando el usuario modifica el borrador.
   useEffect(() => {
-    if (!form.fechaInicio || (form.manual && !form.fechaFin) || horasError) return;
+    if (!form.fechaInicio || !form.horaDeseada || (form.manual && !form.fechaFin) || horasError)
+      return;
     let stale = false;
     const t = setTimeout(() => {
       api
@@ -124,7 +191,7 @@ export function StepPracticas({
   return (
     <div className={styles.practiceStep}>
       <p>Planificación civil: America/Guayaquil. Cada bloque dura 60 minutos.</p>
-      {rules?.active ? <ScheduleDurationTable rules={rules} /> : null}
+
       {!course.rulesActive && (
         <Select
           name="semanas"
@@ -139,41 +206,82 @@ export function StepPracticas({
           ))}
         </Select>
       )}
-      <Select
-        name="modalidad"
-        label="Modalidad"
-        value={form.modalidad}
-        onChange={(e) => change("modalidad", e.target.value as PracticeFormData["modalidad"])}
-      >
-        <option value="entre_semana">Entre semana (L–V)</option>
-        <option value="fin_de_semana">Fin de semana (S–D)</option>
-      </Select>
-      <Input
-        name="fechaInicio"
-        label="Fecha de inicio"
-        type="date"
-        value={form.fechaInicio}
-        onChange={(e) => change("fechaInicio", e.target.value)}
-      />
-      <Input
-        name="horaDeseada"
-        label="Hora deseada"
-        type="time"
-        max={`${String((rules?.endHour ?? 22) - Number(form.horasPorDia || 1)).padStart(2, "0")}:00`}
-        value={form.horaDeseada}
-        onChange={(e) => change("horaDeseada", e.target.value)}
-      />
-      <Input
-        name="horasPorDia"
-        label="Horas por día"
-        type="number"
-        required
-        min={1}
-        max={6}
-        value={form.horasPorDia}
-        error={horasError ?? undefined}
-        onChange={(e) => change("horasPorDia", e.target.value === "" ? "" : Number(e.target.value))}
-      />
+      {course.rulesActive ? (
+        <>
+          <PlanFields
+            rules={rules ?? undefined}
+            value={{
+              modalidad: form.modalidad,
+              horasPorDia: Number(form.horasPorDia) || 0,
+              fechaInicio: form.fechaInicio,
+              horaInicio: form.horaDeseada ? Number(form.horaDeseada.slice(0, 2)) : -1,
+            }}
+            onChange={(next) => {
+              ++version.current;
+              setForm((f) => ({
+                ...f,
+                modalidad: next.modalidad,
+                horasPorDia: next.horasPorDia || "",
+                fechaInicio: next.fechaInicio,
+                horaDeseada:
+                  next.horaInicio < 0 ? "" : `${String(next.horaInicio).padStart(2, "0")}:00`,
+              }));
+              setPlan(null);
+              setSuggestion(null);
+              setResolved(undefined);
+              setInstructor(null);
+              setError(null);
+            }}
+            month={shownMonth}
+            onMonth={setMonth}
+            minDate={minDate}
+            days={currentCalendar?.dias ?? []}
+            hours={currentCalendar?.dias.find((d) => d.fecha === form.fechaInicio)?.horas ?? []}
+            disabled={busy}
+            loading={Boolean(calendarKey && !currentCalendar)}
+          />
+          {currentCalendar?.error ? <p role="alert">{currentCalendar.error}</p> : null}
+        </>
+      ) : (
+        <>
+          <Select
+            name="modalidad"
+            label="Modalidad"
+            value={form.modalidad}
+            onChange={(e) => change("modalidad", e.target.value as PracticeFormData["modalidad"])}
+          >
+            <option value="entre_semana">Entre semana (L–V)</option>
+            <option value="fin_de_semana">Fin de semana (S–D)</option>
+          </Select>
+          <Input
+            name="fechaInicio"
+            label="Fecha de inicio"
+            type="date"
+            value={form.fechaInicio}
+            onChange={(e) => change("fechaInicio", e.target.value)}
+          />
+          <Input
+            name="horaDeseada"
+            label="Hora deseada"
+            type="time"
+            max={`${String((rules?.endHour ?? 22) - Number(form.horasPorDia || 1)).padStart(2, "0")}:00`}
+            value={form.horaDeseada}
+            onChange={(e) => change("horaDeseada", e.target.value)}
+          />
+          <Input
+            name="horasPorDia"
+            label="Horas por día"
+            type="number"
+            required
+            min={1}
+            value={form.horasPorDia}
+            error={horasError ?? undefined}
+            onChange={(e) =>
+              change("horasPorDia", e.target.value === "" ? "" : Number(e.target.value))
+            }
+          />
+        </>
+      )}
       {!course.rulesActive && (
         <Input
           name="fechaFin"
@@ -191,7 +299,7 @@ export function StepPracticas({
       )}
       <p>
         {course.rulesActive
-          ? "Plan exacto de 15 horas; el servidor calcula los días efectivos y la última sesión parcial."
+          ? "El servidor calcula los días consecutivos y las horas de la opción elegida."
           : form.manual
             ? "Ajuste manual: se incluyen solo los días de la modalidad dentro del rango. No cambia la tarifa."
             : "Cálculo automático por días de práctica: 5 por semana L–V o 2 por semana S–D."}

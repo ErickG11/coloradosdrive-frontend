@@ -4,7 +4,7 @@ import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/inscripcion/EnrollmentField";
+import { PlanFields, timeRange } from "./PlanFields";
 import { studentScheduleApi, scheduleError } from "@/lib/api/studentSchedule";
 import type {
   StudentPlanRules,
@@ -14,7 +14,7 @@ import type {
   StudentScheduleReservation,
 } from "@/types/studentSchedule";
 import { SchedulePlanView, type PlanDayView } from "./SchedulePlanView";
-import { SegmentedControl } from "./SegmentedControl";
+
 import { dayLabel, dayLabelLong, guayaquilDate, plural, summarySentence } from "./scheduleFormat";
 import type { useStudentReservation } from "./useStudentReservation";
 interface Props {
@@ -26,128 +26,6 @@ interface Props {
 }
 type Loaded<T> = { key: string; data?: T; error?: string } | null;
 const reloadKey = (id: string | undefined) => id ?? "none";
-const REASONS: Record<string, string> = {
-  DIA_SIN_INSTRUCTOR: "Sin disponibilidad",
-  SOLAPE_PROPIO: "Choca con tu agenda",
-  SIN_COHORTE_ELEGIBLE: "Sin horarios disponibles",
-};
-const WEEKDAYS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
-function monthTitle(month: string): string {
-  const text = new Intl.DateTimeFormat("es-EC", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${month}-01T12:00:00Z`));
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-function shiftMonth(month: string, delta: number): string {
-  const [year, number] = month.split("-").map(Number);
-  return new Date(Date.UTC(year, number - 1 + delta, 1)).toISOString().slice(0, 7);
-}
-interface CalendarDay {
-  fecha: string;
-  disponible: boolean;
-  motivo?: string | null;
-}
-// Calendario propio, en español. Los días pasados no se muestran; el motivo de cada día no
-// disponible aparece solo como texto emergente (al pasar el cursor o al enfocar con teclado).
-function MonthCalendar({
-  month,
-  minMonth,
-  maxMonth,
-  minDate,
-  days,
-  selected,
-  disabled,
-  onMonth,
-  onPick,
-}: {
-  month: string;
-  minMonth: string;
-  maxMonth?: string;
-  minDate: string;
-  days: CalendarDay[];
-  selected: string;
-  disabled: boolean;
-  onMonth: (month: string) => void;
-  onPick: (date: string) => void;
-}) {
-  const [year, number] = month.split("-").map(Number);
-  const total = new Date(Date.UTC(year, number, 0)).getUTCDate();
-  const offset = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
-  const byDate = new Map(days.map((d) => [d.fecha, d]));
-  const cells: (null | { fecha: string; day?: CalendarDay })[] = [
-    ...Array.from({ length: offset }, () => null),
-    ...Array.from({ length: total }, (_, i) => {
-      const fecha = `${month}-${String(i + 1).padStart(2, "0")}`;
-      return { fecha, day: byDate.get(fecha) };
-    }),
-  ];
-  return (
-    <div className="grid gap-2" role="group" aria-label="Fechas de inicio disponibles">
-      <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
-          aria-label="Mes anterior"
-          disabled={month <= minMonth}
-          onClick={() => onMonth(shiftMonth(month, -1))}
-          className="min-h-10 min-w-10 rounded-sm border disabled:opacity-40"
-        >
-          ‹
-        </button>
-        <strong aria-live="polite">{monthTitle(month)}</strong>
-        <button
-          type="button"
-          aria-label="Mes siguiente"
-          disabled={Boolean(maxMonth) && month >= (maxMonth ?? "")}
-          onClick={() => onMonth(shiftMonth(month, 1))}
-          className="min-h-10 min-w-10 rounded-sm border disabled:opacity-40"
-        >
-          ›
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-xs text-text-secondary" aria-hidden="true">
-        {WEEKDAYS.map((w) => (
-          <span key={w}>{w}</span>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((cell, index) => {
-          if (!cell || cell.fecha < minDate) return <span key={cell?.fecha ?? `v${index}`} />;
-          const ok = Boolean(cell.day?.disponible) && !disabled;
-          const reason = cell.day?.motivo ?? null;
-          const tipId = `dia-${cell.fecha}`;
-          return (
-            <div key={cell.fecha} className="group relative">
-              <button
-                type="button"
-                aria-disabled={!ok}
-                aria-pressed={selected === cell.fecha}
-                aria-label={dayLabel(cell.fecha)}
-                aria-describedby={!ok && reason ? tipId : undefined}
-                onClick={() => {
-                  if (ok) onPick(cell.fecha);
-                }}
-                className={`w-full rounded-sm border p-2 aria-pressed:bg-bg-sunken ${ok ? "" : "cursor-not-allowed opacity-40"}`}
-              >
-                {Number(cell.fecha.slice(-2))}
-              </button>
-              {!ok && reason ? (
-                <span
-                  id={tipId}
-                  role="tooltip"
-                  className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 hidden w-44 -translate-x-1/2 rounded-sm border border-border bg-bg-surface p-2 text-xs shadow-elevated group-focus-within:block group-hover:block"
-                >
-                  {reason}
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div
@@ -199,7 +77,7 @@ export function StudentSchedulePicker({
   const rules = useKeyedRequest<StudentPlanRules>(state.ready ? "plan-rules" : null, (signal) =>
     studentScheduleApi.rules(signal),
   );
-  const minDate = rules.data?.active
+  const minDate = rules.data
     ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(
         new Date(rules.data.serverNow),
       )
@@ -208,22 +86,47 @@ export function StudentSchedulePicker({
   const [draft, setInput] = useState<StudentScheduleInput>({
     modalidad: "entre_semana",
     fechaInicio: "",
-    horasPorDia: 3,
+    horasPorDia: 0,
   });
-  const input = { ...draft, fechaInicio: draft.fechaInicio || minDate };
+  const input = draft;
+  const calendarHours =
+    input.horasPorDia ||
+    rules.data?.options.find((o) => o.habilitada && o.modalidad === input.modalidad)?.horasPorDia ||
+    0;
   const [selectedMonth, setMonth] = useState("");
   const month = selectedMonth || minDate.slice(0, 7);
+  const [chosenHour, setChosenHour] = useState<string | null>(null);
   const calendar = useKeyedRequest(
-    rules.data?.active && state.ready && !state.held
-      ? `${enrollmentId}|${month}|${input.modalidad}|${input.horasPorDia}|${reloadKey(state.reservation?.id)}`
+    rules.data && calendarHours && state.ready && !state.held
+      ? `${enrollmentId}|${month}|${input.modalidad}|${calendarHours}|${reloadKey(state.reservation?.id)}`
       : null,
     (signal) =>
-      studentScheduleApi.calendar(enrollmentId, { ...input, fechaInicio: `${month}-01` }, signal),
+      studentScheduleApi
+        .calendar(
+          enrollmentId,
+          { ...input, horasPorDia: calendarHours, fechaInicio: `${month}-01` },
+          signal,
+        )
+        .then((result) => {
+          if (!signal.aborted) {
+            const day = result.dias.find((d) => d.fecha === input.fechaInicio);
+            if (day && !day.disponible) {
+              setInput((current) =>
+                current.fechaInicio === input.fechaInicio &&
+                current.modalidad === input.modalidad &&
+                current.horasPorDia === calendarHours
+                  ? { ...current, fechaInicio: "" }
+                  : current,
+              );
+              setChosenHour(null);
+            }
+          }
+          return result;
+        }),
   );
   const maxDate = rules.data?.active
     ? (calendar.data?.calendarEndDate ?? undefined)
     : legacyMaxDate;
-  const [chosenHour, setChosenHour] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [reserving, setReserving] = useState(false);
   const [reserveError, setReserveError] = useState<string | null>(null);
@@ -232,12 +135,26 @@ export function StudentSchedulePicker({
     /^\d{4}-\d{2}-\d{2}$/.test(input.fechaInicio) &&
     input.fechaInicio >= minDate &&
     (!maxDate || input.fechaInicio <= maxDate);
-  const enabled = !!rules.data && state.ready && !state.held && !state.error && validDate;
+  const enabled =
+    !!rules.data &&
+    state.ready &&
+    !state.held &&
+    !state.error &&
+    validDate &&
+    input.horasPorDia > 0;
   const optionsKey = enabled
     ? `${enrollmentId}|${input.modalidad}|${input.fechaInicio}|${String(input.horasPorDia)}|${String(reload)}`
     : null;
   const options = useKeyedRequest<StudentScheduleOptions>(optionsKey, (signal) =>
-    studentScheduleApi.options(enrollmentId, input, signal),
+    studentScheduleApi.options(enrollmentId, input, signal).then((result) => {
+      if (
+        !signal.aborted &&
+        chosenHour &&
+        !result.horas.some((h) => h.hora === chosenHour && h.factible)
+      )
+        setChosenHour(null);
+      return result;
+    }),
   );
   // Sin ningún curso abierto: el servidor lo indica en las opciones o en todos los días futuros.
   const futureDays = (calendar.data?.dias ?? []).filter((d) => d.fecha >= minDate);
@@ -250,13 +167,9 @@ export function StudentSchedulePicker({
   }, [options.data, noOpen, onWaiting]);
   const list = options.data?.horas ?? [];
   const firstFeasible = list.find((h) => h.factible)?.hora ?? null;
-  // Preselecciona la primera hora factible; la elección del alumno solo vale si sigue siéndolo.
   const hour =
-    chosenHour && list.some((h) => h.hora === chosenHour && h.factible)
-      ? chosenHour
-      : firstFeasible;
-  // Sin ninguna hora factible se previsualiza la primera para explicar qué días fallan.
-  const previewHour = hour ?? (options.data && !options.data.sinCohorte ? list[0]?.hora : null);
+    chosenHour && list.some((h) => h.hora === chosenHour && h.factible) ? chosenHour : null;
+  const previewHour = hour ?? firstFeasible;
   const previewKey =
     optionsKey && options.data && previewHour ? `${optionsKey}|${previewHour}` : null;
   const preview = useKeyedRequest<StudentSchedulePreview>(previewKey, (signal) =>
@@ -268,7 +181,12 @@ export function StudentSchedulePicker({
   );
   function update(next: Partial<StudentScheduleInput>) {
     setInput((current) => ({ ...current, ...next }));
-    setChosenHour(null);
+    if (
+      next.modalidad !== undefined ||
+      next.horasPorDia !== undefined ||
+      next.fechaInicio !== undefined
+    )
+      setChosenHour(null);
     setReserveError(null);
   }
   async function reserve() {
@@ -368,8 +286,6 @@ export function StudentSchedulePicker({
   const data = preview.data;
   const noCohort = options.data?.sinCohorte ?? null;
 
-  const failing = data?.diasFallan ?? [];
-  const alternatives = list.filter((h) => h.factible && h.hora !== previewHour);
   const failure = options.error ?? preview.error ?? null;
   if (noOpen)
     return (
@@ -384,119 +300,39 @@ export function StudentSchedulePicker({
           {rules.error}
         </p>
       ) : null}
-      <p className="mb-5 text-text-secondary">
-        Elige cuándo empiezas y a qué hora. Nosotros armamos el resto: todos los días tendrás la
-        misma hora de inicio hasta completar tus horas de práctica.
-      </p>
       {expired ? (
         <p role="status" className="mb-4 rounded-sm bg-status-warning-bg p-3 text-status-warning">
           {expired}
         </p>
       ) : null}
-      <div className="grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <SegmentedControl
-          legend="Modalidad"
-          value={input.modalidad}
-          disabled={reserving}
-          options={[
-            { value: "entre_semana", label: "Entre semana" },
-            { value: "fin_de_semana", label: "Fin de semana" },
-          ]}
-          onChange={(modalidad) => update({ modalidad })}
-        />
-        {rules.data?.active ? (
-          <div className="grid gap-2">
-            {noCohort?.ultimaFechaInicioPosible ? (
-              <p className="text-sm">
-                Los cursos abiertos permiten empezar hasta el{" "}
-                {dayLabelLong(noCohort.ultimaFechaInicioPosible)} con este plan.
-              </p>
-            ) : null}
-            <MonthCalendar
-              month={month}
-              minMonth={minDate.slice(0, 7)}
-              maxMonth={maxDate?.slice(0, 7)}
-              minDate={minDate}
-              days={calendar.data?.dias ?? []}
-              selected={input.fechaInicio}
-              disabled={reserving}
-              onMonth={setMonth}
-              onPick={(fecha) => update({ fechaInicio: fecha })}
-            />
-            {calendar.loading ? <p role="status">Consultando fechas…</p> : null}
-            {calendar.error ? <p role="alert">{calendar.error}</p> : null}
-          </div>
-        ) : (
-          <Input
-            label="Fecha de inicio"
-            type="date"
-            required
-            min={minDate}
-            max={maxDate}
-            value={input.fechaInicio}
-            disabled={reserving}
-            onChange={(e) => update({ fechaInicio: e.target.value })}
-            error={
-              input.fechaInicio && !validDate
-                ? "Elige una fecha desde hoy con horas futuras."
-                : undefined
-            }
-          />
-        )}
-        <SegmentedControl
-          legend="Horas por día"
-          value={input.horasPorDia}
-          disabled={reserving}
-          options={[1, 2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
-          onChange={(horasPorDia) => update({ horasPorDia })}
-        />
-      </div>
-      <fieldset className="mt-6 min-w-0" disabled={reserving}>
-        <legend className="mb-2 text-sm font-medium text-text-secondary">Hora de inicio</legend>
-        {options.loading || (!options.data && !failure && enabled) ? (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8" aria-busy="true">
-            {Array.from({ length: 8 }, (_, i) => (
-              <Skeleton key={i} className="h-14" />
-            ))}
-            <span className="sr-only" role="status">
-              Buscando horas disponibles…
-            </span>
-          </div>
-        ) : !validDate ? (
-          <p className="text-text-secondary">Elige una fecha de inicio para ver las horas.</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-            {list.map((item) => {
-              const selected = item.hora === hour;
-              const reason = item.motivo ? (REASONS[item.motivo.codigo] ?? "No disponible") : null;
-              return (
-                <button
-                  key={item.hora}
-                  type="button"
-                  disabled={!item.factible}
-                  aria-pressed={selected}
-                  aria-label={
-                    item.factible
-                      ? `${item.hora}${selected ? ", seleccionada" : ""}`
-                      : `${item.hora}, no disponible. ${item.motivo?.mensaje ?? ""}`
-                  }
-                  title={item.motivo?.mensaje}
-                  onClick={() => {
-                    setChosenHour(item.hora);
-                    setReserveError(null);
-                  }}
-                  className={`flex min-h-14 flex-col items-center justify-center rounded-sm border px-2 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${selected ? "border-brand-primary bg-brand-primary text-white" : "border-border-strong bg-bg-surface text-text-primary hover:bg-bg-sunken"}`}
-                >
-                  {item.hora}
-                  {reason ? (
-                    <span className="text-[11px] font-normal leading-tight">{reason}</span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </fieldset>
+      <PlanFields
+        rules={rules.data}
+        value={{ ...input, horaInicio: hour ? Number(hour.slice(0, 2)) : -1 }}
+        month={month}
+        onMonth={setMonth}
+        minDate={minDate}
+        maxDate={maxDate}
+        days={calendar.data?.dias ?? []}
+        hours={list}
+        disabled={reserving}
+        loading={calendar.loading || options.loading}
+        onChange={(next) => {
+          const changed =
+            next.modalidad !== input.modalidad ||
+            next.horasPorDia !== input.horasPorDia ||
+            next.fechaInicio !== input.fechaInicio;
+          if (changed)
+            update({
+              modalidad: next.modalidad,
+              horasPorDia: next.horasPorDia,
+              fechaInicio: next.fechaInicio,
+            });
+          setChosenHour(
+            next.horaInicio < 0 ? null : `${String(next.horaInicio).padStart(2, "0")}:00`,
+          );
+        }}
+      />
+      {calendar.error ? <p role="alert">{calendar.error}</p> : null}
       {failure ? (
         <div role="alert" className="mt-5 text-sm text-accent-red">
           <p>{failure}</p>
@@ -516,7 +352,8 @@ export function StudentSchedulePicker({
           {noCohort.ultimaFechaInicioPosible &&
           !noCohort.mensaje.includes("Última fecha de inicio") ? (
             <p className="mt-1 text-text-secondary">
-              La última fecha de inicio posible es el {dayLabelLong(noCohort.ultimaFechaInicioPosible)}.
+              La última fecha de inicio posible es el{" "}
+              {dayLabelLong(noCohort.ultimaFechaInicioPosible)}.
             </p>
           ) : null}
           <WaitlistControl enrollmentId={enrollmentId} input={input} />
@@ -545,24 +382,23 @@ export function StudentSchedulePicker({
           <Skeleton className="h-32" />
         </div>
       ) : null}
-      {data ? (
-        <section className="mt-6" aria-label="Resumen del plan">
-          <p className="font-medium" aria-live="polite" aria-atomic="true">
-            Tu plan: {plural(data.dias.length, "día", "días")}, del{" "}
-            {dayLabel(data.dias[0]?.fecha ?? data.fechaInicioEfectiva)} al {dayLabel(data.ultimaFecha)}
-            {(data.dias[data.dias.length - 1]?.horas ?? data.horasPorDia) < data.horasPorDia
-              ? "; la última sesión puede ser más corta"
-              : ""}
-            .
+      {reserveError ? (
+        <p role="alert" className="mt-4 text-status-error">
+          {reserveError}
+        </p>
+      ) : null}
+      <div
+        className="sticky bottom-0 z-10 mt-6 grid items-center gap-3 border-t border-border bg-bg-surface p-3 shadow-elevated sm:grid-cols-[minmax(0,1fr)_auto]"
+        aria-label="Resumen del plan"
+      >
+        <div className="min-w-0 flex-1 text-sm" aria-live="polite">
+          <p>
+            {data
+              ? `Tu plan: ${dayLabel(data.dias[0]?.fecha ?? data.fechaInicioEfectiva)} al ${dayLabel(data.ultimaFecha)} · ${plural(data.dias.length, "día", "días")} · ${hour ? timeRange(hour, input.horasPorDia) : "Seleccione un horario"} · ${data.horasTotales} horas en total`
+              : "Tu plan: selecciona las horas por día, la fecha y el horario."}
           </p>
-          {data.ajustada ? (
-            <p className="mt-1 text-sm text-text-secondary">
-              La fecha que elegiste no es de esta modalidad; empezamos el{" "}
-              {dayLabel(data.fechaInicioEfectiva)}.
-            </p>
-          ) : null}
-          {data.precioCentavos !== undefined ? (
-            <p className="mt-2 text-sm font-semibold">
+          {data?.precioCentavos !== undefined ? (
+            <p>
               Precio del curso:{" "}
               {new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(
                 data.precioCentavos / 100,
@@ -570,30 +406,7 @@ export function StudentSchedulePicker({
               . Se fija al reservar.
             </p>
           ) : null}
-          {failing.length ? (
-            <div role="alert" className="mt-4 text-sm text-accent-red">
-              <p className="font-medium">
-                Esta hora no se puede reservar: falta disponibilidad en{" "}
-                {plural(failing.length, "día", "días")}.
-              </p>
-              {alternatives.length ? (
-                <p className="mt-2 text-sm">
-                  Prueba con: {alternatives.map((a) => a.hora).join(", ")}.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-      {reserveError ? (
-        <p role="alert" className="mt-4 text-status-error">
-          {reserveError}
-        </p>
-      ) : null}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-text-secondary">
-          El cupo se confirma al reservar. No necesitas elegir instructor.
-        </p>
+        </div>
         <Button
           isLoading={reserving}
           disabled={

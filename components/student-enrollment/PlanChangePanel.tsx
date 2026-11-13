@@ -13,7 +13,9 @@ import type {
 import { useStudentReservation } from "./useStudentReservation";
 import { ReservationBanner } from "./ReservationBanner";
 import { SchedulePlanView } from "./SchedulePlanView";
-import { dayLabel, summarySentence } from "./scheduleFormat";
+import { PlanFields } from "./PlanFields";
+import type { StudentPlanRules, StudentScheduleStartOption } from "@/types/studentSchedule";
+import { summarySentence } from "./scheduleFormat";
 const options = () => ({ signal: AbortSignal.timeout(20_000), cache: "no-store" as const });
 const localDate = (iso: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(new Date(iso));
@@ -29,14 +31,14 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
       ? `/admin/estudiantes/${studentId}/matriculas/${enrollmentId}/cambio`
       : `/estudiantes/inscripcion/cambio/${enrollmentId}`;
   const meta = useFetch<PlanChangeState>(root);
-  const limits = useFetch<{ endHour?: number }>(
+  const limits = useFetch<StudentPlanRules>(
     admin ? "/admin/manual-enrollments/rules" : "/estudiantes/inscripcion/horario/config",
   );
   const [input, setInput] = useState<StudentScheduleSelection>({
     modalidad: "entre_semana",
     fechaInicio: "",
-    horasPorDia: 3,
-    horaInicio: 6,
+    horasPorDia: 0,
+    horaInicio: -1,
   });
   const [month, setMonth] = useState("");
   const [reason, setReason] = useState("");
@@ -49,10 +51,11 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
     data?: PlanChangeCalendar;
     error?: string;
   } | null>(null);
+  const refetchMeta = meta.refetch;
   const closed = useCallback(() => {
-    meta.refetch();
+    refetchMeta();
     onChanged?.();
-  }, [meta.refetch, onChanged]);
+  }, [refetchMeta, onChanged]);
   const transport = useMemo(
     () =>
       studentId
@@ -85,21 +88,18 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
     meta.data?.active === true,
   );
   const pending = reservation.reservation?.purpose === "plan_change" && reservation.held;
-  const effective = {
-    ...input,
-    fechaInicio:
-      input.fechaInicio ||
-      meta.data?.current?.practiceStartDate ||
-      (meta.data?.serverNow ? localDate(meta.data.serverNow) : ""),
-  };
-  const selectedMonth = month || effective.fechaInicio.slice(0, 7);
+  const effective = input;
+  const minDate = meta.data?.serverNow
+    ? localDate(meta.data.serverNow)
+    : localDate(new Date().toISOString());
+  const selectedMonth = month || minDate.slice(0, 7);
   const key = JSON.stringify({
     effective,
     reason: admin ? reason : "",
     target: admin ? target : "",
   });
   const calendarKey =
-    meta.data?.active && meta.data.canChange && !pending && selectedMonth
+    meta.data?.active && meta.data.canChange && !pending && selectedMonth && input.horasPorDia
       ? `${root}|${selectedMonth}|${input.modalidad}|${input.horasPorDia}|${target}`
       : null;
   useEffect(() => {
@@ -118,7 +118,18 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
         { signal: abort.signal, cache: "no-store" },
       )
       .then((data) => {
-        if (!abort.signal.aborted) setCalendar({ key: calendarKey, data });
+        if (!abort.signal.aborted) {
+          setCalendar({ key: calendarKey, data });
+          const selected = data.dias.find((d) => d.fecha === input.fechaInicio);
+          if (selected && !selected.disponible)
+            setInput((current) =>
+              current.fechaInicio === input.fechaInicio &&
+              current.horasPorDia === input.horasPorDia &&
+              current.modalidad === input.modalidad
+                ? { ...current, fechaInicio: "", horaInicio: -1 }
+                : current,
+            );
+        }
       })
       .catch((error: unknown) => {
         if (!abort.signal.aborted)
@@ -130,6 +141,51 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
     return () => abort.abort();
   }, [calendarKey, root, input.modalidad, input.horasPorDia, selectedMonth, admin, target]);
   const currentCalendar = calendar?.key === calendarKey ? calendar : null;
+  const hourKey =
+    input.fechaInicio && input.horasPorDia && (!admin || reason.trim())
+      ? `${root}|${input.modalidad}|${input.horasPorDia}|${input.fechaInicio}|${reason}|${target}|${limits.data?.endHour}`
+      : null;
+  const [hourResult, setHourResult] = useState<{
+    key: string;
+    hours: StudentScheduleStartOption[];
+  } | null>(null);
+  useEffect(() => {
+    if (!hourKey) return;
+    const abort = new AbortController();
+    void api
+      .post<StudentScheduleStartOption[]>(
+        `${root}/opciones`,
+        {
+          ...input,
+          horaInicio: 6,
+          ...(admin ? { motivo: reason.trim(), ...(target ? { cohortId: target } : {}) } : {}),
+        },
+        { signal: abort.signal, cache: "no-store" },
+      )
+      .then((hours) => {
+        if (!abort.signal.aborted) {
+          setHourResult({ key: hourKey, hours });
+          if (
+            input.horaInicio >= 0 &&
+            !hours.some((h) => Number(h.hora.slice(0, 2)) === input.horaInicio && h.factible)
+          )
+            setInput((current) =>
+              current.horaInicio === input.horaInicio ? { ...current, horaInicio: -1 } : current,
+            );
+        }
+      })
+      .catch((error: unknown) => {
+        if (!abort.signal.aborted) {
+          setHourResult({ key: hourKey, hours: [] });
+          setMessage(
+            error instanceof Error ? error.message : "No se pudieron consultar los horarios.",
+          );
+        }
+      });
+    return () => abort.abort();
+    // La clave incluye todas las entradas de la consulta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hourKey]);
   async function propose(reserve = false) {
     if (admin && !reason.trim()) {
       setMessage("Escribe el motivo de la reasignación.");
@@ -275,95 +331,29 @@ export function PlanChangePanel({ enrollmentId, studentId, targets, onChanged }:
               </Select>
             </>
           ) : null}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Select
-              label="Modalidad"
-              value={input.modalidad}
-              onChange={(e) =>
-                setInput((v) => ({
-                  ...v,
-                  modalidad: e.target.value as StudentScheduleSelection["modalidad"],
-                }))
-              }
-            >
-              <option value="entre_semana">Entre semana</option>
-              <option value="fin_de_semana">Fin de semana</option>
-            </Select>
-            <Select
-              label="Horas por día"
-              value={input.horasPorDia}
-              onChange={(e) =>
-                setInput((v) => ({
-                  ...v,
-                  horasPorDia: Number(e.target.value),
-                  horaInicio: Math.min(
-                    v.horaInicio,
-                    (limits.data?.endHour ?? 22) - Number(e.target.value),
-                  ),
-                }))
-              }
-            >
-              {[1, 2, 3, 4, 5, 6].map((h) => (
-                <option key={h} value={h}>
-                  {h}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label="Hora inicial"
-              type="number"
-              min={6}
-              max={(limits.data?.endHour ?? 22) - input.horasPorDia}
-              step={1}
-              value={input.horaInicio}
-              onChange={(e) => setInput((v) => ({ ...v, horaInicio: Number(e.target.value) }))}
-            />
-          </div>
-          <Input
-            label="Mes de inicio"
-            type="month"
-            min={meta.data.serverNow ? localDate(meta.data.serverNow).slice(0, 7) : undefined}
-            max={meta.data.calendarEndDate?.slice(0, 7)}
-            value={selectedMonth}
-            onChange={(e) => setMonth(e.target.value)}
+          <PlanFields
+            rules={limits.data ?? undefined}
+            value={effective}
+            onChange={setInput}
+            month={selectedMonth}
+            onMonth={setMonth}
+            minDate={minDate}
+            maxDate={meta.data.calendarEndDate ?? undefined}
+            days={currentCalendar?.data?.dias ?? []}
+            hours={hourResult?.key === hourKey ? hourResult.hours : []}
+            disabled={busy}
+            loading={
+              Boolean(calendarKey && !currentCalendar) ||
+              Boolean(hourKey && hourResult?.key !== hourKey)
+            }
           />
-          {calendarKey && !currentCalendar ? (
-            <p role="status">Consultando fechas disponibles…</p>
-          ) : null}
           {currentCalendar?.error ? <p role="alert">{currentCalendar.error}</p> : null}
-          <div className="grid grid-cols-7 gap-1" role="group" aria-label="Fechas de la propuesta">
-            {currentCalendar?.data?.dias.map((day) => (
-              <button
-                className="rounded-sm border p-2 disabled:opacity-40 aria-pressed:bg-bg-sunken"
-                type="button"
-                key={day.fecha}
-                disabled={!day.disponible || busy}
-                aria-pressed={effective.fechaInicio === day.fecha}
-                aria-label={`${dayLabel(day.fecha)}${day.motivo ? `: ${day.motivo}` : ""}`}
-                title={day.motivo ?? undefined}
-                onClick={() => setInput((v) => ({ ...v, fechaInicio: day.fecha }))}
-              >
-                {Number(day.fecha.slice(-2))}
-              </button>
-            ))}
-          </div>
-          <ul className="text-sm text-text-secondary" aria-label="Motivos de fechas no disponibles">
-            {currentCalendar?.data?.dias
-              .filter((day) => !day.disponible && day.motivo)
-              .map((day) => (
-                <li key={day.fecha}>
-                  {dayLabel(day.fecha)}: {day.motivo}
-                </li>
-              ))}
-          </ul>
-          <p>
-            Inicio propuesto:{" "}
-            {effective.fechaInicio ? dayLabel(effective.fechaInicio) : "Selecciona una fecha"}.
-          </p>
           <Button
             type="button"
             variant="secondary"
-            disabled={busy || !effective.fechaInicio}
+            disabled={
+              busy || !effective.fechaInicio || !effective.horasPorDia || effective.horaInicio < 0
+            }
             onClick={() => void propose()}
           >
             Consultar propuesta
