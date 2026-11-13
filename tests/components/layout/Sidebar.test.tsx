@@ -1,11 +1,13 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
+const navigation = vi.hoisted(() => ({ path: "/admin" }));
+beforeEach(() => { navigation.path = "/admin"; localStorage.clear(); });
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/admin",
+  usePathname: () => navigation.path,
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
@@ -18,6 +20,27 @@ function renderSidebar(role: "admin" | "estudiante" | "instructor" | null) {
 }
 
 describe("Sidebar", () => {
+  it.each(["admin", "estudiante", "instructor"] as const)("%s comparte el estilo y el pie del menú", (role) => {
+    renderSidebar(role);
+    const sidebar = screen.getByRole("complementary", { name: "Barra lateral" });
+    expect(sidebar.className).toMatch(/admin/);
+    expect(sidebar.className).toContain("w-[var(--sidebar-w)]");
+    expect(within(sidebar).getByAltText("Colorados Drive")).toBeInTheDocument();
+    expect(screen.getByText("ana@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cerrar sesión/ })).toBeInTheDocument();
+  });
+  it("instructor se pliega conservando enlaces accesibles, logo y estado activo", () => {
+    navigation.path = "/instructor/asistencias";
+    renderSidebar("instructor");
+    expect(screen.getByRole("link", { name: "Asistencias" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Mi agenda" })).not.toHaveAttribute("aria-current");
+    fireEvent.click(screen.getByRole("button", { name: "Contraer menú" }));
+    expect(document.body).toHaveAttribute("data-sidebar", "collapsed");
+    expect(screen.getByRole("link", { name: "Asistencias" })).toHaveAttribute("title", "Asistencias");
+    expect(screen.getByAltText("Colorados Drive")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Expandir menú" }));
+    expect(document.body).not.toHaveAttribute("data-sidebar");
+  });
   it.each(["admin", "estudiante", "instructor", null] as const)(
     "historial propio solo para estudiante: %s",
     (role) => {

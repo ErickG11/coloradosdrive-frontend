@@ -313,7 +313,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
         aria-label="Barra lateral"
         className={cn(
           "sticky top-0 hidden h-dvh w-[var(--sidebar-w)] min-w-0 shrink-0 flex-col border-r border-border bg-bg-surface transition-[width] duration-200 ease-out motion-reduce:transition-none md:flex",
-          (role === "admin" || role === "estudiante") && styles.admin,
+          (role === "admin" || role === "estudiante" || role === "instructor") && styles.admin,
         )}
       >
         <div
@@ -322,7 +322,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
             collapsed ? "flex-col items-center px-2" : "items-center justify-between px-4",
           )}
         >
-          {role === "admin" || role === "estudiante" ? (
+          {role === "admin" || role === "estudiante" || role === "instructor" ? (
             (() => {
               const logo = collapsed ? (
                 <span className={styles.logoMark}>
@@ -420,7 +420,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
             tabIndex={-1}
             className={cn(
               "absolute inset-y-0 left-0 flex w-[min(18rem,calc(100vw-2rem))] flex-col border-r border-border bg-bg-surface shadow-elevated",
-              (role === "admin" || role === "estudiante") && styles.admin,
+              (role === "admin" || role === "estudiante" || role === "instructor") && styles.admin,
             )}
           >
             <div className="flex items-center justify-between px-4 py-3">
@@ -440,7 +440,7 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
                     className={cn(styles.logo, styles.logoImage)}
                   />
                 </Link>
-              ) : role === "estudiante" ? (
+              ) : role === "estudiante" || role === "instructor" ? (
                 <Image
                   unoptimized
                   src="/images/landing/logo.webp"
