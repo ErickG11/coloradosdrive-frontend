@@ -51,7 +51,6 @@ export interface PracticeBlockSummary {
 }
 export interface PracticeBlockMutation extends Record<string, unknown> {
   cohortId: string;
-  audience: string[];
   used: number;
   remaining: number;
   effect?: string;

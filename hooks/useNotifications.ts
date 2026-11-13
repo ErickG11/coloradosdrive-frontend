@@ -86,8 +86,13 @@ export function useNotifications() {
   }, []);
 
   const refresh = useCallback(() => load(page.current), [load]);
-  const userId=useCurrentUserId();
-  useRealtimeChannel(userId?`user-${userId}-notifications`:null,{"notifications-updated":()=>{void refresh();}});
+  const userId = useCurrentUserId();
+  useRealtimeChannel(userId ? `user-${userId}-notifications` : null, {
+    "notifications-updated": () => {
+      void refresh();
+      window.dispatchEvent(new Event("practice-notifications-updated"));
+    },
+  });
   useEffect(() => {
     active.current = true;
     void refresh();

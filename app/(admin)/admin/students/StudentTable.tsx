@@ -1,4 +1,6 @@
+"use client";
 import Link from "next/link";
+import { usePracticeAbsences } from "@/hooks/usePracticeAbsences";
 import type { MouseEvent } from "react";
 import { Button, DataTable, EmptyState, StatusBadge, type DataColumn } from "@/components/ui";
 import { buttonClassName } from "@/components/ui/buttonStyles";
@@ -33,6 +35,10 @@ export function StudentTable({
   onClear?: () => void;
   onOpen?: (event: MouseEvent<HTMLAnchorElement>, id: string, view?: StudentView) => void;
 }) {
+  const absences = usePracticeAbsences();
+  const absenceCounts = new Map(
+    absences.data?.map((student) => [student.studentId, student.count]) ?? [],
+  );
   const href = (student: AdminStudent, view: StudentView = "ficha") => {
     const query = new URLSearchParams(filterQuery);
     query.set("vista", view);
@@ -75,6 +81,11 @@ export function StudentTable({
             >
               {student.nombreCompleto}
             </Link>
+            {(absenceCounts.get(student.id) ?? 0) > 0 ? (
+              <span className="mt-1 inline-flex rounded-full bg-bg-sunken px-2 py-0.5 text-xs font-semibold text-accent-red">
+                Faltas: {absenceCounts.get(student.id)}
+              </span>
+            ) : null}
             {waiting ? (
               <div>
                 <StatusBadge status="esperando_curso" tone="info">
