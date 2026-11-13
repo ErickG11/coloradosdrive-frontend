@@ -22,6 +22,28 @@ const INSTRUCTOR_STATUS_LABELS: Record<PracticeSlotStatus, string> = {
   sin_practica: "Sin alumno",
 };
 
+type BlockDefinition = {
+  id: string;
+  slotIds: string[];
+  startsAt: string;
+  endsAt: string;
+  hours: number;
+};
+
+// La agrupación en bloques es opcional: si la respuesta no sirve, la agenda
+// muestra cada hora por separado. Devuelve null cuando hay que avisar.
+function readBlocks(value: unknown): BlockDefinition[] | null {
+  if (!Array.isArray(value)) return null;
+  const valid = value.filter(
+    (block): block is BlockDefinition =>
+      typeof block === "object" &&
+      block !== null &&
+      typeof (block as BlockDefinition).id === "string" &&
+      Array.isArray((block as BlockDefinition).slotIds),
+  );
+  return valid.length === value.length ? valid : null;
+}
+
 // Recibe una fecha civil, como las que produce schoolCalendarDate.
 function formatDayLabel(day: Date): string {
   const weekday = day.toLocaleDateString("es-EC", { weekday: "long" });
@@ -36,9 +58,8 @@ export default function InstructorPage() {
   const [data, setData] = useState<PracticeSlotWithNames[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [blockDefinitions, setBlockDefinitions] = useState<
-    { id: string; slotIds: string[]; startsAt: string; endsAt: string; hours: number }[]
-  >([]);
+  const [blockDefinitions, setBlockDefinitions] = useState<BlockDefinition[]>([]);
+  const [blocksFailed, setBlocksFailed] = useState(false);
   const [updates, setUpdates] = useState<Record<string, PracticeSlot>>({});
   useEffect(() => {
     let active = true;
@@ -48,13 +69,15 @@ export default function InstructorPage() {
     const blockParams = new URLSearchParams({ from: dayKey(weekDays[0]), to: dayKey(weekDays[6]) });
     void Promise.all([
       api.get<PracticeSlotWithNames[]>(`/practice-slots?${params}`),
-      api.get<{ id: string; slotIds: string[]; startsAt: string; endsAt: string; hours: number }[]>(
-        `/practice-slots/blocks/instructor-groups?${blockParams}`,
-      ),
+      // Si los bloques fallan, las franjas se muestran igual, una por hora.
+      api
+        .get<unknown>(`/practice-slots/blocks/instructor-groups?${blockParams}`)
+        .then(readBlocks, () => null),
     ]).then(
       ([slots, blocks]) => {
-        if (active) setBlockDefinitions(blocks);
         if (!active) return;
+        setBlockDefinitions(blocks ?? []);
+        setBlocksFailed(blocks === null);
         setData(slots);
         setUpdates({});
         setCurrentDate(requestedWeek);
@@ -192,6 +215,9 @@ export default function InstructorPage() {
         <p role="alert" className="text-sm text-accent-red">
           {error}
         </p>
+      ) : null}
+      {data && blocksFailed ? (
+        <p className="text-xs text-text-secondary">No se pudieron agrupar las horas en bloques</p>
       ) : null}
       {data ? (
         <section aria-labelledby="selected-day" className="min-w-0">
