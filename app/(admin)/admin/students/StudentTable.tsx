@@ -7,6 +7,7 @@ import { buttonClassName } from "@/components/ui/buttonStyles";
 import type { AdminStudent, Cohort } from "@/types";
 import { ActiveBadge, StudentBadge } from "./StudentBadge";
 import { StudentAvatar, StudentIcon } from "./StudentVisual";
+import { StudentRowMenu } from "./StudentRowMenu";
 import type { StudentView } from "./StudentDrawer";
 import styles from "./students.module.css";
 
@@ -22,8 +23,10 @@ export function StudentTable({
   onClear,
   onOpen,
   compact = false,
+  selectedId = null,
 }: {
   compact?: boolean;
+  selectedId?: string | null;
   students: AdminStudent[];
   cohorts: Cohort[];
   filterQuery: string;
@@ -50,6 +53,16 @@ export function StudentTable({
     if (!name) return "Cohorte no disponible";
     return /^cohorte\b/iu.test(name) ? name : `Cohorte ${name}`;
   }
+  const paymentLabel = (student: AdminStudent) =>
+    student.paymentStatus === undefined
+      ? null
+      : ({
+          pagado: "Pagado",
+          pendiente: "Pendiente",
+          revision: "En revisión",
+          sin_pago: "Sin pago",
+        }[student.paymentStatus] ?? null);
+  const courseName = (type: "A" | "B") => (type === "A" ? "Motocicletas" : "Vehículos livianos");
   const columns: DataColumn<AdminStudent>[] = [
     ...(students.some((s) => s.paymentStatus !== undefined)
       ? [
@@ -107,7 +120,7 @@ export function StudentTable({
     {
       key: "account",
       header: "Estado de la cuenta",
-      render: (student) => <ActiveBadge active={student.activo} />,
+      render: (student) => <ActiveBadge active={student.activo} className={styles.chip} />,
     },
     {
       key: "enrollments",
@@ -121,32 +134,40 @@ export function StudentTable({
             {student.matchingEnrollments.map((enrollment) => (
               <li key={enrollment.id} className={styles.courseBadges}>
                 <StatusBadge
-                  className={styles.courseBadge}
+                  className={`${styles.courseBadge} ${styles.chip}`}
                   status={`course_type_${enrollment.courseType}`}
                   tone={enrollment.courseType === "A" ? "warning" : "info"}
                 >
                   <StudentIcon name={enrollment.courseType === "A" ? "motorcycle" : "car"} />
-                  <span>Tipo {enrollment.courseType}</span>
-                  <span>
-                    {" · "}
-                    {enrollment.courseType === "A" ? "Motocicletas" : "Vehículos livianos"}
+                  <span
+                    className={styles.chipText}
+                    title={`Tipo ${enrollment.courseType} · ${courseName(enrollment.courseType)}`}
+                  >
+                    Tipo {enrollment.courseType} · {courseName(enrollment.courseType)}
                   </span>
                 </StatusBadge>
                 <div>
                   <StatusBadge
+                    className={styles.chip}
                     status={enrollment.cohortId ? "cohort" : "pendiente_cohorte"}
                     tone={enrollment.cohortId ? "neutral" : "warning"}
                   >
-                    {enrollment.cohortId ? cohortLabel(enrollment.cohortId) : "Sin cohorte"}
+                    <span
+                      className={styles.chipText}
+                      title={enrollment.cohortId ? cohortLabel(enrollment.cohortId) : undefined}
+                    >
+                      {enrollment.cohortId ? cohortLabel(enrollment.cohortId) : "Sin cohorte"}
+                    </span>
                   </StatusBadge>
                   {enrollment.etapa && enrollment.etapa !== "activa" ? (
                     <StatusBadge
+                      className={styles.chip}
                       status={enrollment.etapa}
                       tone="warning"
                       label={enrollment.etapa === "por_agendar" ? "Por agendar" : "Reservado"}
                     />
                   ) : (
-                    <StudentBadge status={enrollment.status} />
+                    <StudentBadge status={enrollment.status} className={styles.chip} />
                   )}
                 </div>
               </li>
@@ -214,6 +235,110 @@ export function StudentTable({
       ),
     },
   ];
+  if (compact && !isLoading && !error && students.length > 0)
+    return (
+      <ul className={styles.compactList} aria-label="Alumnos y matrículas coincidentes">
+        {students.map((student) => {
+          const pay = paymentLabel(student);
+          return (
+            <li
+              key={student.id}
+              className={styles.compactRow}
+              data-selected={student.id === selectedId || undefined}
+            >
+              <div className={styles.compactMain}>
+                <div className={styles.compactTop}>
+                  <StudentAvatar student={student} />
+                  <Link
+                    href={href(student)}
+                    onClick={(event) => onOpen?.(event, student.id)}
+                    className={styles.compactName}
+                    title={student.nombreCompleto}
+                  >
+                    {student.nombreCompleto}
+                  </Link>
+                  <span className={styles.compactChips}>
+                    <ActiveBadge active={student.activo} className={styles.chip} />
+                    {pay ? (
+                      <StatusBadge
+                        className={styles.chip}
+                        status={`pago_${student.paymentStatus}`}
+                        tone={
+                          student.paymentStatus === "pagado"
+                            ? "success"
+                            : student.paymentStatus === "sin_pago"
+                              ? "neutral"
+                              : "warning"
+                        }
+                        label={pay}
+                      />
+                    ) : null}
+                    {(absenceCounts.get(student.id) ?? 0) > 0 ? (
+                      <span className={`${styles.chip} ${styles.absenceChip}`}>
+                        Faltas: {absenceCounts.get(student.id)}
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
+                <div className={styles.compactEnrollments}>
+                  {student.matchingEnrollments.length === 0 ? (
+                    <span className={styles.compactMuted}>Sin matrículas coincidentes</span>
+                  ) : (
+                    student.matchingEnrollments.map((enrollment) => (
+                      <span key={enrollment.id} className={styles.compactGroup}>
+                        <StatusBadge
+                          className={`${styles.courseBadge} ${styles.chip}`}
+                          status={`course_type_${enrollment.courseType}`}
+                          tone={enrollment.courseType === "A" ? "warning" : "info"}
+                        >
+                          <StudentIcon
+                            name={enrollment.courseType === "A" ? "motorcycle" : "car"}
+                          />
+                          <span
+                            title={`Tipo ${enrollment.courseType} · ${courseName(enrollment.courseType)}`}
+                          >
+                            Tipo {enrollment.courseType}
+                          </span>
+                        </StatusBadge>
+                        <StatusBadge
+                          className={styles.chip}
+                          status={enrollment.cohortId ? "cohort" : "pendiente_cohorte"}
+                          tone={enrollment.cohortId ? "neutral" : "warning"}
+                        >
+                          <span
+                            className={styles.chipText}
+                            title={
+                              enrollment.cohortId ? cohortLabel(enrollment.cohortId) : undefined
+                            }
+                          >
+                            {enrollment.cohortId ? cohortLabel(enrollment.cohortId) : "Sin cohorte"}
+                          </span>
+                        </StatusBadge>
+                        {enrollment.etapa && enrollment.etapa !== "activa" ? (
+                          <StatusBadge
+                            className={styles.chip}
+                            status={enrollment.etapa}
+                            tone="warning"
+                            label={enrollment.etapa === "por_agendar" ? "Por agendar" : "Reservado"}
+                          />
+                        ) : (
+                          <StudentBadge status={enrollment.status} className={styles.chip} />
+                        )}
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+              <StudentRowMenu
+                name={student.nombreCompleto}
+                href={(view) => href(student, view)}
+                onOpen={(event, view) => onOpen?.(event, student.id, view)}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    );
   return (
     <DataTable
       columns={
