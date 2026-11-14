@@ -94,7 +94,8 @@ let state: {
 function mock() {
   vi.mocked(useFetch).mockImplementation(((path: string) => ({
     refetch,
-    ...(path.endsWith("/reservas-pendientes")
+    ...(path.endsWith("/reservas-pendientes") ||
+    path.includes("/practice-slots/blocks/admin-absences")
       ? { data: [], isLoading: false, error: null }
       : path === "/courses"
         ? {
@@ -120,10 +121,10 @@ describe("Alumnos A1", () => {
     render(<StudentsList />);
     expect(screen.getAllByText("Alumno ficticio")).toHaveLength(1);
     expect(screen.getAllByRole("row")).toHaveLength(2);
-    expect(screen.getByText("Tipo A")).toBeInTheDocument();
-    expect(screen.getByText("Tipo B")).toBeInTheDocument();
-    expect(screen.getByText("Sin cohorte")).toBeInTheDocument();
+    expect(screen.getByText("Tipo A · Motocicletas")).toBeInTheDocument();
+    expect(screen.getByText("Tipo B · Vehículos livianos")).toBeInTheDocument();
     const row = within(screen.getAllByRole("row")[1]);
+    expect(row.getByText("Sin cohorte")).toBeInTheDocument();
     expect(row.getByText("Cohorte de prueba")).toBeInTheDocument();
     expect(row.getByText("Inactivo")).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "Ficha de Alumno ficticio" });
@@ -270,7 +271,7 @@ describe("Alumnos A1", () => {
   it("aplica pendientes e historial desde página 3 volviendo a página 1", () => {
     navigation.params = new URLSearchParams("page=3&activo=false");
     render(<StudentsList />);
-    fireEvent.change(screen.getByLabelText("Pendientes de cohorte"), { target: { value: "true" } });
+    fireEvent.change(screen.getByLabelText("Sin cohorte", { selector: "select" }), { target: { value: "true" } });
     expect(navigation.replace).toHaveBeenLastCalledWith(
       "/admin/students?page=1&pendienteCohorte=true&activo=false",
       { scroll: false },
