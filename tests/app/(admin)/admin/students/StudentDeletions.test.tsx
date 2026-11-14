@@ -28,13 +28,16 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 function show(state: Record<string, unknown> = {}) {
-  vi.mocked(useFetch).mockReturnValue({
-    data: { items: [operation], total: 41 },
-    error: null,
-    isLoading: false,
-    refetch,
-    ...state,
-  });
+  vi.mocked(useFetch).mockImplementation(((path: string) =>
+    path.includes("/practice-slots/blocks/admin-absences")
+      ? { data: [], error: null, isLoading: false, refetch }
+      : {
+          data: { items: [operation], total: 41 },
+          error: null,
+          isLoading: false,
+          refetch,
+          ...state,
+        }) as typeof useFetch);
   render(<StudentDeletionsList />);
 }
 describe("eliminaciones sin perfil", () => {
@@ -129,7 +132,12 @@ describe("eliminaciones sin perfil", () => {
   it("el listado de alumnos muestra aviso fijo de éxito y entrada a eliminaciones", () => {
     nav.params = new URLSearchParams("aviso=alumno-eliminado");
     vi.mocked(useFetch).mockImplementation(((path: string) => ({
-      data: path === "/courses" || path === "/cohorts" ? [] : { items: [], total: 0 },
+      data:
+        path === "/courses" ||
+        path === "/cohorts" ||
+        path.includes("/practice-slots/blocks/admin-absences")
+          ? []
+          : { items: [], total: 0 },
       error: null,
       isLoading: false,
       refetch,
