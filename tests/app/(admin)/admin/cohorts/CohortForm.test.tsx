@@ -8,6 +8,17 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { Course } from "@/types";
 
+// Fechas futuras: una cohorte cuyo curso ya terminó queda en solo lectura.
+function daysFromToday(days: number): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+const EDIT_ENROLL_START = daysFromToday(10);
+const EDIT_ENROLL_END = daysFromToday(30);
+const EDIT_COURSE_START = daysFromToday(40);
+const EDIT_COURSE_END = daysFromToday(80);
+
 const pushMock = vi.fn();
 const refreshMock = vi.fn();
 
@@ -62,7 +73,7 @@ function fillRequiredFields() {
   fireEvent.change(screen.getByLabelText("Inicio de curso"), {
     target: { value: "2026-03-01" },
   });
-  fireEvent.change(screen.getByLabelText("Fin de curso"), { target: { value: "2026-06-01" } });
+  fireEvent.change(screen.getByLabelText("Fin de curso"), { target: { value: EDIT_ENROLL_START } });
 }
 
 // Envía el formulario sin la validación nativa (como hace la suite @servidor
@@ -94,19 +105,46 @@ describe("CohortForm", () => {
         new ApiError("Revisa este dato de la cohorte.", 400, { code: "INVALID_FIELD", field }),
       );
       render(
-        <CohortForm
-          courses={courses}
-          {...(edit ? { cohortId: "cohort-1", version: "2026-10-19T15:04:05.123456+00:00" } : {})}
-        />,
+        edit ? (
+          <CohortForm
+            courses={courses}
+            cohortId="cohort-1"
+            version="2026-10-19T15:04:05.123456+00:00"
+            initialValues={{
+              courseId: "course-b",
+              nombre: "Cohorte Julio",
+              precio: "200",
+              cupoMaximo: "15",
+              fechaInicioMatricula: EDIT_ENROLL_START,
+              fechaFinMatricula: EDIT_ENROLL_END,
+              fechaInicioCurso: EDIT_COURSE_START,
+              fechaFinCurso: EDIT_COURSE_END,
+              tipoModalidad: "",
+              horariosCapacitacionTeoria: "",
+              numeroVehiculos: "",
+              numeroAulas: "",
+            }}
+          />
+        ) : (
+          <CohortForm courses={courses} />
+        ),
       );
-      fillRequiredFields();
+      if (edit) {
+        // En edición el precio no se muestra: se cambia otro dato para poder guardar.
+        fireEvent.change(screen.getByLabelText("Cupo máximo"), { target: { value: "16" } });
+      } else {
+        fillRequiredFields();
+      }
       await user.click(
         screen.getByRole("button", { name: edit ? "Guardar cambios" : "Crear cohorte" }),
       );
       const alert = await screen.findByRole("alert");
       expect(screen.getByLabelText(label)).toHaveAttribute("aria-invalid", "true");
       expect(screen.getByLabelText(label)).toHaveAttribute("aria-describedby", alert.id);
-      expect(screen.getByLabelText("Precio")).toHaveAttribute("aria-invalid", "false");
+      expect(screen.getByLabelText(edit ? "Cupo máximo" : "Precio")).toHaveAttribute(
+        "aria-invalid",
+        "false",
+      );
     },
   );
 
@@ -142,7 +180,7 @@ describe("CohortForm", () => {
         fechaInicioMatricula: "2026-02-01",
         fechaFinMatricula: "2026-02-25",
         fechaInicioCurso: "2026-03-01",
-        fechaFinCurso: "2026-06-01",
+        fechaFinCurso: EDIT_ENROLL_START,
         tipoModalidad: null,
         horariosCapacitacionTeoria: null,
         numeroVehiculos: null,
@@ -266,7 +304,7 @@ describe("CohortForm", () => {
     await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
     await screen.findByRole("alert");
 
-    fireEvent.change(screen.getByLabelText("Fin de curso"), { target: { value: "2026-06-01" } });
+    fireEvent.change(screen.getByLabelText("Fin de curso"), { target: { value: EDIT_ENROLL_START } });
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Fin de curso")).toHaveAttribute("aria-invalid", "false");
@@ -318,10 +356,10 @@ describe("CohortForm", () => {
           nombre: "Cohorte Julio",
           precio: "200",
           cupoMaximo: "15",
-          fechaInicioMatricula: "2026-06-01",
-          fechaFinMatricula: "2026-06-25",
-          fechaInicioCurso: "2026-07-01",
-          fechaFinCurso: "2026-09-01",
+          fechaInicioMatricula: EDIT_ENROLL_START,
+          fechaFinMatricula: EDIT_ENROLL_END,
+          fechaInicioCurso: EDIT_COURSE_START,
+          fechaFinCurso: EDIT_COURSE_END,
           tipoModalidad: "",
           horariosCapacitacionTeoria: "",
           numeroVehiculos: "",
@@ -344,10 +382,10 @@ describe("CohortForm", () => {
         nombre: "Cohorte Julio B",
         precio: 200,
         cupoMaximo: 15,
-        fechaInicioMatricula: "2026-06-01",
-        fechaFinMatricula: "2026-06-25",
-        fechaInicioCurso: "2026-07-01",
-        fechaFinCurso: "2026-09-01",
+        fechaInicioMatricula: EDIT_ENROLL_START,
+        fechaFinMatricula: EDIT_ENROLL_END,
+        fechaInicioCurso: EDIT_COURSE_START,
+        fechaFinCurso: EDIT_COURSE_END,
         tipoModalidad: null,
         horariosCapacitacionTeoria: null,
         numeroVehiculos: null,
@@ -417,36 +455,6 @@ describe("CohortForm", () => {
         numeroVehiculos: 0,
         numeroAulas: 0,
       });
-    });
-
-    it("en edición, vaciar el precio envía null en el PATCH", async () => {
-      mockedPatch.mockResolvedValue({});
-      render(
-        <CohortForm
-          courses={courses}
-          cohortId="cohort-1"
-          initialValues={{
-            courseId: "course-b",
-            nombre: "Cohorte Julio",
-            precio: "200",
-            cupoMaximo: "15",
-            fechaInicioMatricula: "2026-06-01",
-            fechaFinMatricula: "2026-06-25",
-            fechaInicioCurso: "2026-07-01",
-            fechaFinCurso: "2026-09-01",
-            tipoModalidad: "",
-            horariosCapacitacionTeoria: "",
-            numeroVehiculos: "",
-            numeroAulas: "",
-          }}
-        />,
-      );
-
-      fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "" } });
-      submitWithoutNativeValidation();
-
-      await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
-      expect(mockedPatch.mock.calls[0][1]).toMatchObject({ precio: null });
     });
   });
 
@@ -652,10 +660,10 @@ describe("CohortForm", () => {
             nombre: "Cohorte Julio",
             precio: "200",
             cupoMaximo: "15",
-            fechaInicioMatricula: "2026-06-01",
-            fechaFinMatricula: "2026-06-25",
-            fechaInicioCurso: "2026-07-01",
-            fechaFinCurso: "2026-09-01",
+            fechaInicioMatricula: EDIT_ENROLL_START,
+            fechaFinMatricula: EDIT_ENROLL_END,
+            fechaInicioCurso: EDIT_COURSE_START,
+            fechaFinCurso: EDIT_COURSE_END,
             tipoModalidad: "",
             horariosCapacitacionTeoria: "",
             numeroVehiculos: "",
@@ -753,10 +761,10 @@ describe("CohortForm", () => {
             nombre: "Cohorte Julio",
             precio: "200",
             cupoMaximo: "15",
-            fechaInicioMatricula: "2026-06-01",
-            fechaFinMatricula: "2026-06-25",
-            fechaInicioCurso: "2026-07-01",
-            fechaFinCurso: "2026-09-01",
+            fechaInicioMatricula: EDIT_ENROLL_START,
+            fechaFinMatricula: EDIT_ENROLL_END,
+            fechaInicioCurso: EDIT_COURSE_START,
+            fechaFinCurso: EDIT_COURSE_END,
             tipoModalidad: "",
             horariosCapacitacionTeoria: "",
             numeroVehiculos: "",
@@ -774,7 +782,7 @@ describe("CohortForm", () => {
       // Ningún control (texto, número, fecha, selector) queda marcado.
       const form = screen.getByRole("button", { name: "Guardar cambios" }).closest("form");
       const controls = form?.querySelectorAll("input, select") ?? [];
-      expect(controls).toHaveLength(12);
+      expect(controls).toHaveLength(11);
       for (const control of controls) {
         expect(control).toHaveAttribute("aria-invalid", "false");
       }
@@ -923,10 +931,10 @@ describe("CohortForm", () => {
       nombre: "Cohorte Julio",
       precio: "200",
       cupoMaximo: "15",
-      fechaInicioMatricula: "2026-06-01",
-      fechaFinMatricula: "2026-06-25",
-      fechaInicioCurso: "2026-07-01",
-      fechaFinCurso: "2026-09-01",
+      fechaInicioMatricula: EDIT_ENROLL_START,
+      fechaFinMatricula: EDIT_ENROLL_END,
+      fechaInicioCurso: EDIT_COURSE_START,
+      fechaFinCurso: EDIT_COURSE_END,
       tipoModalidad: "",
       horariosCapacitacionTeoria: "",
       numeroVehiculos: "",
@@ -1002,7 +1010,6 @@ describe("CohortForm", () => {
       const user = userEvent.setup();
       renderEdit();
 
-      fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "200.00" } });
       fireEvent.change(screen.getByLabelText("Nombre de la cohorte"), {
         target: { value: "  Cohorte Julio " },
       });
@@ -1072,10 +1079,10 @@ describe("CohortForm", () => {
             nombre: "Cohorte Julio",
             precio: "200",
             cupoMaximo: "15",
-            fechaInicioMatricula: "2026-06-01",
-            fechaFinMatricula: "2026-06-25",
-            fechaInicioCurso: "2026-07-01",
-            fechaFinCurso: "2026-09-01",
+            fechaInicioMatricula: EDIT_ENROLL_START,
+            fechaFinMatricula: EDIT_ENROLL_END,
+            fechaInicioCurso: EDIT_COURSE_START,
+            fechaFinCurso: EDIT_COURSE_END,
             tipoModalidad: "",
             horariosCapacitacionTeoria: "",
             numeroVehiculos: "",
