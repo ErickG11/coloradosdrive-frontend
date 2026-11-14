@@ -62,7 +62,7 @@ beforeEach(() => {
 
 it("muestra el encabezado y las tres secciones del panel", async () => {
   render(<SolicitudDetail item={item} onClose={vi.fn()} onChanged={vi.fn()} />);
-  expect(screen.getByRole("dialog", { name: "Ana Torres" })).toBeInTheDocument();
+  expect(screen.getByRole("complementary", { name: "Ana Torres" })).toBeInTheDocument();
   expect(await screen.findByRole("tab", { name: "Lo que declaró" })).toBeInTheDocument();
   expect(screen.getByRole("tab", { name: "Verificaciones" })).toBeInTheDocument();
   expect(screen.getByRole("tab", { name: "Consentimiento" })).toBeInTheDocument();
@@ -97,7 +97,7 @@ it("solicitud pendiente coloca eliminar en Más y las tres decisiones en el pie"
     <SolicitudDetail item={{ ...item, estado: "enviada" }} onClose={vi.fn()} onChanged={vi.fn()} />,
   );
   await screen.findByRole("tab", { name: "Lo que declaró" });
-  const dialog = screen.getByRole("dialog", { name: "Ana Torres" });
+  const dialog = screen.getByRole("complementary", { name: "Ana Torres" });
   const footer = within(dialog.querySelector("footer")!);
   expect(footer.getByRole("button", { name: "Rechazar" })).toBeEnabled();
   expect(footer.getByRole("button", { name: "Devolver para corregir" })).toBeEnabled();
