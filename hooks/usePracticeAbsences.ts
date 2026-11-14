@@ -7,14 +7,15 @@ export function usePracticeAbsences(studentId?: string) {
     "/practice-slots/blocks/admin-absences" +
     (studentId ? `?studentId=${encodeURIComponent(studentId)}` : "");
   const result = useFetch<AdminPracticeAbsence[]>(path);
+  const { refetch } = result;
   useEffect(() => {
-    const refresh = () => result.refetch();
+    const refresh = () => refetch();
     window.addEventListener("focus", refresh);
     window.addEventListener("practice-notifications-updated", refresh);
     return () => {
       window.removeEventListener("focus", refresh);
       window.removeEventListener("practice-notifications-updated", refresh);
     };
-  }, [result.refetch]);
+  }, [refetch]);
   return result;
 }
