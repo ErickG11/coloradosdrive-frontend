@@ -272,7 +272,11 @@ describe("integración en ficha", () => {
         .mocked(api.get)
         .mock.calls.filter(([p]) => p === `/admin/estudiantes/${studentProfile.id}`),
     ).toHaveLength(2);
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("complementary", { name: "Asignar cohorte" }),
+      ).not.toBeInTheDocument(),
+    );
   });
   it("eliminación pendiente conocida bloquea edición y nuevas asignaciones al cerrar", async () => {
     vi.mocked(api.get).mockImplementation(async (path) =>
@@ -295,8 +299,16 @@ describe("integración en ficha", () => {
     });
     fireEvent.click(confirm());
     await screen.findByRole("alert");
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancelar" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    fireEvent.click(
+      within(screen.getByRole("complementary", { name: "Asignar cohorte" })).getByRole("button", {
+        name: "Cancelar",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("complementary", { name: "Asignar cohorte" }),
+      ).not.toBeInTheDocument(),
+    );
     expect(screen.getByRole("button", { name: "Editar" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Asignar cohorte" })).toBeDisabled();
   });
