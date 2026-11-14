@@ -4,12 +4,11 @@ import { EnrollmentIcon } from "@/components/inscripcion/EnrollmentVisual";
 import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import flowStyles from "./student-enrollment-flow.module.css";
 import { WaitlistPreferences } from "./WaitlistControl";
-import { useEffect } from "react";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 
 import type { IndividualEnrollmentAccess } from "@/types/individualEnrollmentAccess";
 import { EnrollmentWorkspace } from "./EnrollmentWorkspace";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useStudentPayment } from "./useStudentPayment";
 import { BillingPanel } from "./BillingPanel";
 import { StudentPaymentStep } from "./StudentPaymentStep";
@@ -55,16 +54,15 @@ export function StudentEnrollmentWizard() {
       </fieldset>
     ) : null;
   const [waiting, setWaiting] = useState<{ id: string; value: boolean } | null>(null);
+  const waitingEnrollmentId = data?.enrollmentId;
   const onWaiting = useCallback(
     (value: boolean) => {
-      if (data?.enrollmentId) setWaiting({ id: data.enrollmentId, value });
+      if (waitingEnrollmentId) setWaiting({ id: waitingEnrollmentId, value });
     },
-    [data?.enrollmentId],
+    [waitingEnrollmentId],
   );
   const [selected, setSelected] = useState<number | null>(null);
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("paso") === "2") setSelected(1);
-  }, []);
+  const stepFromUrl = useSearchParams().get("paso") === "2" ? 1 : null;
   const closed = useCallback(() => {
     setSelected(1);
     refetch();
@@ -124,7 +122,7 @@ export function StudentEnrollmentWizard() {
         </div>
       </EnrollmentFlowFrame>
     );
-  const desiredStep = selected ?? (reservation.held ? 2 : 0);
+  const desiredStep = selected ?? stepFromUrl ?? (reservation.held ? 2 : 0);
   const step = desiredStep === 2 && !reservation.live && !paymentOpen ? 1 : desiredStep;
   return (
     <EnrollmentFlowFrame companion={false} student total={3} step={step + 1}>

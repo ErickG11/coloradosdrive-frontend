@@ -38,10 +38,9 @@ export function PracticeBlockProvider({
   const [optionsError, setOptionsError] = useState<string | null>(null);
   const active = useRef(false);
   const version = useRef(0);
-  const refresh = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!enabled) return;
     const request = ++version.current;
-    setLoading(true);
     const current = () => active.current && request === version.current;
     await Promise.allSettled([
       api.get<PracticeBlockSummary>("/practice-slots/blocks/summary").then(
@@ -72,19 +71,27 @@ export function PracticeBlockProvider({
     ]);
     if (current()) setLoading(false);
   }, [enabled]);
+  // Las recargas posteriores muestran el estado de carga; la primera ya nace cargando.
+  const refresh = useCallback(async () => {
+    if (enabled) setLoading(true);
+    await load();
+  }, [enabled, load]);
+  const stop = useCallback(() => {
+    active.current = false;
+    version.current++;
+  }, []);
   useEffect(() => {
     active.current = true;
-    void refresh();
+    void load();
     const focus = () => {
       void refresh();
     };
     window.addEventListener("focus", focus);
     return () => {
-      active.current = false;
-      version.current++;
+      stop();
       window.removeEventListener("focus", focus);
     };
-  }, [refresh]);
+  }, [load, refresh, stop]);
   const cohorts = [...new Set(summary?.enrollments.map((e) => e.cohortId) ?? [])].sort();
   const handlers = {
     "blocks-updated": () => {

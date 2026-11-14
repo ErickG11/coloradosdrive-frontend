@@ -14,24 +14,35 @@ export interface RequestReviewLock {
 }
 
 const INACTIVE: RequestReviewLock = { phase: "inactive", token: null, until: null };
+const LOADING: RequestReviewLock = { phase: "loading", token: null, until: null };
 const MIN_RENEW_MS = 15_000;
 const MAX_RENEW_MS = 120_000;
 
 export function useRequestReview(id: string, enabled: boolean): RequestReviewLock {
-  const [lock, setLock] = useState<RequestReviewLock>(INACTIVE);
+  // El estado se asocia a la solicitud consultada: al cambiar de solicitud o de modo se parte de
+  // "cargando" (o "inactivo") sin escribir estado desde el efecto.
+  const key = `${id}|${String(enabled)}`;
+  const [state, setState] = useState<{ key: string; lock: RequestReviewLock }>({
+    key,
+    lock: enabled ? LOADING : INACTIVE,
+  });
+  const lock = enabled ? (state.key === key ? state.lock : LOADING) : INACTIVE;
 
   useEffect(() => {
-    if (!enabled) {
-      setLock(INACTIVE);
-      return;
-    }
+    if (!enabled) return;
+    const setLock = (next: RequestReviewLock) => {
+      setState({ key, lock: next });
+    };
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const root = `/admin/solicitudes/${id}/revision`;
 
     function apply(state: RequestReviewState) {
       if (!alive) return;
-      if (state.active === false) return setLock(INACTIVE);
+      if (state.active === false) {
+        setLock(INACTIVE);
+        return;
+      }
       if (state.owned && state.token) {
         setLock({ phase: "owned", token: state.token, until: state.until ?? null });
         const left =
@@ -66,7 +77,6 @@ export function useRequestReview(id: string, enabled: boolean): RequestReviewLoc
     }
 
     async function start() {
-      setLock({ phase: "loading", token: null, until: null });
       try {
         const state = await api.get<RequestReviewState>(root);
         if (!alive) return;
@@ -88,7 +98,7 @@ export function useRequestReview(id: string, enabled: boolean): RequestReviewLoc
       alive = false;
       if (timer) clearTimeout(timer);
     };
-  }, [id, enabled]);
+  }, [id, enabled, key]);
 
   return lock;
 }
