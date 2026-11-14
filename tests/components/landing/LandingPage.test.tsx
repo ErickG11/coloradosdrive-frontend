@@ -3,6 +3,9 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
 import { LandingPage } from "@/components/landing/LandingPage";
+import { RequirementsSection } from "@/components/landing/RequirementsSection";
+import { ScheduleSection } from "@/components/landing/ScheduleSection";
+import { landingContent } from "@/lib/content/landing";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { getPublicCourses } from "@/lib/api/publicCourses";
 import type { PublicCourse } from "@/types/publicCourse";
@@ -94,8 +97,9 @@ describe("LandingPage", () => {
     expect(screen.getAllByText("Consulta la próxima cohorte")).toHaveLength(2);
   });
 
-  it("muestra los 4 requisitos de inscripción fijos", () => {
-    renderLanding([]);
+  // La landing ya no monta estas secciones: se verifica su contenido fijo por separado.
+  it("la sección de requisitos muestra los 4 requisitos de inscripción fijos", () => {
+    render(<RequirementsSection />);
 
     expect(screen.getByText("Cédula de identidad")).toBeInTheDocument();
     expect(screen.getByText("Papeleta de votación")).toBeInTheDocument();
@@ -105,8 +109,8 @@ describe("LandingPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("muestra el horario de prácticas fijo", () => {
-    renderLanding([]);
+  it("la sección de horario muestra el horario de prácticas fijo", () => {
+    render(<ScheduleSection />);
 
     expect(screen.getByText("Todos los días, de 06:00 a 22:00.")).toBeInTheDocument();
   });
@@ -151,18 +155,16 @@ describe("enlaces de inscripción de la landing real", () => {
     );
     expect(screen.queryByText("Inscríbete por WhatsApp")).not.toBeInTheDocument();
     expectCourseLinks(`/inscripcion?courseId=${courseAId}`, `/inscripcion?courseId=${courseBId}`);
-    expect(screen.getByRole("link", { name: "Consulta por tus prácticas" })).toHaveAttribute(
-      "href",
-      "/inscripcion",
-    );
+    // La consulta por prácticas pasó a ser un contacto por WhatsApp, no una inscripción.
+    const practiceLink = screen.getByRole("link", { name: "Consulta por tus prácticas" });
+    expect(practiceLink).toHaveAttribute("href", landingContent.whatsappEnrollmentHref);
+    expect(practiceLink).toHaveAttribute("target", "_blank");
     const enrollmentLinks = screen
       .getAllByRole("link", { hidden: true })
       .filter((link) =>
-        /Inscríbete|Inscribirme|Consulta por tus prácticas/.test(
-          link.getAttribute("aria-label") ?? link.textContent ?? "",
-        ),
+        /Inscríbete|Inscribirme/.test(link.getAttribute("aria-label") ?? link.textContent ?? ""),
       );
-    expect(enrollmentLinks).toHaveLength(7);
+    expect(enrollmentLinks).toHaveLength(6);
     for (const link of enrollmentLinks) {
       expect(link.getAttribute("href")).toMatch(/^\/inscripcion(?:\?courseId=[a-f0-9-]+)?$/);
       expect(link.getAttribute("href")).not.toContain("wa.me");
@@ -217,7 +219,7 @@ describe("enlaces de inscripción de la landing real", () => {
         renderLanding(await getPublicCourses());
         expectCourseLinks("/inscripcion", "/inscripcion");
         for (const link of screen.getAllByRole("link", {
-          name: /Inscríbete|Inscribirme|Consulta por tus prácticas/,
+          name: /Inscríbete|Inscribirme/,
         })) {
           expect(link).toHaveAttribute("href", "/inscripcion");
         }
@@ -248,18 +250,30 @@ describe("enlaces de inscripción de la landing real", () => {
         expect(link).toHaveAttribute("rel", "noopener noreferrer");
       }
     }
+    // Además de los cuatro contactos, la nota de cursos y la consulta de prácticas usan el
+    // mensaje genérico hacia el primer número.
+    const whatsappLinks = screen
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("href")?.startsWith("https://wa.me/"));
+    expect(whatsappLinks).toHaveLength(6);
     expect(
-      screen
-        .getAllByRole("link")
-        .filter((link) => link.getAttribute("href")?.startsWith("https://wa.me/")),
+      whatsappLinks.filter(
+        (link) => link.getAttribute("href") === landingContent.whatsappEnrollmentHref,
+      ),
     ).toHaveLength(4);
   });
 
   it("conserva las dos notas informativas sobre WhatsApp", () => {
     renderLanding([]);
-    expect(
-      screen.getByText("Valores sin IVA. Consulta fechas y cohortes por WhatsApp."),
-    ).toBeInTheDocument();
+    const note = screen.getByText(
+      (_, element) =>
+        element?.tagName === "P" &&
+        element.textContent === "Valores sin IVA. Consulta fechas y cohortes por WhatsApp.",
+    );
+    expect(within(note).getByRole("link", { name: "WhatsApp" })).toHaveAttribute(
+      "href",
+      landingContent.whatsappEnrollmentHref,
+    );
     expect(
       screen.getByText("Elige tu curso y consulta la próxima cohorte por WhatsApp."),
     ).toBeInTheDocument();
