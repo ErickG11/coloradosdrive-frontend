@@ -73,6 +73,8 @@ function mockApi(cohort: CohortDetail | Error | (CohortDetail | Error)[]) {
   const queue = Array.isArray(cohort) ? [...cohort] : null;
   mockedGet.mockImplementation((path: string) => {
     if (path === "/courses") return Promise.resolve(courses);
+    // Reglas de cohortes apagadas: no deben gastar las respuestas de la cohorte.
+    if (path === "/cohorts/configuracion") return Promise.resolve({ active: false });
     if (path.startsWith("/cohorts/")) {
       const next = queue ? (queue.length > 1 ? queue.shift() : queue[0]) : cohort;
       return next instanceof Error ? Promise.reject(next) : Promise.resolve(next);

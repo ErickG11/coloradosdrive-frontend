@@ -17,6 +17,8 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/api/client", () => ({
   api: {
+    // El formulario consulta las reglas de cohortes; estas pruebas usan el contrato con reglas apagadas.
+    get: () => Promise.resolve({ active: false }),
     post: vi.fn(),
     patch: vi.fn(),
   },
