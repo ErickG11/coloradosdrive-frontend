@@ -13,6 +13,8 @@ let routeId = "cohort-1";
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: routeId }),
+  // Sin ?seccion=fechas la página abre la sección general.
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 
@@ -45,6 +47,13 @@ const courses: Course[] = [
   },
 ];
 
+// Fechas futuras respecto a hoy: una cohorte cuyo curso ya terminó queda en solo lectura.
+function daysFromToday(days: number): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 function cohortDetail(overrides: Partial<CohortDetail> = {}): CohortDetail {
   return {
     id: "cohort-1",
@@ -52,10 +61,10 @@ function cohortDetail(overrides: Partial<CohortDetail> = {}): CohortDetail {
     nombre: "400",
     precio: 200,
     cupoMaximo: 20,
-    fechaInicioMatricula: "2026-07-01",
-    fechaFinMatricula: "2026-07-25",
-    fechaInicioCurso: "2026-08-01",
-    fechaFinCurso: "2026-09-04",
+    fechaInicioMatricula: daysFromToday(10),
+    fechaFinMatricula: daysFromToday(30),
+    fechaInicioCurso: daysFromToday(40),
+    fechaFinCurso: daysFromToday(80),
     tipoModalidad: null,
     horariosCapacitacionTeoria: null,
     numeroVehiculos: null,
@@ -73,6 +82,8 @@ function mockApi(cohort: CohortDetail | Error | (CohortDetail | Error)[]) {
   const queue = Array.isArray(cohort) ? [...cohort] : null;
   mockedGet.mockImplementation((path: string) => {
     if (path === "/courses") return Promise.resolve(courses);
+    // Reglas de cohortes apagadas: no deben gastar las respuestas de la cohorte.
+    if (path === "/cohorts/configuracion") return Promise.resolve({ active: false });
     if (path.startsWith("/cohorts/")) {
       const next = queue ? (queue.length > 1 ? queue.shift() : queue[0]) : cohort;
       return next instanceof Error ? Promise.reject(next) : Promise.resolve(next);
@@ -255,7 +266,8 @@ describe("EditCohortPage", () => {
       const status = screen.getAllByRole("status")[0];
       await waitFor(() => expect(status).toHaveTextContent("Se cargaron los datos actuales"));
 
-      fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "210" } });
+      // En edición el precio ya no se muestra (se administra por tipo de curso).
+      fireEvent.change(screen.getByLabelText("Cupo máximo"), { target: { value: "25" } });
 
       expect(status).toBeEmptyDOMElement();
       expect(status).toBeInTheDocument();
@@ -305,7 +317,10 @@ describe("EditCohortPage", () => {
       const user = userEvent.setup();
       mockApi(cohortDetail());
       mockedPatch.mockRejectedValueOnce(
-        new ApiError("El precio es obligatorio.", 400, { code: "INVALID_FIELD", field: "precio" }),
+        new ApiError("El cupo máximo es obligatorio.", 400, {
+          code: "INVALID_FIELD",
+          field: "cupoMaximo",
+        }),
       );
       render(<EditCohortPage />);
 

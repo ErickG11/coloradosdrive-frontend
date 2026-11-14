@@ -165,7 +165,11 @@ export function EnrollmentWizard() {
               ? { mode: "existing", id: student.id }
               : {
                   mode: "new",
-                  cedula: student.cedula,
+                  cedula:
+                    student.documentType && student.documentType !== "cedula" ? "" : student.cedula,
+                  ...(student.documentType
+                    ? { documentType: student.documentType, documentNumber: student.cedula }
+                    : {}),
                   nombreCompleto: student.nombreCompleto,
                   correo: student.correo,
                   telefono: student.telefono || undefined,
@@ -176,6 +180,7 @@ export function EnrollmentWizard() {
           automatic: !course.manualOverride,
           practice: {
             ...practicePayload(form),
+            precioCentavos: practice.plan.precioCentavos,
             ...(suggestion && instructor
               ? { horaResuelta: suggestion.horaResuelta, instructorId: instructor.id }
               : {}),
@@ -302,6 +307,13 @@ export function EnrollmentWizard() {
               onNext={(p) => {
                 edit();
                 setPractice(p);
+                if (p.resolved)
+                  setCourse({
+                    ...course,
+                    cohortId: p.resolved.cohort.id,
+                    cohort: p.resolved.cohort,
+                    courseId: p.resolved.courseId,
+                  });
                 setStep(4);
               }}
             />

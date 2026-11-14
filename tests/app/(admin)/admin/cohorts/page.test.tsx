@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,8 +12,8 @@ vi.mock("@/hooks/useFetch", () => ({
   useFetch: vi.fn(),
 }));
 
-vi.mock("@/lib/api/client", () => ({ api: { delete: vi.fn() } }));
-const mockedDelete = vi.mocked(api.delete);
+vi.mock("@/lib/api/client", () => ({ api: { post: vi.fn() } }));
+const mockedPost = vi.mocked(api.post);
 
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -79,6 +79,9 @@ function mockFetchResults(options: {
         ...(options.courses ?? { data: [], isLoading: false, error: null }),
       };
     }
+    if (path === "/cohorts/configuracion") {
+      return { refetch: vi.fn(), data: { active: false }, isLoading: false, error: null };
+    }
     throw new Error(`useFetch mockeado con un path inesperado: ${String(path)}`);
   });
 }
@@ -129,7 +132,6 @@ describe("CohortsPage", () => {
 
     expect(screen.getByText("Cohorte Marzo")).toBeInTheDocument();
     expect(screen.getByText("Motocicletas (Tipo A)")).toBeInTheDocument();
-    expect(screen.getByText("$150.00")).toBeInTheDocument();
   });
 
   it("respeta el orden en que el servidor entrega las cohortes", () => {
@@ -192,7 +194,7 @@ describe("CohortsPage", () => {
     });
   });
 
-  describe("eliminar cohorte", () => {
+  describe("cancelar cohorte", () => {
     const second: Cohort = { ...cohorts[0], id: "cohort-2", nombre: "Cohorte Abril" };
 
     function renderList() {
@@ -203,57 +205,68 @@ describe("CohortsPage", () => {
       render(<CohortsPage />);
     }
 
-    it("cada fila tiene la acción «Eliminar» y el modal muestra el curso", async () => {
+    async function cancelMarzo(user: ReturnType<typeof userEvent.setup>, reason = "Falta de cupos") {
+      await user.click(screen.getByRole("button", { name: "Cancelar cohorte Cohorte Marzo" }));
+      await user.type(screen.getByLabelText("Motivo de cancelación"), reason);
+      await user.click(screen.getByRole("button", { name: "Cancelar cohorte" }));
+    }
+
+    it("cada fila tiene la acción «Cancelar cohorte» y el modal pide el motivo", async () => {
       const user = userEvent.setup();
       renderList();
 
-      expect(screen.getByRole("button", { name: "Eliminar Cohorte Abril" })).toBeInTheDocument();
-      await user.click(screen.getByRole("button", { name: "Eliminar Cohorte Marzo" }));
+      expect(
+        screen.getByRole("button", { name: "Cancelar cohorte Cohorte Abril" }),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Cancelar cohorte Cohorte Marzo" }));
 
       const dialog = screen.getByRole("dialog");
-      expect(dialog).toHaveAccessibleName("Eliminar la cohorte «Cohorte Marzo»");
-      expect(dialog).toHaveTextContent("Motocicletas (Tipo A)");
+      expect(dialog).toHaveAccessibleName("Cancelar cohorte «Cohorte Marzo»");
+      expect(screen.getByLabelText("Motivo de cancelación")).toBeRequired();
+      // Sin motivo no se puede confirmar.
+      expect(screen.getByRole("button", { name: "Cancelar cohorte" })).toBeDisabled();
     });
 
-    it("tras eliminar, la cohorte desaparece del listado, se avisa y se recarga la lista", async () => {
+    it("al cancelar envía el motivo y la versión, avisa y recarga la lista", async () => {
       const user = userEvent.setup();
-      mockedDelete.mockResolvedValue({
-        id: "cohort-1",
-        nombre: "Cohorte Marzo",
-        message: "Cohorte eliminada.",
-      });
+      mockedPost.mockResolvedValue({});
       renderList();
 
-      await user.click(screen.getByRole("button", { name: "Eliminar Cohorte Marzo" }));
-      await user.type(
-        screen.getByLabelText("Para confirmar, escribe el nombre exacto de la cohorte:"),
-        "Cohorte Marzo",
-      );
-      await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
+      await cancelMarzo(user);
 
-      await waitFor(() => expect(statusText()).toBe("Cohorte «Cohorte Marzo» eliminada."));
+      await waitFor(() => expect(statusText()).toBe("Cohorte «Cohorte Marzo» cancelada."));
+      expect(mockedPost).toHaveBeenCalledWith("/cohorts/cohort-1/cancelar", {
+        updatedAt: cohorts[0].updatedAt,
+        motivo: "Falta de cupos",
+      });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(screen.queryByText("Cohorte Marzo")).not.toBeInTheDocument();
-      expect(screen.getByText("Cohorte Abril")).toBeInTheDocument();
       expect(refetchCohorts).toHaveBeenCalledTimes(1);
     });
 
-    it("si está bloqueada (409) no desaparece del listado", async () => {
+    it("si está bloqueada (409) muestra el código, los alumnos afectados y no recarga", async () => {
       const user = userEvent.setup();
-      const message =
-        "No se puede eliminar la cohorte: tiene 1 alumno (1 activo, 0 desactivados, 0 graduados, 0 retirados), 0 franjas de práctica (0 con reserva) y 0 registros de recuperación de prácticas.";
-      mockedDelete.mockRejectedValue(new ApiError(message, 409, { code: "COHORT_IN_USE" }));
+      const message = "La cohorte tiene matrículas activas o reservas vigentes.";
+      mockedPost.mockRejectedValue(
+        new ApiError(message, 409, {
+          code: "COHORTE_CANCELACION_BLOQUEADA",
+          detalles: { cantidad: 3 },
+        }),
+      );
       renderList();
 
-      await user.click(screen.getByRole("button", { name: "Eliminar Cohorte Marzo" }));
-      await user.type(
-        screen.getByLabelText("Para confirmar, escribe el nombre exacto de la cohorte:"),
-        "Cohorte Marzo",
-      );
-      await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
+      await cancelMarzo(user);
 
-      expect(await screen.findByRole("alert")).toHaveTextContent(message);
-      await user.click(screen.getByRole("button", { name: "Cancelar" }));
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent(`COHORTE_CANCELACION_BLOQUEADA: ${message}`);
+      expect(alert).toHaveTextContent("Alumnos afectados: 3.");
+      expect(within(alert).getByRole("link", { name: "Ver alumnos de esta cohorte" })).toHaveAttribute(
+        "href",
+        "/admin/students?cohortId=cohort-1",
+      );
+      // Bloqueada: no se puede reintentar hasta resolver los alumnos.
+      expect(screen.getByRole("button", { name: "Cancelar cohorte" })).toBeDisabled();
+
+      await user.click(screen.getByRole("button", { name: "Conservar cohorte" }));
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.getByText("Cohorte Marzo")).toBeInTheDocument();
@@ -261,50 +274,34 @@ describe("CohortsPage", () => {
       expect(statusText()).toBe("");
     });
 
-    it("tras eliminar, el foco pasa al mensaje de éxito y no queda en body", async () => {
+    it("tras cancelar, el foco pasa al mensaje de éxito y no queda en body", async () => {
       const user = userEvent.setup();
-      mockedDelete.mockResolvedValue({
-        id: "cohort-1",
-        nombre: "Cohorte Marzo",
-        message: "Cohorte eliminada.",
-      });
+      mockedPost.mockResolvedValue({});
       renderList();
 
-      await user.click(screen.getByRole("button", { name: "Eliminar Cohorte Marzo" }));
-      await user.type(
-        screen.getByLabelText("Para confirmar, escribe el nombre exacto de la cohorte:"),
-        "Cohorte Marzo",
-      );
-      await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
+      await cancelMarzo(user);
 
-      await waitFor(() => expect(statusText()).toContain("eliminada."));
+      await waitFor(() => expect(statusText()).toContain("cancelada."));
       const region = screen
         .getAllByRole("status")
-        .find((r) => r.textContent?.includes("eliminada."));
+        .find((r) => r.textContent?.includes("cancelada."));
       expect(region).toHaveFocus();
     });
 
-    it("el aviso de creación se oculta al abrir una eliminación y al completarla", async () => {
+    it("el aviso de creación se oculta al abrir una cancelación y al completarla", async () => {
       const user = userEvent.setup();
       searchParams = new URLSearchParams("aviso=cohorte-creada");
-      mockedDelete.mockResolvedValue({
-        id: "cohort-1",
-        nombre: "Cohorte Marzo",
-        message: "Cohorte eliminada.",
-      });
+      mockedPost.mockResolvedValue({});
       renderList();
       expect(statusText()).toBe("Cohorte creada correctamente.");
 
-      await user.click(screen.getByRole("button", { name: "Eliminar Cohorte Marzo" }));
+      await user.click(screen.getByRole("button", { name: "Cancelar cohorte Cohorte Marzo" }));
       expect(statusText()).toBe("");
 
-      await user.type(
-        screen.getByLabelText("Para confirmar, escribe el nombre exacto de la cohorte:"),
-        "Cohorte Marzo",
-      );
-      await user.click(screen.getByRole("button", { name: "Eliminar cohorte" }));
+      await user.type(screen.getByLabelText("Motivo de cancelación"), "Falta de cupos");
+      await user.click(screen.getByRole("button", { name: "Cancelar cohorte" }));
 
-      await waitFor(() => expect(statusText()).toBe("Cohorte «Cohorte Marzo» eliminada."));
+      await waitFor(() => expect(statusText()).toBe("Cohorte «Cohorte Marzo» cancelada."));
     });
 
     it("un refetch con datos ya cargados no reemplaza la tabla por «Cargando…»", () => {

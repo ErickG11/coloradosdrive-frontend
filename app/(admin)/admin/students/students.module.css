@@ -1,5 +1,5 @@
 :global(body):has(.page) {
-  --sidebar-width: 218px;
+  --sidebar-expanded: 218px;
 }
 :global(#main-content):has(.page) {
   padding: 0;
@@ -105,7 +105,7 @@
   align-items: start;
 }
 .page[data-panel-open="true"] .workspace {
-  grid-template-columns: minmax(0, 1fr) 440px;
+  grid-template-columns: minmax(0, 1fr);
 }
 .main {
   min-width: 0;
@@ -670,7 +670,7 @@
     right: 0;
     bottom: 0;
     z-index: 35;
-    width: calc(100% - var(--sidebar-width));
+    width: calc(100% - var(--sidebar-w));
     max-width: 640px;
     height: 100dvh;
     box-shadow: -12px 0 30px rgb(0 0 0 / 0.15);
@@ -793,4 +793,221 @@
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* C10: el panel vive sobre la página; el listado conserva todo su ancho. */
+.page[data-panel-open="true"] .workspace {
+  display: block;
+}
+.page[data-panel-open="true"] .main {
+  visibility: visible;
+}
+
+/* C11: columna complementaria, compacta y sin ocultar la tabla. */
+@media (min-width: 1024px) {
+  .page[data-panel-open="true"] .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(360px, 28vw, 420px);
+  }
+  .page[data-panel-open="true"] .main {
+    padding-inline: 16px;
+  }
+  .page[data-panel-open="true"] .filters {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .page[data-panel-open="true"] .filters > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .page[data-panel-open="true"] .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .page[data-panel-open="true"] :global(.data-table) table {
+    table-layout: fixed;
+  }
+  .page[data-panel-open="true"] :global(.data-table) :is(th, td) {
+    padding: 10px 6px;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .page[data-panel-open="true"] .courseBadges {
+    min-width: 0;
+  }
+  .page[data-panel-open="true"] .studentIdentity {
+    flex-wrap: wrap;
+  }
+  .page[data-panel-open="true"] .iconButton {
+    width: 30px;
+    min-width: 30px;
+  }
+  .page[data-panel-open="true"] .main :is(select, summary) {
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
+/* C23-A: chips que nunca se parten, textos largos con elipsis y filas compactas. */
+.chip {
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 100%;
+}
+.chipText {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.courseBadge {
+  max-width: 100%;
+  min-width: 0;
+}
+.page :global(.data-table) .chip {
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: nowrap;
+}
+.absenceChip {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-bg-sunken);
+  color: var(--color-accent-red);
+  font-size: 12px;
+  font-weight: 600;
+}
+.compactList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  container-type: inline-size;
+}
+.compactRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 10px;
+  padding: 12px;
+  border: 1px solid var(--student-line);
+  border-radius: 10px;
+  background: var(--student-surface);
+}
+.compactRow:hover,
+.compactRow:focus-within {
+  background: var(--color-brand-tint);
+}
+.compactRow[data-selected] {
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand-border);
+}
+.compactMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.compactTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+.compactName {
+  flex: 1 1 7rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--student-ink);
+}
+.compactChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 0 1 auto;
+}
+.compactEnrollments {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 50px;
+  min-width: 0;
+}
+.compactGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.compactGroup > .chip:nth-child(2) {
+  flex-shrink: 1;
+  min-width: 0;
+}
+.compactMuted {
+  font-size: 12px;
+  color: var(--student-muted);
+}
+.rowMenu {
+  position: relative;
+  align-self: start;
+  justify-self: end;
+}
+.rowMenuButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--student-line);
+  border-radius: 7px;
+  background: var(--student-surface);
+  color: var(--student-ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rowMenuButton:hover,
+.rowMenuButton[aria-expanded="true"] {
+  color: var(--student-accent);
+  background: var(--color-brand-tint);
+}
+.rowMenuList {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--student-line);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.16);
+}
+.rowMenuList a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--student-ink);
+}
+.rowMenuList a:hover,
+.rowMenuList a:focus-visible {
+  background: var(--color-brand-tint);
+  color: var(--student-accent);
 }

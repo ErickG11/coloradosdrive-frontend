@@ -82,5 +82,33 @@ describe("Sidebar", () => {
 
 it("muestra solicitudes solo al administrador", () => {
   renderSidebar("admin");
-  expect(screen.getByRole("link", { name: "Solicitudes de inscripción" })).toHaveAttribute("href", "/admin/solicitudes");
+  expect(screen.getByRole("link", { name: "Solicitudes de inscripción" })).toHaveAttribute(
+    "href",
+    "/admin/solicitudes",
+  );
+});
+
+it("C09: alumno con acceso ve todos los módulos y Mi inscripción", () => {
+  renderSidebar("estudiante");
+  for (const name of [
+    "Mi panel",
+    "Mi inscripción",
+    // Los exámenes viven dentro de «Mi curso»: ya no hay un enlace propio.
+    "Mi curso",
+    "Horarios de práctica",
+    "Documentos para llevar",
+    "Mi historial de asistencia",
+    "Cambiar contraseña",
+  ])
+    expect(screen.getByRole("link", { name })).toBeInTheDocument();
+});
+it("C09: sin acceso conserva Mi inscripción y oculta los módulos protegidos", () => {
+  render(
+    <ThemeProvider>
+      <Sidebar email="ana@example.com" role="estudiante" studentEnrollmentRestricted />
+    </ThemeProvider>,
+  );
+  expect(screen.getByRole("link", { name: "Mi inscripción" })).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Exámenes" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Mi curso" })).not.toBeInTheDocument();
 });

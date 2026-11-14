@@ -12,6 +12,8 @@ export interface MatchingEnrollment {
   etapa?: EnrollmentStage;
 }
 export interface AdminStudent {
+  document?: { type: string; number: string };
+  paymentStatus?: string;
   id: string;
   cedula: string;
   nombreCompleto: string;
@@ -82,6 +84,7 @@ export interface StudentSchedule {
   recent: StudentPractice[];
 }
 export interface StudentDetail extends Omit<AdminStudent, "matchingEnrollments"> {
+  financialRestricted?: boolean;
   status:
     | "pendiente_verificacion"
     | "verificado"

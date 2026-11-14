@@ -1,9 +1,10 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api/client";
 import { ownCatalog, ownCourses } from "@/lib/api/studentContent";
-import { contentDate, safeProgress } from "@/lib/utils/content";
+import { friendlyDate, safeProgress } from "@/lib/utils/content";
 import { accessLabel, studentContentError } from "@/lib/utils/studentContent";
 import { Button } from "@/components/ui/Button";
 import { buttonClassName } from "@/components/ui/buttonStyles";
@@ -13,7 +14,7 @@ import { StudentError, StudentLoading, StudentProgress } from "./StudentContentU
 import {
   CourseRoad,
   LearningIcon,
-  ScoreRing,
+  ExamScoreMeter,
   SubjectEmpty,
   subjectTone,
   visualTitle,
@@ -67,10 +68,10 @@ export function StudentCourse({ initialCourseId = "" }: { initialCourseId?: stri
       {course ? (
         <CourseCatalog key={course.course_id} course={course} />
       ) : (
-        <p className={styles.empty}>
-          Aún no tienes un curso habilitado. Necesitas una matrícula activa con cohorte asignada.
-          Consulta con administración.
-        </p>
+        <StudentEmptyState
+          title="Todavía no hay materias disponibles para ti"
+          description="Tu curso aún no tiene contenido asignado. Te avisaremos cuando esté listo."
+        />
       )}
     </div>
   );
@@ -305,7 +306,12 @@ function CourseCatalog({ course }: { course: Course }) {
             })}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <StudentEmptyState
+          title="Todavía no hay materias disponibles para ti"
+          description="Tu curso aún no tiene contenido asignado. Te avisaremos cuando esté listo."
+        />
+      )}
     </>
   );
 }
@@ -325,6 +331,8 @@ function CourseItem({
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
+  const blocked = item.kind === "examen" && item.bloqueado === true;
+  const pending = item.prerequisitos_pendientes ?? [];
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState<{ title: string; body: string } | null>(null);
   const completed = optimistic ?? item.completado;
@@ -334,26 +342,6 @@ function CourseItem({
     available && item.access.closes_at && Date.parse(item.access.closes_at) - now < 86_400_000;
   const attemptsLeft =
     item.intentos_permitidos == null || (item.intentos_usados ?? 0) < item.intentos_permitidos;
-  async function toggle() {
-    if (lock.current) return;
-    lock.current = true;
-    setBusy(true);
-    setError(null);
-    const next = !completed;
-    setOptimistic(next);
-    try {
-      await api.put(`/estudiantes/content/items/${item.id}/completed`, { completed: next });
-      notify(next ? "Material marcado como visto." : "Marca de visto quitada.");
-      await refresh();
-      setOptimistic(null);
-    } catch (failure) {
-      setOptimistic(null);
-      setError(studentContentError(failure));
-    } finally {
-      lock.current = false;
-      setBusy(false);
-    }
-  }
   async function openMaterial() {
     if (lock.current) return;
     // Reserve a tab during the user gesture, before the signed URL request completes.
@@ -391,8 +379,13 @@ function CourseItem({
         anchor.click();
         anchor.remove();
       }
-      notify("Material abierto. Puedes marcarlo como visto cuando termines.");
+      // Abrir completa el material: el servidor ya lo registró; se actualiza todo sin recargar.
+      setOptimistic(true);
+      notify("Material abierto y completado.");
+      await refresh();
+      setOptimistic(null);
     } catch (failure) {
+      setOptimistic(null);
       tab?.close();
       setError(studentContentError(failure));
     } finally {
@@ -422,7 +415,7 @@ function CourseItem({
               ? "check"
               : item.access.estado === "programado"
                 ? "clock"
-                : !available
+                : !available || blocked
                   ? "lock"
                   : type
           }
@@ -442,6 +435,12 @@ function CourseItem({
         {!item.obligatorio ? <span className={styles.chip}>Opcional</span> : null}
         {completed ? (
           <span className={`${styles.chip} ${styles.success}`}>✓ Completado</span>
+        ) : null}
+        {blocked ? (
+          <span className={`${styles.chip} ${styles.warning}`}>
+            <LearningIcon name="lock" />
+            Bloqueado
+          </span>
         ) : null}
         {closing ? (
           <span className={`${styles.chip} ${styles.warning}`}>
@@ -473,18 +472,52 @@ function CourseItem({
               </strong>
               <small>Intentos utilizados</small>
             </div>
-            {item.mejor_nota != null ? (
-              <ScoreRing value={item.mejor_nota} label="Mejor nota" />
-            ) : null}
+            <ExamScoreMeter value={item.mejor_nota} />
             {ongoing ? (
               <div>
                 <small>Tu intento sigue en curso</small>
-                <p>Límite: {contentDate(ongoing.deadline_at)}</p>
+                <p>Límite: {friendlyDate(ongoing.deadline_at, true)}</p>
               </div>
             ) : null}
           </div>
+          {blocked && pending.length ? (
+            <p id={`blocked-${item.id}`} className={styles.accessText} data-state="no_habilitado">
+              <LearningIcon name="lock" />
+              <span>
+                Antes de rendir este examen, completa:{" "}
+                {pending.map((entry, index) => (
+                  <span key={entry.item_id}>
+                    {index > 0 ? ", " : ""}
+                    <a
+                      href={`#content-${entry.item_id}`}
+                      className="underline"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        const element = document.getElementById(`content-${entry.item_id}`);
+                        element?.scrollIntoView({ block: "center" });
+                        element?.focus({ preventScroll: true });
+                      }}
+                    >
+                      {entry.titulo}
+                    </a>
+                  </span>
+                ))}
+              </span>
+            </p>
+          ) : null}
           <div className={styles.itemActions}>
-            {ongoing || (available && attemptsLeft) ? (
+            {blocked ? (
+              <button
+                type="button"
+                aria-disabled="true"
+                aria-describedby={`blocked-${item.id}`}
+                className={`${styles.accentAction} cursor-not-allowed opacity-60`}
+                onClick={(event) => event.preventDefault()}
+              >
+                Rendir examen
+                <LearningIcon name="arrow" />
+              </button>
+            ) : ongoing || (available && attemptsLeft) ? (
               <Link
                 href={`/student/exams/${item.exam_id}?course_id=${courseId}`}
                 className={styles.accentAction}
@@ -520,9 +553,6 @@ function CourseItem({
           >
             Abrir {type.toLowerCase()}
             <LearningIcon name="arrow" />
-          </Button>
-          <Button variant="ghost" disabled={!available || busy} onClick={() => void toggle()}>
-            {completed ? "Quitar marca" : "Marcar como visto"}
           </Button>
         </div>
       )}

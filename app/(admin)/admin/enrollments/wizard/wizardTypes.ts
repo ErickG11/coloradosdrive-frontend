@@ -6,6 +6,8 @@ export interface StudentData {
   mode: "new" | "existing";
   id?: string;
   cedula: string;
+  documentType?: "cedula" | "pasaporte" | "otro";
+  documentNumber?: string;
   nombreCompleto: string;
   correo: string;
   telefono: string;
@@ -38,6 +40,7 @@ export interface PreviewCohort {
   fecha_fin_curso: string;
 }
 export interface CourseSelection {
+  rulesActive?: boolean;
   courseId: string;
   courseTipo: CourseType;
   courseNombre: string;
@@ -46,6 +49,7 @@ export interface CourseSelection {
   cohort?: PreviewCohort;
 }
 export interface CoursePreview {
+  rulesActive?: boolean;
   courseId: string;
   tipo: CourseType;
   suggestion: {
@@ -69,13 +73,16 @@ export interface PracticeFormData {
 export const EMPTY_PRACTICE: PracticeFormData = {
   semanas: 1,
   modalidad: "entre_semana",
-  horasPorDia: 2,
+  horasPorDia: "",
   fechaInicio: "",
-  horaDeseada: "08:00",
+  horaDeseada: "",
   fechaFin: "",
   manual: false,
 };
 export interface PracticePlan {
+  rulesActive?: boolean;
+  precioCentavos?: number;
+  ultimaHoraFin?: string;
   timezone: string;
   semanas: number;
   modalidad: Modalidad;
@@ -90,13 +97,14 @@ export interface PracticePlan {
   horas: number;
 }
 export interface PracticeChoice {
+  resolved?: { cohort: PreviewCohort; courseId: string };
   form: PracticeFormData;
   plan: PracticePlan;
   suggestion: SugerirPracticaResult | null;
   instructor: InstructorSugerido | null;
 }
 export const DOCUMENTS = [
-  { tipo: "cedula", label: "Cédula" },
+  { tipo: "cedula", label: "Documento de identidad original" },
   { tipo: "papeleta_votacion", label: "Papeleta de votación" },
   { tipo: "tipo_sangre", label: "Tipo de sangre" },
   { tipo: "titulo_bachiller", label: "Título de bachiller o certificado de décimo" },
@@ -156,12 +164,11 @@ export interface ManualResult {
   documentosPendientes?: number;
 }
 export const HORAS_POR_DIA_MIN = 1;
-export const HORAS_POR_DIA_MAX = 16;
 
 export function horasPorDiaError(value: number | ""): string | null {
   if (value === "") return "Ingresa las horas por día.";
-  if (!Number.isInteger(value) || value < HORAS_POR_DIA_MIN || value > HORAS_POR_DIA_MAX)
-    return `Las horas por día deben ser un entero entre ${HORAS_POR_DIA_MIN} y ${HORAS_POR_DIA_MAX}.`;
+  if (!Number.isInteger(value) || value < HORAS_POR_DIA_MIN)
+    return "Selecciona una opción de horas por día válida.";
   return null;
 }
 

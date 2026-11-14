@@ -27,6 +27,7 @@ export function CoursesSection({ courses }: { courses: PublicCourse[] }) {
         {landingContent.courses.map((course, index) => {
           const matchingCourses = courses.filter((item) => item.tipo === course.type);
           const publicCourse = matchingCourses[0];
+          // Con un único curso público del tipo, la inscripción llega con el curso elegido.
           const enrollmentHref =
             matchingCourses.length === 1 && publicCourse?.id
               ? `${course.href}?courseId=${encodeURIComponent(publicCourse.id)}`
@@ -86,7 +87,18 @@ export function CoursesSection({ courses }: { courses: PublicCourse[] }) {
           );
         })}
       </div>
-      <p className={styles.note}>Valores sin IVA. Consulta fechas y cohortes por WhatsApp.</p>
+      <p className={styles.note}>
+        Valores sin IVA. Consulta fechas y cohortes por{" "}
+        <a
+          href={landingContent.whatsappEnrollmentHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.textLink}
+        >
+          WhatsApp
+        </a>
+        .
+      </p>
     </section>
   );
 }

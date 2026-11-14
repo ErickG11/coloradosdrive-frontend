@@ -1,6 +1,7 @@
 import { api } from "./client";
 import { ApiError } from "./errors";
 import type {
+  StudentPlanRules,
   StudentScheduleInput,
   StudentScheduleOptions,
   StudentSchedulePreview,
@@ -11,6 +12,14 @@ import type {
 const ROOT = "/estudiantes/inscripcion";
 const options = () => ({ signal: AbortSignal.timeout(15_000), cache: "no-store" as const });
 export const studentScheduleApi = {
+  rules: (signal: AbortSignal) =>
+    api.get<StudentPlanRules>(`${ROOT}/horario/config`, { signal, cache: "no-store" }),
+  calendar: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
+    api.post<{
+      serverNow: string;
+      calendarEndDate?: string | null;
+      dias: import("@/components/student-enrollment/PlanFields").PlanCalendarDay[];
+    }>(`${ROOT}/horario/calendario`, { enrollmentId, ...input }, { signal, cache: "no-store" }),
   options: (enrollmentId: string, input: StudentScheduleInput, signal: AbortSignal) =>
     api.post<StudentScheduleOptions>(
       `${ROOT}/horario/opciones`,
@@ -25,7 +34,13 @@ export const studentScheduleApi = {
     ),
   reserve: (enrollmentId: string, input: StudentScheduleSelection) =>
     api.post<StudentScheduleReservation>(`${ROOT}/reservas`, { enrollmentId, ...input }, options()),
-  current: () => api.get<StudentReservationSnapshot>(`${ROOT}/reserva`, options()),
+  current: (enrollmentId?: string) =>
+    api.get<StudentReservationSnapshot>(
+      enrollmentId
+        ? `${ROOT}/reserva/matricula/${encodeURIComponent(enrollmentId)}`
+        : `${ROOT}/reserva`,
+      options(),
+    ),
   change: (id: string, action: "ampliar" | "liberar") =>
     api.post<StudentReservationSnapshot>(
       `${ROOT}/reservas/${encodeURIComponent(id)}/${action}`,
@@ -37,7 +52,7 @@ const messages: Record<string, string> = {
   HORARIO_NO_DISPONIBLE: "Ese horario ya no está libre. Elige otra hora de inicio.",
   PLAN_NO_FACTIBLE: "Ese horario ya no es posible en todos los días. Elige otra hora de inicio.",
   HORA_INICIO_INVALIDA: "Elige una hora de inicio que permita terminar a las 22:00.",
-  FECHA_INICIO_INVALIDA: "Elige una fecha de inicio desde mañana y dentro del próximo año.",
+  FECHA_INICIO_INVALIDA: "Elige una fecha de inicio desde hoy con horas futuras.",
   RESERVA_CONCURRENTE: "El horario se está actualizando. Consulta su estado antes de reintentar.",
   RESERVA_YA_EXISTE: "Ya tienes una reserva. Consulta su estado antes de elegir otra.",
   LIMITE_RESERVAS_DIARIO: "Alcanzaste el máximo de reservas de hoy. Puedes volver mañana.",

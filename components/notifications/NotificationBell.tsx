@@ -16,11 +16,11 @@ import type { Role } from "@/types/user";
 const contentNotices = new Set(["contenido_habilitado", "examen_habilitado", "intento_extra"]);
 
 export function NotificationBell({ role }: { role: Role | null }) {
-  if (role !== "estudiante" && role !== "instructor") return null;
+  if (role !== "estudiante" && role !== "instructor" && role !== "admin") return null;
   return <UserNotificationBell role={role} />;
 }
 
-function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
+function UserNotificationBell({ role }: { role: "estudiante" | "instructor" | "admin" }) {
   const notifications = useNotifications();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -33,6 +33,13 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
 
   async function read(notification: Notification) {
     const saved = await notifications.markRead(notification);
+    if (saved && role === "estudiante" && notification.tipo === "cupo_disponible") {
+      close();router.push("/student/schedule#cupos-disponibles");return;
+    }
+    if (role === "admin") {
+      if (saved) close();
+      return;
+    }
     if (saved && role === "estudiante" && contentNotices.has(notification.tipo)) {
       close();
       router.push("/student/course");
@@ -206,6 +213,14 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" }) {
                         </span>
                         <span className="break-words text-sm leading-6 text-text-secondary">
                           {notification.mensaje}
+                          {notification.alert ? (
+                            <span className="mt-1 block font-medium">
+                              {notification.alert.resolvedAt
+                                ? "Resuelta"
+                                : `Alerta ${notification.alert.severity}`}{" "}
+                              · {notification.alert.entityId}
+                            </span>
+                          ) : null}
                         </span>
                         {notification.tipo === "encuesta_practica" ? (
                           <span className="text-xs font-medium text-brand-primary">

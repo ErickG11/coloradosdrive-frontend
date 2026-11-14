@@ -1,4 +1,5 @@
 "use client";
+import { BillingPanel } from "./BillingPanel";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -41,7 +42,9 @@ export function AdminPaymentActions({
     };
   }, [studentId, reload]);
   const reservation = data?.reserva;
-  const held = reservation?.estado === "vigente" || reservation?.estado === "pago_en_curso";
+  const held =
+    reservation?.purpose !== "plan_change" &&
+    (reservation?.estado === "vigente" || reservation?.estado === "pago_en_curso");
   const unresolved = data?.pagos.some((p) => p.estado === "pendiente" || p.estado === "revision");
   async function confirm() {
     if (!reservation || !action || mutation.current) return;
@@ -82,6 +85,7 @@ export function AdminPaymentActions({
   }
   return (
     <Card title="Pago y reserva de inscripción">
+      <BillingPanel studentId={studentId} />
       {!data && !error ? <p role="status">Consultando pagos…</p> : null}
       {data?.pagos.length ? (
         <ul className="grid gap-3">
@@ -97,7 +101,6 @@ export function AdminPaymentActions({
                       ? "Rechazado"
                       : "Pendiente"}
               </p>
-              <p className="break-all text-sm text-text-secondary">{p.id}</p>
               {p.estado === "revision" ? (
                 <p className="mt-2 text-status-warning">
                   Dinero recibido: {paymentMoney(p.recibido_centavos ?? 0)}. Revisa el caso antes de

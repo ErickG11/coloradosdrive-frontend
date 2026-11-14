@@ -114,7 +114,9 @@ describe("StudentCourse (exámenes del alumno)", () => {
 
     render(<StudentCourse />);
 
-    expect(await screen.findByText(/Aún no tienes un curso habilitado/)).toBeInTheDocument();
+    expect(
+      await screen.findByText("Todavía no hay materias disponibles para ti"),
+    ).toBeInTheDocument();
   });
 
   it("examen sin intentos: muestra Disponible y Rendir examen con el curso en el enlace", async () => {

@@ -13,15 +13,16 @@ import styles from "./landing.module.css";
 export function LandingHeader() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [activeSection, setActiveSection] = useState("");
   const menuButton = useRef<HTMLButtonElement>(null);
   const header = useRef<HTMLElement>(null);
+  const [activeSection, setActiveSection] = useState("");
   const { scrollY, scrollYProgress } = useScroll();
   useMotionValueEvent(scrollY, "change", (value) => {
     setScrolled(value > 16);
     if (value < 100) setActiveSection("");
   });
 
+  // Marca en el menú la sección que se está leyendo.
   useEffect(() => {
     const sections = landingContent.navigation.flatMap(({ href }) => {
       const element = document.querySelector(href);
@@ -139,6 +140,16 @@ export function LandingHeader() {
             Inscríbete
             <LandingIcon name="arrow" />
           </Link>
+          <a
+            href={landingContent.whatsappEnrollmentHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.secondaryButton}
+            onClick={() => setOpen(false)}
+          >
+            Consulta por WhatsApp
+            <LandingIcon name="whatsapp" />
+          </a>
         </div>
       </nav>
       <motion.div

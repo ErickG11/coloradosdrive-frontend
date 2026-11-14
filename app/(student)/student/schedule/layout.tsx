@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = { title: "Horarios de práctica" };
+import { PracticeBlockProvider } from "@/components/practice-blocks/PracticeBlockProvider";
+
+export const metadata: Metadata = { title: "Mis prácticas" };
 
 export default function StudentScheduleLayout({ children }: { children: ReactNode }) {
-  return children;
+  return <PracticeBlockProvider enabled>{children}</PracticeBlockProvider>;
 }

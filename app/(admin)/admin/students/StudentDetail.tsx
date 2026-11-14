@@ -1,5 +1,9 @@
 "use client";
+import { StudentAbsences } from "./StudentAbsences";
+import { EnrollmentAdminControls } from "@/components/student-enrollment/EnrollmentAdminControls";
 import Link from "next/link";
+import { AdminPlanChangePanel } from "@/components/student-enrollment/AdminPlanChangePanel";
+import { StudentEnrollmentAccess } from "./StudentEnrollmentAccess";
 import { AdminPaymentActions } from "@/components/student-enrollment/AdminPaymentActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
@@ -10,7 +14,9 @@ import { StudentEditForm } from "./StudentEditForm";
 import { useFetch } from "@/hooks/useFetch";
 import { readStudentFilters, studentListHref } from "@/lib/api/students";
 import type { StudentDetail as Detail } from "@/types";
-import { DOCUMENTS } from "@/app/(admin)/admin/enrollments/wizard/wizardTypes";
+import { SidePanel } from "@/components/ui/SidePanel";
+import type { StudentView } from "./StudentDrawer";
+import type { IndividualEnrollmentAccess } from "@/types/individualEnrollmentAccess";
 import { ActiveBadge, StudentBadge } from "./StudentBadge";
 import { StudentActions } from "./StudentActions";
 import { StudentSchedule } from "./StudentSchedule";
@@ -19,6 +25,7 @@ import { StudentAvatar } from "./StudentVisual";
 import { studentActionError } from "@/lib/api/studentActions";
 import { ApiError } from "@/lib/api/errors";
 import { formatMoney } from "@/lib/utils/money";
+import { StudentCohortTransfer } from "./StudentCohortTransfer";
 import { StudentCohortAssignment } from "./StudentCohortAssignment";
 import type { StudentEnrollment } from "@/types/student";
 import styles from "./students.module.css";
@@ -37,12 +44,25 @@ export function studentTimestamp(value: string) {
 }
 
 type Section = "information" | "enrollments" | "documents" | "practices";
-const SECTIONS: [Section, string][] = [
-  ["information", "Información"],
-  ["enrollments", "Matrículas"],
-  ["documents", "Documentos"],
-  ["practices", "Prácticas"],
-];
+function StudentEnrollmentDates({
+  studentId,
+  enrollmentId,
+}: {
+  studentId: string;
+  enrollmentId: string;
+}) {
+  const state = useFetch<IndividualEnrollmentAccess>(
+    `/admin/estudiantes/${studentId}/matriculas/acceso`,
+  );
+  const dates = state.data?.enrollments?.find((e) => e.id === enrollmentId);
+  if (!dates?.practiceStartDate) return null;
+  return (
+    <p>
+      Prácticas: {date(dates.practiceStartDate)} al {date(dates.practiceEndDate)}
+      {dates.accessEndDate ? ` · Acceso hasta ${date(dates.accessEndDate)}` : ""}.
+    </p>
+  );
+}
 
 export function StudentProfile({
   student,
@@ -51,8 +71,6 @@ export function StudentProfile({
   actions,
   section = "all",
   hideHeading = false,
-  onEdit,
-  editDisabled = false,
   onAttendanceChanged,
   onAttendanceBusyChange,
   onPaymentChanged,
@@ -61,10 +79,8 @@ export function StudentProfile({
   onAssignCohort?: (enrollment: StudentEnrollment) => void;
   assignmentDisabled?: boolean;
   actions?: ReactNode;
-  /** «all» muestra la ficha completa; el panel lateral la muestra por pestañas. */
   section?: "all" | Section;
   hideHeading?: boolean;
-  /** En el panel lateral, «Editar» también va en la cabecera de los datos personales. */
   onEdit?: () => void;
   editDisabled?: boolean;
   onAttendanceChanged?: (slotId: string) => void;
@@ -73,233 +89,248 @@ export function StudentProfile({
 }) {
   const show = (name: Section) => section === "all" || section === name;
   return (
-    <div className={styles.profile}>
-      {!hideHeading && (
+    <div className="grid min-w-0 gap-6">
+      {!hideHeading ? (
+        <div className={styles.profileHeading}>
+          <StudentAvatar student={student} />
+          <h1>{student.nombreCompleto}</h1>
+          <ActiveBadge active={student.activo} />
+        </div>
+      ) : null}
+      {show("information") ? (
         <>
-          <div className={styles.profileHeading}>
-            <StudentAvatar student={student} />
-            <h1 className="font-display text-2xl font-bold text-text-primary">
-              {student.nombreCompleto}
-            </h1>
-            <ActiveBadge active={student.activo} />
-            {student.status && <StudentBadge status={student.status} />}
-          </div>
-          <p className="text-sm text-text-secondary">
-            Registrado el{" "}
-            <time dateTime={student.createdAt}>{studentTimestamp(student.createdAt)}</time>
-          </p>
-        </>
-      )}
-      {show("information") && (
-        <>
-          <Card title="Contacto y matrícula actual">
-            <dl className="grid gap-4 text-sm sm:grid-cols-3">
+          <Card title="Contacto">
+            <dl className="grid gap-x-5 gap-y-4 text-sm sm:grid-cols-2">
               {[
-                ["Cédula", student.cedula],
+                [
+                  student.document?.type === "pasaporte"
+                    ? "Pasaporte"
+                    : student.document?.type === "otro"
+                      ? "Otro documento"
+                      : "Cédula",
+                  student.document?.number ?? student.cedula,
+                ],
                 ["Teléfono", student.telefono],
                 ["Correo", student.correoDisponible ? student.correo : "No disponible"],
+                ["Fecha de nacimiento", date(student.fechaNacimiento)],
+                ["Tipo de sangre", student.tipoSangre],
+                ["Género", student.genero],
+                ["Ciudadanía", student.ciudadania],
+                ["Dirección", student.direccion],
               ].map(([label, value]) => (
-                <div key={label} className={label === "Correo" ? styles.emailField : undefined}>
+                <div
+                  key={label}
+                  className={
+                    label === "Correo" || label === "Dirección" ? "sm:col-span-2" : undefined
+                  }
+                >
                   <dt className="text-text-secondary">{label}</dt>
-                  <dd className="break-words">{value ?? "—"}</dd>
+                  <dd className="mt-1 break-words font-medium">{value ?? "—"}</dd>
                 </div>
               ))}
             </dl>
-            {student.enrollments
-              .filter((e) => ["activo", "pendiente_cohorte"].includes(e.status))
-              .map((enrollment) => (
-                <div key={enrollment.enrollmentId} className="mt-4">
-                  <p>
-                    {enrollment.curso?.nombre ?? "Curso no disponible"} ·{" "}
-                    {enrollment.cohorte?.nombre ?? "Sin cohorte asignada"}
-                  </p>
-                  {enrollment.etapa && enrollment.etapa !== "activa" && (
-                    <p className="mt-2 text-sm text-text-secondary">
-                      {enrollment.etapa === "por_agendar"
-                        ? "Por agendar: el alumno debe elegir su horario y pagar."
-                        : "Horario reservado temporalmente; pago pendiente."}
-                    </p>
-                  )}
-                  {enrollment.status === "pendiente_cohorte" &&
-                    onAssignCohort &&
-                    (enrollment.origen !== "solicitud" || enrollment.etapa === "activa") && (
-                      <div className="mt-2 mb-4 flex flex-col items-start gap-2">
-                        <Button
-                          variant="secondary"
-                          disabled={assignmentDisabled || !student.activo}
-                          onClick={() => onAssignCohort(enrollment)}
-                        >
-                          Asignar cohorte
-                        </Button>
-                        {!student.activo && (
-                          <p className="text-sm text-text-secondary">
-                            Reactiva al alumno primero para asignar cohorte.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                </div>
-              ))}
-            {!student.enrollments.some((e) =>
-              ["activo", "pendiente_cohorte"].includes(e.status),
-            ) && <p className="mt-3">Sin matrícula vigente · Sin cohorte asignada</p>}
-            {student.identidadPresencial?.origenSolicitud && (
-              <p className="mt-3 text-sm text-text-secondary">
-                Identidad presencial:{" "}
-                {student.identidadPresencial.confirmada ? "Confirmada" : "Pendiente"}
-                {student.identidadPresencial.confirmadaAt && (
-                  <>
-                    {" "}
-                    ·{" "}
-                    <time dateTime={student.identidadPresencial.confirmadaAt}>
-                      {studentTimestamp(student.identidadPresencial.confirmadaAt)}
-                    </time>
-                  </>
-                )}
-              </p>
-            )}
           </Card>
-          {actions}
+          <Card title="Cuenta y acceso">
+            <dl className="grid gap-4 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <dt>Estado de acceso</dt>
+                <dd>
+                  <ActiveBadge active={student.activo} />
+                </dd>
+              </div>
+              {student.status ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <dt>Estado de la cuenta</dt>
+                  <dd>
+                    <StudentBadge status={student.status} />
+                  </dd>
+                </div>
+              ) : null}
+              {student.identidadPresencial?.origenSolicitud ? (
+                <div>
+                  <dt className="text-text-secondary">Identidad presencial</dt>
+                  <dd className="mt-1">
+                    {student.identidadPresencial.confirmada ? "Confirmada" : "Pendiente"}
+                    {student.identidadPresencial.confirmadaAt
+                      ? ` · ${studentTimestamp(student.identidadPresencial.confirmadaAt)}`
+                      : ""}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+            {actions ? <div className="mt-4">{actions}</div> : null}
+          </Card>
           <StudentGraduation graduation={student.graduation} />
         </>
-      )}
-      {show("practices") && (
-        <StudentSchedule
-          key={student.id}
-          schedule={student.practiceSchedule}
-          onAttendanceChanged={onAttendanceChanged}
-          onBusyChange={onAttendanceBusyChange}
-        />
-      )}
-      {show("information") && (
-        <Card
-          className={styles.personalCard}
-          title={
-            onEdit ? (
-              <span className={styles.sectionTitle}>
-                Datos personales
-                <Button variant="secondary" size="sm" onClick={onEdit} disabled={editDisabled}>
-                  Editar datos
-                </Button>
-              </span>
-            ) : (
-              "Datos personales"
-            )
-          }
-        >
-          <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              ["Fecha de nacimiento", date(student.fechaNacimiento)],
-              ["Tipo de sangre", student.tipoSangre],
-              ["Género", student.genero],
-              ["Ciudadanía", student.ciudadania],
-              ["Dirección", student.direccion],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <dt className="text-text-secondary">{label}</dt>
-                <dd className="mt-1 break-words text-text-primary">{value ?? "—"}</dd>
-              </div>
-            ))}
-          </dl>
-        </Card>
-      )}
-      {(show("enrollments") || show("documents")) && (
+      ) : null}
+      {show("practices") ? (
         <>
-          <h2 className="font-display text-xl font-bold text-text-primary">
-            {section === "documents" ? "Documentos por matrícula" : "Matrículas"}
-          </h2>
-          {student.enrollments.length === 0 && (
-            <p className="text-text-secondary">El alumno no tiene matrículas.</p>
-          )}
-          {student.enrollments.map((enrollment) => (
-            <div key={enrollment.enrollmentId} className={styles.enrollmentGroup}>
-              {show("enrollments") && (
-                <Card
-                  className={styles.enrollmentCard}
-                  title={`${enrollment.curso?.nombre ?? "Curso no disponible"} · Tipo ${enrollment.courseType}`}
-                >
-                  <div className="mb-4 flex flex-wrap items-center gap-3">
-                    <StudentBadge status={enrollment.status} />
-                    <span className="text-sm text-text-secondary">
-                      {enrollment.cohorte?.nombre ?? "Sin cohorte"}
+          <StudentAbsences studentId={student.id} />
+          <StudentSchedule
+            key={student.id}
+            schedule={student.practiceSchedule}
+            onAttendanceChanged={onAttendanceChanged}
+            onBusyChange={onAttendanceBusyChange}
+          />
+        </>
+      ) : null}
+      {show("enrollments") || show("documents") ? (
+        <>
+          {student.enrollments.length === 0 ? (
+            <p className="text-sm text-text-secondary">El alumno no tiene matrículas.</p>
+          ) : null}
+          {student.enrollments.map((enrollment) => {
+            const hours = student.graduation.enrollments
+              .find((e) => e.enrollmentId === enrollment.enrollmentId)
+              ?.checks.find((check) => check.key === "practice");
+            return (
+              <Card
+                key={enrollment.enrollmentId}
+                title={
+                  <span className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      {enrollment.curso?.nombre ?? "Curso no disponible"} · Tipo{" "}
+                      {enrollment.courseType}
                     </span>
-                  </div>
-                  <p className="mb-4 text-sm text-text-secondary">
-                    Fecha de inscripción:{" "}
-                    <time dateTime={enrollment.fechaInscripcion}>
-                      {studentTimestamp(enrollment.fechaInscripcion)}
-                    </time>
-                  </p>
-                  <dl className="grid gap-4 text-sm sm:grid-cols-3">
-                    {(
-                      [
-                        ["Total", enrollment.montoTotal],
-                        ["Abonado", enrollment.montoAbonado],
-                        ["Saldo", enrollment.saldo],
-                      ] as const
-                    ).map(([label, value]) => (
-                      <div key={label}>
-                        <dt className="text-text-secondary">{label}</dt>
-                        <dd className="mt-1 font-medium text-text-primary">
-                          {studentMoney(value)}
-                        </dd>
+                    <StudentBadge
+                      status={
+                        enrollment.etapa && enrollment.etapa !== "activa"
+                          ? enrollment.etapa
+                          : enrollment.status
+                      }
+                    />
+                  </span>
+                }
+              >
+                {show("enrollments") ? (
+                  <div className="grid gap-4 text-sm">
+                    <p
+                      className={
+                        enrollment.cohorte
+                          ? "font-medium"
+                          : "w-fit rounded-sm bg-status-warning-bg px-3 py-2 text-status-warning"
+                      }
+                    >
+                      {enrollment.cohorte?.nombre ?? "Sin cohorte"}
+                    </p>
+                    <p className="text-text-secondary">
+                      Inscripción: {studentTimestamp(enrollment.fechaInscripcion)}
+                    </p>
+                    {student.financialRestricted ? (
+                      <p>Información reservada al permiso de pagos y facturas.</p>
+                    ) : (
+                      <div className="rounded-sm bg-bg-sunken p-3">
+                        <p className="font-medium">
+                          {enrollment.montoAbonado > 0
+                            ? `Pagado ${studentMoney(enrollment.montoAbonado)} de ${studentMoney(enrollment.montoTotal)}`
+                            : "Sin pago"}
+                        </p>
+                        {enrollment.saldo !== null && enrollment.saldo > 0 ? (
+                          <p className="mt-1 text-text-secondary">
+                            Saldo: {studentMoney(enrollment.saldo)}
+                          </p>
+                        ) : null}
                       </div>
-                    ))}
-                  </dl>
-                </Card>
-              )}
-              {show("enrollments") && student.enrollments.some((e) => e.origen === "solicitud") ? (
+                    )}
+                    <StudentEnrollmentDates
+                      studentId={student.id}
+                      enrollmentId={enrollment.enrollmentId}
+                    />
+                    {hours ? (
+                      <p className="text-text-secondary">
+                        {hours.label}: {hours.detail}
+                      </p>
+                    ) : null}
+                    {!student.financialRestricted &&
+                    onAssignCohort &&
+                    (enrollment.status === "pendiente_cohorte" ||
+                      (enrollment.cohorte && enrollment.status === "activo")) ? (
+                      <Button
+                        id={`cohort-action-${enrollment.enrollmentId}`}
+                        variant="secondary"
+                        className="justify-self-start"
+                        disabled={
+                          assignmentDisabled ||
+                          !student.activo ||
+                          (enrollment.origen === "solicitud" && enrollment.etapa !== "activa")
+                        }
+                        onClick={() => onAssignCohort(enrollment)}
+                      >
+                        {enrollment.status === "pendiente_cohorte"
+                          ? "Asignar cohorte"
+                          : "Cambiar de cohorte"}
+                      </Button>
+                    ) : null}
+                    {!student.activo && enrollment.status === "pendiente_cohorte" ? (
+                      <p className="text-text-secondary">
+                        Reactiva al alumno primero para asignar cohorte.
+                      </p>
+                    ) : null}
+                    {enrollment.status === "activo" ? (
+                      <AdminPlanChangePanel
+                        studentId={student.id}
+                        enrollmentId={enrollment.enrollmentId}
+                        courseType={enrollment.courseType}
+                        onChanged={onPaymentChanged}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+                {show("documents") ? (
+                  <div>
+                    <p className="mb-3 text-sm font-medium text-text-secondary">
+                      {enrollment.documentosPendientes} pendientes
+                    </p>
+                    <EnrollmentAdminControls
+                      studentId={student.id}
+                      enrollment={enrollment}
+                      onChanged={onPaymentChanged}
+                    />
+                  </div>
+                ) : null}
+              </Card>
+            );
+          })}
+          {show("enrollments") ? (
+            <>
+              {!student.financialRestricted &&
+              student.enrollments.some((e) => e.origen === "solicitud") ? (
                 <AdminPaymentActions
                   studentId={student.id}
                   active={student.activo}
                   onChanged={onPaymentChanged}
                 />
               ) : null}
-              {show("documents") && (
-                <Card
-                  title={`Documentos requeridos · ${enrollment.documentosPendientes} pendientes`}
-                >
-                  {section === "documents" && (
-                    <p className="mb-3 text-text-secondary">
-                      {enrollment.curso?.nombre ?? "Curso no disponible"} · Tipo{" "}
-                      {enrollment.courseType}
-                    </p>
-                  )}
-                  {enrollment.documentos.length === 0 ? (
-                    <p className="text-sm text-text-secondary">No hay documentos registrados.</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {enrollment.documentos.map((document) => (
-                        <li
-                          key={document.tipo}
-                          className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2 text-sm text-text-primary"
-                        >
-                          <span>
-                            {DOCUMENTS.find((item) => item.tipo === document.tipo)?.label ??
-                              document.tipo}
-                          </span>
-                          <StudentBadge status={document.estado} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Card>
-              )}
-            </div>
-          ))}
+              <StudentEnrollmentAccess
+                studentId={student.id}
+                labels={Object.fromEntries(
+                  student.enrollments.map((e) => [
+                    e.enrollmentId,
+                    `${e.curso?.nombre ?? `Tipo ${e.courseType}`} · ${e.cohorte?.nombre ?? "Sin cohorte"}`,
+                  ]),
+                )}
+                onChanged={onPaymentChanged}
+              />
+            </>
+          ) : null}
         </>
-      )}
+      ) : null}
     </div>
   );
 }
+
 export function StudentDetail({
   id,
   embedded = false,
   onChanged,
   onBusyChange,
+  view = "ficha",
+  onClose,
 }: {
   id: string;
-  /** Dentro del panel lateral: sin «Volver», con pestañas y acciones al pie. */
+  view?: StudentView;
+  onClose?: () => void;
+  /** Dentro del panel lateral: vistas independientes y acciones en el encabezado. */
   embedded?: boolean;
   onChanged?: () => void;
   onBusyChange?: (busy: boolean) => void;
@@ -311,8 +342,10 @@ export function StudentDetail({
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
+  const [cohortBusy, setCohortBusy] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const attendanceFocus = useRef<string | null>(null);
+  const cohortFocus = useRef<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [deletionPending, setDeletionPending] = useState(false);
   const [assigning, setAssigning] = useState<StudentEnrollment | null>(null);
@@ -333,7 +366,13 @@ export function StudentDetail({
       attendanceFocus.current = null;
     }
   }, [data, isLoading, error]);
-  const actions = data ? (
+  useEffect(() => {
+    if (!assigning && !isLoading && !error && cohortFocus.current) {
+      document.getElementById(`cohort-action-${cohortFocus.current}`)?.focus();
+      cohortFocus.current = null;
+    }
+  }, [assigning, isLoading, error, data]);
+  const accountActions = data ? (
     <>
       <StudentActions
         student={data}
@@ -348,6 +387,10 @@ export function StudentDetail({
           onChanged?.();
         }}
       />
+    </>
+  ) : null;
+  const identityAction = data ? (
+    <>
       {data.identidadPresencial?.origenSolicitud && !data.identidadPresencial.confirmada && (
         <Button
           variant="secondary"
@@ -366,21 +409,10 @@ export function StudentDetail({
           Confirmar identidad manualmente
         </Button>
       )}
-      <Button
-        variant="secondary"
-        className="self-start"
-        disabled={actionBusy || deletionPending || assigning !== null || confirmingIdentity}
-        onClick={() => {
-          setSuccess(false);
-          setEditing(true);
-        }}
-      >
-        Editar
-      </Button>
     </>
   ) : null;
-  return (
-    <div className={embedded ? styles.detail : "flex flex-col gap-6"}>
+  const content = (
+    <div className={assigning && embedded ? "h-full min-h-0" : "flex min-h-0 flex-col gap-6"}>
       {!embedded && (
         <Link
           className={buttonClassName("secondary", "sm", "self-start")}
@@ -389,13 +421,15 @@ export function StudentDetail({
           Volver a Alumnos
         </Link>
       )}
-      {identityNotice && <Toast message={identityNotice} onDismiss={() => setIdentityNotice("")} />}
-      {success && (
+      {!assigning && identityNotice && (
+        <Toast message={identityNotice} onDismiss={() => setIdentityNotice("")} />
+      )}
+      {!assigning && success && (
         <p role="status" className="text-sm text-accent-blue">
           Los datos del alumno se guardaron correctamente.
         </p>
       )}
-      {isLoading ? (
+      {isLoading && !data ? (
         <p role="status" className="text-text-secondary">
           Cargando ficha…
         </p>
@@ -415,91 +449,175 @@ export function StudentDetail({
         </div>
       ) : data ? (
         <>
-          {embedded && (
-            <header className={styles.profileHeading}>
-              <StudentAvatar student={data} />
-              <div>
-                <h2>{data.nombreCompleto}</h2>
-                <p>Cédula: {data.cedula}</p>
-                <p>Registrado el {studentTimestamp(data.createdAt)}</p>
-              </div>
-              <ActiveBadge active={data.activo} />
-              {data.status && <StudentBadge status={data.status} />}
-            </header>
-          )}
-          {actionNotice && (
+          {!embedded ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="secondary"
+                disabled={actionBusy || deletionPending || assigning !== null || confirmingIdentity}
+                onClick={() => setEditing(true)}
+              >
+                Editar
+              </Button>
+              {accountActions}
+            </div>
+          ) : null}
+          {!assigning && actionNotice && (
             <p role="status" className="text-sm text-accent-blue">
               {actionNotice}
             </p>
           )}
-          {embedded && (
-            <nav aria-label="Secciones de la ficha" className={styles.tabs}>
-              {SECTIONS.map(([key, label]) => (
+          {embedded && view === "ficha" && !assigning ? (
+            <div
+              role="tablist"
+              aria-label="Ficha del alumno"
+              className="flex gap-2 border-b border-border"
+            >
+              {(
+                [
+                  ["information", "Información"],
+                  ["practices", "Prácticas"],
+                ] as const
+              ).map(([key, label], index) => (
                 <button
-                  type="button"
                   key={key}
-                  aria-current={section === key ? "page" : undefined}
+                  id={`student-tab-${key}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={section === key}
+                  aria-controls="student-profile-panel"
+                  tabIndex={section === key ? 0 : -1}
+                  className="min-h-11 border-b-2 border-transparent px-3 text-sm aria-selected:border-brand-primary aria-selected:font-semibold"
                   onClick={() => setSection(key)}
+                  onKeyDown={(event) => {
+                    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+                    event.preventDefault();
+                    const next =
+                      event.key === "Home"
+                        ? "information"
+                        : event.key === "End"
+                          ? "practices"
+                          : index === 0
+                            ? "practices"
+                            : "information";
+                    setSection(next);
+                    document.getElementById(`student-tab-${next}`)?.focus();
+                  }}
                 >
                   {label}
                 </button>
               ))}
-            </nav>
-          )}
-          <StudentProfile
-            actions={embedded ? undefined : actions}
-            student={data}
-            onPaymentChanged={() => {
-              refetch();
-              onChanged?.();
-            }}
-            onAttendanceBusyChange={setAttendanceBusy}
-            onAttendanceChanged={(slotId) => {
-              attendanceFocus.current = slotId;
-              setActionNotice("La asistencia se guardó correctamente.");
-              refetch();
-              onChanged?.();
-            }}
-            hideHeading={embedded}
-            section={embedded ? section : "all"}
-            onEdit={
-              embedded
-                ? () => {
-                    setSuccess(false);
-                    setEditing(true);
-                  }
-                : undefined
-            }
-            editDisabled={actionBusy || deletionPending || assigning !== null || confirmingIdentity}
-            onAssignCohort={setAssigning}
-            assignmentDisabled={
-              editing ||
-              saving ||
-              actionBusy ||
-              deletionPending ||
-              assigning !== null ||
-              confirmingIdentity
-            }
-          />
-          {embedded && <div className={styles.accountActions}>{actions}</div>}
-          {assigning && (
-            <StudentCohortAssignment
+            </div>
+          ) : null}
+          {!assigning && view === "editar" ? (
+            <div className="grid gap-6">
+              <StudentEditForm
+                student={data}
+                onBusyChange={setSaving}
+                onDeletionPending={() => setDeletionPending(true)}
+                onCancel={() => onClose?.()}
+                onReload={refetch}
+                onSaved={() => {
+                  setSuccess(true);
+                  refetch();
+                  onChanged?.();
+                }}
+              />
+              {accountActions}
+            </div>
+          ) : null}
+          {!assigning && view !== "editar" ? (
+            <div
+              id="student-profile-panel"
+              role={view === "ficha" ? "tabpanel" : undefined}
+              aria-labelledby={view === "ficha" ? `student-tab-${section}` : undefined}
+            >
+              <StudentProfile
+                actions={identityAction}
+                student={data}
+                onPaymentChanged={() => {
+                  refetch();
+                  onChanged?.();
+                }}
+                onAttendanceBusyChange={setAttendanceBusy}
+                onAttendanceChanged={(slotId) => {
+                  attendanceFocus.current = slotId;
+                  setActionNotice("La asistencia se guardó correctamente.");
+                  refetch();
+                  onChanged?.();
+                }}
+                hideHeading={embedded}
+                section={
+                  !embedded
+                    ? "all"
+                    : view === "documentos"
+                      ? "documents"
+                      : view === "matriculas"
+                        ? "enrollments"
+                        : section
+                }
+                onEdit={
+                  embedded
+                    ? () => {
+                        setSuccess(false);
+                        setEditing(true);
+                      }
+                    : undefined
+                }
+                editDisabled={
+                  actionBusy || deletionPending || assigning !== null || confirmingIdentity
+                }
+                onAssignCohort={(enrollment) => {
+                  cohortFocus.current = enrollment.enrollmentId;
+                  setAssigning(enrollment);
+                }}
+                assignmentDisabled={
+                  editing ||
+                  saving ||
+                  actionBusy ||
+                  deletionPending ||
+                  assigning !== null ||
+                  confirmingIdentity
+                }
+              />
+            </div>
+          ) : null}
+          {assigning && assigning.cohorte ? (
+            <StudentCohortTransfer
+              embedded={embedded}
+              onBusyChange={setCohortBusy}
               key={assigning.enrollmentId}
               studentId={id}
               enrollment={assigning}
               onClose={() => setAssigning(null)}
-              onReload={() => {
+              onChanged={() => {
                 setAssigning(null);
-                refetch();
-              }}
-              onDeletionPending={() => setDeletionPending(true)}
-              onSaved={() => {
-                setAssigning(null);
-                setActionNotice("La cohorte se asignó correctamente.");
+                setActionNotice("La cohorte se cambió correctamente.");
                 refetch();
                 onChanged?.();
               }}
             />
+          ) : (
+            assigning && (
+              <StudentCohortAssignment
+                embedded={embedded}
+                onBusyChange={setCohortBusy}
+                key={assigning.enrollmentId}
+                studentId={id}
+                enrollment={assigning}
+                onClose={() => setAssigning(null)}
+                onReload={() => {
+                  setAssigning(null);
+                  refetch();
+                }}
+                onDeletionPending={() => setDeletionPending(true)}
+                onSaved={() => {
+                  setAssigning(null);
+                  setActionNotice("La cohorte se asignó correctamente.");
+                  refetch();
+                  onChanged?.();
+                }}
+              />
+            )
           )}
           {confirmingIdentity && (
             <StudentIdentityConfirmation
@@ -547,5 +665,49 @@ export function StudentDetail({
         </>
       ) : null}
     </div>
+  );
+  if (!embedded) return content;
+  return (
+    <SidePanel
+      context={
+        view === "editar"
+          ? "EDITAR ALUMNO"
+          : view === "matriculas"
+            ? "MATRÍCULAS"
+            : view === "documentos"
+              ? "DOCUMENTOS"
+              : "FICHA DEL ALUMNO"
+      }
+      className={styles.page}
+      title={data?.nombreCompleto ?? "Alumno"}
+      avatar={data ? <StudentAvatar student={data} /> : undefined}
+      subtitle={
+        data ? (
+          <>
+            <p>Documento: {data.document?.number ?? data.cedula}</p>
+            <p>Registrado el {studentTimestamp(data.createdAt)}</p>
+          </>
+        ) : undefined
+      }
+      header={
+        data ? (
+          <>
+            <ActiveBadge active={data.activo} />
+            {data.status ? <StudentBadge status={data.status} /> : null}
+          </>
+        ) : undefined
+      }
+      closeDisabled={
+        editing || saving || actionBusy || attendanceBusy || confirmingIdentity || cohortBusy
+      }
+      headerScrolls={!assigning && view !== "editar"}
+      bodyClassName={assigning ? "!overflow-hidden !p-0" : undefined}
+      onClose={() => {
+        if (assigning) setAssigning(null);
+        else onClose?.();
+      }}
+    >
+      {content}
+    </SidePanel>
   );
 }

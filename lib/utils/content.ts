@@ -92,6 +92,27 @@ export function contentDate(value: string | null): string {
   const local = isoToGuayaquil(value);
   return local ? local.replace("T", " ") + " (Guayaquil)" : "Sin límite";
 }
+// «vie 13 nov a las 12:20», en la hora de la escuela y sin zona ni segundos.
+export function friendlyDate(value: string | null, compact = false): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("es-EC", {
+    timeZone: "America/Guayaquil",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const part = (name: string) =>
+    (parts.find((p) => p.type === name)?.value ?? "").replace(/\./g, "");
+  const day = `${part("weekday")} ${part("day")} ${part("month")}`;
+  return compact
+    ? `${day}, ${part("hour")}:${part("minute")}`
+    : `${day} a las ${part("hour")}:${part("minute")}`;
+}
 export function buildAccessPayload(
   scope: ContentScope,
   draft: AccessDraft,

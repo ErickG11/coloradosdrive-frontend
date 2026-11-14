@@ -1,3 +1,4 @@
+import type { IndividualEnrollmentSnapshot } from "./enrollmentFoundation";
 export interface StudentScheduleInput {
   modalidad: "entre_semana" | "fin_de_semana";
   fechaInicio: string;
@@ -8,7 +9,9 @@ export interface StudentScheduleSelection extends StudentScheduleInput {
 }
 export type StartHourReason = "DIA_SIN_INSTRUCTOR" | "SOLAPE_PROPIO" | "SIN_COHORTE_ELEGIBLE";
 export interface StudentScheduleNoCohort {
-  codigo: "SIN_COHORTE_ELEGIBLE";
+  codigo:
+    "SIN_COHORTE_ELEGIBLE" | "SIN_CURSOS_ABIERTOS" | "SIN_FECHAS_COMPATIBLES" | "SIN_HORAS_LIBRES";
+  ultimaFechaInicioPosible?: string | null;
   mensaje: string;
   primeraFechaPosible: string | null;
 }
@@ -24,7 +27,7 @@ export interface StudentScheduleOptions {
   horasRequeridas: number;
   fechaInicioEfectiva: string;
   ajustada: boolean;
-  cohorte: { id: string; nombre: string } | null;
+  cohorte: { id: string; nombre?: string } | null;
   sinCohorte: StudentScheduleNoCohort | null;
   horas: StudentScheduleStartOption[];
 }
@@ -39,6 +42,7 @@ export interface StudentSchedulePreviewDay {
   motivo: { codigo: "DIA_SIN_INSTRUCTOR" | "SOLAPE_PROPIO"; mensaje: string } | null;
 }
 export interface StudentSchedulePreview {
+  precioCentavos?: number;
   enrollmentId: string;
   serverNow: string;
   modalidad: StudentScheduleInput["modalidad"];
@@ -52,7 +56,7 @@ export interface StudentSchedulePreview {
   ultimaFecha: string;
   ultimaHoraFin: string;
   ultimoFin: string;
-  cohorte: { id: string; nombre: string } | null;
+  cohorte: { id: string; nombre?: string } | null;
   sinCohorte: StudentScheduleNoCohort | null;
   diasFallan: string[];
   factible: boolean;
@@ -66,6 +70,8 @@ export interface StudentReservationPlan {
   ultimaHoraFin: string;
 }
 export interface StudentScheduleReservation {
+  purpose?: "initial" | "plan_change";
+  individualDates?: IndividualEnrollmentSnapshot;
   id: string;
   enrollmentId: string;
   estado: "vigente" | "pago_en_curso" | "liberada" | "vencida" | "confirmada";
@@ -73,11 +79,27 @@ export interface StudentScheduleReservation {
   serverNow: string;
   extensiones: number;
   puedeAmpliar: boolean;
-  cohorte: { id: string; nombre: string };
+  cohorte?: { id: string; nombre?: string } | null;
+  precioCentavos?: number;
   franjas: { scheduledAt: string }[];
   plan?: StudentReservationPlan | null;
 }
 export interface StudentReservationSnapshot {
   reserva: StudentScheduleReservation | null;
   serverNow: string;
+}
+
+export interface StudentPlanRules {
+  endHour?: number;
+  active: boolean;
+  serverNow: string;
+  options: {
+    modalidad: StudentScheduleInput["modalidad"];
+    horasPorDia: number;
+    habilitada: boolean;
+    totalHoras?: number;
+    sesiones: number;
+    primeraFecha: string;
+    ultimaFecha: string;
+  }[];
 }

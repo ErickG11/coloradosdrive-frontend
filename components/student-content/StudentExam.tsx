@@ -1,10 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { QuestionImage } from "@/components/exams/QuestionImage";
+import { questionImageApi } from "@/lib/api/questionImages";
+import type { QuestionImage as ImageValue, AttemptQuestionImage } from "@/types/exam";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { ownCatalog, ownExamContext } from "@/lib/api/studentContent";
-import { contentDate } from "@/lib/utils/content";
+import { friendlyDate } from "@/lib/utils/content";
 import {
   accessLabel,
   countdown,
@@ -27,6 +30,7 @@ import styles from "./student-learning.module.css";
 
 type Context = Awaited<ReturnType<typeof ownExamContext>>;
 type Result = AttemptResult | ExamAttempt;
+type Images = Record<string, ImageValue | null>;
 const draftKey = (id: string) => `content-attempt:${id}`;
 function clearDraft(id: string) {
   try {
@@ -42,6 +46,7 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
   const [context, setContext] = useState<Context | null>(null);
   const [history, setHistory] = useState<ExamAttempt[] | null>(null);
   const [active, setActive] = useState<ActiveStudentAttempt | null>(null);
+  const [resultImages, setResultImages] = useState<Images>({});
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -108,6 +113,7 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
       if (!Number.isFinite(Date.parse(started.deadlineAt))) throw new Error("Missing deadline");
       setType(started.exam.type);
       setResult(null);
+      setResultImages({});
       setActive(started);
       notify(
         expected && expected.id === started.attemptId ? "Intento reanudado." : "Intento iniciado.",
@@ -119,12 +125,16 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
         ["ATTEMPTS_EXHAUSTED", "ALREADY_PASSED"].includes(failure.code ?? "")
       )
         setDenied(true);
+      // Datos desactualizados: se vuelve a consultar el estado del examen y sus requisitos.
+      if (failure instanceof ApiError && failure.code === "MATERIALES_PENDIENTES")
+        setRevision((value) => value + 1);
     } finally {
       lock.current = false;
       setBusy(false);
     }
   }
-  const finish = useCallback((value: Result, notice?: string) => {
+  const finish = useCallback((value: Result, notice?: string, images: Images = {}) => {
+    setResultImages(images);
     setActive(null);
     setResult(value);
     setError(notice ?? null);
@@ -167,6 +177,7 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
   const allowed =
     !refreshing &&
     !denied &&
+    !item.bloqueado &&
     (Boolean(ongoing) || (item.access.estado === "abierto" && left && !passedDefinitive));
   return (
     <div className={`${styles.examPage} space-y-5`}>
@@ -191,12 +202,12 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
         </p>
         {ongoing ? (
           <p className="text-sm">
-            Intento en curso. Límite: {contentDate(ongoing.deadline_at)}. Cerrar esta ventana no
-            detiene el tiempo.
+            Intento en curso. Límite: {friendlyDate(ongoing.deadline_at, true)}. Cerrar esta ventana
+            no detiene el tiempo.
           </p>
         ) : null}
         {result ? (
-          <ExamResult result={result} />
+          <ExamResult result={result} images={resultImages} />
         ) : (
           <p className={styles.introNote}>
             Cuando inicies, el tiempo seguirá corriendo aunque cierres la ventana. Tus respuestas se
@@ -228,11 +239,13 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
           <p className="text-sm text-text-secondary">
             {refreshing
               ? "Actualizando disponibilidad de intentos…"
-              : passedDefinitive
-                ? "Ya aprobaste este definitivo y no se puede repetir."
-                : denied || !left
-                  ? "No hay más intentos disponibles por ahora."
-                  : "No puedes iniciar un intento mientras el examen no esté abierto."}
+              : item.bloqueado
+                ? `Antes de rendir este examen, completa: ${(item.prerequisitos_pendientes ?? []).map((entry) => entry.titulo).join(", ")}.`
+                : passedDefinitive
+                  ? "Ya aprobaste este definitivo y no se puede repetir."
+                  : denied || !left
+                    ? "No hay más intentos disponibles por ahora."
+                    : "No puedes iniciar un intento mientras el examen no esté abierto."}
           </p>
         )}
         {item.completado && !type && allowed && !ongoing ? (
@@ -246,7 +259,7 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
   );
 }
 
-function ExamResult({ result }: { result: Result }) {
+function ExamResult({ result, images }: { result: Result; images: Images }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     heading.current?.focus();
@@ -266,16 +279,23 @@ function ExamResult({ result }: { result: Result }) {
           {result.passed === null ? "Consultando estado" : result.passed ? "Aprobado" : "Reprobado"}
         </strong>
         {result.scorePercent == null ? <p>Pendiente de finalizar</p> : null}
-        {result.completedAt ? <p>Finalizado: {contentDate(result.completedAt)}</p> : null}
+        {result.completedAt ? <p>Finalizado: {friendlyDate(result.completedAt, true)}</p> : null}
       </div>
       {result.answers?.some((answer) => "pointsEarned" in answer) ? (
         <div className={styles.resultPoints}>
           <h3>Puntos por pregunta</h3>
           <ul>
-            {result.answers.map((answer) =>
+            {result.answers.map((answer, index) =>
               "pointsEarned" in answer && "pointsPossible" in answer ? (
                 <li key={answer.questionId}>
-                  <span>{answer.prompt}</span>
+                  <div className="min-w-0 flex-1">
+                    <QuestionImage
+                      image={images[answer.questionId]}
+                      index={index}
+                      eager={index === 0}
+                    />
+                    <span>{answer.prompt}</span>
+                  </div>
                   <strong>
                     {answer.pointsEarned} / {answer.pointsPossible} pts
                   </strong>
@@ -324,9 +344,17 @@ function AttemptForm({
   attempt: ActiveStudentAttempt;
   clock: ServerClock;
   courseId: string;
-  finish: (value: Result, notice?: string) => void;
+  finish: (value: Result, notice?: string, images?: Images) => void;
   back: string;
 }) {
+  const [questionImages, setQuestionImages] = useState<Images>(() =>
+    Object.fromEntries(
+      attempt.exam.questions.map((question) => [question.id, question.image ?? null]),
+    ),
+  );
+  const imageRequest = useRef<Promise<AttemptQuestionImage[]> | null>(null);
+  const imageController = useRef<AbortController | null>(null);
+  useEffect(() => () => imageController.current?.abort(), []);
   const [confirmSend, setConfirmSend] = useState(false);
   const [draft] = useState(() => restoreDraft(attempt, clock));
   const [answers, setAnswers] = useState<Answers>(draft.answers);
@@ -377,7 +405,7 @@ function AttemptForm({
       done.current = true;
       clearDraft(attempt.attemptId);
       notify("Intento finalizado. Consulta tu resultado.");
-      finish(state, notice);
+      finish(state, notice, questionImages);
       return true;
     }
     return false;
@@ -402,6 +430,44 @@ function AttemptForm({
     } finally {
       lock.current = false;
       setBusy(false);
+    }
+  }
+  async function refreshImage(questionId: string) {
+    if (done.current || terminal || getRemaining() <= 0) {
+      if (!done.current) await expire();
+      throw new ApiError("Vencido", 409, { code: "ATTEMPT_EXPIRED" });
+    }
+    if (!imageRequest.current) {
+      const controller = new AbortController();
+      imageController.current = controller;
+      imageRequest.current = questionImageApi
+        .refresh(attempt.attemptId, controller.signal)
+        .then((images) => {
+          if (!controller.signal.aborted && !done.current) {
+            const ids = new Set(attempt.exam.questions.map((question) => question.id));
+            setQuestionImages((current) => ({
+              ...current,
+              ...Object.fromEntries(
+                images
+                  .filter((image) => ids.has(image.questionId))
+                  .map((image) => [image.questionId, { url: image.url, alt: image.alt }]),
+              ),
+            }));
+          }
+          return images;
+        });
+    }
+    const pending = imageRequest.current;
+    try {
+      const images = await pending;
+      if (!images.some((image) => image.questionId === questionId))
+        throw new ApiError("No disponible", 503, { code: "CONTENT_UNAVAILABLE" });
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.code === "ATTEMPT_EXPIRED" && !done.current)
+        await expire();
+      throw failure;
+    } finally {
+      if (imageRequest.current === pending) imageRequest.current = null;
     }
   }
   async function submit() {
@@ -433,7 +499,7 @@ function AttemptForm({
       done.current = true;
       clearDraft(attempt.attemptId);
       notify("Examen enviado correctamente.");
-      finish(result);
+      finish(result, undefined, questionImages);
     } catch (failure) {
       const terminal =
         failure instanceof ApiError &&
@@ -570,7 +636,7 @@ function AttemptForm({
         </p>
       </header>
       <p className={styles.attemptDetails}>
-        Límite: {contentDate(attempt.deadlineAt)}. Cerrar o salir no detiene el tiempo. Envío
+        Límite: {friendlyDate(attempt.deadlineAt, true)}. Cerrar o salir no detiene el tiempo. Envío
         automático unos 10 segundos antes del límite.
       </p>
       {error ? <StudentError error={error} /> : null}
@@ -591,9 +657,10 @@ function AttemptForm({
             key={question.id}
             disabled={busy || terminal || remaining <= 0}
             className={styles.question}
+            aria-labelledby={`attempt-question-${question.id}-label attempt-question-${question.id}-prompt`}
           >
             <legend>
-              <span className={styles.questionMeta}>
+              <span className={styles.questionMeta} id={`attempt-question-${question.id}-label`}>
                 <span>
                   Pregunta {index + 1} de {total} · {question.points} puntos
                 </span>
@@ -601,8 +668,16 @@ function AttemptForm({
                   <span className={`${styles.chip} ${styles.success}`}>✓ Respondida</span>
                 ) : null}
               </span>
-              <span className={styles.questionPrompt}>{question.prompt}</span>
             </legend>
+            <QuestionImage
+              image={questionImages[question.id]}
+              index={index}
+              eager={index === 0}
+              onRetry={() => refreshImage(question.id)}
+            />
+            <p className={styles.questionPrompt} id={`attempt-question-${question.id}-prompt`}>
+              {question.prompt}
+            </p>
             {question.type === "opcion_multiple" ? (
               question.options.map((option) => (
                 <label key={option.id} className={styles.answerOption}>

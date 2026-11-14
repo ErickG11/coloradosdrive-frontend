@@ -31,7 +31,9 @@ export const landingContent = {
     ...phone,
     href: whatsappHref(undefined, phone.international),
   })),
+  // Inscripción en línea (acción principal). WhatsApp queda como acción secundaria.
   enrollmentHref: "/inscripcion",
+  whatsappEnrollmentHref: whatsappHref(),
   hours: null as string | null,
   email: null as string | null,
   socialLinks: null as { label: string; href: string }[] | null,
@@ -56,6 +58,9 @@ export const landingContent = {
       },
       benefits: ["Instructores certificados", "Formación segura y práctica", "Vehículos modernos"],
       href: "/inscripcion",
+      whatsappHref: whatsappHref(
+        "Hola, Colorados Drive. Quiero inscribirme en el curso Tipo B para vehículos livianos ($175 + IVA). ¿Qué fechas y cohortes están disponibles?",
+      ),
     },
     {
       type: "A",
@@ -74,6 +79,9 @@ export const landingContent = {
         "Manejo real en vía y circuito",
       ],
       href: "/inscripcion",
+      whatsappHref: whatsappHref(
+        "Hola, Colorados Drive. Quiero inscribirme en el curso Tipo A para motocicletas ($135 + IVA). ¿Qué fechas y cohortes están disponibles?",
+      ),
     },
   ],
   platformFeatures: [

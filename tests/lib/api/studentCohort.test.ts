@@ -10,14 +10,19 @@ import {
 vi.mock("@/lib/api/client", () => ({ api: { post: vi.fn() } }));
 beforeEach(() => vi.clearAllMocks());
 describe("contrato C", () => {
-  it("usa UUID de matrícula y alumno, y solo cohortId en el cuerpo", async () => {
+  it("usa UUID de matrícula y alumno, y exige el motivo en el cuerpo", async () => {
     expect(studentCohortPath("student-uuid", "enrollment-uuid")).toBe(
       "/admin/estudiantes/student-uuid/matriculas/enrollment-uuid",
     );
-    await assignStudentCohort("student-uuid", "enrollment-uuid", "cohort-uuid");
+    await assignStudentCohort(
+      "student-uuid",
+      "enrollment-uuid",
+      "cohort-uuid",
+      "Asignación administrativa",
+    );
     expect(api.post).toHaveBeenCalledExactlyOnceWith(
       "/admin/estudiantes/student-uuid/matriculas/enrollment-uuid/asignar-cohorte",
-      { cohortId: "cohort-uuid" },
+      { cohortId: "cohort-uuid", motivo: "Asignación administrativa" },
     );
   });
   it.each([

@@ -1,4 +1,6 @@
 "use client";
+import { EnrollmentFlowFrame, FlowStepIcon } from "@/components/inscripcion/EnrollmentFlowFrame";
+import { PasswordGuidance } from "@/components/inscripcion/PasswordGuidance";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
@@ -42,57 +44,61 @@ export default function ChangePasswordPage() {
     }
   }
   return (
-    <Card title="Cambiar contraseña temporal" titleAs="h1">
-      {completed ? (
-        <div className="flex flex-col gap-4">
-          <p role="status">
-            Contraseña actualizada. Inicia sesión con tu nueva contraseña para continuar.
-          </p>
-          <Button
-            onClick={() => {
-              router.replace("/login");
-              router.refresh();
-            }}
-          >
-            Iniciar sesión con nueva contraseña
-          </Button>
-        </div>
-      ) : (
-        <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
-          <p>Para continuar, elige una contraseña propia de al menos 8 caracteres.</p>
-          <Input
-            name="newPassword"
-            label="Nueva contraseña"
-            type="password"
-            minLength={8}
-            required
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setConfirmError(null);
-            }}
-          />
-          <Input
-            name="confirmPassword"
-            label="Confirmar nueva contraseña"
-            type="password"
-            minLength={8}
-            required
-            autoComplete="new-password"
-            value={confirm}
-            error={confirmError ?? undefined}
-            onChange={(e) => {
-              setConfirm(e.target.value);
-              setConfirmError(null);
-            }}
-          />
-          {error && <p role="alert">{error}</p>}
-          <Button type="submit" isLoading={busy}>
-            Guardar contraseña
-          </Button>
-        </form>
-      )}
-    </Card>
+    <EnrollmentFlowFrame step={1} total={1} student>
+      <Card title="Cambiar contraseña" titleAs="h1">
+        <FlowStepIcon step={2} />
+        {completed ? (
+          <div className="flex flex-col gap-4">
+            <p role="status">
+              Contraseña actualizada. Inicia sesión con tu nueva contraseña para continuar.
+            </p>
+            <Button
+              onClick={() => {
+                router.replace("/login");
+                router.refresh();
+              }}
+            >
+              Iniciar sesión con nueva contraseña
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
+            <p>Para continuar, elige una contraseña propia de al menos 8 caracteres.</p>
+            <Input
+              name="newPassword"
+              label="Nueva contraseña"
+              type="password"
+              minLength={8}
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setConfirmError(null);
+              }}
+            />
+            <PasswordGuidance value={password} minimum={8} />
+            <Input
+              name="confirmPassword"
+              label="Confirmar nueva contraseña"
+              type="password"
+              minLength={8}
+              required
+              autoComplete="new-password"
+              value={confirm}
+              error={confirmError ?? undefined}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+                setConfirmError(null);
+              }}
+            />
+            {error && <p role="alert">{error}</p>}
+            <Button type="submit" isLoading={busy}>
+              Guardar contraseña
+            </Button>
+          </form>
+        )}
+      </Card>
+    </EnrollmentFlowFrame>
   );
 }

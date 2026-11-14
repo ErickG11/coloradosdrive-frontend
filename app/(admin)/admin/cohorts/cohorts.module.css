@@ -1,5 +1,5 @@
 :global(body):has(.page) {
-  --sidebar-width: 218px;
+  --sidebar-expanded: 218px;
 }
 :global(#main-content):has(.page) {
   padding: 0;
@@ -1301,4 +1301,43 @@
 :global(.dark) .formScope {
   --cohort-accent: #ffb0b9;
   --cohort-input-line: #4c5969;
+}
+
+/* C10: el aplazamiento comparte el margen de las secciones generales. */
+.datesPanel {
+  display: grid;
+  gap: 24px;
+  padding-inline: 22px;
+}
+.datesPanel[hidden] {
+  display: none;
+}
+.datesPanel .section {
+  padding-inline: 0;
+  padding-bottom: 0;
+}
+.datesPanel .sectionHelp {
+  margin-left: 0;
+  margin-bottom: 14px;
+}
+.datesPanel .section .formGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 767px) {
+  .datesPanel {
+    padding-inline: 20px;
+  }
+}
+
+.panelInset {
+  margin-inline: 22px;
+}
+@media (max-width: 767px) {
+  .panelInset {
+    margin-inline: 20px;
+  }
+}
+
+.datesPanel .section .formGrid > div:nth-child(-n + 2) {
+  grid-column: auto;
 }

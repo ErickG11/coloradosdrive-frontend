@@ -1,5 +1,5 @@
 :global(body):has(.page) {
-  --sidebar-width: 218px;
+  --sidebar-expanded: 218px;
 }
 :global(#main-content):has(.page) {
   padding: 0;

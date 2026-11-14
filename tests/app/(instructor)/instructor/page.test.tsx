@@ -52,19 +52,40 @@ const rangePath = (from: string, to: string) =>
   `/practice-slots?${new URLSearchParams({ from, to })}`;
 const currentPath = rangePath("2026-03-09T05:00:00.000Z", "2026-03-16T05:00:00.000Z");
 
+// La agenda hace dos consultas: las franjas de la semana y cómo se agrupan en
+// bloques. El mock responde según la URL para no mezclar una con otra.
+const isBlocksPath = (path: string) => path.startsWith("/practice-slots/blocks/instructor-groups?");
+const blocksPath = (from: string, to: string) =>
+  `/practice-slots/blocks/instructor-groups?${new URLSearchParams({ from, to })}`;
+let slotQueue: (() => Promise<PracticeSlotWithNames[]>)[] = [];
+let slotDefault: PracticeSlotWithNames[] = [];
+let blocksReply: () => Promise<unknown> = () => Promise.resolve([]);
+const slotsOnce = (rows: PracticeSlotWithNames[]) => slotQueue.push(() => Promise.resolve(rows));
+const slotsFailOnce = (error: unknown) => slotQueue.push(() => Promise.reject(error));
+// Solo las consultas de franjas, en orden.
+const slotCalls = () => get.mock.calls.map(([path]) => path).filter((path) => !isBlocksPath(path));
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-03-10T15:00:00Z"));
-  get.mockResolvedValue([slot]);
+  slotQueue = [];
+  slotDefault = [slot];
+  blocksReply = () => Promise.resolve([]);
+  get.mockImplementation(((path: string) =>
+    isBlocksPath(path)
+      ? blocksReply()
+      : (slotQueue.shift()?.() ?? Promise.resolve(slotDefault))) as typeof api.get);
 });
 afterEach(() => vi.useRealTimers());
 
 describe("agenda diaria del instructor", () => {
   it("abre en hoy, pide solo la semana y muestra el selector L M X J V S D", async () => {
     render(<InstructorPage />);
-    expect(get).toHaveBeenCalledExactlyOnceWith(currentPath);
-    expect(await screen.findByText("Ana Torres")).toBeInTheDocument();
+    expect(slotCalls()).toEqual([currentPath]);
+    expect(get).toHaveBeenCalledWith(blocksPath("2026-03-09", "2026-03-15"));
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(await screen.findAllByText("Ana Torres")).not.toHaveLength(0);
     expect(screen.getByRole("heading", { name: "Martes 10 de marzo" })).toBeInTheDocument();
     const days = within(screen.getByRole("navigation", { name: "Días de la semana" })).getAllByRole(
       "button",
@@ -81,14 +102,14 @@ describe("agenda diaria del instructor", () => {
     ]);
     expect(days[1]).toHaveAttribute("aria-pressed", "true");
     expect(days[1]).toHaveAttribute("aria-current", "date");
-    expect(days[1]).toHaveAccessibleName("Martes 10 de marzo, 1 franjas con alumno, hoy");
+    expect(days[1]).toHaveAccessibleName("Martes 10 de marzo, 1 bloques con alumno, hoy");
     expect(screen.getByText("10:00 – 11:00")).toBeInTheDocument();
     expect(screen.queryByText("Mis datos")).not.toBeInTheDocument();
-    expect(get.mock.calls.every(([path]) => path.startsWith("/practice-slots?"))).toBe(true);
+    expect(get.mock.calls.every(([path]) => path.startsWith("/practice-slots"))).toBe(true);
   });
 
   it("cambia de día sin pedir de nuevo la semana y ordena por hora", async () => {
-    get.mockResolvedValueOnce([
+    slotsOnce([
       slot,
       { ...slot, id: "late", scheduledAt: "2026-03-09T21:00:00Z", studentName: "Última" },
       {
@@ -101,9 +122,9 @@ describe("agenda diaria del instructor", () => {
     ]);
     const user = userEvent.setup();
     render(<InstructorPage />);
-    await screen.findByText("Ana Torres");
+    await screen.findAllByText("Ana Torres");
     await user.click(
-      screen.getByRole("button", { name: "Lunes 9 de marzo, 2 franjas con alumno" }),
+      screen.getByRole("button", { name: "Lunes 9 de marzo, 2 bloques con alumno" }),
     );
     const rows = screen.getAllByRole("article");
     expect(rows[0]).toHaveTextContent("08:00 – 09:30");
@@ -118,57 +139,58 @@ describe("agenda diaria del instructor", () => {
       "aria-pressed",
       "true",
     );
-    expect(get).toHaveBeenCalledTimes(1);
+    expect(slotCalls()).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: /Miércoles 11 de marzo/ }));
-    expect(screen.getByText("No tienes franjas este día.")).toBeInTheDocument();
+    expect(screen.getByText("No tienes bloques este día.")).toBeInTheDocument();
   });
 
   it("navega por semanas, conserva el día de semana y mantiene los datos mientras carga", async () => {
     let resolve!: (rows: PracticeSlotWithNames[]) => void;
-    get.mockResolvedValueOnce([slot]).mockReturnValueOnce(
-      new Promise((done) => {
-        resolve = done;
-      }),
+    slotsOnce([slot]);
+    slotQueue.push(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
     );
     const user = userEvent.setup();
     render(<InstructorPage />);
-    await screen.findByText("Ana Torres");
+    await screen.findAllByText("Ana Torres");
     await user.click(screen.getByRole("button", { name: "Semana siguiente" }));
-    expect(get).toHaveBeenLastCalledWith(
+    expect(slotCalls().at(-1)).toBe(
       rangePath("2026-03-16T05:00:00.000Z", "2026-03-23T05:00:00.000Z"),
     );
     expect(screen.getByRole("heading", { name: "Martes 10 de marzo" })).toBeInTheDocument();
-    expect(screen.getByText("Ana Torres")).toBeInTheDocument();
+    expect(screen.getAllByText("Ana Torres")).not.toHaveLength(0);
     expect(screen.getByText("Cargando horario…")).toBeInTheDocument();
     await act(async () => resolve([]));
     expect(screen.getByText("16 - 22 de marzo, 2026")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Martes 17 de marzo" })).toBeInTheDocument();
-    expect(screen.getByText("No tienes franjas este día.")).toBeInTheDocument();
+    expect(screen.getByText("No tienes bloques este día.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Semana anterior" }));
-    expect(get).toHaveBeenLastCalledWith(currentPath);
-    expect(await screen.findByText("Ana Torres")).toBeInTheDocument();
+    expect(slotCalls().at(-1)).toBe(currentPath);
+    expect(await screen.findAllByText("Ana Torres")).not.toHaveLength(0);
   });
 
   it("mantiene la semana y el día ante un error, y permite reintentar con Hoy", async () => {
-    get
-      .mockResolvedValueOnce([slot])
-      .mockRejectedValueOnce(new ApiError("Sin conexión", 503))
-      .mockResolvedValueOnce([]);
+    slotsOnce([slot]);
+    slotsFailOnce(new ApiError("Sin conexión", 503));
+    slotsOnce([]);
     const user = userEvent.setup();
     render(<InstructorPage />);
-    await screen.findByText("Ana Torres");
+    await screen.findAllByText("Ana Torres");
     await user.click(screen.getByRole("button", { name: "Semana siguiente" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Sin conexión");
     expect(screen.getByText("9 - 15 de marzo, 2026")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Martes 10 de marzo" })).toBeInTheDocument();
-    expect(screen.getByText("Ana Torres")).toBeInTheDocument();
+    expect(screen.getAllByText("Ana Torres")).not.toHaveLength(0);
     await user.click(screen.getByRole("button", { name: "Hoy" }));
-    expect(get).toHaveBeenLastCalledWith(currentPath);
-    expect(await screen.findByText("No tienes franjas este día.")).toBeInTheDocument();
+    expect(slotCalls().at(-1)).toBe(currentPath);
+    expect(await screen.findByText("No tienes bloques este día.")).toBeInTheDocument();
   });
 
   it("muestra carga y error inicial sin presentar datos de otra pantalla", async () => {
-    get.mockRejectedValueOnce(new Error("network"));
+    slotsFailOnce(new Error("network"));
     render(<InstructorPage />);
     expect(screen.getByRole("status")).toHaveTextContent("Cargando horario");
     expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo consultar el horario");
@@ -185,7 +207,7 @@ describe("agenda diaria del instructor", () => {
   ] as const)(
     "traduce %s a %s y muestra asistencia solo si fue realizada",
     async (status, label, hasStudent) => {
-      get.mockResolvedValueOnce([
+      slotsOnce([
         {
           ...slot,
           status,
@@ -203,7 +225,7 @@ describe("agenda diaria del instructor", () => {
       );
       expect(
         screen.getByRole("button", {
-          name: new RegExp(`Martes 10 de marzo, ${hasStudent ? 1 : 0} franjas con alumno`),
+          name: new RegExp(`Martes 10 de marzo, ${hasStudent ? 1 : 0} bloques con alumno`),
         }),
       ).toBeInTheDocument();
     },
@@ -215,7 +237,7 @@ describe("agenda diaria del instructor", () => {
       patch.mockResolvedValue(attendanceResponse(attended));
       const user = userEvent.setup();
       render(<InstructorPage />);
-      await screen.findByText("Ana Torres");
+      await screen.findAllByText("Ana Torres");
       await user.click(screen.getByRole("button", { name: attended ? "Asistió" : "No asistió" }));
       expect(patch).toHaveBeenCalledExactlyOnceWith("/practice-slots/slot-1/attendance", {
         attended,
@@ -224,18 +246,18 @@ describe("agenda diaria del instructor", () => {
       expect(
         await screen.findByText(`Asistencia guardada: ${attended ? "Asistió" : "No asistió"}`),
       ).toBeInTheDocument();
-      expect(screen.getByText("Ana Torres")).toBeInTheDocument();
+      expect(screen.getAllByText("Ana Torres")).not.toHaveLength(0);
     },
   );
 
   it.each([true, false])(
     "confirma una corrección desde attended=%s y permite cancelar",
     async (attended) => {
-      get.mockResolvedValueOnce([{ ...slot, attended }]);
+      slotsOnce([{ ...slot, attended }]);
       patch.mockResolvedValue(attendanceResponse(!attended));
       const user = userEvent.setup();
       render(<InstructorPage />);
-      await screen.findByText("Ana Torres");
+      await screen.findAllByText("Ana Torres");
       await user.click(screen.getByRole("button", { name: "Cambiar asistencia" }));
       await user.click(screen.getByRole("button", { name: attended ? "No asistió" : "Asistió" }));
       let dialog = screen.getByRole("dialog", { name: "Confirmar cambio de asistencia" });
@@ -260,7 +282,7 @@ describe("agenda diaria del instructor", () => {
       expect(
         await screen.findByText(`Asistencia guardada: ${attended ? "No asistió" : "Asistió"}`),
       ).toBeInTheDocument();
-      expect(screen.getByText("Ana Torres")).toBeInTheDocument();
+      expect(screen.getAllByText("Ana Torres")).not.toHaveLength(0);
     },
   );
 
@@ -270,7 +292,7 @@ describe("agenda diaria del instructor", () => {
       .mockResolvedValueOnce(attendanceResponse(true));
     const user = userEvent.setup();
     render(<InstructorPage />);
-    await screen.findByText("Ana Torres");
+    await screen.findAllByText("Ana Torres");
     await user.click(screen.getByRole("button", { name: "Asistió" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Cuenta inactiva");
     expect(screen.getByText("Asistencia: Sin registrar")).toBeInTheDocument();
@@ -279,13 +301,13 @@ describe("agenda diaria del instructor", () => {
   });
 
   it("mantiene el diálogo ante un error de corrección para reintentar", async () => {
-    get.mockResolvedValueOnce([{ ...slot, attended: true }]);
+    slotsOnce([{ ...slot, attended: true }]);
     patch
       .mockRejectedValueOnce(new ApiError("Franja no encontrada", 404))
       .mockResolvedValueOnce(attendanceResponse(false));
     const user = userEvent.setup();
     render(<InstructorPage />);
-    await screen.findByText("Ana Torres");
+    await screen.findAllByText("Ana Torres");
     await user.click(screen.getByRole("button", { name: "Cambiar asistencia" }));
     await user.click(screen.getByRole("button", { name: "No asistió" }));
     await user.type(
@@ -305,6 +327,63 @@ describe("agenda diaria del instructor", () => {
   });
 });
 
+describe("bloques de la agenda", () => {
+  const second = { ...slot, id: "slot-2", scheduledAt: "2026-03-10T16:00:00.000Z" };
+  const block = {
+    id: "block-1",
+    slotIds: ["slot-1", "slot-2"],
+    startsAt: slot.scheduledAt,
+    endsAt: "2026-03-10T17:00:00.000Z",
+    hours: 2,
+  };
+  const notice = "No se pudieron agrupar las horas en bloques";
+
+  it("agrupa las horas del mismo bloque y no muestra el aviso", async () => {
+    slotsOnce([slot, second]);
+    blocksReply = () => Promise.resolve([block]);
+    render(<InstructorPage />);
+    expect(
+      await screen.findByRole("heading", { name: /Bloque 10:00–12:00 · 2 h/ }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Martes 10 de marzo, 1 bloques con alumno, hoy" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(notice)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["la consulta falla", () => Promise.reject(new ApiError("Sin conexión", 503))],
+    ["la respuesta no es un arreglo", () => Promise.resolve({ blocks: [] })],
+    ["la respuesta llega vacía", () => Promise.resolve(undefined)],
+    ["un bloque no trae slotIds", () => Promise.resolve([{ id: "block-1" }])],
+    ["slotIds no es un arreglo", () => Promise.resolve([{ ...block, slotIds: "slot-1" }])],
+  ])("si %s, igual muestra las franjas por hora con un aviso discreto", async (_label, reply) => {
+    slotsOnce([slot, second]);
+    blocksReply = reply;
+    render(<InstructorPage />);
+    const rows = await screen.findAllByRole("article");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("10:00 – 11:00");
+    expect(rows[1]).toHaveTextContent("11:00 – 12:00");
+    expect(screen.getByRole("heading", { name: /Bloque 10:00–11:00 · 1 h/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Bloque 11:00–12:00 · 1 h/ })).toBeInTheDocument();
+    expect(screen.getByText(notice)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("quita el aviso cuando los bloques vuelven a cargar", async () => {
+    blocksReply = () => Promise.reject(new Error("network"));
+    const user = userEvent.setup();
+    render(<InstructorPage />);
+    expect(await screen.findByText(notice)).toBeInTheDocument();
+    blocksReply = () => Promise.resolve([]);
+    await user.click(screen.getByRole("button", { name: "Hoy" }));
+    await waitFor(() => expect(screen.queryByText(notice)).not.toBeInTheDocument());
+    expect(screen.getAllByText("Ana Torres")).not.toHaveLength(0);
+  });
+});
+
 describe("bordes de Guayaquil independientes de TZ del runner", () => {
   it.each([
     ["lunes 22:00", "2026-03-10T03:00:00Z", "Lunes 9 de marzo", "22:00 – 23:00"],
@@ -315,11 +394,11 @@ describe("bordes de Guayaquil independientes de TZ del runner", () => {
     "ubica %s en el día correcto y calcula el fin",
     async (_label, scheduledAt, day, timeRange) => {
       vi.setSystemTime(new Date(scheduledAt));
-      get.mockResolvedValueOnce([{ ...slot, scheduledAt }]);
+      slotsOnce([{ ...slot, scheduledAt }]);
       render(<InstructorPage />);
       expect(await screen.findByRole("article")).toHaveTextContent(timeRange);
       expect(screen.getByRole("heading", { name: day })).toBeInTheDocument();
-      const selected = screen.getByRole("button", { name: `${day}, 1 franjas con alumno, hoy` });
+      const selected = screen.getByRole("button", { name: `${day}, 1 bloques con alumno, hoy` });
       expect(selected).toHaveAttribute("aria-current", "date");
       expect(selected).toHaveAttribute("aria-pressed", "true");
     },
@@ -340,22 +419,22 @@ describe("bordes de Guayaquil independientes de TZ del runner", () => {
     ],
   ])("Hoy y la semana actual para %s", async (instant, day, from, to) => {
     vi.setSystemTime(new Date(instant));
-    get.mockResolvedValue([]);
+    slotDefault = [];
     const user = userEvent.setup();
     render(<InstructorPage />);
-    await screen.findByText("No tienes franjas este día.");
-    expect(get).toHaveBeenCalledWith(rangePath(from, to));
+    await screen.findByText("No tienes bloques este día.");
+    expect(slotCalls()).toContain(rangePath(from, to));
     expect(screen.getByRole("heading", { name: day })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Semana siguiente" }));
-    await screen.findByText("No tienes franjas este día.");
+    await screen.findByText("No tienes bloques este día.");
     await user.click(screen.getByRole("button", { name: "Hoy" }));
     expect(await screen.findByRole("heading", { name: day })).toBeInTheDocument();
-    expect(get).toHaveBeenLastCalledWith(rangePath(from, to));
+    expect(slotCalls().at(-1)).toBe(rangePath(from, to));
   });
 
   it("formatea solo la primera letra en mayúscula y navega entre años", async () => {
     vi.setSystemTime(new Date("2026-10-19T15:00:00Z"));
-    get.mockResolvedValue([]);
+    slotDefault = [];
     const user = userEvent.setup();
     render(<InstructorPage />);
     expect(await screen.findByRole("heading", { name: "Lunes 19 de octubre" })).toBeInTheDocument();

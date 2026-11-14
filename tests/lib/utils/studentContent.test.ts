@@ -86,9 +86,9 @@ describe("etiquetas de acceso y fechas del alumno", () => {
   };
   it.each([
     ["no_habilitado", "Aún no disponible"],
-    ["programado", "Se abre el 2026-11-09 10:00 (Guayaquil)"],
-    ["cerrado", "Cerró el 2026-11-09 11:00 (Guayaquil)"],
-    ["abierto", "Cierra el 2026-11-09 11:00 (Guayaquil)"],
+    ["programado", "Se abre el lun 9 nov, 10:00"],
+    ["cerrado", "Cerró el lun 9 nov, 11:00"],
+    ["abierto", "Cierra el lun 9 nov, 11:00"],
   ] as const)("etiqueta %s", (estado, expected) => {
     expect(accessLabel({ ...access, estado })).toBe(expected);
   });

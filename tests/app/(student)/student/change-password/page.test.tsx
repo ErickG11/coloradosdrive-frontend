@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import Page from "@/app/(student)/student/change-password/page";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { api } from "@/lib/api/client";
 const { replace, refresh, signOut } = vi.hoisted(() => ({
   replace: vi.fn(),
@@ -18,9 +19,13 @@ beforeEach(() => {
 });
 it("exige coincidencia y usa la API autenticada existente", async () => {
   const user = userEvent.setup();
-  render(<Page />);
+  render(
+    <ThemeProvider>
+      <Page />
+    </ThemeProvider>,
+  );
   expect(
-    screen.getByRole("heading", { level: 1, name: "Cambiar contraseña temporal" }),
+    screen.getByRole("heading", { level: 1, name: "Cambiar contraseña" }),
   ).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Nueva contraseña"), {
     target: { value: "new-local-password" },
@@ -39,7 +44,11 @@ it("exige coincidencia y usa la API autenticada existente", async () => {
 });
 it("no envía contraseñas que no coinciden", async () => {
   const user = userEvent.setup();
-  render(<Page />);
+  render(
+    <ThemeProvider>
+      <Page />
+    </ThemeProvider>,
+  );
   fireEvent.change(screen.getByLabelText("Nueva contraseña"), {
     target: { value: "new-local-password" },
   });
@@ -59,14 +68,28 @@ it("no envía contraseñas que no coinciden", async () => {
 });
 it("no muestra el botón hacia /login hasta cerrar la sesión local", async () => {
   let finishSignOut: () => void = () => undefined;
-  signOut.mockReturnValue(new Promise<void>((resolve) => { finishSignOut = resolve; }));
+  signOut.mockReturnValue(
+    new Promise<void>((resolve) => {
+      finishSignOut = resolve;
+    }),
+  );
   const user = userEvent.setup();
-  render(<Page />);
-  fireEvent.change(screen.getByLabelText("Nueva contraseña"), { target: { value: "new-local-password" } });
-  fireEvent.change(screen.getByLabelText("Confirmar nueva contraseña"), { target: { value: "new-local-password" } });
+  render(
+    <ThemeProvider>
+      <Page />
+    </ThemeProvider>,
+  );
+  fireEvent.change(screen.getByLabelText("Nueva contraseña"), {
+    target: { value: "new-local-password" },
+  });
+  fireEvent.change(screen.getByLabelText("Confirmar nueva contraseña"), {
+    target: { value: "new-local-password" },
+  });
   await user.click(screen.getByRole("button", { name: "Guardar contraseña" }));
   await vi.waitFor(() => expect(signOut).toHaveBeenCalled());
   expect(screen.queryByRole("button", { name: "Iniciar sesión con nueva contraseña" })).toBeNull();
   finishSignOut();
-  expect(await screen.findByRole("button", { name: "Iniciar sesión con nueva contraseña" })).toBeInTheDocument();
+  expect(
+    await screen.findByRole("button", { name: "Iniciar sesión con nueva contraseña" }),
+  ).toBeInTheDocument();
 });

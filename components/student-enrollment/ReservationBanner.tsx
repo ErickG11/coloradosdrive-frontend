@@ -1,4 +1,6 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
+import { EnrollmentIcon } from "@/components/inscripcion/EnrollmentVisual";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -10,12 +12,14 @@ export function ReservationBanner({ state }: Props) {
     <>
       {held && reservation ? (
         <Card
-          className={`${visual.reservation} ${remaining <= 300 ? "border-status-warning" : ""}`}
-          data-near-expiry={remaining <= 300}
+          className={`${visual.reservation} ${remaining <= 120 ? "border-status-warning" : ""}`}
+          data-near-expiry={remaining <= 120}
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="font-semibold">Horario reservado · {reservation.cohorte.nombre}</p>
+              <p className="font-semibold">
+                Horario reservado hasta {reservation.plan?.ultimaFecha ?? ""}
+              </p>
               <p
                 role="timer"
                 aria-label="Tiempo restante de la reserva"
@@ -42,9 +46,11 @@ export function ReservationBanner({ state }: Props) {
               </Button>
             ) : null}
           </div>
-          {live && remaining <= 300 ? (
+          {live && reservation.estado !== "pago_en_curso" && remaining <= 120 ? (
             <p role="status" className="mt-3 text-status-warning">
-              Quedan 5 minutos o menos. Amplía tu reserva si aún tienes esa opción.
+              {reservation.purpose === "plan_change"
+                ? "Quedan 2 minutos o menos para confirmar la propuesta."
+                : "Quedan 2 minutos o menos para continuar con el pago."}
             </p>
           ) : null}
           {!live ? (
@@ -57,10 +63,20 @@ export function ReservationBanner({ state }: Props) {
           ) : null}
         </Card>
       ) : reservation?.estado === "vencida" ? (
-        <p role="status" className="rounded-sm border border-status-warning p-4">
-          Tu reserva venció y se liberaron las franjas y el cupo. Tu solicitud aprobada se conserva.
-          Elige un horario nuevamente.
-        </p>
+        <StudentEmptyState
+          icon={<EnrollmentIcon name="clock" />}
+          title="Tu reserva venció"
+          description={
+            reservation.purpose === "plan_change"
+              ? "La propuesta venció. Tu horario original se conserva."
+              : "Se liberaron las franjas y el cupo. Tu solicitud aprobada se conserva."
+          }
+          actions={
+            <p className="text-sm text-text-secondary">
+              Elige un horario nuevamente para continuar.
+            </p>
+          }
+        />
       ) : null}
       {state.error ? (
         <div className="grid gap-3">

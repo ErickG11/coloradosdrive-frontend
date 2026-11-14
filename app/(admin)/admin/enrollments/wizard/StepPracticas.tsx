@@ -1,4 +1,6 @@
 "use client";
+import { PlanFields, type PlanCalendarDay } from "@/components/student-enrollment/PlanFields";
+import type { StudentPlanRules } from "@/types/studentSchedule";
 import styles from "./enrollment.module.css";
 import { WizardIcon } from "./WizardVisual";
 import { useEffect, useRef, useState } from "react";
@@ -28,18 +30,101 @@ export function StepPracticas({
   onBack: () => void;
   onNext: (p: PracticeChoice) => void;
 }) {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null);
+  const [rules, setRules] = useState<StudentPlanRules | null>(null);
+  const [resolved, setResolved] = useState<PracticeChoice["resolved"]>(value?.resolved);
+  useEffect(() => {
+    let alive = true;
+    api
+      .get<StudentPlanRules>(`${BASE}/rules`)
+      .then((r) => {
+        if (alive) setRules(r);
+      })
+      .catch(() => {
+        if (alive) setError("No se pudo consultar la configuración de planes.");
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [form, setForm] = useState(value?.form ?? EMPTY_PRACTICE);
   const [plan, setPlan] = useState<PracticePlan | null>(null);
   const [suggestion, setSuggestion] = useState<SugerirPracticaResult | null>(null);
   const [instructor, setInstructor] = useState<InstructorSugerido | null>(null);
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState<string | null>(null);
+
   const version = useRef(0);
+  const [month, setMonth] = useState("");
+  const [calendar, setCalendar] = useState<{
+    key: string;
+    dias: PlanCalendarDay[];
+    error?: string;
+  } | null>(null);
+  const minDate = rules?.serverNow
+    ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(
+        new Date(rules.serverNow),
+      )
+    : new Date().toISOString().slice(0, 10);
+  const shownMonth = month || minDate.slice(0, 7);
+  const calendarKey =
+    rules?.active && form.horasPorDia
+      ? `${course.courseTipo}|${shownMonth}|${form.modalidad}|${form.horasPorDia}`
+      : null;
+  useEffect(() => {
+    if (!calendarKey) return;
+    const abort = new AbortController();
+    void api
+      .post<{ dias: PlanCalendarDay[] }>(
+        `${BASE}/calendar`,
+        {
+          courseType: course.courseTipo,
+          fechaInicio: `${shownMonth}-01`,
+          modalidad: form.modalidad,
+          horasPorDia: form.horasPorDia,
+        },
+        { signal: abort.signal, cache: "no-store" },
+      )
+      .then((r) => {
+        if (!abort.signal.aborted) {
+          setCalendar({ key: calendarKey, dias: r.dias });
+          const selected = r.dias.find((d) => d.fecha === form.fechaInicio);
+          if (selected && !selected.disponible)
+            setForm((current) =>
+              current.fechaInicio === form.fechaInicio &&
+              current.horasPorDia === form.horasPorDia &&
+              current.modalidad === form.modalidad
+                ? { ...current, fechaInicio: "", horaDeseada: "" }
+                : current,
+            );
+          else if (
+            selected?.horas &&
+            form.horaDeseada &&
+            !selected.horas.some((h) => h.hora === form.horaDeseada && h.factible)
+          )
+            setForm((current) =>
+              current.horaDeseada === form.horaDeseada ? { ...current, horaDeseada: "" } : current,
+            );
+        }
+      })
+      .catch((e) => {
+        if (!abort.signal.aborted)
+          setCalendar({
+            key: calendarKey,
+            dias: [],
+            error: e instanceof Error ? e.message : "No se pudo consultar el calendario.",
+          });
+      });
+    return () => abort.abort();
+    // La clave incluye todas las entradas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calendarKey]);
+  const currentCalendar = calendar?.key === calendarKey ? calendar : null;
   const horasError = horasPorDiaError(form.horasPorDia);
   // Se consulta la misma regla del servidor para automático y manual. Se
   // descartan respuestas antiguas cuando el usuario modifica el borrador.
   useEffect(() => {
-    if (!form.fechaInicio || (form.manual && !form.fechaFin) || horasError) return;
+    if (!form.fechaInicio || !form.horaDeseada || (form.manual && !form.fechaFin) || horasError)
+      return;
     let stale = false;
     const t = setTimeout(() => {
       api
@@ -67,6 +152,7 @@ export function StepPracticas({
     setForm((f) => ({ ...f, [field]: value }));
     setPlan(null);
     setSuggestion(null);
+    setResolved(undefined);
     setInstructor(null);
     setError(null);
   }
@@ -77,21 +163,24 @@ export function StepPracticas({
     setSuggestion(null);
     setInstructor(null);
     try {
-      const r = await api.post<{ plan: PracticePlan; suggestion: SugerirPracticaResult | null }>(
-        `${BASE}/practice-preview`,
-        {
-          courseType: course.courseTipo,
-          cohortId: course.cohortId,
-          automatic: !course.manualOverride,
-          practice: practicePayload(form),
-        },
-      );
+      const r = await api.post<{
+        plan: PracticePlan;
+        suggestion: SugerirPracticaResult | null;
+        resolved?: PracticeChoice["resolved"];
+      }>(`${BASE}/practice-preview`, {
+        courseType: course.courseTipo,
+        cohortId: course.cohortId,
+        automatic: !course.manualOverride,
+        practice: practicePayload(form),
+      });
       if (request !== version.current) return;
       setPlan(r.plan);
+      setResolved(r.resolved);
       setSuggestion(r.suggestion);
       if (r.suggestion?.instructoresSugeridos.length === 1)
         setInstructor(r.suggestion.instructoresSugeridos[0]);
-      if (!course.cohortId) onNext({ form, plan: r.plan, suggestion: null, instructor: null });
+      if (!course.rulesActive && !course.cohortId)
+        onNext({ form, plan: r.plan, suggestion: null, instructor: null });
     } catch (e) {
       if (request === version.current)
         setError(e instanceof ApiError ? e.message : "No se pudo consultar la sugerencia.");
@@ -102,71 +191,120 @@ export function StepPracticas({
   return (
     <div className={styles.practiceStep}>
       <p>Planificación civil: America/Guayaquil. Cada bloque dura 60 minutos.</p>
-      <Select
-        name="semanas"
-        label="Duración"
-        value={form.semanas}
-        onChange={(e) => change("semanas", Number(e.target.value) as 1 | 2 | 3)}
-      >
-        {[1, 2, 3].map((s) => (
-          <option key={s} value={s}>
-            {s} {s === 1 ? "semana" : "semanas"}
-          </option>
-        ))}
-      </Select>
-      <Select
-        name="modalidad"
-        label="Modalidad"
-        value={form.modalidad}
-        onChange={(e) => change("modalidad", e.target.value as PracticeFormData["modalidad"])}
-      >
-        <option value="entre_semana">Entre semana (L–V)</option>
-        <option value="fin_de_semana">Fin de semana (S–D)</option>
-      </Select>
-      <Input
-        name="fechaInicio"
-        label="Fecha de inicio"
-        type="date"
-        value={form.fechaInicio}
-        onChange={(e) => change("fechaInicio", e.target.value)}
-      />
-      <Input
-        name="horaDeseada"
-        label="Hora deseada"
-        type="time"
-        value={form.horaDeseada}
-        onChange={(e) => change("horaDeseada", e.target.value)}
-      />
-      <Input
-        name="horasPorDia"
-        label="Horas por día"
-        type="number"
-        required
-        min={1}
-        max={16}
-        value={form.horasPorDia}
-        error={horasError ?? undefined}
-        onChange={(e) => change("horasPorDia", e.target.value === "" ? "" : Number(e.target.value))}
-      />
-      <Input
-        name="fechaFin"
-        label="Fecha final"
-        type="date"
-        value={form.manual ? form.fechaFin : (plan?.fechaFinElegida ?? "")}
-        onChange={(e) => {
-          ++version.current;
-          setForm((f) => ({ ...f, manual: true, fechaFin: e.target.value }));
-          setPlan(null);
-          setSuggestion(null);
-          setInstructor(null);
-        }}
-      />
+
+      {!course.rulesActive && (
+        <Select
+          name="semanas"
+          label="Duración"
+          value={form.semanas}
+          onChange={(e) => change("semanas", Number(e.target.value) as 1 | 2 | 3)}
+        >
+          {[1, 2, 3].map((s) => (
+            <option key={s} value={s}>
+              {s} {s === 1 ? "semana" : "semanas"}
+            </option>
+          ))}
+        </Select>
+      )}
+      {course.rulesActive ? (
+        <>
+          <PlanFields
+            rules={rules ?? undefined}
+            value={{
+              modalidad: form.modalidad,
+              horasPorDia: Number(form.horasPorDia) || 0,
+              fechaInicio: form.fechaInicio,
+              horaInicio: form.horaDeseada ? Number(form.horaDeseada.slice(0, 2)) : -1,
+            }}
+            onChange={(next) => {
+              ++version.current;
+              setForm((f) => ({
+                ...f,
+                modalidad: next.modalidad,
+                horasPorDia: next.horasPorDia || "",
+                fechaInicio: next.fechaInicio,
+                horaDeseada:
+                  next.horaInicio < 0 ? "" : `${String(next.horaInicio).padStart(2, "0")}:00`,
+              }));
+              setPlan(null);
+              setSuggestion(null);
+              setResolved(undefined);
+              setInstructor(null);
+              setError(null);
+            }}
+            month={shownMonth}
+            onMonth={setMonth}
+            minDate={minDate}
+            days={currentCalendar?.dias ?? []}
+            hours={currentCalendar?.dias.find((d) => d.fecha === form.fechaInicio)?.horas ?? []}
+            disabled={busy}
+            loading={Boolean(calendarKey && !currentCalendar)}
+          />
+          {currentCalendar?.error ? <p role="alert">{currentCalendar.error}</p> : null}
+        </>
+      ) : (
+        <>
+          <Select
+            name="modalidad"
+            label="Modalidad"
+            value={form.modalidad}
+            onChange={(e) => change("modalidad", e.target.value as PracticeFormData["modalidad"])}
+          >
+            <option value="entre_semana">Entre semana (L–V)</option>
+            <option value="fin_de_semana">Fin de semana (S–D)</option>
+          </Select>
+          <Input
+            name="fechaInicio"
+            label="Fecha de inicio"
+            type="date"
+            value={form.fechaInicio}
+            onChange={(e) => change("fechaInicio", e.target.value)}
+          />
+          <Input
+            name="horaDeseada"
+            label="Hora deseada"
+            type="time"
+            max={`${String((rules?.endHour ?? 22) - Number(form.horasPorDia || 1)).padStart(2, "0")}:00`}
+            value={form.horaDeseada}
+            onChange={(e) => change("horaDeseada", e.target.value)}
+          />
+          <Input
+            name="horasPorDia"
+            label="Horas por día"
+            type="number"
+            required
+            min={1}
+            value={form.horasPorDia}
+            error={horasError ?? undefined}
+            onChange={(e) =>
+              change("horasPorDia", e.target.value === "" ? "" : Number(e.target.value))
+            }
+          />
+        </>
+      )}
+      {!course.rulesActive && (
+        <Input
+          name="fechaFin"
+          label="Fecha final"
+          type="date"
+          value={form.manual ? form.fechaFin : (plan?.fechaFinElegida ?? "")}
+          onChange={(e) => {
+            ++version.current;
+            setForm((f) => ({ ...f, manual: true, fechaFin: e.target.value }));
+            setPlan(null);
+            setSuggestion(null);
+            setInstructor(null);
+          }}
+        />
+      )}
       <p>
-        {form.manual
-          ? "Ajuste manual: se incluyen solo los días de la modalidad dentro del rango. No cambia la tarifa."
-          : "Cálculo automático por días de práctica: 5 por semana L–V o 2 por semana S–D."}
+        {course.rulesActive
+          ? "El servidor calcula los días consecutivos y las horas de la opción elegida."
+          : form.manual
+            ? "Ajuste manual: se incluyen solo los días de la modalidad dentro del rango. No cambia la tarifa."
+            : "Cálculo automático por días de práctica: 5 por semana L–V o 2 por semana S–D."}
       </p>
-      {form.manual && (
+      {!course.rulesActive && form.manual && (
         <Button variant="secondary" onClick={() => change("manual", false)}>
           Restaurar cálculo automático
         </Button>
@@ -182,11 +320,15 @@ export function StepPracticas({
           )}
           <p>
             {plan.dias} días · {plan.bloques} bloques · {plan.horas} horas. Último día de práctica:{" "}
-            {plan.fechaFin}.
+            {plan.fechaFin}
+            {plan.ultimaHoraFin ? ` hasta las ${plan.ultimaHoraFin}` : ""}.
+            {plan.precioCentavos !== undefined
+              ? ` Precio: $${(plan.precioCentavos / 100).toFixed(2)}.`
+              : ""}
           </p>
         </div>
       )}
-      {!course.cohortId && (
+      {!course.rulesActive && !course.cohortId && (
         <p>
           El plan se guardará como pendiente de cohorte. Todavía no se pueden generar franjas ni
           asignar instructor.
@@ -197,7 +339,7 @@ export function StepPracticas({
           {error}
         </p>
       )}
-      {course.cohortId && (
+      {(course.rulesActive || course.cohortId) && (
         <Button
           variant="secondary"
           isLoading={busy}
@@ -250,11 +392,15 @@ export function StepPracticas({
         </Button>
         <Button
           isLoading={!course.cohortId && busy}
-          disabled={!plan || (!!course.cohortId && (!suggestion || !instructor)) || busy}
+          disabled={
+            !plan ||
+            ((course.rulesActive || !!course.cohortId) && (!suggestion || !instructor)) ||
+            busy
+          }
           onClick={() => {
-            if (!course.cohortId) void preview();
+            if (!course.rulesActive && !course.cohortId) void preview();
             else if (plan && suggestion && instructor)
-              onNext({ form, plan, suggestion, instructor });
+              onNext({ form, plan, suggestion, instructor, resolved });
           }}
         >
           Continuar

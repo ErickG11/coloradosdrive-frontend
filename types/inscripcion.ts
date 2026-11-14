@@ -36,6 +36,7 @@ export const ESTADOS_INSCRIPCION = [
   "devuelta",
   "aprobada",
   "rechazada",
+  "archivada",
 ] as const;
 export type EstadoInscripcion = (typeof ESTADOS_INSCRIPCION)[number];
 
@@ -150,18 +151,22 @@ export interface ConsentimientoResult {
 }
 
 export interface RepresentanteInput {
+  documentType?: "cedula" | "pasaporte" | "otro";
+  documentNumber?: string;
   nombre: string;
   cedula: string;
   acepta: true;
 }
 
 export interface DatosSolicitudInput {
+  documentType?: "cedula" | "pasaporte" | "otro";
+  documentNumber?: string;
   nombres: string;
   apellidos: string;
   cedula: string;
   fechaNacimiento: string;
   telefono: string;
-  // extranjero_sin_cedula no se registra: el servidor responde ATENCION_POR_CONTACTO.
+  // El servidor publica los tipos admitidos; sin habilitación conserva la atención por contacto.
   nacionalidadTipo: Nacionalidad;
   tipoSangre: TipoSangre;
   nivelEstudios?: Exclude<NivelEstudios, "menos_de_decimo">;
@@ -191,6 +196,7 @@ export interface DevolucionProgreso {
 }
 
 export interface ProgresoSolicitud {
+  revokedAt?: string | null;
   identidadVerificada: boolean;
   estudiosVerificados: boolean;
   courseId: string;
@@ -212,11 +218,19 @@ export interface ProgresoSolicitud {
     nombres: string | null;
     apellidos: string | null;
     cedula: string | null;
+    documentType?: "cedula" | "pasaporte" | "otro";
+    documentNumber?: string | null;
     fechaNacimiento: string | null;
     telefono: string | null;
     nacionalidadTipo: Nacionalidad | null;
     tipoSangre: TipoSangre | null;
-    representante: { nombre: string; cedula: string; acepta: boolean } | null;
+    representante: {
+      nombre: string;
+      cedula: string;
+      acepta: boolean;
+      documentType?: "cedula" | "pasaporte" | "otro";
+      documentNumber?: string;
+    } | null;
   };
   pasosCompletos: {
     correo: boolean;
@@ -237,7 +251,8 @@ export interface EnvioSolicitudResult {
 
 // --- Admin ----------------------------------------------------------------
 
-export type TabSolicitudes = "pendientes" | "devueltas" | "aprobadas" | "rechazadas" | "todas";
+export type TabSolicitudes =
+  "pendientes" | "devueltas" | "aprobadas" | "archivadas" | "rechazadas" | "todas";
 
 export interface ListarSolicitudesParams {
   page?: number;
@@ -247,6 +262,8 @@ export interface ListarSolicitudesParams {
 }
 
 export interface SolicitudAdminItem {
+  documentType?: string;
+  documentNumber?: string | null;
   id: string;
   courseId: string;
   correo: string;
@@ -286,6 +303,8 @@ export interface ResumenSolicitudes {
 }
 
 export interface VerificacionSolicitud {
+  mode?: string | null;
+  scanAvailable?: boolean;
   vigente?: boolean;
   id: string;
   tipo: TipoVerificacion;
@@ -306,6 +325,8 @@ export interface CertificadoAdmin {
 }
 
 export interface ConsentimientoAdmin {
+  representanteDocumentType?: string;
+  representanteDocumentNumber?: string | null;
   versionAviso: string;
   versionTerminos: string;
   aceptadoAt: string;
@@ -315,6 +336,14 @@ export interface ConsentimientoAdmin {
 }
 
 export interface SolicitudAdminDetalle extends SolicitudAdminItem {
+  documentType?: string;
+  documentNumber?: string | null;
+  identityRulesActive?: boolean;
+  reviewOwned?: boolean;
+  updatedAt?: string;
+  archivedAt?: string | null;
+  revokedAt?: string | null;
+  revocationPaymentReview?: boolean;
   studentId?: string | null;
   telefono: string | null;
   fechaNacimiento: string | null;
@@ -357,9 +386,11 @@ export interface DecisionResult {
   cohorte?: { id: string; nombre: string } | null;
   pendienteCohorte?: boolean;
   correoEnviado?: boolean;
+  correoEncolado?: boolean;
 }
 
 export interface ConfigInscripcion {
+  documentTypes?: string[];
   inscripcionesAbiertas: boolean;
 }
 

@@ -109,30 +109,34 @@ export function StudentActions({
   }
   return (
     <>
-      <p className="text-sm text-text-secondary">
-        Estado de acceso: <strong>{student.activo ? "Activo" : "Inactivo"}</strong>
-      </p>
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="secondary"
-          disabled={disabled || busy || deletionPending}
-          onClick={() => open(student.activo ? "desactivar" : "reactivar")}
-        >
-          {student.activo ? "Desactivar" : "Reactivar"}
-        </Button>
-        <Button
-          variant="danger"
-          disabled={disabled || busy || deletionPending}
-          onClick={() => open("eliminar")}
-        >
-          Eliminar definitivamente
-        </Button>
-        {deletionPending && (
-          <Link className={buttonClassName("secondary")} href={studentDeletionsHref}>
-            Ver eliminaciones pendientes
-          </Link>
-        )}
-      </div>
+      <section className="grid gap-3 border-t border-border pt-6" aria-label="Gestionar cuenta">
+        <h3 className="font-display text-lg font-semibold">Gestionar cuenta</h3>
+        <p className="text-sm text-text-secondary">
+          Desactivar es reversible. Eliminar borra definitivamente la cuenta y sus datos.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="secondary"
+            disabled={disabled || busy || deletionPending}
+            onClick={() => open(student.activo ? "desactivar" : "reactivar")}
+          >
+            {student.activo ? "Desactivar" : "Reactivar"}
+          </Button>
+          <Button
+            variant="ghost"
+            className="border-t border-border pt-3 !text-status-error"
+            disabled={disabled || busy || deletionPending}
+            onClick={() => open("eliminar")}
+          >
+            Eliminar definitivamente
+          </Button>
+          {deletionPending && (
+            <Link className={buttonClassName("secondary")} href={studentDeletionsHref}>
+              Ver eliminaciones pendientes
+            </Link>
+          )}
+        </div>
+      </section>
       <Modal
         isOpen={action !== null}
         onClose={close}

@@ -1,0 +1,143 @@
+.figure {
+  min-width: 0;
+  margin-block: 1rem;
+}
+.frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: clamp(12rem, 34vw, 25rem);
+  max-height: 60vh;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.8rem;
+  background: var(--color-bg-sunken);
+}
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+}
+.image[data-loaded="true"] {
+  opacity: 1;
+}
+.enlarge {
+  cursor: zoom-in;
+}
+.enlarge:disabled {
+  cursor: wait;
+}
+.zoomHint {
+  position: absolute;
+  right: 0.65rem;
+  bottom: 0.65rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 0.75rem;
+}
+.skeleton {
+  position: absolute;
+  inset: 1rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(110deg, var(--color-bg-surface), var(--color-bg-sunken));
+}
+.feedback {
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+  padding: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+.lightbox {
+  max-width: min(70rem, 96vw) !important;
+}
+.fullImage {
+  width: 100%;
+  max-height: 75dvh;
+  object-fit: contain;
+  background: var(--color-bg-sunken);
+  border-radius: 0.7rem;
+}
+.field {
+  display: grid;
+  gap: 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  padding: 1rem;
+}
+.fieldHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.drop {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  padding: 1.25rem 1rem;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 0.65rem;
+  background: var(--color-bg-sunken);
+}
+.drop[data-disabled="true"] {
+  border-style: solid;
+}
+.help {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.error {
+  color: var(--color-status-error);
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.field .figure {
+  margin: 0;
+}
+.field .frame {
+  height: clamp(10rem, 24vw, 17rem);
+}
+.field input[type="file"] {
+  display: none;
+}
+.confirmActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+@media (max-width: 767px) {
+  .field {
+    padding: 0.8rem;
+  }
+  .frame {
+    height: 14rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .figure *,
+  .field * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

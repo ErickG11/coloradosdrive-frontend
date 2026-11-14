@@ -90,7 +90,14 @@ export async function proxy(request: NextRequest) {
       for (const cookie of supabaseResponse.cookies.getAll()) response.cookies.set(cookie);
       return response;
     }
-    if (!account.mustChangePassword && changePage && !account.inscripcionIncompleta)
+    // Students also use the existing form for voluntary password changes
+    // from their enrollment sheet. Role, session and account checks above still apply.
+    if (
+      role !== "estudiante" &&
+      !account.mustChangePassword &&
+      changePage &&
+      !account.inscripcionIncompleta
+    )
       return NextResponse.redirect(new URL(home, request.url));
   }
 

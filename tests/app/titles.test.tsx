@@ -38,7 +38,11 @@ const instructor: Loader = () => import("@/app/(instructor)/instructor/layout");
 const studentExams: Loader = () => import("@/app/(student)/student/exams/layout");
 
 const SCREENS: Array<[string, Loader[], string]> = [
-  ["login", [root, () => import("@/app/(auth)/login/page")], "Iniciar sesión · ColoradosDrive"],
+  [
+    "login",
+    [root, () => import("@/app/(auth)/login/page")],
+    "Iniciar sesión | Colorados Drive · ColoradosDrive",
+  ],
   [
     "cuenta inactiva",
     [root, () => import("@/app/(auth)/account-inactive/page")],
@@ -122,7 +126,7 @@ const SCREENS: Array<[string, Loader[], string]> = [
   [
     "horarios (estudiante)",
     [root, () => import("@/app/(student)/student/schedule/layout")],
-    "Horarios de práctica · ColoradosDrive",
+    "Mis prácticas · ColoradosDrive",
   ],
   // La landing y la 404 viven en el segmento raíz.
   ["404", [root, () => import("@/app/not-found")], "Página no encontrada · ColoradosDrive"],

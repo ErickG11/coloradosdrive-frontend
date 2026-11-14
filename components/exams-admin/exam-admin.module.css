@@ -1,0 +1,647 @@
+.page {
+  display: grid;
+  gap: 1.5rem;
+}
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.pageHeader h1 {
+  font-size: clamp(1.65rem, 3vw, 2.15rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+.pageHeader h1 span {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  font-size: 0.9rem;
+  letter-spacing: 0;
+  color: var(--color-text-secondary);
+}
+.pageHeader p,
+.help {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+.pageHeader p {
+  margin-top: 0.4rem;
+}
+.pageHeader svg,
+.contentLink svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.workflow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: var(--color-bg-surface);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.workflow span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.workflow b {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--color-bg-sunken);
+  color: var(--color-text-primary);
+  font-size: 0.75rem;
+}
+.workflow i {
+  font-style: normal;
+}
+.workflow a {
+  margin-left: auto;
+  color: var(--color-brand-ink);
+  font-weight: 600;
+  padding: 0.5rem 0;
+}
+.filters {
+  display: grid;
+  grid-template-columns: 1.6fr 1.3fr 1fr 1fr;
+  gap: 1rem;
+}
+.surface,
+.examCard,
+.section,
+.summary {
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: var(--color-bg-surface);
+}
+.surface {
+  padding: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+.listCaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+.listCaption svg {
+  width: 1rem;
+  height: 1rem;
+}
+.examList {
+  display: grid;
+  gap: 1.25rem;
+}
+.examCard {
+  overflow: hidden;
+}
+.cardHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1rem;
+}
+.examIcon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  background: var(--color-bg-sunken);
+  color: var(--color-brand-ink);
+}
+.examIcon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.cardTitle {
+  flex: 1;
+  min-width: 0;
+}
+.cardTitle h2 {
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+  margin-bottom: 0.6rem;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.description {
+  padding: 0 1.5rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.examStats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  padding: 1.1rem 1.5rem;
+  border-block: 1px solid var(--color-border);
+  background: var(--color-bg-sunken);
+}
+.examStats div,
+.summaryStats div {
+  display: grid;
+  gap: 0.3rem;
+}
+.examStats span,
+.summaryStats span {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+.examStats strong {
+  font-size: 1rem;
+  font-weight: 650;
+}
+.availability {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.9fr) 1.2fr;
+  gap: 1rem;
+  padding: 1.2rem 1.5rem;
+}
+.availability p {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.5rem;
+  overflow-wrap: anywhere;
+}
+.availability ul {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+.availability li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.availability li[data-met="true"] span {
+  color: var(--color-status-success);
+}
+.examCard > .help {
+  padding: 0 1.5rem 1rem;
+}
+.cardFooter {
+  border-top: 1px solid var(--color-border);
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.cardFooter > div {
+  display: flex;
+  gap: 0.5rem;
+}
+.contentLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--color-brand-ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.skeletonList {
+  display: grid;
+  gap: 1rem;
+}
+.skeletonList > div {
+  display: grid;
+  gap: 1rem;
+  padding: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+}
+.skeletonList i {
+  display: block;
+  height: 1rem;
+  width: 65%;
+  border-radius: 0.4rem;
+  background: var(--color-bg-sunken);
+}
+.skeletonList i:first-child {
+  width: 40%;
+  height: 1.5rem;
+}
+.editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: 1.5rem;
+  align-items: start;
+  padding-bottom: 5.5rem;
+}
+.editor fieldset {
+  min-width: 0;
+}
+.mainFields {
+  display: grid;
+  gap: 1.5rem;
+}
+.section {
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.3rem;
+  min-width: 0;
+}
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.sectionHeading > span {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 0.55rem;
+  background: var(--color-bg-sunken);
+  color: var(--color-brand-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.sectionHeading h2 {
+  font-size: 1.1rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+.twoColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+.typeCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.typeCards label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.25rem 0.6rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.8rem;
+  padding: 1rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+.typeCards label:has(input:checked) {
+  border-color: var(--color-brand-ink);
+  background: var(--color-bg-sunken);
+}
+.typeCards label:has(input:disabled) {
+  cursor: default;
+}
+.typeCards input {
+  margin-top: 0.2rem;
+  accent-color: var(--color-brand-ink);
+}
+.typeCards small {
+  grid-column: 2;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.switches {
+  display: grid;
+  gap: 0.75rem;
+}
+.switches label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  font-size: 0.875rem;
+}
+.switches small {
+  display: block;
+  color: var(--color-text-secondary);
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+.switches input {
+  appearance: none;
+  position: relative;
+  width: 2.5rem;
+  height: 1.4rem;
+  flex-shrink: 0;
+  align-self: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 2rem;
+  background: var(--color-bg-sunken);
+  transition: background-color 150ms ease-out;
+}
+.switches input::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1rem;
+  height: 1rem;
+  background: var(--color-text-secondary);
+  border-radius: 50%;
+  transition: transform 150ms ease-out;
+}
+.switches input:checked {
+  background: var(--color-brand-primary);
+  border-color: var(--color-brand-primary);
+}
+.switches input:checked::before {
+  background: white;
+  transform: translateX(1.1rem);
+}
+.switches input:disabled {
+  opacity: 0.55;
+}
+.summary {
+  position: sticky;
+  top: 5.5rem;
+  padding: 1.3rem;
+  display: grid;
+  gap: 1.2rem;
+}
+.summary h2 {
+  font-size: 1rem;
+  font-weight: 650;
+}
+.summaryStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+}
+.summaryStats strong {
+  font-size: 1.1rem;
+}
+.issues {
+  display: grid;
+  gap: 0.6rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.issues li {
+  line-height: 1.6;
+}
+.issues button {
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+  min-height: 2rem;
+}
+.question {
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: var(--color-bg-surface);
+  overflow: hidden;
+}
+.questionTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-sunken);
+}
+.questionTools strong {
+  margin-right: auto;
+  font-size: 0.85rem;
+}
+.question summary {
+  cursor: pointer;
+  padding: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.question summary span {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.questionBody {
+  display: grid;
+  gap: 1rem;
+  padding: 0 1rem 1.25rem;
+}
+.questionBody input[type="radio"] {
+  min-width: 1.1rem;
+  min-height: 1.1rem;
+  accent-color: var(--color-brand-ink);
+}
+.inlineIssues {
+  color: var(--color-status-error);
+  font-size: 0.8rem;
+  display: grid;
+  gap: 0.4rem;
+}
+.actions {
+  position: fixed;
+  z-index: 30;
+  bottom: 0;
+  left: var(--sidebar-w, 16rem);
+  right: 0;
+  padding: 0.8rem clamp(1rem, 3vw, 2.5rem);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  box-shadow: 0 -4px 20px #00000008;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.actions > span {
+  margin-right: auto;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+.preview {
+  position: fixed !important;
+  right: 1rem;
+  top: 1rem;
+  bottom: 1rem;
+  max-width: 38rem !important;
+}
+.previewQuestion {
+  padding-block: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  gap: 1rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.previewQuestion label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+}
+.previewQuestion h3 {
+  font-weight: 600;
+}
+.passingMeter {
+  height: 0.3rem;
+  width: 100%;
+  accent-color: var(--color-brand-ink);
+}
+@media (max-width: 1100px) {
+  .editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .summary {
+    position: static;
+    grid-row: 1;
+  }
+  .summaryStats {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .issues {
+    max-height: 10rem;
+    overflow-y: auto;
+  }
+  .filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .availability {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 767px) {
+  .questionTools strong {
+    flex-basis: 100%;
+    padding: 0.25rem 0.5rem;
+  }
+  .pageHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .workflow {
+    gap: 0.65rem;
+    padding: 1rem;
+  }
+  .workflow i {
+    display: none;
+  }
+  .workflow span {
+    width: calc(50% - 0.4rem);
+    font-size: 0.75rem;
+  }
+  .workflow a {
+    margin-left: 0;
+  }
+  .filters {
+    gap: 0.8rem;
+  }
+  .filters > :first-child,
+  .filters > :nth-child(2) {
+    grid-column: 1 / -1;
+  }
+  .cardHeading {
+    gap: 0.65rem;
+    padding: 1rem;
+  }
+  .examIcon {
+    display: none;
+  }
+  .description {
+    padding-inline: 1rem;
+  }
+  .examStats {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 1rem;
+  }
+  .availability,
+  .cardFooter {
+    padding: 1rem;
+  }
+  .section {
+    padding: 1rem;
+  }
+  .twoColumns,
+  .typeCards {
+    grid-template-columns: 1fr;
+  }
+  .summaryStats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  .actions {
+    left: 0;
+    padding: 0.65rem 0.75rem max(0.65rem, env(safe-area-inset-bottom));
+    gap: 0.5rem;
+  }
+  .actions > span {
+    display: none;
+  }
+  .actions > button {
+    flex: 1;
+    padding-inline: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .preview {
+    right: 0.5rem;
+    left: 0.5rem;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: auto !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .editor * {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+  .switches input::before {
+    transition: none;
+  }
+}
+
+.editor :is(input, textarea, select, summary, button) {
+  scroll-margin-block: 6rem;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.optionRow > div {
+  flex: 1;
+  min-width: 0;
+}

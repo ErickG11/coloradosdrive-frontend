@@ -11,6 +11,7 @@ import styles from "./solicitudes.module.css";
 
 const TITULOS = {
   aprobada: "Solicitud aprobada",
+  archivada: "Solicitud aprobada y archivada",
   devuelta: "Solicitud devuelta al postulante",
   rechazada: "Solicitud rechazada",
 } as const;
@@ -28,7 +29,9 @@ export const ResultadoDecisionCard = forwardRef<HTMLDivElement, { resultado: Res
         ? TITULOS[resultado.estado as keyof typeof TITULOS]
         : "Decisión registrada";
     // Tras aprobar, el correo puede no haber salido: el reenvío cubre ese caso y los enlaces perdidos.
-    const puedeReenviar = resultado.estado === "aprobada" && Boolean(resultado.studentId);
+    const puedeReenviar =
+      (resultado.estado === "aprobada" || resultado.estado === "archivada") &&
+      Boolean(resultado.studentId);
 
     async function reenviar() {
       if (lock.current || !resultado.studentId) return;
@@ -51,7 +54,7 @@ export const ResultadoDecisionCard = forwardRef<HTMLDivElement, { resultado: Res
       <div ref={ref} tabIndex={-1} className={styles.resultFocus}>
         <Card title={titulo} className="border-status-success">
           <div className={styles.detail}>
-            {resultado.estado === "aprobada" ? (
+            {resultado.estado === "aprobada" || resultado.estado === "archivada" ? (
               <>
                 {resultado.etapa === "por_agendar" ? (
                   <p>
@@ -76,9 +79,12 @@ export const ResultadoDecisionCard = forwardRef<HTMLDivElement, { resultado: Res
                 ) : null}
               </>
             ) : null}
+            {resultado.correoEncolado ? (
+              <p role="status">El correo de estado quedó en cola; aún no consta como entregado.</p>
+            ) : null}
             {resultado.correoEnviado === true ? (
               <p className="text-sm text-status-success" role="status">
-                {resultado.estado === "aprobada"
+                {resultado.estado === "aprobada" || resultado.estado === "archivada"
                   ? "Correo enviado con el enlace para crear la contraseña."
                   : "Correo enviado al postulante."}
               </p>

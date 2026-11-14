@@ -19,12 +19,14 @@ export function StudentGraduation({ graduation }: { graduation: Graduation }) {
                 Number(a.checks.some((c) => !c.fulfilled)),
             )
             .map((e) => (
-              <section
+              <details
                 key={e.enrollmentId}
                 className="mb-4"
                 aria-label={"Requisitos de " + e.courseName}
               >
-                <h3 className="mb-2 font-medium">{e.courseName}</h3>
+                <summary className="cursor-pointer py-2 text-sm font-medium">
+                  {e.courseName} · {e.checks.filter((check) => !check.fulfilled).length} pendientes
+                </summary>
                 <ul className="space-y-2">
                   {[...e.checks]
                     .sort((a, b) => Number(a.fulfilled) - Number(b.fulfilled))
@@ -34,9 +36,12 @@ export function StudentGraduation({ graduation }: { graduation: Graduation }) {
                         className={
                           check.fulfilled
                             ? "text-sm text-text-secondary"
-                            : "rounded border border-accent-red p-2 text-sm text-text-primary"
+                            : "text-sm text-text-primary"
                         }
                       >
+                        <span aria-hidden="true" className="mr-2">
+                          {check.fulfilled ? "✓" : "○"}
+                        </span>
                         <span className="font-semibold">
                           {check.fulfilled ? "Cumplido" : "Pendiente"} · {check.label}:{" "}
                         </span>
@@ -44,7 +49,7 @@ export function StudentGraduation({ graduation }: { graduation: Graduation }) {
                       </li>
                     ))}
                 </ul>
-              </section>
+              </details>
             ))}
         </>
       )}

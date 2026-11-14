@@ -12,7 +12,14 @@ import styles from "./solicitudes.module.css";
 export function DatosDeclarados({ detalle }: { detalle: SolicitudAdminDetalle }) {
   const filas: [string, string][] = [
     ["Nombres y apellidos", nombreDe(detalle)],
-    ["Cédula", detalle.cedula ?? "No registrada"],
+    [
+      detalle.documentType === "pasaporte"
+        ? "Pasaporte"
+        : detalle.documentType === "otro"
+          ? "Otro documento"
+          : "Cédula",
+      detalle.documentNumber ?? detalle.cedula ?? "No registrado",
+    ],
     ["Fecha de nacimiento", detalle.fechaNacimiento ?? "No indicada"],
     [
       "Nacionalidad",

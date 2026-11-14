@@ -1,32 +1,35 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
+import { EnrollmentIcon } from "@/components/inscripcion/EnrollmentVisual";
+import { NoOpenCoursePanel, WaitlistControl } from "./WaitlistControl";
+import planStyles from "./enrollment-plan.module.css";
 import visual from "@/components/inscripcion/enrollment-surface.module.css";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/inscripcion/EnrollmentField";
+import { PlanFields, timeRange } from "./PlanFields";
 import { studentScheduleApi, scheduleError } from "@/lib/api/studentSchedule";
 import type {
+  StudentPlanRules,
   StudentScheduleInput,
   StudentScheduleOptions,
   StudentSchedulePreview,
   StudentScheduleReservation,
 } from "@/types/studentSchedule";
 import { SchedulePlanView, type PlanDayView } from "./SchedulePlanView";
-import { SegmentedControl } from "./SegmentedControl";
-import { dayLabel, guayaquilDate, plural, summarySentence } from "./scheduleFormat";
+
+import { dayLabel, dayLabelLong, guayaquilDate, plural, summarySentence } from "./scheduleFormat";
 import type { useStudentReservation } from "./useStudentReservation";
 interface Props {
+  onWaiting?: (waiting: boolean) => void;
   enrollmentId: string;
   state: ReturnType<typeof useStudentReservation>;
   onReserved: (reservation: StudentScheduleReservation) => void;
   onNext: () => void;
+  onBack?: () => void;
 }
 type Loaded<T> = { key: string; data?: T; error?: string } | null;
-const REASONS: Record<string, string> = {
-  DIA_SIN_INSTRUCTOR: "Sin disponibilidad",
-  SOLAPE_PROPIO: "Choca con tu agenda",
-  SIN_COHORTE_ELEGIBLE: "Sin grupo con cupo",
-};
+const reloadKey = (id: string | undefined) => id ?? "none";
 function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div
@@ -68,15 +71,67 @@ function useKeyedRequest<T>(
     error: current?.error,
   };
 }
-export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext }: Props) {
-  const minDate = guayaquilDate(1);
-  const maxDate = guayaquilDate(365);
-  const [input, setInput] = useState<StudentScheduleInput>({
+export function StudentSchedulePicker({
+  onWaiting,
+  enrollmentId,
+  state,
+  onReserved,
+  onNext,
+  onBack,
+}: Props) {
+  const rules = useKeyedRequest<StudentPlanRules>(state.ready ? "plan-rules" : null, (signal) =>
+    studentScheduleApi.rules(signal),
+  );
+  const minDate = rules.data
+    ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(
+        new Date(rules.data.serverNow),
+      )
+    : guayaquilDate(0);
+  const legacyMaxDate = guayaquilDate(365);
+  const [draft, setInput] = useState<StudentScheduleInput>({
     modalidad: "entre_semana",
-    fechaInicio: minDate,
-    horasPorDia: 3,
+    fechaInicio: "",
+    horasPorDia: 0,
   });
+  const input = draft;
+  const calendarHours =
+    input.horasPorDia ||
+    rules.data?.options.find((o) => o.habilitada && o.modalidad === input.modalidad)?.horasPorDia ||
+    0;
+  const [selectedMonth, setMonth] = useState("");
+  const month = selectedMonth || minDate.slice(0, 7);
   const [chosenHour, setChosenHour] = useState<string | null>(null);
+  const calendar = useKeyedRequest(
+    rules.data && calendarHours && state.ready && !state.held
+      ? `${enrollmentId}|${month}|${input.modalidad}|${calendarHours}|${reloadKey(state.reservation?.id)}`
+      : null,
+    (signal) =>
+      studentScheduleApi
+        .calendar(
+          enrollmentId,
+          { ...input, horasPorDia: calendarHours, fechaInicio: `${month}-01` },
+          signal,
+        )
+        .then((result) => {
+          if (!signal.aborted) {
+            const day = result.dias.find((d) => d.fecha === input.fechaInicio);
+            if (day && !day.disponible) {
+              setInput((current) =>
+                current.fechaInicio === input.fechaInicio &&
+                current.modalidad === input.modalidad &&
+                current.horasPorDia === calendarHours
+                  ? { ...current, fechaInicio: "" }
+                  : current,
+              );
+              setChosenHour(null);
+            }
+          }
+          return result;
+        }),
+  );
+  const maxDate = rules.data?.active
+    ? (calendar.data?.calendarEndDate ?? undefined)
+    : legacyMaxDate;
   const [reload, setReload] = useState(0);
   const [reserving, setReserving] = useState(false);
   const [reserveError, setReserveError] = useState<string | null>(null);
@@ -84,23 +139,42 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
   const validDate =
     /^\d{4}-\d{2}-\d{2}$/.test(input.fechaInicio) &&
     input.fechaInicio >= minDate &&
-    input.fechaInicio <= maxDate;
-  const enabled = state.ready && !state.held && !state.error && validDate;
+    (!maxDate || input.fechaInicio <= maxDate);
+  const enabled =
+    !!rules.data &&
+    state.ready &&
+    !state.held &&
+    !state.error &&
+    validDate &&
+    input.horasPorDia > 0;
   const optionsKey = enabled
     ? `${enrollmentId}|${input.modalidad}|${input.fechaInicio}|${String(input.horasPorDia)}|${String(reload)}`
     : null;
   const options = useKeyedRequest<StudentScheduleOptions>(optionsKey, (signal) =>
-    studentScheduleApi.options(enrollmentId, input, signal),
+    studentScheduleApi.options(enrollmentId, input, signal).then((result) => {
+      if (
+        !signal.aborted &&
+        chosenHour &&
+        !result.horas.some((h) => h.hora === chosenHour && h.factible)
+      )
+        setChosenHour(null);
+      return result;
+    }),
   );
+  // Sin ningún curso abierto: el servidor lo indica en las opciones o en todos los días futuros.
+  const futureDays = (calendar.data?.dias ?? []).filter((d) => d.fecha >= minDate);
+  const noOpen =
+    options.data?.sinCohorte?.codigo === "SIN_CURSOS_ABIERTOS" ||
+    (futureDays.length > 0 &&
+      futureDays.every((d) => !d.disponible && /cursos abiertos/i.test(d.motivo ?? "")));
+  useEffect(() => {
+    if (options.data || noOpen) onWaiting?.(noOpen || Boolean(options.data?.sinCohorte));
+  }, [options.data, noOpen, onWaiting]);
   const list = options.data?.horas ?? [];
   const firstFeasible = list.find((h) => h.factible)?.hora ?? null;
-  // Preselecciona la primera hora factible; la elección del alumno solo vale si sigue siéndolo.
   const hour =
-    chosenHour && list.some((h) => h.hora === chosenHour && h.factible)
-      ? chosenHour
-      : firstFeasible;
-  // Sin ninguna hora factible se previsualiza la primera para explicar qué días fallan.
-  const previewHour = hour ?? (options.data && !options.data.sinCohorte ? list[0]?.hora : null);
+    chosenHour && list.some((h) => h.hora === chosenHour && h.factible) ? chosenHour : null;
+  const previewHour = hour ?? firstFeasible;
   const previewKey =
     optionsKey && options.data && previewHour ? `${optionsKey}|${previewHour}` : null;
   const preview = useKeyedRequest<StudentSchedulePreview>(previewKey, (signal) =>
@@ -112,7 +186,12 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
   );
   function update(next: Partial<StudentScheduleInput>) {
     setInput((current) => ({ ...current, ...next }));
-    setChosenHour(null);
+    if (
+      next.modalidad !== undefined ||
+      next.horasPorDia !== undefined ||
+      next.fechaInicio !== undefined
+    )
+      setChosenHour(null);
     setReserveError(null);
   }
   async function reserve() {
@@ -139,8 +218,8 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
     const plan = state.reservation.plan;
     const days: PlanDayView[] = plan?.dias.map((d) => ({ ...d, ok: true })) ?? [];
     return (
-      <Card title="Tu horario reservado" className={visual.schedule}>
-        <p className="font-semibold">Grupo: {state.reservation.cohorte.nombre}</p>
+      <Card title="Tu horario reservado" className={`${visual.schedule} ${planStyles.schedule}`}>
+        <p className="font-semibold">Tu plan de prácticas</p>
         {plan ? (
           <p className="mt-2" aria-live="polite">
             {summarySentence({
@@ -211,109 +290,55 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
       : null;
   const data = preview.data;
   const noCohort = options.data?.sinCohorte ?? null;
-  const days: PlanDayView[] =
-    data?.dias.map((d) => ({
-      fecha: d.fecha,
-      horaInicio: d.horaInicio,
-      horaFin: d.horaFin,
-      horas: d.horas,
-      ok: d.disponible,
-      motivo: d.motivo?.mensaje,
-    })) ?? [];
-  const failing = data?.diasFallan ?? [];
-  const alternatives = list.filter((h) => h.factible && h.hora !== previewHour);
+
   const failure = options.error ?? preview.error ?? null;
+  if (noOpen)
+    return (
+      <Card title="Elige tu horario" className={`${visual.schedule} ${planStyles.schedule}`}>
+        <NoOpenCoursePanel enrollmentId={enrollmentId} />
+      </Card>
+    );
   return (
-    <Card title="Elige tu horario" className={visual.schedule}>
-      <p className="mb-5 text-text-secondary">
-        Elige cuándo empiezas y a qué hora. Nosotros armamos el resto: todos los días tendrás la
-        misma hora de inicio hasta completar tus horas de práctica.
-      </p>
+    <Card title="Elige tu horario" className={`${visual.schedule} ${planStyles.schedule}`}>
+      {rules.error ? (
+        <p role="status" className="text-status-warning">
+          {rules.error}
+        </p>
+      ) : null}
       {expired ? (
         <p role="status" className="mb-4 rounded-sm bg-status-warning-bg p-3 text-status-warning">
           {expired}
         </p>
       ) : null}
-      <div className="grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <SegmentedControl
-          legend="Modalidad"
-          value={input.modalidad}
-          disabled={reserving}
-          options={[
-            { value: "entre_semana", label: "Entre semana" },
-            { value: "fin_de_semana", label: "Fin de semana" },
-          ]}
-          onChange={(modalidad) => update({ modalidad })}
-        />
-        <Input
-          label="Fecha de inicio"
-          type="date"
-          required
-          min={minDate}
-          max={maxDate}
-          value={input.fechaInicio}
-          disabled={reserving}
-          onChange={(e) => update({ fechaInicio: e.target.value })}
-          error={
-            input.fechaInicio && !validDate
-              ? "Elige una fecha desde mañana y dentro del próximo año."
-              : undefined
-          }
-        />
-        <SegmentedControl
-          legend="Horas por día"
-          value={input.horasPorDia}
-          disabled={reserving}
-          options={[1, 2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
-          onChange={(horasPorDia) => update({ horasPorDia })}
-        />
-      </div>
-      <fieldset className="mt-6 min-w-0" disabled={reserving}>
-        <legend className="mb-2 text-sm font-medium text-text-secondary">Hora de inicio</legend>
-        {options.loading || (!options.data && !failure && enabled) ? (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8" aria-busy="true">
-            {Array.from({ length: 8 }, (_, i) => (
-              <Skeleton key={i} className="h-14" />
-            ))}
-            <span className="sr-only" role="status">
-              Buscando horas disponibles…
-            </span>
-          </div>
-        ) : !validDate ? (
-          <p className="text-text-secondary">Elige una fecha de inicio para ver las horas.</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-            {list.map((item) => {
-              const selected = item.hora === hour;
-              const reason = item.motivo ? (REASONS[item.motivo.codigo] ?? "No disponible") : null;
-              return (
-                <button
-                  key={item.hora}
-                  type="button"
-                  disabled={!item.factible}
-                  aria-pressed={selected}
-                  aria-label={
-                    item.factible
-                      ? `${item.hora}${selected ? ", seleccionada" : ""}`
-                      : `${item.hora}, no disponible. ${item.motivo?.mensaje ?? ""}`
-                  }
-                  title={item.motivo?.mensaje}
-                  onClick={() => {
-                    setChosenHour(item.hora);
-                    setReserveError(null);
-                  }}
-                  className={`flex min-h-14 flex-col items-center justify-center rounded-sm border px-2 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${selected ? "border-brand-primary bg-brand-primary text-white" : "border-border-strong bg-bg-surface text-text-primary hover:bg-bg-sunken"}`}
-                >
-                  {item.hora}
-                  {reason ? (
-                    <span className="text-[11px] font-normal leading-tight">{reason}</span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </fieldset>
+      <PlanFields
+        appearance="enrollment"
+        rules={rules.data}
+        value={{ ...input, horaInicio: hour ? Number(hour.slice(0, 2)) : -1 }}
+        month={month}
+        onMonth={setMonth}
+        minDate={minDate}
+        maxDate={maxDate}
+        days={calendar.data?.dias ?? []}
+        hours={list}
+        disabled={reserving}
+        loading={calendar.loading || options.loading}
+        onChange={(next) => {
+          const changed =
+            next.modalidad !== input.modalidad ||
+            next.horasPorDia !== input.horasPorDia ||
+            next.fechaInicio !== input.fechaInicio;
+          if (changed)
+            update({
+              modalidad: next.modalidad,
+              horasPorDia: next.horasPorDia,
+              fechaInicio: next.fechaInicio,
+            });
+          setChosenHour(
+            next.horaInicio < 0 ? null : `${String(next.horaInicio).padStart(2, "0")}:00`,
+          );
+        }}
+      />
+      {calendar.error ? <p role="alert">{calendar.error}</p> : null}
       {failure ? (
         <div role="alert" className="mt-5 text-sm text-accent-red">
           <p>{failure}</p>
@@ -328,21 +353,35 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
         </p>
       ) : null}
       {noCohort ? (
-        <div role="status" className="mt-5 rounded-sm border border-border p-4">
-          <p className="font-medium">Ningún grupo con cupo cubre esas fechas.</p>
-          <p className="mt-1 text-text-secondary">
-            Prueba empezar más tarde o consulta a la escuela.
-          </p>
-          {noCohort.primeraFechaPosible ? (
-            <Button
-              className="mt-3"
-              variant="secondary"
-              onClick={() => update({ fechaInicio: noCohort.primeraFechaPosible ?? minDate })}
-            >
-              Empezar el {dayLabel(noCohort.primeraFechaPosible)}
-            </Button>
-          ) : null}
-        </div>
+        <StudentEmptyState
+          icon={<EnrollmentIcon name="calendar" />}
+          title={
+            noCohort.codigo === "SIN_COHORTE_ELEGIBLE"
+              ? "Los cursos abiertos están completos"
+              : "Aún no hay un plan disponible para estas fechas"
+          }
+          description={noCohort.mensaje}
+          actions={
+            <div className="grid gap-3">
+              {noCohort.ultimaFechaInicioPosible &&
+              !noCohort.mensaje.includes("Última fecha de inicio") ? (
+                <p className="text-sm text-text-secondary">
+                  La última fecha de inicio posible es el{" "}
+                  {dayLabelLong(noCohort.ultimaFechaInicioPosible)}.
+                </p>
+              ) : null}
+              <WaitlistControl enrollmentId={enrollmentId} input={input} />
+              {noCohort.primeraFechaPosible ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => update({ fechaInicio: noCohort.primeraFechaPosible ?? minDate })}
+                >
+                  Empezar el {dayLabel(noCohort.primeraFechaPosible)}
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
       ) : null}
       {options.data && !noCohort && !firstFeasible ? (
         <div role="status" className="mt-5 rounded-sm border border-border p-4">
@@ -358,58 +397,37 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
           <Skeleton className="h-32" />
         </div>
       ) : null}
-      {data ? (
-        <section className="mt-6" aria-labelledby="plan-title">
-          <h3 id="plan-title" className="font-display text-lg font-semibold">
-            Tu plan
-          </h3>
-          <p className="mt-2 font-medium" aria-live="polite" aria-atomic="true">
-            {summarySentence({
-              primerDia: data.fechaInicioEfectiva,
-              horaInicio: data.horaInicio,
-              ultimoDia: data.ultimaFecha,
-              horaFin: data.ultimaHoraFin,
-              horasTotales: data.horasTotales,
-              dias: data.dias.length,
-            })}
-          </p>
-          {data.ajustada ? (
-            <p className="mt-1 text-sm text-text-secondary">
-              La fecha que elegiste no es de esta modalidad; empezamos el{" "}
-              {dayLabel(data.fechaInicioEfectiva)}.
-            </p>
-          ) : null}
-          {data.cohorte ? (
-            <p className="mt-1 text-sm text-text-secondary">
-              Grupo: {data.cohorte.nombre} · se confirma al reservar.
-            </p>
-          ) : null}
-          <SchedulePlanView days={days} />
-          {failing.length ? (
-            <div role="alert" className="mt-4 text-sm text-accent-red">
-              <p className="font-medium">
-                Esta hora no se puede reservar: falta disponibilidad en{" "}
-                {plural(failing.length, "día", "días")}.
-              </p>
-              <p className="mt-1 text-sm">{failing.map(dayLabel).join(", ")}.</p>
-              {alternatives.length ? (
-                <p className="mt-2 text-sm">
-                  Prueba con: {alternatives.map((a) => a.hora).join(", ")}.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
       {reserveError ? (
         <p role="alert" className="mt-4 text-status-error">
           {reserveError}
         </p>
       ) : null}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-text-secondary">
-          El cupo se confirma al reservar. No necesitas elegir instructor.
-        </p>
+      <div
+        className={`${planStyles.planSummary} sticky bottom-0 z-10 mt-6 grid items-center gap-3 border-t border-border bg-bg-surface p-3 shadow-elevated`}
+        data-flow-actions
+        aria-label="Resumen del plan"
+      >
+        <div className="min-w-0 flex-1 text-sm" aria-live="polite">
+          <p>
+            {data
+              ? `Tu plan: ${dayLabel(data.dias[0]?.fecha ?? data.fechaInicioEfectiva)} al ${dayLabel(data.ultimaFecha)} · ${plural(data.dias.length, "día", "días")} · ${hour ? timeRange(hour, input.horasPorDia) : "Seleccione un horario"} · ${data.horasTotales} horas en total`
+              : "Tu plan: selecciona las horas por día, la fecha y el horario."}
+          </p>
+          {data?.precioCentavos !== undefined ? (
+            <p>
+              Precio del curso:{" "}
+              {new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(
+                data.precioCentavos / 100,
+              )}
+              . Se fija al reservar.
+            </p>
+          ) : null}
+        </div>
+        {onBack ? (
+          <Button variant="secondary" disabled={reserving} onClick={onBack}>
+            Volver
+          </Button>
+        ) : null}
         <Button
           isLoading={reserving}
           disabled={
@@ -422,7 +440,7 @@ export function StudentSchedulePicker({ enrollmentId, state, onReserved, onNext 
           }
           onClick={() => void reserve()}
         >
-          Reservar este horario
+          Continuar
         </Button>
       </div>
     </Card>

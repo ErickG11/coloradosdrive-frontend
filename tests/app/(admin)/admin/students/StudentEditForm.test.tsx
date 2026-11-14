@@ -114,10 +114,12 @@ describe("StudentEditForm", () => {
   it("fechas, apertura del modal, éxito y refresco de la ficha", async () => {
     const refetch = vi.fn();
     vi.mocked(useFetch).mockReturnValue({ data: student, isLoading: false, error: null, refetch });
-    render(<StudentDetail id={student.id} />);
+    const panel = render(<StudentDetail id={student.id} embedded />);
     expect(screen.getByText(/Registrado el/)).toHaveTextContent(
       studentTimestamp(student.createdAt),
     );
+    panel.unmount();
+    render(<StudentDetail id={student.id} />);
     fireEvent.click(screen.getByRole("button", { name: "Editar" }));
     const dialog = within(screen.getByRole("dialog", { name: "Editar alumno" }));
     fireEvent.change(dialog.getByLabelText("Nombre completo"), { target: { value: "Corregido" } });
@@ -153,7 +155,7 @@ describe("StudentEditForm", () => {
         }}
       />,
     );
-    expect(screen.getByText(/Fecha de inscripción/)).toHaveTextContent(
+    expect(screen.getByText(/Inscripción:/)).toHaveTextContent(
       studentTimestamp("2026-03-10T15:00:00Z"),
     );
   });

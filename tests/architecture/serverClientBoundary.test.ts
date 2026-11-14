@@ -65,5 +65,7 @@ describe("limite entre modulos de servidor y cliente", () => {
     for (const directory of ["app", "components", "hooks", "lib", "types"])
       scan(path.join(root, directory));
     expect(findClientCalls(files, root)).toEqual([]);
-  });
+    // Analiza todo el código fuente con el compilador de TypeScript: tarda varios segundos
+    // y con el límite por defecto (5 s) falla en equipos cargados aunque el resultado sea correcto.
+  }, 30_000);
 });

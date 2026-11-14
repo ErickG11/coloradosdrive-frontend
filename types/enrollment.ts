@@ -1,8 +1,10 @@
+import type { IndividualEnrollmentSnapshot } from "./enrollmentFoundation";
 import type { User } from "./user";
 
 export type EnrollmentStage = "por_agendar" | "reservado" | "activa";
 
-export type EnrollmentStatus = "activo" | "finalizado" | "retirado" | "pendiente_cohorte";
+export type EnrollmentStatus =
+  "activo" | "finalizado" | "retirado" | "anulada" | "pendiente_cohorte";
 
 // Refleja la tabla `enrollments` del backend: vínculo estudiante-cohorte.
 // Un estudiante solo puede estar "activo" o "pendiente_cohorte" (inscrito
@@ -11,6 +13,7 @@ export type EnrollmentStatus = "activo" | "finalizado" | "retirado" | "pendiente
 // en la base de datos, no aquí. La etapa reservado permite cohorte tentativa
 // con monto null; activa conserva la forma histórica.
 export interface Enrollment {
+  individualDates?: IndividualEnrollmentSnapshot;
   id: string;
   studentId: string;
   cohortId: string | null;

@@ -97,10 +97,90 @@ describe("ExamForm", () => {
     render(<ExamForm courses={courses} />);
 
     expect(screen.getByLabelText("Curso")).toBeRequired();
-    expect(screen.getByLabelText("Tipo")).toBeRequired();
+    expect(screen.getByRole("radio", { name: /^Práctica/ })).toBeRequired();
+    expect(screen.getByRole("radio", { name: /^Definitivo/ })).toBeRequired();
     expect(screen.getByLabelText("Título")).toBeRequired();
     expect(screen.getByLabelText("Tiempo límite (minutos)")).toBeRequired();
     expect(screen.getByLabelText("Nota mínima (%)")).toBeRequired();
+  });
+
+  it.each([false, true])(
+    "definitivo nuevo precarga 1; vaciarlo advierte y envía null (vacío=%s)",
+    async (unlimited) => {
+      const user = userEvent.setup();
+      mockedPost.mockResolvedValue(savedExam());
+      render(<ExamForm courses={courses} />);
+      fillRequiredExamFields();
+      fillFirstQuestionAsMultipleChoice();
+      await user.click(screen.getByRole("radio", { name: /^Definitivo/ }));
+      const limit = screen.getByLabelText("Intentos por defecto (vacío = ilimitados)");
+      expect(limit).toHaveValue(1);
+      expect(screen.queryByText(/Este definitivo permitirá/)).not.toBeInTheDocument();
+      if (unlimited) {
+        fireEvent.change(limit, { target: { value: "" } });
+        expect(
+          screen.getByText(/Este definitivo permitirá intentos ilimitados hasta aprobar/),
+        ).toBeInTheDocument();
+      }
+      expect(
+        screen.getByText(
+          "Se usa si la habilitación no define un límite propio. Vacío = ilimitado.",
+        ),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
+      expect(mockedPost).toHaveBeenCalledWith(
+        "/exams",
+        expect.objectContaining({ type: "definitivo", maxAttemptsDefault: unlimited ? null : 1 }),
+      );
+    },
+  );
+
+  it("avisa antes de salir con cambios y permite cancelar la navegación", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<ExamForm courses={courses} />);
+    fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Borrador local" } });
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(true);
+    await user.click(screen.getByRole("link", { name: "Volver a exámenes" }));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("cambios sin guardar"));
+    expect(screen.getByLabelText("Título")).toHaveValue("Borrador local");
+    confirm.mockRestore();
+  });
+
+  it("vista previa no revela claves ni marca la opción correcta; Escape devuelve el foco", async () => {
+    const user = userEvent.setup();
+    render(<ExamForm courses={courses} />);
+    fillFirstQuestionAsMultipleChoice();
+    const trigger = screen.getByRole("button", { name: "Vista previa del alumno" });
+    await user.click(trigger);
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("Precaución")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText(/es correcta/)).not.toBeInTheDocument();
+    expect(
+      within(dialog)
+        .getAllByRole("radio")
+        .every((radio) => !(radio as HTMLInputElement).checked),
+    ).toBe(true);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it("una pregunta colapsada se abre al ir a su validación", async () => {
+    const user = userEvent.setup();
+    render(<ExamForm courses={courses} />);
+    const details = document.getElementById("exam-question-0") as HTMLDetailsElement;
+    await user.click(within(details).getByText(/Completar enunciado/));
+    expect(details.open).toBe(false);
+    await user.click(
+      within(screen.getByRole("complementary", { name: "Resumen en vivo" })).getByRole("button", {
+        name: "Escribe el enunciado de la pregunta 1.",
+      }),
+    );
+    expect(details.open).toBe(true);
+    expect(screen.getByLabelText("Pregunta 1 - Enunciado")).toHaveFocus();
   });
 
   it("arranca con una pregunta de opción múltiple con 2 opciones", () => {
@@ -264,12 +344,116 @@ describe("ExamForm", () => {
       ],
     };
 
+    it("reordena sin colisiones: libera posiciones antes de asignar el orden final", async () => {
+      const user = userEvent.setup();
+      mockedPatch.mockResolvedValue({});
+      render(<ExamForm courses={courses} examId="exam-1" initialValues={initialValues} />);
+      await user.click(screen.getByRole("button", { name: "Subir Pregunta 2" }));
+      expect(screen.getByLabelText("Pregunta 1 - Enunciado")).toHaveValue(
+        "Pregunta que se mantiene",
+      );
+      await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
+      await waitFor(() => expect(mockedGet).toHaveBeenCalled());
+      expect(mockedPatch.mock.calls).toEqual([
+        ["/questions/question-2", { orderIndex: 5 }],
+        ["/questions/question-1", { orderIndex: 6 }],
+        ["/questions/question-2", { orderIndex: 1 }],
+        ["/questions/question-1", { orderIndex: 2 }],
+      ]);
+    });
+
+    it("duplicar conserva el contenido sin reutilizar ids de pregunta ni opciones", async () => {
+      const user = userEvent.setup();
+      mockedPatch.mockResolvedValue({});
+      mockedPost.mockResolvedValue({});
+      render(<ExamForm courses={courses} examId="exam-1" initialValues={initialValues} />);
+      await user.click(screen.getByRole("button", { name: "Duplicar Pregunta 1" }));
+      expect(screen.getByLabelText("Pregunta 2 - Enunciado")).toHaveValue("Pregunta a eliminar");
+      await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
+      await waitFor(() =>
+        expect(mockedPost).toHaveBeenCalledWith("/exams/exam-1/questions", {
+          type: "opcion_multiple",
+          prompt: "Pregunta a eliminar",
+          points: 5,
+          orderIndex: 2,
+          options: [
+            { optionText: "A", isCorrect: true, orderIndex: 1 },
+            { optionText: "B", isCorrect: false, orderIndex: 2 },
+          ],
+        }),
+      );
+    });
+
+    it("sin cambios no envía PATCH de metadatos, pero relee el examen", async () => {
+      const user = userEvent.setup();
+      render(<ExamForm courses={courses} examId="exam-1" initialValues={initialValues} />);
+      await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
+      await waitFor(() =>
+        expect(mockedGet).toHaveBeenCalledWith("/exams/exam-1", { cache: "no-store" }),
+      );
+      expect(mockedPatch).not.toHaveBeenCalled();
+    });
+
+    it("un conflicto de estructura relee y congela los controles sin repetir escrituras", async () => {
+      const user = userEvent.setup();
+      mockedPatch.mockRejectedValueOnce(
+        new ApiError("Conflicto", 409, { code: "EXAM_STRUCTURE_FROZEN" }),
+      );
+      mockedGet.mockResolvedValue(savedExam());
+      render(<ExamForm courses={courses} examId="exam-1" initialValues={initialValues} />);
+      fireEvent.change(screen.getByLabelText("Tiempo límite (minutos)"), {
+        target: { value: "50" },
+      });
+      await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
+      await waitFor(() => expect(mockedGet).toHaveBeenCalled());
+      expect(screen.getByLabelText("Tiempo límite (minutos)")).toBeDisabled();
+      expect(mockedPatch).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(/Este examen ya tiene intentos/)).toBeInTheDocument();
+    });
+
+    it("si falla tras guardar y también falla la relectura bloquea reintentos duplicados", async () => {
+      const user = userEvent.setup();
+      mockedPatch.mockResolvedValueOnce({}).mockRejectedValueOnce(new ApiError("Error", 500));
+      mockedGet.mockRejectedValueOnce(new ApiError("Error", 500));
+      render(<ExamForm courses={courses} examId="exam-1" initialValues={initialValues} />);
+      fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Cambio guardado" } });
+      fireEvent.change(screen.getByLabelText("Pregunta 1 - Enunciado"), {
+        target: { value: "Cambio fallido" },
+      });
+      await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
+      expect(
+        await screen.findByText(/Recarga la página antes de repetir para no duplicar preguntas/),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Guardar borrador" })).toBeDisabled();
+      expect(mockedPatch).toHaveBeenCalledTimes(2);
+    });
+
+    it("con intentos solo cambia textos de opciones y preserva sus ids", async () => {
+      const user = userEvent.setup();
+      mockedPatch.mockResolvedValue({});
+      render(
+        <ExamForm courses={courses} examId="exam-1" initialValues={initialValues} hasAttempts />,
+      );
+      for (const name of ["Duplicar Pregunta 1", "Subir Pregunta 2", "Bajar Pregunta 1"])
+        expect(screen.getByRole("button", { name })).toBeDisabled();
+      expect(screen.getByLabelText("Intentos por defecto (vacío = ilimitados)")).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Pregunta 1 - Opción 1"), {
+        target: { value: "Corrección A" },
+      });
+      await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
+      await waitFor(() => expect(mockedGet).toHaveBeenCalled());
+      expect(mockedPatch.mock.calls).toEqual([
+        ["/questions/question-1", { optionTexts: [{ id: "opt-a", optionText: "Corrección A" }] }],
+      ]);
+    });
+
     it("precarga los valores y deshabilita curso y tipo", () => {
       render(<ExamForm courses={courses} examId="exam-1" initialValues={initialValues} />);
 
       expect(screen.getByLabelText("Título")).toHaveValue("Examen definitivo - Señales");
       expect(screen.getByLabelText("Curso")).toBeDisabled();
-      expect(screen.getByLabelText("Tipo")).toBeDisabled();
+      expect(screen.getByRole("radio", { name: /^Práctica/ })).toBeDisabled();
+      expect(screen.getByRole("radio", { name: /^Definitivo/ })).toBeDisabled();
       expect(screen.getByRole("button", { name: "Guardar borrador" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Guardar y publicar" })).toBeInTheDocument();
     });
@@ -282,6 +466,7 @@ describe("ExamForm", () => {
 
       render(<ExamForm courses={courses} examId="exam-1" initialValues={initialValues} />);
 
+      fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Examen corregido" } });
       // Con 2 preguntas se puede quitar la primera (question-1); con 1
       // sola pregunta el botón queda deshabilitado a propósito (regla de
       // "el examen necesita al menos una pregunta", ver siguiente test).
@@ -312,15 +497,7 @@ describe("ExamForm", () => {
       await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
 
       await waitFor(() => {
-        expect(mockedPatch).toHaveBeenCalledWith("/exams/exam-1", {
-          title: "Examen definitivo - Señales",
-          description: "",
-          maxAttemptsDefault: null,
-          shuffleQuestions: false,
-          shuffleOptions: false,
-          timeLimitMinutes: 45,
-          passingScorePercent: 80,
-        });
+        expect(mockedPatch).toHaveBeenCalledWith("/exams/exam-1", { title: "Examen corregido" });
       });
       // question-1 se eliminó.
       expect(mockedDelete).toHaveBeenCalledWith("/questions/question-1");

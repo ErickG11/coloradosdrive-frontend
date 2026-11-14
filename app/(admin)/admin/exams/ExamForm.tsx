@@ -9,26 +9,33 @@ import { ContentConfirm } from "@/components/content-admin/ContentUI";
 import type {
   Course,
   CreateQuestionInput,
-  ExamType,
   ExamWithQuestions,
   Question,
-  UpdateExamInput,
   UpdateQuestionInput,
 } from "@/types";
+import {
+  attemptLimitValue,
+  changedExamMetadata,
+  examDraftIssues,
+  examTypeDefault,
+} from "@/lib/utils/examAdmin";
+import { useUnsavedExam } from "@/components/exams-admin/useUnsavedExam";
+import { AdminChip, ContentBanner } from "@/components/content-admin/AdminContentUI";
+import { useQuestionImageDrafts } from "@/components/exams-admin/useQuestionImageDrafts";
+import { QuestionImageField } from "@/components/exams-admin/QuestionImageField";
+import { QuestionImage } from "@/components/exams/QuestionImage";
+import {
+  examContentFingerprint,
+  keepQuestionDraftKeys,
+  questionDraftKey,
+  questionImageError,
+} from "@/lib/utils/questionImages";
+import { ApiError } from "@/lib/api/errors";
+import { Modal } from "@/components/ui/Modal";
+import styles from "@/components/exams-admin/exam-admin.module.css";
 import { emptyQuestion, QuestionBuilder, type QuestionFormValue } from "./QuestionBuilder";
-export interface ExamFormValues {
-  courseId: string;
-  title: string;
-  type: ExamType;
-  timeLimitMinutes: string;
-  passingScorePercent: string;
-  isPublished: boolean;
-  questions: QuestionFormValue[];
-  description?: string;
-  maxAttemptsDefault?: string;
-  shuffleQuestions?: boolean;
-  shuffleOptions?: boolean;
-}
+import type { ExamFormValues } from "@/types/examDraft";
+export type { ExamFormValues } from "@/types/examDraft";
 export function examToFormValues(exam: ExamWithQuestions): ExamFormValues {
   return {
     courseId: exam.courseId,
@@ -48,6 +55,7 @@ export function examToFormValues(exam: ExamWithQuestions): ExamFormValues {
       .slice()
       .sort((a, b) => a.orderIndex - b.orderIndex)
       .map((q) => ({
+        image: q.image ?? null,
         id: q.id,
         orderIndex: q.orderIndex,
         type: q.type,
@@ -104,9 +112,19 @@ export function ExamForm({
     maxAttemptsDefault: "",
     shuffleQuestions: false,
     shuffleOptions: false,
-    questions: [emptyQuestion()],
+    questions: [{ ...emptyQuestion(), draftKey: "initial" }],
     ...initialValues,
   }));
+  const imageDrafts = useQuestionImageDrafts();
+  const [cleanValues, setCleanValues] = useState(values);
+  const [reordered, setReordered] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const issues = examDraftIssues(values);
+  const dirty =
+    examContentFingerprint(values) !== examContentFingerprint(cleanValues) ||
+    imageDrafts.hasPending ||
+    imageDrafts.checking;
+  useUnsavedExam(dirty);
   const [baseline, setBaseline] = useState(initialValues);
   const [id, setId] = useState(examId ?? "");
   const [published, setPublished] = useState(initialValues?.isPublished ?? false);
@@ -136,9 +154,68 @@ export function ExamForm({
       lock.current = false;
     }
   }
+  function handleImageConflict(code?: string) {
+    if (code === "EXAM_STRUCTURE_FROZEN") setFrozen(true);
+    if (code === "EXAM_PUBLISHED_UNPUBLISH") setPublished(true);
+  }
+  async function retryImage(question: QuestionFormValue) {
+    if (lock.current || !id || published || reloadRequired || imageDrafts.working()) return;
+    lock.current = true;
+    setBusy(true);
+    try {
+      const result = await imageDrafts.saveOne(id, question);
+      handleImageConflict(result.code);
+      if (result.ok && result.image !== undefined) {
+        setValues((current) => ({
+          ...current,
+          questions: current.questions.map((entry) =>
+            questionDraftKey(entry) === questionDraftKey(question)
+              ? { ...entry, image: result.image }
+              : entry,
+          ),
+        }));
+        if (!imageDrafts.pending()) setError(null);
+        notify("Imagen y descripción guardadas.");
+      }
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
+  async function reloadImage(question: QuestionFormValue, discardChange = true) {
+    if (lock.current || !id) throw new Error("Guardado en curso");
+    lock.current = true;
+    setBusy(true);
+    try {
+      const latest = await api.get<ExamWithQuestions>(`/exams/${id}`, { cache: "no-store" });
+      const fresh = latest.questions.find((entry) => entry.id === question.id);
+      if (!fresh) throw new ApiError("No disponible", 404, { code: "IMAGE_NOT_FOUND" });
+      if (discardChange) imageDrafts.discard(questionDraftKey(question));
+      setValues((current) => ({
+        ...current,
+        questions: current.questions.map((entry) =>
+          entry.id === question.id ? { ...entry, image: fresh.image ?? null } : entry,
+        ),
+      }));
+      setPublished(latest.isPublished);
+      if (!imageDrafts.pending()) setError(null);
+    } catch (failure) {
+      setError(questionImageError(failure));
+      throw failure;
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
+  function previewImage(question: QuestionFormValue) {
+    const draft = imageDrafts.drafts[questionDraftKey(question)];
+    if (draft?.action === "remove") return null;
+    if (draft?.preview) return { url: draft.preview, alt: draft.alt };
+    return question.image ? { ...question.image, alt: draft?.alt ?? question.image.alt } : null;
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (lock.current || published || reloadRequired) return;
+    if (lock.current || published || reloadRequired || imageDrafts.working()) return;
     const wantsPublish =
       (event.nativeEvent as SubmitEvent).submitter?.getAttribute("data-publish") === "true";
     lock.current = true;
@@ -146,26 +223,18 @@ export function ExamForm({
     setError(null);
     let changed = false;
     let currentId = id;
+    const bindings: Record<string, string> = {};
+    const readValues = (latest: ExamWithQuestions) => {
+      const fresh = examToFormValues(latest);
+      fresh.questions = keepQuestionDraftKeys(fresh.questions, values.questions, bindings);
+      return fresh;
+    };
     try {
-      if (
-        !values.questions.length ||
-        values.questions.some(
-          (q) =>
-            !q.prompt.trim() ||
-            (q.type === "opcion_multiple" &&
-              (q.options.length < 2 ||
-                q.options.filter((o) => o.isCorrect).length !== 1 ||
-                q.options.some((o) => !o.optionText.trim()))),
-        )
-      )
-        throw new ContentInputError(
-          "El banco necesita preguntas completas y exactamente una opción correcta por pregunta múltiple.",
-        );
+      if (issues.length) throw new ContentInputError(issues[0].message);
       const meta = {
         title: values.title,
         description: values.description ?? "",
-        maxAttemptsDefault:
-          values.maxAttemptsDefault === "" ? null : Number(values.maxAttemptsDefault),
+        maxAttemptsDefault: attemptLimitValue(values.maxAttemptsDefault),
         shuffleQuestions: values.shuffleQuestions ?? false,
         shuffleOptions: values.shuffleOptions ?? false,
         timeLimitMinutes: Number(values.timeLimitMinutes),
@@ -178,22 +247,47 @@ export function ExamForm({
           type: values.type,
           questions: values.questions.map((q, i) => questionPayload(q, i + 1)),
         });
+        values.questions.forEach((question, index) => {
+          const saved = created.questions?.find((entry) => entry.orderIndex === index + 1);
+          if (saved?.id) bindings[questionDraftKey(question)] = saved.id;
+        });
         currentId = created.id;
         setId(currentId);
         changed = true;
       } else {
-        const patch: UpdateExamInput = { title: meta.title, description: meta.description };
-        if (!frozen) Object.assign(patch, meta);
-        await api.patch(`/exams/${currentId}`, patch);
-        changed = true;
+        const patch = changedExamMetadata(values, baseline, frozen);
+        if (Object.keys(patch).length) {
+          await api.patch(`/exams/${currentId}`, patch);
+          changed = true;
+        }
         const original = baseline?.questions ?? [];
-        for (const old of original)
-          if (old.id && !values.questions.some((q) => q.id === old.id))
+        for (const old of original) {
+          if (old.id && !values.questions.some((q) => q.id === old.id)) {
             await api.delete(`/questions/${old.id}`);
-        let order = Math.max(0, ...original.map((q) => q.orderIndex ?? 0)) + 1;
-        for (const q of values.questions) {
+            changed = true;
+          }
+        }
+        const maxOrder = Math.max(0, ...original.map((q) => q.orderIndex ?? 0));
+        // The unique (exam_id, order_index) index is immediate: free the final slots first.
+        if (reordered && !frozen) {
+          for (const [index, q] of values.questions.entries()) {
+            if (q.id && original.find((old) => old.id === q.id)?.orderIndex !== index + 1) {
+              await api.patch(`/questions/${q.id}`, {
+                orderIndex: maxOrder + values.questions.length + index + 1,
+              });
+              changed = true;
+            }
+          }
+        }
+        let order = maxOrder + 1;
+        for (const [index, q] of values.questions.entries()) {
           if (!q.id) {
-            await api.post<Question>(`/exams/${currentId}/questions`, questionPayload(q, order++));
+            const createdQuestion = await api.post<Question>(
+              `/exams/${currentId}/questions`,
+              questionPayload(q, reordered ? index + 1 : order++),
+            );
+            if (createdQuestion.id) bindings[questionDraftKey(q)] = createdQuestion.id;
+            changed = true;
             continue;
           }
           const old = original.find((o) => o.id === q.id);
@@ -201,6 +295,7 @@ export function ExamForm({
           const patch: UpdateQuestionInput = {};
           if (q.prompt !== old.prompt) patch.prompt = q.prompt;
           if (!frozen) {
+            if (reordered && old.orderIndex !== index + 1) patch.orderIndex = index + 1;
             if (q.points !== old.points) patch.points = Number(q.points);
             if (q.correctAnswerText !== old.correctAnswerText)
               patch.correctAnswerText = q.correctAnswerText;
@@ -222,17 +317,65 @@ export function ExamForm({
               if (texts.length) patch.optionTexts = texts;
             }
           }
-          if (Object.keys(patch).length) await api.patch(`/questions/${q.id}`, patch);
+          if (Object.keys(patch).length) {
+            await api.patch(`/questions/${q.id}`, patch);
+            changed = true;
+          }
+        }
+      }
+      if (imageDrafts.pending()) {
+        const latest = await api.get<ExamWithQuestions>(`/exams/${currentId}`, {
+          cache: "no-store",
+        });
+        const fresh = readValues(latest);
+        setValues(fresh);
+        setCleanValues(fresh);
+        setBaseline(fresh);
+        setReordered(false);
+        setPublished(latest.isPublished);
+        if (latest.isPublished) {
+          setError(
+            "Despublica para editar las imágenes pendientes. Los archivos siguen en esta pestaña.",
+          );
+          return;
+        }
+        const savedImages = new Map<string, Question["image"]>();
+        for (const question of fresh.questions) {
+          const result = await imageDrafts.saveOne(currentId, question);
+          if (result.ok && result.image !== undefined)
+            savedImages.set(questionDraftKey(question), result.image);
+          handleImageConflict(result.code);
+        }
+        const savedFresh = {
+          ...fresh,
+          questions: fresh.questions.map((question) =>
+            savedImages.has(questionDraftKey(question))
+              ? { ...question, image: savedImages.get(questionDraftKey(question)) }
+              : question,
+          ),
+        };
+        setValues(savedFresh);
+        setCleanValues(savedFresh);
+        setBaseline(savedFresh);
+        if (imageDrafts.pending()) {
+          setError(
+            "Examen guardado como borrador. Hay imágenes pendientes; revisa sus avisos y reintenta sin volver a crear el examen.",
+          );
+          notify("Examen guardado. Algunas imágenes siguen pendientes.");
+          return;
         }
       }
       if (wantsPublish) {
         await api.patch(`/exams/${currentId}`, { isPublished: true });
         setPublished(true);
+        changed = true;
       }
       notify(wantsPublish ? "Examen guardado y publicado." : "Examen guardado como borrador.");
       const latest = await api.get<ExamWithQuestions>(`/exams/${currentId}`, { cache: "no-store" });
-      const fresh = examToFormValues(latest);
+      const fresh = readValues(latest);
       setValues(fresh);
+      setCleanValues(fresh);
+      setReordered(false);
       setBaseline(fresh);
       setPublished(latest.isPublished);
     } catch (error: unknown) {
@@ -256,8 +399,10 @@ export function ExamForm({
           const latest = await api.get<ExamWithQuestions>(`/exams/${currentId}`, {
             cache: "no-store",
           });
-          const fresh = examToFormValues(latest);
+          const fresh = readValues(latest);
           setValues(fresh);
+          setCleanValues(fresh);
+          setReordered(false);
           setBaseline(fresh);
           setPublished(latest.isPublished);
         } catch {
@@ -272,131 +417,314 @@ export function ExamForm({
       lock.current = false;
     }
   }
+  function moveQuestion(from: number, to: number) {
+    const questions = [...values.questions];
+    const [moved] = questions.splice(from, 1);
+    questions.splice(to, 0, moved);
+    field("questions", questions);
+    setReordered(true);
+  }
+  function focusQuestion(index: number) {
+    const details = document.getElementById(`exam-question-${index}`) as HTMLDetailsElement | null;
+    if (details) {
+      details.open = true;
+      details.querySelector<HTMLTextAreaElement>("textarea")?.focus();
+    }
+  }
+  const points = values.questions.reduce(
+    (total, question) => total + (Number(question.points) || 0),
+    0,
+  );
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-text-secondary">
-        Flujo: despublicar → editar → publicar. Publicar prepara el examen; las habilitaciones y la
-        materia determinan el acceso.
-      </p>
+    <div className={styles.page}>
+      <div className={styles.workflow}>
+        <span>
+          <b>1</b> Crear
+        </span>
+        <i>→</i>
+        <span>
+          <b>2</b> Publicar
+        </span>
+        <i>→</i>
+        <span>
+          <b>3</b> Colocar en una materia
+        </span>
+        <i>→</i>
+        <span>
+          <b>4</b> Habilitar
+        </span>
+        <Link href={id ? `/admin/content?exam=${id}` : "/admin/content"}>Ir a Contenido ↗</Link>
+      </div>
       {id ? (
         <div className="flex flex-wrap items-center gap-3">
-          <strong>{published ? "Publicado" : "Borrador"}</strong>
+          <AdminChip tone={published ? "success" : "neutral"}>
+            {published ? "Publicado" : "Borrador"}
+          </AdminChip>
           {published ? (
-            <Button disabled={busy || reloadRequired} onClick={() => void publish(false)}>
+            <Button
+              variant="secondary"
+              disabled={busy || reloadRequired}
+              onClick={() => void publish(false)}
+            >
               Despublicar para editar
             </Button>
           ) : null}
         </div>
       ) : null}
-      {frozen ? (
-        <p className="rounded-md border border-status-warning p-4 text-sm">
-          Este examen ya tiene intentos. Solo se admiten correcciones de texto y despublicación. El
-          máximo por defecto está congelado: usa Habilitar para dar intentos extra. Cambiar claves,
-          puntos, tiempo o barajado requiere otro examen.
-        </p>
+      {published ? (
+        <ContentBanner>
+          Para editar, despublica primero. Publicar prepara el examen; la materia y las
+          habilitaciones determinan el acceso.
+        </ContentBanner>
       ) : null}
-      <form className="space-y-6" onSubmit={submit}>
-        <fieldset disabled={busy || published || reloadRequired} className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2">
+      {frozen ? (
+        <ContentBanner tone="warning">
+          Este examen ya tiene intentos. Solo se admiten correcciones de título, descripción,
+          enunciados y textos de opciones. El máximo por defecto está congelado: usa Habilitar para
+          dar intentos extra. Cambiar claves, puntos, tiempo o barajado requiere otro examen.
+        </ContentBanner>
+      ) : null}
+      <form onSubmit={submit} className={styles.editor}>
+        <fieldset
+          disabled={busy || published || reloadRequired || imageDrafts.saving}
+          className={styles.mainFields}
+        >
+          <section className={styles.section} aria-labelledby="exam-general">
+            <div className={styles.sectionHeading}>
+              <span>01</span>
+              <h2 id="exam-general">Datos generales</h2>
+            </div>
             <Select
               label="Curso"
               required
               disabled={Boolean(id)}
               value={values.courseId}
-              onChange={(e) => field("courseId", e.target.value)}
+              onChange={(event) => field("courseId", event.target.value)}
             >
               <option value="">Seleccionar curso</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre} · Tipo {c.tipo}
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.nombre} · Tipo {course.tipo}
                 </option>
               ))}
             </Select>
-            <Select
-              label="Tipo"
-              name="type"
-              required
-              value={values.type}
-              disabled={Boolean(id)}
-              onChange={(e) =>
-                setValues({
-                  ...values,
-                  type: e.target.value as ExamType,
-                  maxAttemptsDefault: e.target.value === "definitivo" ? "1" : "",
-                })
-              }
-            >
-              <option value="practica">Práctica</option>
-              <option value="definitivo">Definitivo</option>
-            </Select>
-          </div>
-          <Input
-            label="Título"
-            required
-            value={values.title}
-            onChange={(e) => field("title", e.target.value)}
-          />
-          <Textarea
-            label="Descripción"
-            maxLength={20000}
-            value={values.description ?? ""}
-            onChange={(e) => field("description", e.target.value)}
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium text-text-secondary">Tipo</legend>
+              <div className={styles.typeCards}>
+                {(["practica", "definitivo"] as const).map((type) => (
+                  <label key={type}>
+                    <input
+                      type="radio"
+                      name="exam-type"
+                      value={type}
+                      required
+                      checked={values.type === type}
+                      disabled={Boolean(id)}
+                      onChange={() =>
+                        setValues((current) => ({
+                          ...current,
+                          type,
+                          maxAttemptsDefault: examTypeDefault(type),
+                        }))
+                      }
+                    />
+                    <strong>{type === "practica" ? "Práctica" : "Definitivo"}</strong>
+                    <small>
+                      {type === "practica"
+                        ? "Para practicar y reforzar conocimientos. Intentos ilimitados por defecto."
+                        : "Evaluación final. Un definitivo aprobado nunca se repite."}
+                    </small>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <Input
-              label="Tiempo límite (minutos)"
-              type="number"
-              min={1}
-              step={1}
+              label="Título"
               required
-              disabled={frozen}
-              value={values.timeLimitMinutes}
-              onChange={(e) => field("timeLimitMinutes", e.target.value)}
+              value={values.title}
+              onChange={(event) => field("title", event.target.value)}
             />
-            <Input
-              label="Nota mínima (%)"
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              required
-              disabled={frozen}
-              value={values.passingScorePercent}
-              onChange={(e) => field("passingScorePercent", e.target.value)}
+            <Textarea
+              label="Descripción"
+              maxLength={20000}
+              value={values.description ?? ""}
+              onChange={(event) => field("description", event.target.value)}
             />
-            <Input
-              label="Intentos por defecto (vacío = ilimitados)"
-              type="number"
-              min={1}
-              max={20}
-              step={1}
-              disabled={frozen}
-              value={values.maxAttemptsDefault ?? ""}
-              onChange={(e) => field("maxAttemptsDefault", e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap gap-5">
-            <label className="flex min-h-11 items-center gap-2">
-              <input
-                type="checkbox"
+          </section>
+          <section className={styles.section} aria-labelledby="exam-rules">
+            <div className={styles.sectionHeading}>
+              <span>02</span>
+              <h2 id="exam-rules">Reglas del examen</h2>
+            </div>
+            <p className={styles.help}>
+              Valores base para nuevas evaluaciones. La regla del alumno reemplaza a la de su
+              cohorte; un intento iniciado conserva su configuración.
+            </p>
+            <div className={styles.twoColumns}>
+              <div>
+                <Input
+                  label="Tiempo límite (minutos)"
+                  type="number"
+                  min={1}
+                  step={1}
+                  required
+                  disabled={frozen}
+                  value={values.timeLimitMinutes}
+                  aria-describedby="exam-time-help"
+                  onChange={(event) => field("timeLimitMinutes", event.target.value)}
+                />
+                <p id="exam-time-help" className={styles.help}>
+                  Los minutos extra se suman desde la habilitación
+                </p>
+              </div>
+              <div>
+                <Input
+                  label="Nota mínima (%)"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  required
+                  disabled={frozen}
+                  value={values.passingScorePercent}
+                  onChange={(event) => field("passingScorePercent", event.target.value)}
+                />
+                <meter
+                  aria-label="Nota para aprobar"
+                  min={0}
+                  max={100}
+                  value={Number(values.passingScorePercent) || 0}
+                  className={styles.passingMeter}
+                />
+              </div>
+            </div>
+            <div>
+              <Input
+                label="Intentos por defecto (vacío = ilimitados)"
+                type="number"
+                min={1}
+                max={20}
+                step={1}
                 disabled={frozen}
-                checked={values.shuffleQuestions ?? false}
-                onChange={(e) => field("shuffleQuestions", e.target.checked)}
+                value={values.maxAttemptsDefault ?? ""}
+                aria-describedby="exam-attempt-help"
+                onChange={(event) => field("maxAttemptsDefault", event.target.value)}
               />
-              Barajar preguntas
-            </label>
-            <label className="flex min-h-11 items-center gap-2">
-              <input
-                type="checkbox"
-                disabled={frozen}
-                checked={values.shuffleOptions ?? false}
-                onChange={(e) => field("shuffleOptions", e.target.checked)}
+              <p id="exam-attempt-help" className={styles.help}>
+                Se usa si la habilitación no define un límite propio. Vacío = ilimitado.
+              </p>
+            </div>
+            {values.type === "definitivo" &&
+            attemptLimitValue(values.maxAttemptsDefault) === null ? (
+              <ContentBanner tone="warning">
+                Este definitivo permitirá intentos ilimitados hasta aprobar si la habilitación no
+                define un límite propio. Un definitivo aprobado nunca se repite.
+              </ContentBanner>
+            ) : null}
+            <div className={styles.switches}>
+              <label>
+                <span>
+                  Barajar preguntas<small>Cambia el orden de las preguntas en cada intento.</small>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  aria-label="Barajar preguntas"
+                  disabled={frozen}
+                  checked={values.shuffleQuestions ?? false}
+                  onChange={(event) => field("shuffleQuestions", event.target.checked)}
+                />
+              </label>
+              <label>
+                <span>
+                  Barajar opciones<small>Cambia el orden de las opciones al responder.</small>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  aria-label="Barajar opciones"
+                  disabled={frozen}
+                  checked={values.shuffleOptions ?? false}
+                  onChange={(event) => field("shuffleOptions", event.target.checked)}
+                />
+              </label>
+            </div>
+          </section>
+          <section className={styles.section} aria-labelledby="exam-bank">
+            <div className={styles.sectionHeading}>
+              <span>03</span>
+              <h2 id="exam-bank">Preguntas</h2>
+              <span className="ml-auto">{values.questions.length}</span>
+            </div>
+            <p className={styles.help}>
+              Completa cada enunciado. En opción múltiple, marca exactamente una respuesta correcta.{" "}
+              Duplicar copia el texto y las opciones; la imagen se agrega por separado.
+            </p>
+            {values.questions.map((question, index) => (
+              <QuestionBuilder
+                key={questionDraftKey(question)}
+                question={question}
+                index={index}
+                textOnly={frozen}
+                canRemove={values.questions.length > 1}
+                canMoveUp={index > 0}
+                canMoveDown={index < values.questions.length - 1}
+                onMoveUp={() => moveQuestion(index, index - 1)}
+                onMoveDown={() => moveQuestion(index, index + 1)}
+                onDuplicate={() => {
+                  const copy: QuestionFormValue = {
+                    ...question,
+                    image: null,
+                    id: undefined,
+                    orderIndex: undefined,
+                    draftKey: crypto.randomUUID(),
+                    synonyms: [...question.synonyms],
+                    options: question.options.map((option) => ({
+                      optionText: option.optionText,
+                      isCorrect: option.isCorrect,
+                    })),
+                  };
+                  const questions = [...values.questions];
+                  questions.splice(index + 1, 0, copy);
+                  field("questions", questions);
+                  setReordered(true);
+                  if (question.image || imageDrafts.drafts[questionDraftKey(question)]?.preview)
+                    notify("Pregunta duplicada sin imagen. Agrégala por separado.");
+                }}
+                issues={issues
+                  .filter((issue) => issue.questionIndex === index)
+                  .map((issue) => issue.message)}
+                onChange={(updated) =>
+                  field(
+                    "questions",
+                    values.questions.map((old, position) => (position === index ? updated : old)),
+                  )
+                }
+                imageField={
+                  <QuestionImageField
+                    image={question.image}
+                    draft={imageDrafts.drafts[questionDraftKey(question)]}
+                    index={index}
+                    frozen={frozen}
+                    published={published}
+                    disabled={busy || reloadRequired || imageDrafts.saving}
+                    saved={Boolean(question.id)}
+                    onChoose={(file, alt) =>
+                      imageDrafts.choose(questionDraftKey(question), file, alt)
+                    }
+                    onAlt={(alt) =>
+                      imageDrafts.changeAlt(questionDraftKey(question), alt, question.image)
+                    }
+                    onRemove={() => imageDrafts.remove(questionDraftKey(question), question.image)}
+                    onDiscard={() => imageDrafts.discard(questionDraftKey(question))}
+                    onRetry={() => retryImage(question)}
+                    onReload={() => reloadImage(question)}
+                    onRefresh={() => reloadImage(question, false)}
+                  />
+                }
+                onRemove={() => setRemoved(index)}
               />
-              Barajar opciones
-            </label>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-lg font-semibold">Preguntas</h2>
+            ))}
             <Button
               type="button"
               variant="secondary"
@@ -410,39 +738,87 @@ export function ExamForm({
             >
               Agregar pregunta
             </Button>
-          </div>
-          {values.questions.map((q, index) => (
-            <QuestionBuilder
-              key={q.id ?? q.draftKey ?? index}
-              question={q}
-              index={index}
-              textOnly={frozen}
-              canRemove={values.questions.length > 1}
-              onChange={(updated) =>
-                field(
-                  "questions",
-                  values.questions.map((old, i) => (i === index ? updated : old)),
-                )
-              }
-              onRemove={() => setRemoved(index)}
-            />
-          ))}
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" isLoading={busy}>
+          </section>
+          <div className={styles.actions}>
+            <span>{dirty ? "Cambios sin guardar" : "Sin cambios pendientes"}</span>
+            <Button
+              type="submit"
+              variant="secondary"
+              isLoading={busy}
+              disabled={imageDrafts.checking || imageDrafts.saving}
+            >
               Guardar borrador
             </Button>
-            <Button type="submit" variant="secondary" disabled={busy} data-publish="true">
+            <Button
+              type="submit"
+              disabled={busy || imageDrafts.checking || imageDrafts.saving}
+              data-publish="true"
+            >
               Guardar y publicar
             </Button>
           </div>
+          <FormError>{error}</FormError>
         </fieldset>
-        <FormError>{error}</FormError>
+        <aside className={styles.summary} aria-label="Resumen en vivo">
+          <div className="flex items-center justify-between gap-2">
+            <h2>Resumen del examen</h2>
+            <span className={styles.help}>En vivo</span>
+          </div>
+          <div className={styles.summaryStats}>
+            <div>
+              <span>Preguntas</span>
+              <strong>{values.questions.length}</strong>
+            </div>
+            <div>
+              <span>Puntos totales</span>
+              <strong>{points.toLocaleString("es-EC")}</strong>
+            </div>
+            <div>
+              <span>Tiempo</span>
+              <strong>{values.timeLimitMinutes || "—"} min</strong>
+            </div>
+            <div>
+              <span>Para aprobar</span>
+              <strong>{values.passingScorePercent || "—"}%</strong>
+            </div>
+            <div>
+              <span>Intentos</span>
+              <strong>{values.maxAttemptsDefault || "∞"}</strong>
+            </div>
+          </div>
+          <div className={styles.issues}>
+            <strong>
+              {issues.length
+                ? `${issues.length} validaciones pendientes`
+                : "✓ Listo para guardar y publicar"}
+            </strong>
+            <ul>
+              {issues.map((issue, index) => (
+                <li key={index}>
+                  {issue.questionIndex === undefined ? (
+                    issue.message
+                  ) : (
+                    <button type="button" onClick={() => focusQuestion(issue.questionIndex!)}>
+                      {issue.message}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <Button type="button" variant="secondary" onClick={() => setPreview(true)}>
+            Vista previa del alumno
+          </Button>
+          <p className={styles.help}>
+            Publicarlo no habilita el acceso. Continúa en Contenido para colocarlo y habilitarlo.
+          </p>
+        </aside>
       </form>
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap gap-4 text-sm">
         <Link className="underline" href="/admin/exams">
           Volver a exámenes
         </Link>
-        <Link className="underline" href="/admin/content">
+        <Link className="underline" href={id ? `/admin/content?exam=${id}` : "/admin/content"}>
           Ir a Contenido y habilitaciones
         </Link>
       </div>
@@ -454,14 +830,51 @@ export function ExamForm({
           error={null}
           onClose={() => setRemoved(null)}
           onConfirm={() => {
+            if (values.questions[removed])
+              imageDrafts.discard(questionDraftKey(values.questions[removed]));
             field(
               "questions",
-              values.questions.filter((_, i) => i !== removed),
+              values.questions.filter((_, index) => index !== removed),
             );
             setRemoved(null);
           }}
         />
       ) : null}
+      <Modal
+        isOpen={preview}
+        onClose={() => setPreview(false)}
+        title="Vista previa del alumno"
+        className={styles.preview}
+      >
+        <p className={styles.help}>
+          Simulación visual del banco. El orden puede variar al barajar. No muestra claves ni
+          respuestas correctas.
+        </p>
+        <h2 className="my-4 text-xl font-semibold">{values.title || "Sin título"}</h2>
+        {values.questions.map((question, index) => (
+          <div key={index} className={styles.previewQuestion}>
+            <QuestionImage
+              image={previewImage(question)}
+              index={index}
+              eager={index === 0}
+              expandable={false}
+            />
+            <h3>
+              {index + 1}. {question.prompt || "Enunciado pendiente"}
+            </h3>
+            {question.type === "opcion_multiple" ? (
+              question.options.map((option, optionIndex) => (
+                <label key={optionIndex}>
+                  <input type="radio" name={`preview-${index}`} />
+                  {option.optionText || `Opción ${optionIndex + 1}`}
+                </label>
+              ))
+            ) : (
+              <Textarea label={`Respuesta ${index + 1}`} placeholder="Escribe tu respuesta" />
+            )}
+          </div>
+        ))}
+      </Modal>
     </div>
   );
 }

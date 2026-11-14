@@ -8,6 +8,7 @@ import { FormError } from "@/components/ui/FormError";
 import { contentApi } from "@/lib/api/content";
 import type { CourseSubject } from "@/types/content";
 import { useContentMutation } from "./useContentResource";
+import { useRequiredFields } from "./useRequiredFields";
 import styles from "./admin-content.module.css";
 export function SubjectEditor({
   subject,
@@ -25,8 +26,10 @@ export function SubjectEditor({
   const [title, setTitle] = useState(subject?.title ?? "");
   const [description, setDescription] = useState(subject?.description ?? "");
   const action = useContentMutation();
+  const required = useRequiredFields();
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (!required.check([{ id: "subject-title", empty: title.trim() === "" }])) return;
     const result = await action.run(
       () =>
         contentApi.saveSubject(subject?.id ?? null, {
@@ -51,13 +54,19 @@ export function SubjectEditor({
         Define una parada del curso. Las nuevas materias se guardan como borrador para que puedas
         prepararlas antes de publicarlas.
       </p>
-      <form className="space-y-4" onSubmit={submit}>
+      <form className={`space-y-4 ${styles.requiredFields}`} noValidate onSubmit={submit}>
         <fieldset disabled={action.busy} className="space-y-4">
           <Input
+            id="subject-title"
             label="Título"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              required.clear("subject-title");
+            }}
             required
+            aria-required="true"
+            error={required.errors["subject-title"]}
             maxLength={120}
           />
           <Textarea

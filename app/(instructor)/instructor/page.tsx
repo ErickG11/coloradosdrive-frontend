@@ -22,6 +22,28 @@ const INSTRUCTOR_STATUS_LABELS: Record<PracticeSlotStatus, string> = {
   sin_practica: "Sin alumno",
 };
 
+type BlockDefinition = {
+  id: string;
+  slotIds: string[];
+  startsAt: string;
+  endsAt: string;
+  hours: number;
+};
+
+// La agrupación en bloques es opcional: si la respuesta no sirve, la agenda
+// muestra cada hora por separado. Devuelve null cuando hay que avisar.
+function readBlocks(value: unknown): BlockDefinition[] | null {
+  if (!Array.isArray(value)) return null;
+  const valid = value.filter(
+    (block): block is BlockDefinition =>
+      typeof block === "object" &&
+      block !== null &&
+      typeof (block as BlockDefinition).id === "string" &&
+      Array.isArray((block as BlockDefinition).slotIds),
+  );
+  return valid.length === value.length ? valid : null;
+}
+
 // Recibe una fecha civil, como las que produce schoolCalendarDate.
 function formatDayLabel(day: Date): string {
   const weekday = day.toLocaleDateString("es-EC", { weekday: "long" });
@@ -36,14 +58,26 @@ export default function InstructorPage() {
   const [data, setData] = useState<PracticeSlotWithNames[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [blockDefinitions, setBlockDefinitions] = useState<BlockDefinition[]>([]);
+  const [blocksFailed, setBlocksFailed] = useState(false);
   const [updates, setUpdates] = useState<Record<string, PracticeSlot>>({});
   useEffect(() => {
     let active = true;
     const { from, to } = schoolWeekRange(requestedWeek);
     const params = new URLSearchParams({ from, to });
-    void api.get<PracticeSlotWithNames[]>(`/practice-slots?${params}`).then(
-      (slots) => {
+    const weekDays = getWeekDays(requestedWeek);
+    const blockParams = new URLSearchParams({ from: dayKey(weekDays[0]), to: dayKey(weekDays[6]) });
+    void Promise.all([
+      api.get<PracticeSlotWithNames[]>(`/practice-slots?${params}`),
+      // Si los bloques fallan, las franjas se muestran igual, una por hora.
+      api
+        .get<unknown>(`/practice-slots/blocks/instructor-groups?${blockParams}`)
+        .then(readBlocks, () => null),
+    ]).then(
+      ([slots, blocks]) => {
         if (!active) return;
+        setBlockDefinitions(blocks ?? []);
+        setBlocksFailed(blocks === null);
         setData(slots);
         setUpdates({});
         setCurrentDate(requestedWeek);
@@ -64,6 +98,18 @@ export default function InstructorPage() {
     };
   }, [requestedWeek, requestId]);
 
+  useEffect(() => {
+    const refresh = () => setRequestId((id) => id + 1);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("practice-notifications-updated", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("practice-notifications-updated", refresh);
+    };
+  }, []);
+  const blockBySlot = new Map(
+    blockDefinitions.flatMap((block) => block.slotIds.map((id) => [id, block] as const)),
+  );
   function requestWeek(date: Date) {
     setError(null);
     setIsLoading(true);
@@ -88,6 +134,11 @@ export default function InstructorPage() {
   const todayKey = dayKey(schoolCalendarDate(new Date()));
   const selectedKey = dayKey(currentDate);
   const selectedSlots = groups.get(selectedKey) ?? [];
+  const selectedBlocks = new Map<string, PracticeSlotWithNames[]>();
+  for (const slot of selectedSlots) {
+    const key = blockBySlot.get(slot.id)?.id ?? slot.id;
+    selectedBlocks.set(key, [...(selectedBlocks.get(key) ?? []), slot]);
+  }
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -126,14 +177,18 @@ export default function InstructorPage() {
       <nav aria-label="Días de la semana" className="grid min-w-0 grid-cols-7 gap-1">
         {days.map((day, index) => {
           const key = dayKey(day);
-          const count = (groups.get(key) ?? []).filter((slot) => slot.studentId !== null).length;
+          const count = new Set(
+            (groups.get(key) ?? [])
+              .filter((slot) => slot.studentId !== null)
+              .map((slot) => blockBySlot.get(slot.id)?.id ?? slot.id),
+          ).size;
           const isToday = key === todayKey;
           return (
             <Button
               key={key}
               variant={key === selectedKey ? "primary" : "secondary"}
               className="h-auto min-w-0 flex-col gap-1 px-0 py-2"
-              aria-label={`${formatDayLabel(day)}, ${count} franjas con alumno${isToday ? ", hoy" : ""}`}
+              aria-label={`${formatDayLabel(day)}, ${count} bloques con alumno${isToday ? ", hoy" : ""}`}
               aria-pressed={key === selectedKey}
               aria-current={isToday ? "date" : undefined}
               onClick={() => setCurrentDate(day)}
@@ -150,7 +205,7 @@ export default function InstructorPage() {
           );
         })}
       </nav>
-      <p className="text-xs text-text-secondary">Franjas con alumno por día</p>
+      <p className="text-xs text-text-secondary">Bloques con alumno por día</p>
       {isLoading ? (
         <p role="status" className="text-sm text-text-secondary">
           Cargando horario…
@@ -160,6 +215,9 @@ export default function InstructorPage() {
         <p role="alert" className="text-sm text-accent-red">
           {error}
         </p>
+      ) : null}
+      {data && blocksFailed ? (
+        <p className="text-xs text-text-secondary">No se pudieron agrupar las horas en bloques</p>
       ) : null}
       {data ? (
         <section aria-labelledby="selected-day" className="min-w-0">
@@ -171,59 +229,77 @@ export default function InstructorPage() {
           </h2>
           <Card className="min-w-0">
             {selectedSlots.length === 0 ? (
-              <p className="text-sm text-text-secondary">No tienes franjas este día.</p>
+              <p className="text-sm text-text-secondary">No tienes bloques este día.</p>
             ) : (
               <div className="flex flex-col divide-y divide-border">
-                {selectedSlots.map((slot) => {
-                  const isFree = slot.status === "disponible" || slot.status === "liberado";
-                  const isMuted = isFree || slot.status === "sin_practica";
-                  const end = new Date(
-                    Date.parse(slot.scheduledAt) + slot.durationMinutes * 60_000,
-                  );
-                  return (
-                    <article
-                      key={slot.id}
-                      aria-label={`Franja de las ${formatSchoolTime(slot.scheduledAt)}`}
-                      className="flex min-w-0 flex-col gap-3 py-3 first:pt-0"
-                    >
-                      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-                        <time
-                          dateTime={slot.scheduledAt}
-                          className={
-                            isMuted
-                              ? "font-medium text-text-secondary"
-                              : "font-medium text-text-primary"
-                          }
-                        >
-                          {formatSchoolTime(slot.scheduledAt)} –{" "}
-                          {formatSchoolTime(end.toISOString())}
-                        </time>
-                        {!isMuted ? (
-                          <StatusBadge
-                            status={slot.status}
-                            label={INSTRUCTOR_STATUS_LABELS[slot.status]}
-                          />
-                        ) : slot.status === "sin_practica" ? (
-                          <span className="text-sm text-text-secondary">Sin alumno</span>
-                        ) : null}
-                      </div>
-                      <p
-                        className={`break-words text-sm ${isMuted ? "text-text-secondary" : "text-text-primary"}`}
-                      >
-                        {isFree ? "Libre" : (slot.studentName ?? "Libre")}
-                      </p>
-                      <IdentidadPresencialControl slot={slot} />
-                      {slot.status === "completado" ? (
-                        <SlotAttendance
-                          slot={slot}
-                          onSaved={(updated) =>
-                            setUpdates((previous) => ({ ...previous, [updated.id]: updated }))
-                          }
-                        />
-                      ) : null}
-                    </article>
-                  );
-                })}
+                {[...selectedBlocks.entries()].map(([key, slots]) => (
+                  <section key={key} className="py-4 first:pt-0">
+                    <h3 className="mb-2 font-display text-base font-semibold text-text-primary">
+                      Bloque {formatSchoolTime(slots[0].scheduledAt)}–
+                      {formatSchoolTime(
+                        new Date(
+                          Date.parse(slots[slots.length - 1].scheduledAt) + 3600000,
+                        ).toISOString(),
+                      )}{" "}
+                      · {slots.length} h
+                    </h3>
+                    <p className="mb-2 text-sm text-text-secondary">
+                      {slots[0].studentName ?? "Sin alumno"}
+                    </p>
+                    <div className="ml-1 border-l-2 border-border pl-3">
+                      {slots.map((slot) => {
+                        const isFree = slot.status === "disponible" || slot.status === "liberado";
+                        const isMuted = isFree || slot.status === "sin_practica";
+                        const end = new Date(
+                          Date.parse(slot.scheduledAt) + slot.durationMinutes * 60_000,
+                        );
+                        return (
+                          <article
+                            key={slot.id}
+                            aria-label={`Franja de las ${formatSchoolTime(slot.scheduledAt)}`}
+                            className="flex min-w-0 flex-col gap-3 py-3 first:pt-0"
+                          >
+                            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                              <time
+                                dateTime={slot.scheduledAt}
+                                className={
+                                  isMuted
+                                    ? "font-medium text-text-secondary"
+                                    : "font-medium text-text-primary"
+                                }
+                              >
+                                {formatSchoolTime(slot.scheduledAt)} –{" "}
+                                {formatSchoolTime(end.toISOString())}
+                              </time>
+                              {!isMuted ? (
+                                <StatusBadge
+                                  status={slot.status}
+                                  label={INSTRUCTOR_STATUS_LABELS[slot.status]}
+                                />
+                              ) : slot.status === "sin_practica" ? (
+                                <span className="text-sm text-text-secondary">Sin alumno</span>
+                              ) : null}
+                            </div>
+                            <p
+                              className={`break-words text-sm ${isMuted ? "text-text-secondary" : "text-text-primary"}`}
+                            >
+                              {isFree ? "Libre" : (slot.studentName ?? "Libre")}
+                            </p>
+                            <IdentidadPresencialControl slot={slot} />
+                            {slot.status === "completado" ? (
+                              <SlotAttendance
+                                slot={slot}
+                                onSaved={(updated) =>
+                                  setUpdates((previous) => ({ ...previous, [updated.id]: updated }))
+                                }
+                              />
+                            ) : null}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
               </div>
             )}
           </Card>

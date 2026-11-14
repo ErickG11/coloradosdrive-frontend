@@ -66,3 +66,12 @@ test-results/
 
 # Herramientas locales de asistentes
 .claude/
+.agents/
+.impeccable/
+.taste-skill/
+.github/skills/
+.github/agents/
+.github/hooks/
+
+# Binarios locales
+*.exe

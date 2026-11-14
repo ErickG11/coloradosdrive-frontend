@@ -18,13 +18,17 @@ const callbacks = {
   onDeletionPending: vi.fn(),
 };
 function show(enrollment = pendingEnrollment) {
-  return render(
+  const result = render(
     <StudentCohortAssignment
       studentId={studentProfile.id}
       enrollment={enrollment}
       {...callbacks}
     />,
   );
+  fireEvent.change(screen.getByLabelText("Motivo de la asignación"), {
+    target: { value: "Asignación C09" },
+  });
+  return result;
 }
 const confirm = () => screen.getByRole("button", { name: "Confirmar asignación" });
 beforeEach(() => {
@@ -84,7 +88,7 @@ describe("modal C", () => {
     expect(callbacks.onClose).not.toHaveBeenCalled();
     expect(api.post).toHaveBeenCalledExactlyOnceWith(
       `/admin/estudiantes/${studentProfile.id}/matriculas/${pendingEnrollment.enrollmentId}/asignar-cohorte`,
-      { cohortId: cohortOptions.items[0].id },
+      { cohortId: cohortOptions.items[0].id, motivo: "Asignación C09" },
     );
     await act(async () => resolve({ status: "activo" }));
     expect(callbacks.onSaved).toHaveBeenCalledOnce();
@@ -119,6 +123,9 @@ describe("modal C", () => {
     );
     show();
     await screen.findByLabelText("Cohorte");
+    fireEvent.change(screen.getByLabelText("Motivo de la asignación"), {
+      target: { value: "Asignación C09" },
+    });
     fireEvent.click(confirm());
     await screen.findByText(/La cohorte o el día cambiaron/);
     await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
@@ -147,6 +154,9 @@ describe("modal C", () => {
     );
     show();
     await screen.findByLabelText("Cohorte");
+    fireEvent.change(screen.getByLabelText("Motivo de la asignación"), {
+      target: { value: "Asignación C09" },
+    });
     fireEvent.click(confirm());
     await screen.findByRole("alert");
     expect(screen.getByRole("alert")).not.toHaveTextContent("proveedor");
@@ -170,6 +180,9 @@ describe("modal C", () => {
     vi.mocked(api.post).mockRejectedValueOnce(new ApiError("Mensaje general", 400));
     show();
     await screen.findByLabelText("Cohorte");
+    fireEvent.change(screen.getByLabelText("Motivo de la asignación"), {
+      target: { value: "Asignación C09" },
+    });
     fireEvent.click(confirm());
     await screen.findByText("Mensaje general");
     vi.mocked(api.post).mockRejectedValueOnce(new TypeError("network"));
@@ -191,6 +204,9 @@ describe("integración en ficha", () => {
     vi.mocked(api.post).mockRejectedValue(new ApiError("incierto", 503, { code: "UNCONFIRMED" }));
     show();
     await screen.findByLabelText("Cohorte");
+    fireEvent.change(screen.getByLabelText("Motivo de la asignación"), {
+      target: { value: "Asignación C09" },
+    });
     fireEvent.click(confirm());
     await screen.findByText(/verifica antes de repetir/);
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
@@ -234,13 +250,18 @@ describe("integración en ficha", () => {
         ? []
         : path.endsWith("/cohortes")
           ? cohortOptions
-          : profile,
+          : path.endsWith("/matriculas/acceso")
+            ? { active: false, enrollments: [] }
+            : profile,
     );
     render(<StudentDetail id={studentProfile.id} />);
     fireEvent.click(await screen.findByRole("button", { name: "Asignar cohorte" }));
     expect(screen.getByRole("button", { name: "Editar" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Desactivar" })).toBeDisabled();
     await screen.findByLabelText("Cohorte");
+    fireEvent.change(screen.getByLabelText("Motivo de la asignación"), {
+      target: { value: "Asignación C09" },
+    });
     fireEvent.click(confirm());
     await screen.findByText("La cohorte se asignó correctamente.");
     await waitFor(() =>
@@ -251,7 +272,11 @@ describe("integración en ficha", () => {
         .mocked(api.get)
         .mock.calls.filter(([p]) => p === `/admin/estudiantes/${studentProfile.id}`),
     ).toHaveLength(2);
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("complementary", { name: "Asignar cohorte" }),
+      ).not.toBeInTheDocument(),
+    );
   });
   it("eliminación pendiente conocida bloquea edición y nuevas asignaciones al cerrar", async () => {
     vi.mocked(api.get).mockImplementation(async (path) =>
@@ -259,7 +284,9 @@ describe("integración en ficha", () => {
         ? []
         : path.endsWith("/cohortes")
           ? cohortOptions
-          : { ...studentProfile, enrollments: [pendingEnrollment] },
+          : path.endsWith("/matriculas/acceso")
+            ? { active: false, enrollments: [] }
+            : { ...studentProfile, enrollments: [pendingEnrollment] },
     );
     vi.mocked(api.post).mockRejectedValue(
       new ApiError("proveedor", 409, { code: "DELETION_PENDING" }),
@@ -267,10 +294,21 @@ describe("integración en ficha", () => {
     render(<StudentDetail id={studentProfile.id} />);
     fireEvent.click(await screen.findByRole("button", { name: "Asignar cohorte" }));
     await screen.findByLabelText("Cohorte");
+    fireEvent.change(screen.getByLabelText("Motivo de la asignación"), {
+      target: { value: "Asignación C09" },
+    });
     fireEvent.click(confirm());
     await screen.findByRole("alert");
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancelar" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    fireEvent.click(
+      within(screen.getByRole("complementary", { name: "Asignar cohorte" })).getByRole("button", {
+        name: "Cancelar",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("complementary", { name: "Asignar cohorte" }),
+      ).not.toBeInTheDocument(),
+    );
     expect(screen.getByRole("button", { name: "Editar" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Asignar cohorte" })).toBeDisabled();
   });

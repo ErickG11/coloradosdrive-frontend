@@ -145,7 +145,7 @@ async function draft(existing = false, birthDate?: string) {
     await user.click(screen.getByRole("button", { name: "Buscar estudiante" }));
     await user.click(await screen.findByRole("button", { name: /Ana existente/ }));
   } else {
-    fireEvent.change(screen.getByLabelText("Cédula"), { target: { value: "1234567890" } });
+    fireEvent.change(screen.getByLabelText("Cédula"), { target: { value: "1710034065" } });
     fireEvent.change(screen.getByLabelText("Nombres completos"), {
       target: { value: "Ana nueva" },
     });
@@ -162,6 +162,8 @@ async function draft(existing = false, birthDate?: string) {
   await screen.findByText(/Cupos disponibles/);
   expect(screen.getAllByRole("button", { name: /Tipo [AB]/ })).toHaveLength(2);
   await user.click(screen.getByRole("button", { name: "Continuar" }));
+  fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "2" } });
+  fireEvent.change(screen.getByLabelText("Hora deseada"), { target: { value: "08:00" } });
   fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-09-30" } });
   await screen.findByText(/5 días · 10 bloques/);
   await user.click(screen.getByRole("button", { name: "Ver sugerencia" }));
@@ -326,6 +328,8 @@ describe("Fecha final en modo automático y manual", () => {
   it("restaura cálculo del servidor sin enviar la fecha manual", async () => {
     const user = userEvent.setup();
     render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Hora deseada"), { target: { value: "08:00" } });
     fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-09-30" } });
     await waitFor(() => expect(screen.getByLabelText("Fecha final")).toHaveValue("2026-10-06"));
     fireEvent.change(screen.getByLabelText("Fecha final"), { target: { value: "2026-10-12" } });
@@ -349,6 +353,8 @@ describe("Fecha final en modo automático y manual", () => {
   it("muestra primer día efectivo sin cambiar inicio elegido", async () => {
     post.mockResolvedValue({ ...plan, fechaInicio: "2026-10-03", primerDiaEfectivo: "2026-10-05" });
     render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Hora deseada"), { target: { value: "08:00" } });
     fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-10-03" } });
     await screen.findByText(/El inicio elegido no corresponde/);
     expect(screen.getByLabelText("Fecha de inicio")).toHaveValue("2026-10-03");
@@ -356,12 +362,16 @@ describe("Fecha final en modo automático y manual", () => {
   it("rango sin días no permite continuar", async () => {
     post.mockRejectedValue(new ApiError("El rango no contiene días aplicables", 400));
     render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Hora deseada"), { target: { value: "08:00" } });
     fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-10-03" } });
     await screen.findByRole("alert");
     expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
   });
   it("horas por día vacío no se envía como 0 y muestra un error claro", async () => {
     render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Hora deseada"), { target: { value: "08:00" } });
     fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-09-30" } });
     await waitFor(() => expect(post).toHaveBeenCalled());
     post.mockClear();
@@ -373,21 +383,27 @@ describe("Fecha final en modo automático y manual", () => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(post).not.toHaveBeenCalled();
   });
-  it("horas por día fuera de 1 a 16 no consulta el plan", async () => {
+  it("horas por día no positivas no consultan el plan", async () => {
     render(<StepPracticas course={selection} value={null} onBack={() => {}} onNext={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Hora deseada"), { target: { value: "08:00" } });
     fireEvent.change(screen.getByLabelText("Fecha de inicio"), { target: { value: "2026-09-30" } });
     await waitFor(() => expect(post).toHaveBeenCalled());
     post.mockClear();
     fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "0" } });
-    expect(screen.getByRole("alert")).toHaveTextContent("entre 1 y 16");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Selecciona una opción de horas por día válida.",
+    );
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(post).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText("Horas por día"), { target: { value: "2" } });
     await waitFor(() =>
       expect(post).toHaveBeenLastCalledWith(`${BASE}/plan`, {
-        practice: expect.objectContaining({ horasPorDia: 3 }),
+        practice: expect.objectContaining({ horasPorDia: 2 }),
       }),
     );
-    expect(screen.queryByText(/entre 1 y 16/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Selecciona una opción de horas por día válida/),
+    ).not.toBeInTheDocument();
   });
 });

@@ -13,10 +13,11 @@ import {
   studentListHref,
   type StudentFilters as Filters,
 } from "@/lib/api/students";
+import { WaitlistRetry } from "./WaitlistRetry";
 import { StudentFilters } from "./StudentFilters";
 import { StudentTable } from "./StudentTable";
 import { StudentMetrics } from "./StudentMetrics";
-import { StudentDrawer } from "./StudentDrawer";
+import { StudentDrawer, studentView, type StudentView } from "./StudentDrawer";
 import { StudentPagination } from "./StudentPagination";
 import { StudentIcon } from "./StudentVisual";
 import styles from "./students.module.css";
@@ -27,9 +28,13 @@ const STUDENT_PATH = /^\/admin\/students\/([0-9a-f-]+)$/i;
 // monta este mismo listado con la ficha abierta; abrir y cerrar desde el
 // listado solo cambia la URL (sin recargar la lista).
 export function StudentsList({ initialSelected = null }: { initialSelected?: string | null }) {
+  const waitlist = useFetch<{ active: boolean; A: number; B: number }>(
+    "/admin/estudiantes/espera/resumen",
+  );
   const params = useSearchParams();
   const router = useRouter();
   const filters = readStudentFilters(params);
+  const [view, setView] = useState<StudentView>(() => studentView(params.get("vista")));
   const [selected, setSelected] = useState<string | null>(initialSelected);
   const [version, setVersion] = useState(0);
   const [q, setQ] = useState("");
@@ -42,6 +47,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
   useEffect(() => {
     function sync() {
       setSelected(window.location.pathname.match(STUDENT_PATH)?.[1] ?? null);
+      setView(studentView(new URLSearchParams(window.location.search).get("vista")));
     }
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
@@ -58,18 +64,23 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
       window.history.replaceState(
         null,
         "",
-        `/admin/students/${selected}?${studentFilterParams(next)}`,
+        `/admin/students/${selected}?${studentFilterParams(next)}&vista=${view}`,
       );
     else router.replace(studentListHref(next), { scroll: false });
   }
   function change(value: Partial<Filters>) {
     navigate(changeStudentFilter(filters, value));
   }
-  function open(event: MouseEvent<HTMLAnchorElement>, id: string) {
+  function open(event: MouseEvent<HTMLAnchorElement>, id: string, nextView: StudentView = "ficha") {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
       return;
     event.preventDefault();
-    window.history.pushState(null, "", `/admin/students/${id}?${studentFilterParams(filters)}`);
+    window.history.pushState(
+      null,
+      "",
+      `/admin/students/${id}?${studentFilterParams(filters)}&vista=${nextView}`,
+    );
+    setView(nextView);
     setSelected(id);
   }
   function close() {
@@ -94,6 +105,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
     filters.courseId ||
     filters.cohortId ||
     filters.pendienteCohorte ||
+    filters.interesadoEn ||
     filters.documentosPendientes ||
     filters.activo ||
     filters.incluirHistorial,
@@ -123,6 +135,18 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
             description="Consulta sus cuentas, cursos y cohortes."
             actions={
               <>
+                {waitlist.data?.active ? (
+                  <details className="relative">
+                    <summary
+                      className={buttonClassName("secondary", "md", "cursor-pointer list-none")}
+                    >
+                      Más acciones
+                    </summary>
+                    <div className="absolute right-0 z-20 mt-2 w-80 rounded-md border border-border bg-bg-surface shadow-elevated">
+                      <WaitlistRetry />
+                    </div>
+                  </details>
+                ) : null}
                 <Link className={buttonClassName("secondary")} href="/admin/students/deletions">
                   Eliminaciones pendientes
                 </Link>
@@ -133,6 +157,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
             }
           />
           <StudentMetrics version={version} />
+          {waitlist.error ? <p role="status">{waitlist.error}</p> : null}
           {params.get("aviso") === "alumno-eliminado" && (
             <p role="status" className="text-status-success">
               El alumno se eliminó definitivamente.
@@ -140,6 +165,8 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
           )}
           <StudentFilters
             filters={filters}
+            waitlistActive={waitlist.data?.active}
+            waitlistSummary={waitlist.data?.active ? waitlist.data : null}
             q={q}
             courses={courses.data ?? []}
             cohorts={cohorts.data ?? []}
@@ -185,9 +212,12 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
               </section>
             )}
           <StudentTable
+            compact={Boolean(selected)}
+            selectedId={selected}
             students={list.data?.items ?? []}
             cohorts={cohorts.data ?? []}
             filterQuery={studentFilterParams(filters).toString()}
+            waiting={Boolean(filters.interesadoEn)}
             isLoading={list.isLoading}
             error={list.error}
             onRetry={list.refetch}
@@ -203,7 +233,7 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
             />
           )}
         </div>
-        <StudentDrawer id={selected} onClose={close} onChanged={refresh} />
+        <StudentDrawer view={view} id={selected} onClose={close} onChanged={refresh} />
       </div>
     </div>
   );

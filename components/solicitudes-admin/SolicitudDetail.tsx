@@ -7,7 +7,6 @@ import { getSolicitudAdmin } from "@/lib/api/inscripcion";
 import type { SolicitudAdminDetalle, SolicitudAdminItem } from "@/types/inscripcion";
 import { adminErrorMessage } from "./adminErrors";
 import { nombreDe } from "./catalogo";
-import { CertificadoPanel } from "./CertificadoPanel";
 import { ConsentimientoPanel } from "./ConsentimientoPanel";
 import { DatosDeclarados } from "./DatosDeclarados";
 import { DecisionPanel } from "./DecisionPanel";
@@ -16,6 +15,8 @@ import { ResultadoDecisionCard } from "./ResultadoDecisionCard";
 import type { ResultadoDecision } from "./decisionTipos";
 import { SolicitudDrawer } from "./SolicitudDrawer";
 import { SolicitudStatus } from "./SolicitudStatus";
+import { IdentityReviewPanel } from "./IdentityReviewPanel";
+import { useRequestReview } from "./useRequestReview";
 import { VerificacionesPanel } from "./VerificacionesPanel";
 import styles from "./solicitudes.module.css";
 
@@ -70,16 +71,22 @@ export function SolicitudDetail({
     if (resultado) resultadoRef.current?.focus();
   }, [resultado]);
 
+  // Candado de revisión: se adquiere al abrir la solicitud pendiente y se renueva en silencio.
+  const candado = useRequestReview(
+    item.id,
+    detalle?.estado === "enviada" && Boolean(detalle.identityRulesActive),
+  );
   const actual = detalle ?? item;
   return (
     <SolicitudDrawer
-      title={`Solicitud de ${nombreDe(actual)}`}
+      title={nombreDe(actual)}
       avatar={<EnrollmentAvatar name={nombreDe(actual)} large />}
       onClose={onClose}
       footer={
         detalle?.estado === "enviada" ? (
           <DecisionPanel
             detalle={detalle}
+            candado={candado}
             onDecidida={(decidida) => {
               setResultado(decidida);
               setDetalle((previo) => (previo ? { ...previo, estado: decidida.estado } : previo));
@@ -91,9 +98,42 @@ export function SolicitudDetail({
           />
         ) : undefined
       }
+      actions={
+        detalle && detalle.estado !== "aprobada" && detalle.estado !== "archivada" ? (
+          <details
+            className="relative"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector("summary")?.focus();
+              }
+            }}
+          >
+            <summary
+              aria-label="Más acciones de la solicitud"
+              title="Más"
+              className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-sm border border-border text-xl"
+            >
+              ⋯
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 w-64 rounded-md border border-border bg-bg-surface p-3 shadow-elevated">
+              <DeleteSolicitud
+                id={detalle.id}
+                cedula={detalle.cedula}
+                onDeleted={() => {
+                  onChanged();
+                  onClose();
+                }}
+              />
+            </div>
+          </details>
+        ) : undefined
+      }
       header={
         <>
-          <p>Cédula · {actual.cedula ?? "No registrada"}</p>
+          <p>Cédula · {actual.documentNumber ?? actual.cedula ?? "No registrada"}</p>
           <SolicitudStatus estado={actual.estado} />
         </>
       }
@@ -162,8 +202,16 @@ export function SolicitudDetail({
               hidden={seccion !== "verificaciones"}
               tabIndex={0}
             >
+              <IdentityReviewPanel
+                detail={detalle}
+                onChanged={() => {
+                  setIntento((n) => n + 1);
+                  onChanged();
+                }}
+              />
               <VerificacionesPanel
                 detalle={detalle}
+                candado={candado}
                 onRegistrada={(verificacion) =>
                   setDetalle((previo) =>
                     previo
@@ -172,7 +220,6 @@ export function SolicitudDetail({
                   )
                 }
               />
-              <CertificadoPanel detalle={detalle} />
             </div>
 
             <div
@@ -196,6 +243,7 @@ export function SolicitudDetail({
               {detalle.estado !== "enviada" ? (
                 <DecisionPanel
                   detalle={detalle}
+                  candado={candado}
                   onDecidida={(decidida) => {
                     setResultado(decidida);
                     setDetalle((previo) =>
@@ -210,18 +258,6 @@ export function SolicitudDetail({
               ) : null}
             </section>
           </>
-        ) : null}
-        {detalle && detalle.estado !== "aprobada" ? (
-          <div className={styles.deleteZone}>
-            <DeleteSolicitud
-              id={detalle.id}
-              cedula={detalle.cedula}
-              onDeleted={() => {
-                onChanged();
-                onClose();
-              }}
-            />
-          </div>
         ) : null}
       </div>
     </SolicitudDrawer>

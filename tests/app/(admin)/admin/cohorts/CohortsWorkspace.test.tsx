@@ -19,16 +19,22 @@ vi.mock("next/navigation", () => ({
 
 // Versión con microsegundos tal como la entrega PostgREST (contrato L4b).
 const VERSION = "2026-10-19T15:04:05.123456+00:00";
+// Fechas futuras: una cohorte cuyo curso ya terminó queda en solo lectura.
+function daysFromToday(days: number): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
 const cohort: Cohort = {
   id: "cohort-1",
   courseId: "course-a",
   nombre: "Cohorte Marzo",
   precio: 150,
   cupoMaximo: 20,
-  fechaInicioMatricula: "2026-02-01",
-  fechaFinMatricula: "2026-02-25",
-  fechaInicioCurso: "2026-03-01",
-  fechaFinCurso: "2026-06-01",
+  fechaInicioMatricula: daysFromToday(10),
+  fechaFinMatricula: daysFromToday(30),
+  fechaInicioCurso: daysFromToday(40),
+  fechaFinCurso: daysFromToday(80),
   tipoModalidad: null,
   horariosCapacitacionTeoria: null,
   numeroVehiculos: null,
@@ -78,22 +84,20 @@ const statusText = () =>
     .join("");
 
 describe("panel lateral de cohortes", () => {
-  it.each(["Escape", "Cancelar"])(
-    "devuelve el foco al botón Eliminar al cerrar con %s",
+  it.each(["Escape", "Conservar cohorte"])(
+    "devuelve el foco al botón Cancelar cohorte al cerrar con %s",
     async (action) => {
       const user = userEvent.setup();
       render(<CohortsPage />);
-      const opener = screen.getAllByRole("button", { name: "Eliminar Cohorte Marzo" })[0];
+      const opener = screen.getAllByRole("button", { name: "Cancelar cohorte Cohorte Marzo" })[0];
       await user.click(opener);
       const dialog = await screen.findByRole("dialog");
-      expect(
-        within(dialog).getByLabelText("Para confirmar, escribe el nombre exacto de la cohorte:"),
-      ).toHaveFocus();
+      expect(within(dialog).getByLabelText("Motivo de cancelación")).toBeInTheDocument();
       if (action === "Escape") await user.keyboard("{Escape}");
-      else await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+      else await user.click(within(dialog).getByRole("button", { name: "Conservar cohorte" }));
       await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
       await waitFor(() => expect(opener).toHaveFocus());
-      expect(api.delete).not.toHaveBeenCalled();
+      expect(api.post).not.toHaveBeenCalled();
     },
   );
 

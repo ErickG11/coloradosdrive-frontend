@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -177,6 +177,162 @@ const inProgress = (startedAt = new Date().toISOString()) =>
     startedAt,
     completedAt: null,
   });
+
+describe("imágenes en el intento del alumno", () => {
+  const image = {
+    url: "https://signed.example.invalid/initial?token=secreto",
+    alt: "Señal triangular",
+  };
+  beforeEach(() => {
+    vi.resetAllMocks();
+    sessionStorage.clear();
+  });
+  function activeWithImage() {
+    const exam = buildExamForStudent();
+    return buildActive({
+      exam: { ...exam, questions: exam.questions.map((question) => ({ ...question, image })) },
+    });
+  }
+  it("renueva con /images y conserva respuestas, reloj y el mismo intento sin persistir URLs", async () => {
+    const user = userEvent.setup();
+    mockBackend();
+    const original = mockedGet.getMockImplementation()!;
+    mockedGet.mockImplementation((path, options) =>
+      path === "/attempts/attempt-1/images"
+        ? Promise.resolve([
+            {
+              questionId: "question-1",
+              url: "https://signed.example.invalid/renewed?token=nuevo",
+              alt: "Señal triangular",
+            },
+          ])
+        : original(path, options),
+    );
+    mockedPost.mockResolvedValueOnce(activeWithImage());
+    render(<TakeExamPage />);
+    await user.click(await screen.findByRole("button", { name: "Iniciar examen" }));
+    await user.click(screen.getByLabelText("Precaución"));
+    const clock = screen.getByRole("timer").textContent;
+    fireEvent.error(screen.getByAltText(image.alt));
+    await user.click(screen.getByRole("button", { name: "Reintentar imagen de la pregunta 1" }));
+    await waitFor(() =>
+      expect(screen.getByAltText(image.alt)).toHaveAttribute(
+        "src",
+        "https://signed.example.invalid/renewed?token=nuevo",
+      ),
+    );
+    expect(mockedGet).toHaveBeenCalledWith(
+      "/attempts/attempt-1/images",
+      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+    );
+    expect(mockedGet.mock.calls.some(([path]) => path === "/attempts/attempt-1")).toBe(false);
+    expect(mockedPost).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("Precaución")).toBeChecked();
+    const seconds = (text: string | null) => {
+      const [minutes, seconds] = (text ?? "0:0").split(":").map(Number);
+      return minutes * 60 + seconds;
+    };
+    expect(seconds(screen.getByRole("timer").textContent)).toBeLessThanOrEqual(seconds(clock));
+    expect(seconds(clock) - seconds(screen.getByRole("timer").textContent)).toBeLessThanOrEqual(2);
+    expect(JSON.parse(sessionStorage.getItem("content-attempt:attempt-1")!)).toEqual({
+      "question-1": "option-1",
+    });
+    expect(JSON.stringify({ ...sessionStorage })).not.toMatch(/signed\.example|token=|image_path/);
+  });
+  it("409 vencido reconcilia resultado y no reinicia ni envía el examen", async () => {
+    const user = userEvent.setup();
+    mockBackend({ attemptState: buildAttempt({ passed: false, scorePercent: 0 }) });
+    const original = mockedGet.getMockImplementation()!;
+    mockedGet.mockImplementation((path, options) =>
+      path === "/attempts/attempt-1/images"
+        ? Promise.reject(new ApiError("privado", 409, { code: "ATTEMPT_EXPIRED" }))
+        : original(path, options),
+    );
+    mockedPost.mockResolvedValueOnce(activeWithImage());
+    render(<TakeExamPage />);
+    await user.click(await screen.findByRole("button", { name: "Iniciar examen" }));
+    await user.click(screen.getByLabelText("Precaución"));
+    fireEvent.error(screen.getByAltText(image.alt));
+    await user.click(screen.getByRole("button", { name: "Reintentar imagen de la pregunta 1" }));
+    expect(await screen.findByRole("region", { name: "Resultado del examen" })).toHaveTextContent(
+      "Reprobado",
+    );
+    expect(mockedPost).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem("content-attempt:attempt-1")).toBeNull();
+  });
+  it("lightbox conserva borrador, Escape devuelve foco y el resultado muestra la imagen sin correctas", async () => {
+    const user = userEvent.setup();
+    mockBackend();
+    const active = activeWithImage();
+    mockedPost.mockResolvedValueOnce(active);
+    mockedPost.mockResolvedValueOnce({
+      attemptId: "attempt-1",
+      examId: "exam-1",
+      status: "completado",
+      scorePercent: 100,
+      passed: true,
+      startedAt: active.startedAt,
+      completedAt: new Date().toISOString(),
+      answers: [
+        {
+          questionId: "question-1",
+          prompt: active.exam.questions[0].prompt,
+          pointsEarned: 10,
+          pointsPossible: 10,
+          similarityScore: null,
+        },
+      ],
+    } satisfies AttemptResult);
+    render(<TakeExamPage />);
+    await user.click(await screen.findByRole("button", { name: "Iniciar examen" }));
+    await user.click(screen.getByLabelText("Precaución"));
+    fireEvent.load(screen.getByAltText(image.alt));
+    const trigger = screen.getByRole("button", { name: "Ampliar imagen de la pregunta 1" });
+    await user.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Imagen de la pregunta 1" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+    expect(screen.getByLabelText("Precaución")).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Revisar y enviar respuestas" }));
+    await user.click(screen.getByRole("button", { name: "Enviar examen" }));
+    const result = await screen.findByRole("region", { name: "Resultado del examen" });
+    expect(within(result).getByAltText(image.alt)).toBeInTheDocument();
+    expect(within(result).queryByText("Correcta")).not.toBeInTheDocument();
+  });
+  it("el lightbox no impide el envío automático al acercarse el plazo", async () => {
+    const user = userEvent.setup();
+    mockBackend();
+    mockedPost.mockResolvedValueOnce(activeWithImage());
+    mockedPost.mockResolvedValueOnce({
+      attemptId: "attempt-1",
+      examId: "exam-1",
+      status: "completado",
+      scorePercent: 0,
+      passed: false,
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      answers: [],
+    } satisfies AttemptResult);
+    render(<TakeExamPage />);
+    await user.click(await screen.findByRole("button", { name: "Iniciar examen" }));
+    fireEvent.load(screen.getByAltText(image.alt));
+    await user.click(screen.getByRole("button", { name: "Ampliar imagen de la pregunta 1" }));
+    const sampled = performance.now();
+    const monotonic = vi.spyOn(performance, "now").mockReturnValue(sampled + 30 * 60_000 - 5000);
+    try {
+      await waitFor(
+        () =>
+          expect(mockedPost).toHaveBeenCalledWith("/attempts/attempt-1/submit", { answers: [] }),
+        { timeout: 4000 },
+      );
+    } finally {
+      monotonic.mockRestore();
+    }
+    expect(await screen.findByRole("region", { name: "Resultado del examen" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
 
 describe("TakeExamPage", () => {
   beforeEach(() => {

@@ -336,3 +336,126 @@
 .requirementDocuments [role="listitem"] {
   display: list-item;
 }
+
+/* C11: misma jerarquía y ritmo en cada paso, sin alterar los textos legales. */
+.panel {
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.025);
+}
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 600;
+}
+.panelTitle > span {
+  width: 40px;
+  height: 40px;
+}
+.stepNumber {
+  border: 0;
+  border-radius: 10px;
+}
+.stepNumber > span {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+.stepNumber svg {
+  width: 18px;
+  height: 18px;
+}
+.stepList li button {
+  font: inherit;
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 1023px) {
+  .stepList {
+    display: none;
+  }
+  .panel {
+    padding: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar span {
+    transition: none;
+  }
+}
+.courseChoices {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.courseChoice {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  position: relative;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-surface);
+  cursor: pointer;
+}
+.courseChoice:has(input:checked) {
+  border-color: var(--color-brand-primary);
+  background: var(--color-brand-tint);
+}
+.courseChoice:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+.courseChoice input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-brand-primary);
+}
+.courseChoice strong {
+  font-size: 15px;
+}
+.courseChoice p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+.otp {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.otp input {
+  min-width: 0;
+  text-align: center;
+  padding-inline: 0;
+  font-size: 22px;
+  height: 56px;
+  border-radius: 10px;
+}
+@media (max-width: 420px) {
+  .courseChoices {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  animation: step-in 180ms ease-out;
+}
+@keyframes step-in {
+  from {
+    opacity: 0.5;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

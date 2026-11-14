@@ -14,6 +14,7 @@ import type {
 import { adminErrorMessage, esConflictoDeEstado } from "./adminErrors";
 import { ETIQUETA_MOTIVO, MOTIVOS_DEVOLVER, MOTIVOS_RECHAZAR, formatearFecha } from "./catalogo";
 import type { ResultadoDecision } from "./decisionTipos";
+import { horaGuayaquil, type RequestReviewLock } from "./useRequestReview";
 import styles from "./solicitudes.module.css";
 
 type Accion = "aprobar" | "devolver" | "rechazar";
@@ -23,9 +24,9 @@ const MAX_MENSAJE = 300;
 const MAX_NOTA = 1000;
 
 const ACCIONES: { id: Accion; label: string }[] = [
-  { id: "aprobar", label: "Aprobar" },
-  { id: "devolver", label: "Devolver" },
   { id: "rechazar", label: "Rechazar" },
+  { id: "devolver", label: "Devolver para corregir" },
+  { id: "aprobar", label: "Aprobar" },
 ];
 
 // Requisitos que el servidor exige para aprobar. Es una guía visible para el admin: el
@@ -61,7 +62,7 @@ function SoloLectura({ detalle }: { detalle: SolicitudAdminDetalle }) {
         Todavía es un borrador: el postulante no la ha enviado, por eso no se puede decidir.
       </p>
     );
-  if (detalle.estado === "aprobada")
+  if (detalle.estado === "aprobada" || detalle.estado === "archivada")
     return (
       <p className={styles.note}>
         Solicitud aprobada. La decisión es definitiva y el expediente queda en solo lectura.
@@ -110,10 +111,12 @@ function SoloLectura({ detalle }: { detalle: SolicitudAdminDetalle }) {
 
 export function DecisionPanel({
   detalle,
+  candado,
   onDecidida,
   onConflicto,
 }: {
   detalle: SolicitudAdminDetalle;
+  candado: RequestReviewLock;
   onDecidida: (resultado: ResultadoDecision) => void;
   onConflicto: () => void;
 }) {
@@ -131,6 +134,16 @@ export function DecisionPanel({
   const lock = useRef(false);
 
   if (detalle.estado !== "enviada") return <SoloLectura detalle={detalle} />;
+  if (detalle.identityRulesActive && candado.phase !== "owned" && candado.phase !== "inactive")
+    return (
+      <p role="status" className={styles.note}>
+        {candado.phase === "other"
+          ? `Otro administrador está revisando esta solicitud hasta las ${horaGuayaquil(candado.until)}.`
+          : candado.phase === "error"
+            ? "No se pudo preparar la revisión. Cierra y vuelve a abrir la solicitud."
+            : "Preparando la revisión…"}
+      </p>
+    );
 
   const motivos = accion === "devolver" ? MOTIVOS_DEVOLVER : MOTIVOS_RECHAZAR;
   const motivoActual = motivos.find((m) => m.codigo === motivo);
@@ -263,7 +276,9 @@ export function DecisionPanel({
                 setErrores((previo) => ({ ...previo, motivo: undefined, mensaje: undefined }));
               }}
             >
-              <option value="">Selecciona un motivo…</option>
+              <option value="" disabled>
+                Seleccione…
+              </option>
               {motivos.map((m) => (
                 <option key={m.codigo} value={m.codigo}>
                   {m.label}
@@ -365,9 +380,8 @@ export function DecisionPanel({
         {ACCIONES.map((item) => (
           <Button
             key={item.id}
-            variant={
-              item.id === "aprobar" ? "primary" : item.id === "rechazar" ? "danger" : "secondary"
-            }
+            variant={item.id === "aprobar" ? "primary" : "secondary"}
+            className={item.id === "rechazar" ? styles.dangerOutline : undefined}
             disabled={ocupado || (item.id === "aprobar" && faltan.length > 0)}
             aria-describedby={
               item.id === "aprobar" && faltan.length > 0 ? `${baseId}-faltantes` : undefined

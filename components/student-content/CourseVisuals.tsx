@@ -1,4 +1,5 @@
 "use client";
+import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 
 import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
@@ -42,6 +43,43 @@ export function ScoreRing({
         </strong>
         <small>{label}</small>
       </span>
+    </div>
+  );
+}
+
+// Medidor de la mejor nota de la tarjeta de examen: etiqueta fuera del aro y color por rango
+// calculado con el porcentaje entero que se muestra (>= 80 verde, 70–79 amarillo, <= 69 rojo).
+export function ExamScoreMeter({ value }: { value: number | string | null | undefined }) {
+  const parsed = value == null || value === "" ? null : Number(value);
+  const score = parsed !== null && Number.isFinite(parsed) ? Math.round(parsed) : null;
+  const tone = score === null ? "none" : score >= 80 ? "high" : score >= 70 ? "medium" : "low";
+  const range = { none: "sin nota", high: "rango alto", medium: "rango medio", low: "rango bajo" }[
+    tone
+  ];
+  const fill = score === null ? 0 : Math.min(100, Math.max(0, score));
+  return (
+    <div className={styles.meter} data-tone={tone}>
+      <div
+        className={styles.meterRing}
+        role="img"
+        aria-label={
+          score === null ? "Mejor nota: sin nota" : `Mejor nota: ${score} por ciento, ${range}`
+        }
+      >
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="44" className={styles.meterTrack} />
+          <circle
+            cx="50"
+            cy="50"
+            r="44"
+            className={styles.meterValue}
+            pathLength="100"
+            strokeDasharray={`${fill} 100`}
+          />
+        </svg>
+        <strong aria-hidden="true">{score === null ? "—" : `${score}%`}</strong>
+      </div>
+      <small aria-hidden="true">{score === null ? "Sin nota" : "Mejor nota"}</small>
     </div>
   );
 }
@@ -166,27 +204,9 @@ export function CourseRoad({ progress }: { progress: CourseProgress }) {
 
 export function SubjectEmpty() {
   return (
-    <div className={styles.empty}>
-      <svg width="110" height="82" viewBox="0 0 110 82" fill="none" aria-hidden="true">
-        <path d="M5 68h100M28 64V22h54v42M35 22V13h40v9" stroke="currentColor" strokeWidth="2" />
-        <path
-          d="M41 37h28m-28 9h20m-20 9h25"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <circle
-          cx="84"
-          cy="25"
-          r="14"
-          fill="var(--color-bg-surface)"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-        <path d="M84 18v14m-7-7h14" stroke="currentColor" strokeWidth="2" />
-      </svg>
-      <h3>Estamos preparando esta parada</h3>
-      <p>Los materiales publicados aparecerán aquí. Puedes seguir explorando las otras materias.</p>
-    </div>
+    <StudentEmptyState
+      title="Esta materia aún no tiene contenido"
+      description="Los materiales publicados aparecerán aquí. Puedes seguir explorando las otras materias."
+    />
   );
 }

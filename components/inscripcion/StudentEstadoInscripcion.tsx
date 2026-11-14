@@ -47,9 +47,9 @@ export function StudentEstadoInscripcion() {
         {data.motivoBloqueo ? data.motivoBloqueo : null}
       </p>
       {data.cohorte ? (
-        <p className="mt-2 text-sm">Cohorte: {data.cohorte.nombre}</p>
+        <p className="mt-2 text-sm">Tu curso ya tiene fechas asignadas.</p>
       ) : (
-        <p className="mt-2 text-sm">Tu cohorte está pendiente. La escuela te asignará una.</p>
+        <p className="mt-2 text-sm">Tus fechas de curso están pendientes. La escuela te las asignará.</p>
       )}
       {presencial ? (
         <p className="mt-2 text-sm">

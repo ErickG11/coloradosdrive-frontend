@@ -29,7 +29,7 @@ async function extractError(response: Response): Promise<ApiError> {
         message: string;
         code?: unknown;
         field?: unknown;
-        detalles?: { faltantes?: string[] };
+        detalles?: { faltantes?: string[]; pendientes?: { item_id: string; titulo: string }[] };
         faltantes?: string[];
       };
       return new ApiError(body.message, response.status, {

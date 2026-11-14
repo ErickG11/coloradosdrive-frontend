@@ -7,10 +7,17 @@ import type {
   StudentReservationSnapshot,
 } from "@/types/studentSchedule";
 interface ClockSnapshot extends StudentReservationSnapshot {
+  scope?: string;
   receivedAt: number;
   serverMs: number;
 }
-export function useStudentReservation(onClosed: () => void) {
+type ReservationApi = Pick<typeof studentScheduleApi, "current" | "change">;
+export function useStudentReservation(
+  onClosed: () => void,
+  enrollmentId?: string,
+  transport: ReservationApi = studentScheduleApi,
+  enabled = true,
+) {
   const [snapshot, setSnapshot] = useState<ClockSnapshot | null>(null);
   const [monotonicNow, setMonotonicNow] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +34,7 @@ export function useStudentReservation(onClosed: () => void) {
       if (!Number.isFinite(serverMs)) throw new Error("invalid_server_clock");
       const receivedAt = performance.now();
       setMonotonicNow(receivedAt);
-      setSnapshot({ ...data, receivedAt, serverMs });
+      setSnapshot({ ...data, scope: enrollmentId, receivedAt, serverMs });
       setError(null);
       if (
         data.reserva &&
@@ -38,10 +45,11 @@ export function useStudentReservation(onClosed: () => void) {
         onClosed();
       }
     },
-    [onClosed],
+    [onClosed, enrollmentId],
   );
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     let loading = false;
     async function refresh() {
@@ -50,7 +58,7 @@ export function useStudentReservation(onClosed: () => void) {
       loading = true;
       setChecking(true);
       try {
-        const data = await studentScheduleApi.current();
+        const data = await transport.current(enrollmentId);
         if (!cancelled && startedVersion === version.current) accept(data);
       } catch (err) {
         if (!cancelled && startedVersion === version.current) setError(scheduleError(err));
@@ -74,28 +82,33 @@ export function useStudentReservation(onClosed: () => void) {
       document.removeEventListener("visibilitychange", visible);
       window.removeEventListener("focus", visible);
     };
-  }, [accept, refreshKey]);
+  }, [accept, refreshKey, enrollmentId, transport, enabled]);
   useEffect(() => {
+    if (!enabled) return;
     const timer = window.setInterval(() => setMonotonicNow(performance.now()), 1000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [enabled]);
   // Reloj monotónico: cambiar la hora del equipo no prolonga el contador.
-  const elapsed = snapshot ? Math.max(0, monotonicNow - snapshot.receivedAt) : 0;
-  const remaining = snapshot?.reserva
+  const currentSnapshot = snapshot?.scope === enrollmentId ? snapshot : null;
+  const elapsed = currentSnapshot ? Math.max(0, monotonicNow - currentSnapshot.receivedAt) : 0;
+  const remaining = currentSnapshot?.reserva
     ? Math.max(
         0,
-        Math.ceil((Date.parse(snapshot.reserva.expiraAt) - snapshot.serverMs - elapsed) / 1000),
+        Math.ceil(
+          (Date.parse(currentSnapshot.reserva.expiraAt) - currentSnapshot.serverMs - elapsed) /
+            1000,
+        ),
       )
     : 0;
-  const reservation = snapshot?.reserva ?? null;
+  const reservation = currentSnapshot?.reserva ?? null;
   const held = reservation?.estado === "vigente" || reservation?.estado === "pago_en_curso";
-  const live = held && remaining > 0;
+  const live = reservation?.estado === "pago_en_curso" || (held && remaining > 0);
   useEffect(() => {
-    if (!held || remaining > 0) return;
+    if (!held || reservation?.estado === "pago_en_curso" || remaining > 0) return;
     // Cero local pide confirmación al servidor. No libera ni concede acceso local.
     const timer = window.setTimeout(refetch, 100);
     return () => window.clearTimeout(timer);
-  }, [held, remaining, refetch]);
+  }, [held, remaining, refetch, reservation?.estado]);
 
   async function change(next: "ampliar" | "liberar") {
     if (!reservation || action || mutation.current) return;
@@ -103,7 +116,7 @@ export function useStudentReservation(onClosed: () => void) {
     version.current++;
     setAction(next);
     try {
-      accept(await studentScheduleApi.change(reservation.id, next));
+      accept(await transport.change(reservation.id, next));
     } catch (err) {
       setError(scheduleError(err));
       refetch();
@@ -123,7 +136,7 @@ export function useStudentReservation(onClosed: () => void) {
     held,
     error,
     checking,
-    ready: snapshot !== null,
+    ready: enabled && currentSnapshot !== null,
     action,
     change,
     reserved,

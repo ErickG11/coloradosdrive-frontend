@@ -13,17 +13,31 @@ vi.mock("next/navigation", () => ({
 }));
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(api.get).mockResolvedValue(graduationStudent);
+  vi.mocked(api.get).mockImplementation(async (path: string) =>
+    path === "/admin/estudiantes/" + graduationStudent.id
+      ? graduationStudent
+      : path.includes("/practice-slots/blocks/admin-absences")
+        ? []
+        : { enrollments: [] },
+  );
 });
+/** La ficha pide aparte faltas y acceso a matrículas; aquí solo importa el GET de la ficha. */
+function fichaCalls() {
+  return vi
+    .mocked(api.get)
+    .mock.calls.filter(([path]) => path === "/admin/estudiantes/" + graduationStudent.id);
+}
 it("muestra encabezado, pendientes primero y datos concretos del alumno con pagos y horas parciales", () => {
   render(<StudentProfile student={graduationStudent} />);
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Alumno ficticio");
   expect(screen.getByText(graduationStudent.cedula)).toBeInTheDocument();
   expect(screen.getByText(graduationStudent.correo!)).toBeInTheDocument();
   expect(screen.getByText("Faltan 4 requisitos")).toBeInTheDocument();
-  const section = screen.getByRole("region", { name: "Requisitos de Curso ficticio" });
+  const summary = screen.getByText(/Curso ficticio · 4 pendientes/);
+  fireEvent.click(summary);
+  const section = summary.closest("details")!;
   const rows = within(section).getAllByRole("listitem");
-  expect(rows.slice(0, 4).every((r) => r.textContent?.startsWith("Pendiente"))).toBe(true);
+  expect(rows.slice(0, 4).every((r) => r.textContent?.includes("Pendiente"))).toBe(true);
   expect(rows[4]).toHaveTextContent("Cumplido");
   for (const text of [
     "Saldo pendiente $70.00; abonado $30.00",
@@ -36,8 +50,7 @@ it("muestra encabezado, pendientes primero y datos concretos del alumno con pago
 it("una sola petición GET entrega encabezado, requisitos y horario", async () => {
   render(<StudentDetail id={graduationStudent.id} />);
   await screen.findByText("Faltan 4 requisitos");
-  expect(api.get).toHaveBeenCalledTimes(1);
-  expect(api.get).toHaveBeenCalledWith("/admin/estudiantes/" + graduationStudent.id);
+  expect(fichaCalls()).toHaveLength(1);
   expect(api.post).not.toHaveBeenCalled();
   expect(api.patch).not.toHaveBeenCalled();
 });
@@ -91,15 +104,12 @@ it("horario vacío y nombres/asistencia no disponibles sin inventarlos", () => {
   expect(screen.getByText("Asistencia sin registrar")).toBeInTheDocument();
 });
 it("error de la ficha y reintento recargan el mismo endpoint", async () => {
-  vi.mocked(api.get).mockRejectedValueOnce(new ApiError("No se pudo consultar estudiantes", 503));
+  vi.mocked(api.get).mockImplementationOnce(async () => {
+    throw new ApiError("No se pudo consultar estudiantes", 503);
+  });
   render(<StudentDetail id={graduationStudent.id} />);
   await screen.findByRole("alert");
   fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
   await screen.findByText("Faltan 4 requisitos");
-  await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
-  expect(
-    vi
-      .mocked(api.get)
-      .mock.calls.every(([path]) => path === "/admin/estudiantes/" + graduationStudent.id),
-  ).toBe(true);
+  await waitFor(() => expect(fichaCalls()).toHaveLength(2));
 });
