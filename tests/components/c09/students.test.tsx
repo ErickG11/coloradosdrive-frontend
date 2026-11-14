@@ -67,7 +67,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.post).mockResolvedValue({});
 });
-it("asignación abre panel derecho, exige selección y motivo y muestra la comprobación", async () => {
+it("asignación abre el panel lateral, exige selección y motivo y muestra la comprobación", async () => {
   const user = userEvent.setup(),
     onSaved = vi.fn();
   render(
@@ -80,8 +80,7 @@ it("asignación abre panel derecho, exige selección y motivo y muestra la compr
       onDeletionPending={vi.fn()}
     />,
   );
-  const dialog = screen.getByRole("dialog", { name: "Asignar cohorte" });
-  expect(dialog.parentElement).toHaveClass("justify-end");
+  expect(screen.getByRole("complementary", { name: "Asignar cohorte" })).toBeInTheDocument();
   const submit = screen.getByRole("button", { name: "Confirmar asignación" });
   expect(submit).toBeDisabled();
   await user.selectOptions(screen.getByLabelText("Cohorte"), cohortOptions.items[0].id);
@@ -115,9 +114,7 @@ it("cambio lista solo destinos abiertos con cupo y conserva la versión exacta",
       onChanged={onChanged}
     />,
   );
-  expect(screen.getByRole("dialog", { name: "Cambiar de cohorte" }).parentElement).toHaveClass(
-    "justify-end",
-  );
+  expect(screen.getByRole("complementary", { name: "Cambiar de cohorte" })).toBeInTheDocument();
   expect(screen.queryByRole("option", { name: /Cerrada|Completa|Actual/ })).not.toBeInTheDocument();
   expect(screen.getByRole("option", { name: /15 cupos libres/ })).toBeInTheDocument();
   const submit = screen.getByRole("button", { name: "Confirmar cambio de cohorte" });
