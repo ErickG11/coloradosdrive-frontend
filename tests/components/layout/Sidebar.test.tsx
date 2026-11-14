@@ -93,8 +93,8 @@ it("C09: alumno con acceso ve todos los módulos y Mi inscripción", () => {
   for (const name of [
     "Mi panel",
     "Mi inscripción",
+    // Los exámenes viven dentro de «Mi curso»: ya no hay un enlace propio.
     "Mi curso",
-    "Exámenes",
     "Horarios de práctica",
     "Documentos para llevar",
     "Mi historial de asistencia",
