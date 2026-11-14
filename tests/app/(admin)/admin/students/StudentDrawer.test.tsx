@@ -100,17 +100,23 @@ beforeEach(() => {
 });
 
 describe("C10 vistas de alumno", () => {
-  it("Ficha contiene solo Información y Prácticas, con acciones en el encabezado", () => {
+  it("Ficha contiene solo Información y Prácticas; editar y gestionar la cuenta son otra vista", () => {
     render(<StudentDetail id={id} embedded />);
     const tabs = within(screen.getByRole("tablist", { name: "Ficha del alumno" }));
     expect(tabs.getAllByRole("tab")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Contacto" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Cuenta y acceso" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Asignar cohorte" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Más acciones del alumno")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Desactivar" })).not.toBeInTheDocument();
     fireEvent.click(tabs.getByRole("tab", { name: "Prácticas" }));
     expect(screen.getByText("Horario de prácticas")).toBeInTheDocument();
+  });
+  it("la vista Editar incluye el formulario y la sección Gestionar cuenta", () => {
+    render(<StudentDetail id={id} embedded view="editar" />);
+    expect(screen.queryByRole("tablist", { name: "Ficha del alumno" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Desactivar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Eliminar definitivamente" })).toBeInTheDocument();
   });
   it.each([
     ["ficha", "Ficha"],
@@ -132,7 +138,7 @@ describe("C10 vistas de alumno", () => {
       "",
       `/admin/students/${id}?page=1&activo=true&vista=${view}`,
     );
-    const drawer = screen.getByRole("dialog", { name: "Alumno ficticio" });
+    const drawer = screen.getByRole("complementary", { name: "Alumno ficticio" });
     fireEvent.click(within(drawer).getByRole("button", { name: "Cerrar panel" }));
     expect(pushState).toHaveBeenLastCalledWith(null, "", "/admin/students?page=1&activo=true");
     pushState.mockRestore();
@@ -143,7 +149,7 @@ describe("C10 vistas de alumno", () => {
   ])("recargar el enlace %s conserva la vista", (view, label) => {
     navigation.params = new URLSearchParams(`vista=${view}`);
     render(<StudentsList initialSelected={id} />);
-    expect(screen.getByRole("dialog", { name: "Alumno ficticio" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Alumno ficticio" })).toBeInTheDocument();
     expect(
       screen.getByRole(view === "matriculas" ? "button" : "group", { name: label }),
     ).toBeInTheDocument();
@@ -152,7 +158,7 @@ describe("C10 vistas de alumno", () => {
   it("Matrículas abre la elección dentro del mismo panel y permite volver", () => {
     render(<StudentDetail id={id} embedded view="matriculas" />);
     fireEvent.click(screen.getByRole("button", { name: "Asignar cohorte" }));
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getAllByRole("complementary")).toHaveLength(1);
     expect(screen.getByLabelText("Motivo de la asignación")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Volver a Matrículas" }));
     expect(screen.getByRole("button", { name: "Asignar cohorte" })).toBeInTheDocument();
@@ -191,7 +197,7 @@ describe("C10 vistas de alumno", () => {
           : original(path)) as typeof useFetch);
     render(<StudentDetail id={id} embedded view="matriculas" />);
     fireEvent.click(screen.getByRole("button", { name: "Cambiar de cohorte" }));
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getAllByRole("complementary")).toHaveLength(1);
     expect(screen.getByLabelText("Motivo del cambio de cohorte")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Volver a Matrículas" }));
     expect(screen.getByRole("button", { name: "Cambiar de cohorte" })).toBeInTheDocument();
