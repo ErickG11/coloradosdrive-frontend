@@ -29,8 +29,7 @@ const categories = {
 };
 const effectBox =
   "rounded-md border border-border bg-bg-sunken px-3 py-2 text-sm text-text-primary";
-const range = (startsAt: string, endsAt: string) =>
-  `${blockTime(startsAt)} – ${blockTime(endsAt)}`;
+const range = (startsAt: string, endsAt: string) => `${blockTime(startsAt)} – ${blockTime(endsAt)}`;
 
 // Un solo paso: cambiar a otra hora del mismo día con el mismo instructor, o avisar la falta.
 export function BlockDialog({
@@ -69,10 +68,26 @@ export function BlockDialog({
     void load();
   }
   useEffect(() => {
-    void load();
-    // Solo al abrir: la vista previa se consulta una vez por apertura.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Se consulta una vez por apertura; el estado solo cambia cuando responde el servidor.
+    let alive = true;
+    api.get<PracticeBlockResolutionPreview>(`${base}/resolution-preview`).then(
+      (value) => {
+        if (!alive) return;
+        setPreview(value);
+        setError(null);
+        setAction((current) => current ?? (value.started ? null : value.canMove ? null : "falta"));
+        setLoading(false);
+      },
+      (e: unknown) => {
+        if (!alive) return;
+        setError(message(e));
+        setLoading(false);
+      },
+    );
+    return () => {
+      alive = false;
+    };
+  }, [base]);
   const ready =
     Boolean(preview) &&
     !preview?.started &&
@@ -300,8 +315,11 @@ export function TakeBlockDialog({
           {blockDate(option.startsAt)} · con {option.instructorName}
         </p>
         <p className={effectBox}>
-          Cambiarás tu bloque {source ? range(source, new Date(Date.parse(source) + option.hours * 3600000).toISOString()) : ""} por{" "}
-          {range(option.startsAt, option.endsAt)}. Consumirá 1 reprogramación; te quedará{" "}
+          Cambiarás tu bloque{" "}
+          {source
+            ? range(source, new Date(Date.parse(source) + option.hours * 3600000).toISOString())
+            : ""}{" "}
+          por {range(option.startsAt, option.endsAt)}. Consumirá 1 reprogramación; te quedará{" "}
           {option.remaining}.
         </p>
         <FormError>{error}</FormError>
