@@ -23,7 +23,6 @@ function show(active = true, pending = false) {
       onBusyChange={onBusyChange}
     />,
   );
-  fireEvent.click(screen.getByLabelText("Más acciones del alumno"));
 }
 function deletion() {
   fireEvent.click(screen.getByRole("button", { name: "Eliminar definitivamente" }));
@@ -122,7 +121,13 @@ describe("acciones en ficha", () => {
       recuperacionPendiente: false,
     });
     show(active);
-    expect(screen.getByText(active ? "Activo" : "Inactivo")).toBeInTheDocument();
+    // El estado de la cuenta decide la acción que ofrece la sección «Gestionar cuenta».
+    expect(
+      screen.getByRole("button", { name: active ? "Desactivar" : "Reactivar" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: active ? "Reactivar" : "Desactivar" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: active ? "Desactivar" : "Reactivar" }));
     fireEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
