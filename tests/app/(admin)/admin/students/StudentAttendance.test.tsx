@@ -224,27 +224,37 @@ describe("asistencia administrativa E4", () => {
       corrected = true;
       return { id: "slot", attended: false };
     });
-    vi.mocked(api.get).mockImplementation(async () => ({
-      ...graduationStudent,
-      practiceSchedule: { upcoming: [], recovery: [], recent: [{ ...row, attended: !corrected }] },
-      graduation: {
-        pendingCount: 1,
-        enrollments: [
-          {
-            enrollmentId: "e",
-            courseName: "Curso",
-            checks: [
-              {
-                key: "practice",
-                label: "Práctica",
-                fulfilled: false,
-                detail: corrected ? "0 de 10 horas" : "1 de 10 horas",
-              },
-            ],
+    vi.mocked(api.get).mockImplementation(async (path: string) =>
+      path !== "/admin/estudiantes/" + graduationStudent.id
+        ? path.includes("/practice-slots/blocks/admin-absences")
+          ? []
+          : { enrollments: [] }
+        : {
+            ...graduationStudent,
+            practiceSchedule: {
+              upcoming: [],
+              recovery: [],
+              recent: [{ ...row, attended: !corrected }],
+            },
+            graduation: {
+              pendingCount: 1,
+              enrollments: [
+                {
+                  enrollmentId: "e",
+                  courseName: "Curso",
+                  checks: [
+                    {
+                      key: "practice",
+                      label: "Práctica",
+                      fulfilled: false,
+                      detail: corrected ? "0 de 10 horas" : "1 de 10 horas",
+                    },
+                  ],
+                },
+              ],
+            },
           },
-        ],
-      },
-    }));
+    );
     render(<StudentDetail id={graduationStudent.id} onChanged={changed} />);
     expect(await screen.findByText(/1 de 10 horas/)).toBeInTheDocument();
     const user = await showHistory();
@@ -255,6 +265,11 @@ describe("asistencia administrativa E4", () => {
     );
     await user.click(screen.getByRole("button", { name: "Confirmar cambio" }));
     expect(await screen.findByText(/0 de 10 horas/)).toBeInTheDocument();
-    expect(api.get).toHaveBeenCalledTimes(2);
+    // La ficha se vuelve a pedir una vez tras corregir (faltas y acceso son otras consultas).
+    expect(
+      vi
+        .mocked(api.get)
+        .mock.calls.filter(([path]) => path === "/admin/estudiantes/" + graduationStudent.id),
+    ).toHaveLength(2);
   });
 });
