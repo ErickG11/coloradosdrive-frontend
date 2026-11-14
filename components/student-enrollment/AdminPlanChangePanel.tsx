@@ -1,12 +1,9 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Input } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
-import type {
-  PlanChangeState,
-  PlanChangeCalendar,
-} from "@/types/adminPlanChange";
+import type { PlanChangeState, PlanChangeCalendar } from "@/types/adminPlanChange";
 import type {
   StudentScheduleSelection,
   StudentScheduleReservation,
@@ -14,7 +11,6 @@ import type {
 } from "@/types/studentSchedule";
 import { useStudentReservation } from "./useStudentReservation";
 import { ReservationBanner } from "./ReservationBanner";
-import { SchedulePlanView } from "./SchedulePlanView";
 import { PlanFields } from "./PlanFields";
 import type { StudentPlanRules, StudentScheduleStartOption } from "@/types/studentSchedule";
 import { dayLabelLong, plural } from "./scheduleFormat";
@@ -123,8 +119,14 @@ function AdminPlanChangeForm({ enrollmentId, studentId, onChanged }: Props) {
     meta.data?.active && meta.data.canChange && !pending && selectedMonth && input.horasPorDia
       ? `${root}|${selectedMonth}|${input.modalidad}|${input.horasPorDia}`
       : null;
+  // La fecha elegida no debe volver a lanzar la consulta del calendario: se lee al responder.
+  const startRef = useRef(input.fechaInicio);
+  useEffect(() => {
+    startRef.current = input.fechaInicio;
+  }, [input.fechaInicio]);
   useEffect(() => {
     if (!calendarKey) return;
+    const requestedStart = startRef.current;
     const abort = new AbortController();
     void api
       .post<PlanChangeCalendar>(
@@ -140,10 +142,10 @@ function AdminPlanChangeForm({ enrollmentId, studentId, onChanged }: Props) {
       .then((data) => {
         if (!abort.signal.aborted) {
           setCalendar({ key: calendarKey, data });
-          const selected = data.dias.find((d) => d.fecha === input.fechaInicio);
+          const selected = data.dias.find((d) => d.fecha === requestedStart);
           if (selected && !selected.disponible)
             setInput((current) =>
-              current.fechaInicio === input.fechaInicio &&
+              current.fechaInicio === requestedStart &&
               current.horasPorDia === input.horasPorDia &&
               current.modalidad === input.modalidad
                 ? { ...current, fechaInicio: "", horaInicio: -1 }
