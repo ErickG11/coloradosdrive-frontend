@@ -145,7 +145,7 @@ async function draft(existing = false, birthDate?: string) {
     await user.click(screen.getByRole("button", { name: "Buscar estudiante" }));
     await user.click(await screen.findByRole("button", { name: /Ana existente/ }));
   } else {
-    fireEvent.change(screen.getByLabelText("Cédula"), { target: { value: "1234567890" } });
+    fireEvent.change(screen.getByLabelText("Cédula"), { target: { value: "1710034065" } });
     fireEvent.change(screen.getByLabelText("Nombres completos"), {
       target: { value: "Ana nueva" },
     });
