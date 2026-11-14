@@ -302,10 +302,19 @@ describe("NotificationBell", () => {
     expect(screen.getByRole("button", { name: "Notificaciones, 1 sin leer" })).toBeInTheDocument();
   });
 
-  it.each(["admin", null] as const)("no monta campana ni consulta para %s", (role) => {
-    render(<NotificationBell role={role} />);
+  it("sin rol no monta campana ni consulta", () => {
+    render(<NotificationBell role={null} />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(get).not.toHaveBeenCalled();
+  });
+
+  it("el administrador también monta la campana y consulta sus avisos", async () => {
+    get.mockResolvedValue(page([first]));
+    render(<NotificationBell role="admin" />);
+    expect(
+      await screen.findByRole("button", { name: "Notificaciones, 1 sin leer" }),
+    ).toBeInTheDocument();
+    expect(get).toHaveBeenCalled();
   });
 
   it("abortar al desmontar evita navegar por una lectura que termino despues", async () => {
