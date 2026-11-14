@@ -69,7 +69,7 @@ describe("CancelPracticeModal", () => {
     await user.click(screen.getByRole("button", { name: "Confirmar que no asistiré" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(status === 400
       ? "Revisa el motivo e inténtalo de nuevo."
-      : "Revisa el motivo o la matrícula");
+      : "El horario cambió. Revisa tu agenda e inténtalo de nuevo.");
     expect(screen.getByRole("button", { name: "Confirmar que no asistiré" })).toBeEnabled();
     await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
