@@ -35,7 +35,7 @@ describe("proxy por rol y estado del instructor", () => {
       const response = await visit("/admin/instructors");
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe(
-        `http://localhost:3001/${role === "estudiante" ? "student" : "instructor"}`,
+        `http://localhost:3001/${role === "estudiante" ? "student/dashboard" : "instructor"}`,
       );
       expect(fetchMock).not.toHaveBeenCalled();
     },
@@ -45,7 +45,9 @@ describe("proxy por rol y estado del instructor", () => {
     session("admin");
     expect((await visit("/instructor")).headers.get("location")).toBe("http://localhost:3001/admin");
     session("estudiante");
-    expect((await visit("/instructor")).headers.get("location")).toBe("http://localhost:3001/student");
+    expect((await visit("/instructor")).headers.get("location")).toBe(
+      "http://localhost:3001/student/dashboard",
+    );
   });
 
   it("envía al instructor con clave temporal a cambiarla y permite esa ruta", async () => {
@@ -69,7 +71,7 @@ describe("proxy por rol y estado del instructor", () => {
 
   it.each([
     ["admin", "/admin"],
-    ["estudiante", "/student"],
+    ["estudiante", "/student/dashboard"],
     ["instructor", "/instructor"],
   ] as [Role, string][])("redirige /login con sesión de %s a su home", async (role, home) => {
     session(role);
@@ -105,7 +107,7 @@ describe("proxy por rol y estado del instructor", () => {
     session("estudiante");
     fetchMock.mockImplementation(async () => Response.json({ mustChangePassword: true, inscripcionIncompleta: false }));
     const first = await visit("/login");
-    expect(first.headers.get("location")).toBe("http://localhost:3001/student");
+    expect(first.headers.get("location")).toBe("http://localhost:3001/student/dashboard");
     const second = await visit("/student");
     expect(second.headers.get("location")).toBe("http://localhost:3001/student/change-password");
     expect((await visit("/student/change-password")).status).toBe(200);
@@ -114,7 +116,9 @@ describe("proxy por rol y estado del instructor", () => {
   it("envía al estudiante desactivado con JWT vigente a /account-inactive, también desde /login", async () => {
     session("estudiante");
     fetchMock.mockResolvedValue(new Response(null, { status: 403 }));
-    expect((await visit("/login")).headers.get("location")).toBe("http://localhost:3001/student");
+    expect((await visit("/login")).headers.get("location")).toBe(
+      "http://localhost:3001/student/dashboard",
+    );
     expect((await visit("/student")).headers.get("location")).toBe(
       "http://localhost:3001/account-inactive",
     );
