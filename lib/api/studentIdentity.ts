@@ -8,20 +8,19 @@ export interface StudentIdentityResult {
   enrollmentId: string;
 }
 
-export function confirmStudentIdentity(studentId: string, motivo: string) {
+// La observación es opcional (ADR 027 del backend): sin ella se envía un cuerpo vacío.
+export function confirmStudentIdentity(studentId: string, motivo?: string) {
   return api.post<StudentIdentityResult>(
     `/admin/estudiantes/${studentId}/identidad-presencial`,
-    { motivo },
+    motivo ? { motivo } : {},
     { signal: AbortSignal.timeout(30_000) },
   );
 }
 
 const MESSAGES: Record<string, string> = {
-  MOTIVO_INVALIDO: "Escribe un motivo de 10 a 300 caracteres.",
+  MOTIVO_INVALIDO: "La observación debe tener entre 10 y 300 caracteres.",
   ALUMNO_NO_ENCONTRADO: "Alumno no encontrado. Recarga la ficha.",
   ALUMNO_SIN_SOLICITUD: "La matrícula más reciente no proviene de una solicitud de inscripción.",
-  VENTANA_IDENTIDAD_NO_VENCIDA:
-    "La confirmación manual requiere una práctica cuyo plazo del instructor ya venció (48 horas después del fin).",
   ACCESO_DENEGADO: "Se requiere un administrador activo para confirmar la identidad.",
   MFA_REQUERIDA: "Verifica tu segundo factor antes de confirmar la identidad.",
   INVALID_FIELD: "Revisa los datos de la confirmación.",

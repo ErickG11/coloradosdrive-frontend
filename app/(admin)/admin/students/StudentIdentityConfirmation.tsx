@@ -29,7 +29,8 @@ export function StudentIdentityConfirmation({
     .normalize("NFC")
     .trim();
   const length = Array.from(normalized).length;
-  const valid = length >= 10 && length <= 300;
+  // La observación es opcional; si se escribe, debe tener entre 10 y 300 caracteres.
+  const valid = length === 0 || (length >= 10 && length <= 300);
 
   function close() {
     if (!submitting.current) onClose();
@@ -42,7 +43,7 @@ export function StudentIdentityConfirmation({
     setBusy(true);
     setFailure(null);
     try {
-      await confirmStudentIdentity(studentId, normalized);
+      await confirmStudentIdentity(studentId, normalized || undefined);
       onSaved();
     } catch (error) {
       setFailure(studentIdentityError(error));
@@ -53,25 +54,24 @@ export function StudentIdentityConfirmation({
   }
 
   return (
-    <Modal isOpen title="Confirmar identidad manualmente" onClose={close}>
+    <Modal isOpen title="Confirmar identidad" onClose={close}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <p className="text-sm text-text-secondary">
-          Confirma que revisaste la identidad presencialmente. Esta acción se permite después del
-          plazo del instructor y queda auditada con tu usuario y el motivo.
+          Confirma que revisaste la cédula original del alumno. Puedes hacerlo en cualquier momento
+          y queda registrado con tu usuario y la fecha.
         </p>
         <Input
           id={reasonId}
           name="motivo"
-          label="Motivo (10 a 300 caracteres)"
+          label="Observación (opcional, 10 a 300 caracteres)"
           value={motivo}
           onChange={(event) => setMotivo(event.target.value)}
-          required
           maxLength={1200}
           disabled={busy || failure?.reload}
           aria-describedby={`${reasonId}-ayuda ${reasonId}-contador`}
         />
         <p id={`${reasonId}-ayuda`} className="text-sm text-text-secondary">
-          Explica la razón operativa sin incluir datos personales.
+          Si escribes una observación, no incluyas datos personales.
         </p>
         <p id={`${reasonId}-contador`} className="text-sm text-text-secondary" aria-live="polite">
           {length}/300 caracteres

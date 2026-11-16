@@ -406,7 +406,7 @@ export function StudentDetail({
           }
           onClick={() => setConfirmingIdentity(true)}
         >
-          Confirmar identidad manualmente
+          Confirmar identidad
         </Button>
       )}
     </>
