@@ -96,3 +96,35 @@ Lote 10: selectores de documento y representante, contacto según capacidad, res
 ## Instrucción posterior de cierre L11/L12
 
 No escribir ni ejecutar pruebas automáticas, lint o build. Única excepción al final: tipos en ambos repos y una instalación local completa 001–última con las verificaciones existentes; corregir y repetir solo el fallo. Privacidad, permisos, catálogo, concurrencia y QA de componentes de la punta final permanecen pendientes. No añadir skips. Las guías de cada lote se conservan; no se crea guía consolidada nueva.
+
+## CD-346 · Exportar reportes (RF-08)
+
+Automatizadas: `tests/lib/api/reports.test.ts` y `tests/components/reports/ReportExport.test.tsx` (estados, errores, filtros enviados, rol, teclado). No sustituyen las pruebas manuales de abajo, que dependen del navegador real.
+
+### Guía de prueba manual del frontend (pendiente de ejecutar)
+
+Preparación: frontend y backend corriendo con datos de demostración; sesión de administrador (y una de instructor y otra de alumno). Pantalla: `/admin`, sección «Exportar reportes» bajo el resumen.
+
+| N.º | Paso | Resultado esperado |
+| --- | --- | --- |
+| 1 | Entrar como instructor y como alumno | La sección «Exportar reportes» no aparece; el ranking de instructores tampoco |
+| 2 | Entrar como administrador | Aparece la sección con Desde, Hasta, Tipo de curso, Cohorte y Reporte; el período es el mes en curso |
+| 3 | Para cada reporte (matrículas, asistencia, exámenes, finanzas, instructores, todos): Exportar → PDF | Toast verde «Reporte descargado»; el archivo se descarga con nombre `reporte-<tipo>-<desde>_<hasta>.pdf` |
+| 4 | Lo mismo con Excel | Descarga `.xlsx` con una hoja por reporte |
+| 5 | Cambiar fechas, tipo de curso y cohorte y exportar | El resumen de filtros junto al botón coincide; el documento muestra los mismos filtros |
+| 6 | Elegir Tipo B y mirar el selector de cohortes | Solo aparecen cohortes tipo B; una cohorte tipo A elegida antes se limpia |
+| 7 | Poner «Desde» posterior a «Hasta» | Error junto al campo; al exportar aparece «Corrige las fechas antes de exportar.» y no se descarga nada |
+| 8 | Poner un rango de más de 366 días | Error junto a «Hasta» |
+| 9 | Período sin datos (por ejemplo, enero de 2020) | El PDF y el Excel dicen «Sin datos para el período seleccionado» |
+| 10 | Abrir el Excel y comparar con el PDF y con el panel `/admin` | Mismas cifras; en Excel las cifras son números con formato de moneda y de porcentaje |
+| 11 | En Excel: congelar paneles, filtro automático y totales | Encabezado fijo, filtro en la fila de títulos, fila de totales |
+| 12 | Hacer doble clic rápido en «Exportar» y elegir un formato | Una sola descarga; el botón queda deshabilitado y dice «Generando…» |
+| 13 | Exportar más de 20 veces seguidas | Aviso «Hiciste demasiadas exportaciones…» sin toast verde |
+| 14 | Quitar la red o apagar el backend y exportar | Aviso en español; la pantalla sigue usable |
+| 15 | Con la sesión expirada, exportar | Aviso «Tu sesión expiró…» |
+| 16 | Con `ADMIN_MFA_REQUIRED=true` y sesión sin segundo factor | Redirige al desafío de segundo factor |
+| 17 | En Safari de iOS y en Chrome de Android: exportar PDF y Excel | Se descarga, o aparece el enlace «Abrir …» y funciona |
+| 18 | Probar con 375, 768 y 1440 px de ancho | Sin desplazamiento horizontal; el botón ocupa todo el ancho en móvil; filtros en 1, 2 y 5 columnas |
+| 19 | Probar modo claro y modo oscuro | Textos legibles, errores y foco visibles en ambos |
+| 20 | Usar solo teclado: Tab hasta «Exportar», flecha abajo, flechas, Escape, Enter | El menú se abre, se recorre, se cierra con Escape devolviendo el foco, y Enter descarga |
+| 21 | Con un lector de pantalla | Se anuncia «Generando el reporte…» y los errores |
