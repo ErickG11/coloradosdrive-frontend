@@ -69,6 +69,8 @@ export function useAttendance(from: string, to: string, valid: boolean) {
   useEffect(() => {
     void load();
     return () => {
+      // generation es un contador de versiones, no un nodo del DOM: se necesita su valor actual.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       generation.current++;
     };
   }, [load]);
