@@ -128,3 +128,36 @@ Preparación: frontend y backend corriendo con datos de demostración; sesión d
 | 19 | Probar modo claro y modo oscuro | Textos legibles, errores y foco visibles en ambos |
 | 20 | Usar solo teclado: Tab hasta «Exportar», flecha abajo, flechas, Escape, Enter | El menú se abre, se recorre, se cierra con Escape devolviendo el foco, y Enter descarga |
 | 21 | Con un lector de pantalla | Se anuncia «Generando el reporte…» y los errores |
+
+## CD-364 · Agenda del instructor y asistencias por bloques
+
+Rama `integracion/cierre-sprint-6`. Antes de probar, el backend de la misma rama debe estar levantado. Prepara un instructor con franjas confirmadas esta semana (algunas ya terminadas), un alumno con cohorte de tipo A y otro de tipo B, y un administrador. Cada paso se prueba con 375, 768 y 1440 px de ancho y en modo claro y oscuro (pasos 21 y 22).
+
+### Guía de prueba manual (pendiente de ejecutar)
+
+| # | Acción | Resultado esperado |
+| --- | --- | --- |
+| 1 | Entrar como instructor y abrir «Mi agenda» en 1440 px | Se abre en vista **Semana**, con las horas del día en filas, la hora actual marcada y la siguiente práctica destacada con su cuenta regresiva |
+| 2 | Abrir la misma pantalla en 375 px | Se abre en vista **Día**; hay un selector L M X J V S D y se puede pasar a Semana sin esperar una carga nueva |
+| 3 | Revisar una franja con alumno | Muestra curso (A o B) y cohorte; una franja libre no muestra datos de alumno |
+| 4 | Hacer clic en un bloque | Se abre el detalle con alumno, cohorte y horas; Escape lo cierra y devuelve el foco al bloque |
+| 5 | Navegar a la semana anterior y siguiente, y pulsar «Hoy» | Cambia la semana, se conserva el día de la semana y vuelve a hoy |
+| 6 | Revisar el resumen de la parte superior | Cuenta horas y alumnos distintos de hoy y de la semana; una hora pendiente de asistencia aparece en el aviso |
+| 7 | Pulsar el aviso de horas pendientes | Abre «Asistencias» con el rango de la semana |
+| 8 | En «Asistencias» registrar una hora **terminada** como Asistió y otra como Faltó | Se guarda, aparece el mensaje de éxito en verde y las horas pasan a la pestaña de registradas |
+| 9 | Intentar registrar una hora que **no ha terminado** | No hay botón para guardar y se explica que aún no está completada |
+| 10 | Registrar un bloque de dos horas | Se registran las dos horas y el resumen del bloque se actualiza |
+| 11 | Intentar corregir una hora ya registrada | Pide un motivo de 10 a 500 caracteres; con el motivo se guarda. Si la ventana ya cerró, indica que pida la corrección al administrador |
+| 12 | Provocar un error (apagar el backend) y reintentar | El error se muestra, el diálogo y el motivo se conservan y se puede reintentar |
+| 13 | Como administrador, cambiar el horario de una franja con instructor asignado | El instructor recibe el aviso; al pulsarlo «Mi agenda» abre el **día afectado** (parámetro `fecha`) |
+| 14 | Con la agenda abierta, llegar un aviso para otro día | La agenda cambia al día del aviso sin recargar la página |
+| 15 | Abrir el menú del instructor | Tiene «Mi agenda», «Asistencias» y «Cambiar contraseña» como en los demás roles; «Cambiar contraseña» abre la pantalla y cambia la clave |
+| 16 | Apagar solo la consulta de bloques (simulando un error 500 en `/practice-slots/blocks/instructor-groups`) | Las franjas se muestran una por hora y aparece el aviso de bloques no disponibles |
+| 17 | Abrir una franja con alumno proveniente de solicitud | **No hay** ningún control para confirmar la cédula original (ADR 026 del backend) |
+| 18 | Como alumno con solicitud, abrir «Documentos» y el estado de inscripción | Los textos dicen que la escuela verificará la cédula, no el instructor |
+| 19 | Como administrador, abrir la ficha de un alumno de solicitud | Sigue existiendo «Confirmar identidad manualmente» (con motivo; solo permitido 48 horas después de una práctica, ver pendientes) |
+| 20 | No regresión: Panel del administrador (exportar un reporte), cohortes, estudiantes y Mi panel del alumno | Siguen abriendo y funcionando igual |
+| 21 | Repetir los pasos 1, 2, 4, 8 y 15 en modo oscuro | Textos legibles, foco y errores visibles; la línea de «ahora» se distingue |
+| 22 | Repetir en 375, 768 y 1440 px | Sin desplazamiento horizontal de la página; el calendario semanal se desplaza dentro de su propio contenedor; objetivos táctiles cómodos |
+| 23 | Usar solo teclado: Tab por la agenda, Enter en un bloque, Escape, Tab hasta los botones de asistencia | El orden de foco es lógico, el foco es visible y Escape cierra el detalle y el diálogo |
+| 24 | Con un lector de pantalla en «Asistencias» | Se anuncia el resultado del guardado y los errores |
