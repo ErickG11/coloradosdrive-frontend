@@ -43,6 +43,8 @@ function AttendanceWorkspace() {
     const start = parseSchoolDateKey(linkedFrom) ?? parseSchoolDateKey(fecha);
     const end = parseSchoolDateKey(linkedTo) ?? parseSchoolDateKey(fecha);
     if (start && end) {
+      // Un enlace nuevo (?desde, ?hasta o ?fecha) reemplaza el rango; solo corre cuando cambia.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFrom(dayKey(start));
       setTo(dayKey(end));
     }

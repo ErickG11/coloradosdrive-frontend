@@ -36,11 +36,15 @@ export function useInstructorPracticeSlots(fecha: string | null) {
     if (appliedFecha.current === fecha) return;
     appliedFecha.current = fecha;
     const date = parseSchoolDateKey(fecha);
+    // Un aviso nuevo (?fecha) cambia la semana pedida; solo corre cuando cambia el parámetro.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (date) requestWeek(date);
   }, [fecha, requestWeek]);
 
   useEffect(() => {
     let active = true;
+    // Marca la carga antes de pedir la semana: sincroniza el estado con la petición externa.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     setError(null);
     const params = new URLSearchParams(schoolWeekRange(requestedWeek));
