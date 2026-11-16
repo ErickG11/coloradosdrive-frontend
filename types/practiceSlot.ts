@@ -1,3 +1,5 @@
+import type { CourseType } from "./course";
+
 export const PRACTICE_SLOT_STATUSES = [
   "disponible",
   "asignado",
@@ -34,6 +36,9 @@ export interface PracticeSlot {
 export interface PracticeSlotWithNames extends PracticeSlot {
   instructorName: string;
   studentName: string | null;
+  // Solo el listado del instructor añade estos campos cuando existe la relación.
+  courseType?: CourseType;
+  cohortName?: string;
 }
 
 // La selección del estudiante no revela al instructor en franjas libres.

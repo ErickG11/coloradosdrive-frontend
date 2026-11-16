@@ -16,7 +16,6 @@ import type {
   EnvioSolicitudResult,
   EstadoInscripcion,
   EstadoInscripcionAlumno,
-  IdentidadPresencialInput,
   InscripcionConfig,
   ListaSolicitudes,
   ListarSolicitudesParams,
@@ -260,9 +259,3 @@ export const reenviarEnlaceAcceso = (studentId: string) =>
 // ---------------------------------------------------------------------------
 export const getEstadoInscripcionAlumno = () =>
   api.get<EstadoInscripcionAlumno>("/estudiantes/estado-inscripcion");
-
-export const confirmarIdentidadPresencial = (slotId: string, input: IdentidadPresencialInput) =>
-  api.patch<{ transicion: boolean; confirmadaAt: string; certificadoOriginalVisto: boolean }>(
-    `/practice-slots/${encodeURIComponent(slotId)}/identidad-presencial`,
-    input,
-  );

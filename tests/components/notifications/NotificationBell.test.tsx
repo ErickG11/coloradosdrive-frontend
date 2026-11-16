@@ -175,6 +175,30 @@ describe("NotificationBell", () => {
     ).toBeInTheDocument();
   });
 
+  it.each([
+    // 03:30 UTC del 28 todavía es 27 de octubre en Guayaquil.
+    ["cambio_agenda_instructor", null, "2026-10-28T03:30:00Z", "/instructor?fecha=2026-10-27"],
+    ["sin_practica_instructor", "slot-1", "2026-10-27T20:00:00Z", "/instructor?fecha=2026-10-27"],
+    ["cambio_agenda_instructor", null, null, "/instructor"],
+    ["sin_practica_instructor", null, "no es una fecha", "/instructor"],
+  ] as const)(
+    "el instructor abre su agenda desde %s (franja %s, fecha %s)",
+    async (tipo, practiceSlotId, scheduledAt, destination) => {
+      const agenda = notice({
+        tipo,
+        titulo: "Cambio de horario de un alumno",
+        practiceSlotId,
+        scheduledAt,
+      });
+      get.mockResolvedValue(page([agenda, second]));
+      patch.mockResolvedValue({ ...agenda, readAt: "2026-10-27T19:45:00Z" });
+      const { user } = await open("instructor");
+      await user.click(screen.getByRole("button", { name: /Cambio de horario de un alumno/ }));
+      expect(push).toHaveBeenCalledExactlyOnceWith(destination);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    },
+  );
+
   it("marca todas como leidas y vacia el contador incluso si otra sesion ya lo hizo", async () => {
     post.mockResolvedValue({ updatedCount: 0 });
     const { user } = await open();
