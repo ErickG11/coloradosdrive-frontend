@@ -201,8 +201,8 @@ export function DocumentsWorkspace() {
                     <h2>Verificación en persona</h2>
                     <p>
                       {data.identidadPresencial.confirmada
-                        ? "Tu instructor comprobó tu cédula original en persona."
-                        : "En tu primera clase tu instructor comprobará tu cédula original. Llévala contigo."}
+                        ? "La escuela comprobó tu cédula original en persona."
+                        : "La escuela comprobará tu cédula original. Llévala contigo."}
                     </p>
                     {data.identidadPresencial.confirmada &&
                     data.identidadPresencial.confirmadaAt &&

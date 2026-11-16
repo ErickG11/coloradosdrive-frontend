@@ -9,11 +9,13 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { XIcon } from "@/components/ui/icons";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { useNotifications } from "@/hooks/useNotifications";
-import { formatPracticeDateTime } from "@/lib/utils/schoolTime";
+import { formatPracticeDateTime, schoolDateKey } from "@/lib/utils/schoolTime";
 import type { Notification } from "@/types/notification";
 import type { Role } from "@/types/user";
 
 const contentNotices = new Set(["contenido_habilitado", "examen_habilitado", "intento_extra"]);
+// Avisos del instructor que abren su agenda en el día del cambio.
+const instructorAgendaNotices = new Set(["cambio_agenda_instructor", "sin_practica_instructor"]);
 
 export function NotificationBell({ role }: { role: Role | null }) {
   if (role !== "estudiante" && role !== "instructor" && role !== "admin") return null;
@@ -34,7 +36,9 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" | "a
   async function read(notification: Notification) {
     const saved = await notifications.markRead(notification);
     if (saved && role === "estudiante" && notification.tipo === "cupo_disponible") {
-      close();router.push("/student/schedule#cupos-disponibles");return;
+      close();
+      router.push("/student/schedule#cupos-disponibles");
+      return;
     }
     if (role === "admin") {
       if (saved) close();
@@ -43,6 +47,12 @@ function UserNotificationBell({ role }: { role: "estudiante" | "instructor" | "a
     if (saved && role === "estudiante" && contentNotices.has(notification.tipo)) {
       close();
       router.push("/student/course");
+      return;
+    }
+    if (saved && role === "instructor" && instructorAgendaNotices.has(notification.tipo)) {
+      const fecha = notification.scheduledAt ? schoolDateKey(notification.scheduledAt) : null;
+      close();
+      router.push(fecha ? `/instructor?fecha=${fecha}` : "/instructor");
       return;
     }
     if (saved && notification.practiceSlotId) {

@@ -55,7 +55,7 @@ export function StudentEstadoInscripcion() {
         <p className="mt-2 text-sm">
           {presencial.confirmada
             ? "Tu cédula original fue verificada en persona."
-            : "Tu instructor verificará tu cédula original en tu primera clase."}
+            : "La escuela verificará tu cédula original."}
         </p>
       ) : null}
       {pendientes.length > 0 ? (

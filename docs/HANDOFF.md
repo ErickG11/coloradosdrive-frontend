@@ -203,3 +203,15 @@ Hay etiquetas `pre-cNN` (por ejemplo `pre-c17`, `pre-c20`, `pre-c25`, `pre-c27`;
 - **C23** — Lista de alumnos compacta, panel lateral fijo y delgado, menú lateral plegable.
 - **C24** — Menú que se pliega liberando el ancho y que sigue el tema; el cambio de tema pasa junto a la campana.
 - **C25** (partes A, B+C y E) — Cabecera y contenido del panel como una sola pieza, «Cambiar horario de prácticas» y «Extender acceso».
+
+---
+
+## Estado al 16/11/2026
+
+- **Reportes (CD-346)** ya está en `main` del frontend (PR #51, `113a012`): `ReportExport` en el panel del administrador, `lib/api/reports.ts` y `types/report.ts`. Guía: `docs/reportes-exportacion.md`.
+- **CD-364 (agenda semanal y diaria del instructor y asistencias por bloques)** se integra con la rama `integracion/cierre-sprint-6`, que conserva con `merge --no-ff` los commits de Johao. La pantalla `app/(instructor)/instructor/page.tsx` es la versión de Johao; contiene la tolerancia a bloques caídos que `main` ya tenía.
+- **Cambio de requisito (control de cambios, 14/11/2026):** el instructor ya no confirma la cédula original; solo la verifica el administrador. Se retiró el control del instructor y los textos del alumno dicen «la escuela». Decisión registrada en el ADR 026 del backend (`docs/adr/026-identidad-solo-administrador.md`).
+- **Pendiente de decisión:** el botón del administrador «Confirmar identidad manualmente» solo funciona 48 horas después de una práctica (función SQL de la migración 056). Para que el administrador verifique sin esa espera hace falta una migración 095 en el backend, que aún no existe.
+- **Orden de fusión:** primero el PR del backend, después este. El frontend consume `cohortName` y `courseType` de `GET /practice-slots`.
+- Las migraciones están en el backend: última la 094; la 093 no consta como aplicada.
+
