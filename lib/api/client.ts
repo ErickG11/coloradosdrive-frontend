@@ -8,7 +8,7 @@ interface ApiFetchOptions extends Omit<RequestInit, "body"> {
   token?: string | null;
 }
 
-async function getAccessToken(): Promise<string | null> {
+export async function getAccessToken(): Promise<string | null> {
   const supabase = createClient();
   const {
     data: { session },
@@ -63,7 +63,7 @@ async function extractError(response: Response): Promise<ApiError> {
 
 // En /mfa y en el panel de seguridad no se redirige: allí se resuelve el factor, y
 // redirigir de nuevo crearía un bucle por las consultas de fondo del panel.
-function redirigirAlDesafioMfa(): void {
+export function redirigirAlDesafioMfa(): void {
   if (typeof window === "undefined") return;
   const { pathname } = window.location;
   if (pathname === "/mfa" || pathname.startsWith("/admin/seguridad")) return;
