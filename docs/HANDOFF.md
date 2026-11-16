@@ -70,6 +70,8 @@ Instructor (`/instructor/...`)
 
 Las variables CSS globales (espaciado, anchos, colores) están en `app/globals.css` y los componentes base en `components/ui/` (se importan desde `components/ui/index.ts`). Reutilízalos antes de crear estilos nuevos. Accesibilidad es requisito: errores junto al campo, foco gestionado, objetivos táctiles de 44 px, respeto a movimiento reducido, textos en español claro.
 
+Exportar reportes a PDF y Excel (RF-08, CD-346): `docs/reportes-exportacion.md`. El panel de CD-345 debe reutilizar `ReportExportMenu` y `GET /admin/reportes`.
+
 ## 6. Qué no se toca sin coordinar
 
 - El asistente de matrícula manual del admin (`app/(admin)/admin/enrollments/wizard/`): tiene conflictos pendientes con `main`.
