@@ -47,6 +47,7 @@ function AttendanceHarness({ initial }: { initial: PracticeSlotWithNames }) {
 }
 
 function response(attended: boolean) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { instructorName: _instructor, studentName: _student, ...fields } = slot;
   return { ...fields, attended };
 }
