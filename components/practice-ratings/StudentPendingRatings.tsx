@@ -7,6 +7,7 @@ import { PracticeRatingModal } from "@/components/practice-ratings/PracticeRatin
 import { usePendingPracticeRatings } from "@/hooks/usePendingPracticeRatings";
 import { formatPracticeDateTime } from "@/lib/utils/schoolTime";
 import type { PendingPracticeRating } from "@/types/practiceRating";
+import { useToast } from "@/components/ui/Toast";
 
 function remaining(closesAt: string, now: number): string {
   const minutes = Math.ceil((Date.parse(closesAt) - now) / 60_000);
@@ -20,6 +21,7 @@ function remaining(closesAt: string, now: number): string {
 
 export function StudentPendingRatings() {
   const pending = usePendingPracticeRatings();
+  const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedId = searchParams.get("calificar");
@@ -126,7 +128,10 @@ export function StudentPendingRatings() {
       <PracticeRatingModal
         practice={practice}
         onClose={close}
-        onSubmitted={submitted}
+        onSubmitted={() => {
+          toast.success("Gracias, tu calificación se envió correctamente.");
+          submitted();
+        }}
         onStale={pending.refetch}
       />
     </>

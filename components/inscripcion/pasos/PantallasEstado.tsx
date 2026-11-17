@@ -18,6 +18,7 @@ import { ContactoWhatsApp } from "./ContactoWhatsApp";
 import { faltantesSolicitud } from "./faltantesSolicitud";
 import formStyles from "../inscripcion.module.css";
 import styles from "./pasos.module.css";
+import { useToast } from "@/components/ui/Toast";
 
 export interface PantallasEstadoProps {
   solicitudId: string;
@@ -158,6 +159,7 @@ function PantallaDevuelta({
   irAPaso,
 }: Pick<PantallasEstadoProps, "solicitudId" | "progreso" | "onProgreso" | "irAPaso">) {
   const titulo = useFocoEnTitulo();
+  const toast = useToast();
   const [error, setError] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const bloqueo = useRef(false);
@@ -175,6 +177,7 @@ function PantallaDevuelta({
     setError("");
     try {
       await reenviarSolicitud(solicitudId);
+      toast.success("Solicitud reenviada.");
       onProgreso(await getProgreso(solicitudId));
     } catch (e) {
       if (requiereVerificarCorreoDeNuevo(e)) irAPaso(PASO_CORREO);
