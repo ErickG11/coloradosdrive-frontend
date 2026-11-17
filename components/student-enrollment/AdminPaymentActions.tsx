@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { adminPaymentApi, paymentError, paymentMoney } from "@/lib/api/studentPayment";
 import type { AdminPaymentData } from "@/types/studentPayment";
+import { useToast } from "@/components/ui/Toast";
 export function AdminPaymentActions({
   studentId,
   active,
@@ -15,6 +16,7 @@ export function AdminPaymentActions({
   active: boolean;
   onChanged?: () => void;
 }) {
+  const toast = useToast();
   const [data, setData] = useState<AdminPaymentData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [action, setAction] = useState<"efectivo" | "liberar" | null>(null);
@@ -61,6 +63,7 @@ export function AdminPaymentActions({
           attempt.current,
           receipt,
         );
+        if (payment.estado === "aprobado") toast.success("Pago en efectivo registrado.");
         setMessage(
           payment.estado === "aprobado"
             ? "Pago en efectivo registrado. La matrícula está activa."
@@ -70,6 +73,7 @@ export function AdminPaymentActions({
         );
       } else {
         await adminPaymentApi.release(reservation.id);
+        toast.success("Reserva liberada.");
         setMessage("Reserva liberada.");
       }
       setAction(null);

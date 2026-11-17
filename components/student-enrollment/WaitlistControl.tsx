@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import type { StudentScheduleInput } from "@/types/studentSchedule";
+import { useToast } from "@/components/ui/Toast";
 interface State {
   active: boolean;
   expiryDays?: number;
@@ -19,6 +20,7 @@ export function WaitlistControl({
   enrollmentId: string;
   input?: StudentScheduleInput;
 }) {
+  const toast = useToast();
   const state = useFetch<State>("/estudiantes/inscripcion/espera");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export function WaitlistControl({
         quitar: remove,
       });
       state.refetch();
+      toast.success(remove ? "Aviso retirado." : "Listo, te avisaremos por correo.");
       setMessage(remove ? "Aviso retirado." : "Listo, te avisaremos por correo.");
     } catch (error) {
       setMessage(
@@ -102,6 +105,7 @@ export function NoOpenCoursePanel({ enrollmentId }: { enrollmentId: string }) {
 }
 
 export function WaitlistPreferences() {
+  const toast = useToast();
   const state = useFetch<State>("/estudiantes/inscripcion/espera");
   const [message, setMessage] = useState<string | null>(null);
   if (!state.data?.active || !Object.keys(state.data.types).length) return null;
@@ -120,6 +124,7 @@ export function WaitlistPreferences() {
                 .post("/estudiantes/inscripcion/espera", { tipo: type, quitar: true })
                 .then(() => {
                   state.refetch();
+                  toast.success("Aviso retirado.");
                   setMessage("Aviso retirado.");
                 })
                 .catch(() => setMessage("No se pudo retirar el aviso. Reintenta."));
