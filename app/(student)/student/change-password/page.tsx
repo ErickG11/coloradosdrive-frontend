@@ -7,7 +7,9 @@ import { Button, Card, Input } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/Toast";
 export default function ChangePasswordPage() {
+  const toast = useToast();
   const [password, setPassword] = useState(""),
     [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false),
@@ -27,6 +29,7 @@ export default function ChangePasswordPage() {
     setBusy(true);
     try {
       await api.post("/estudiantes/cambiar-password", { nuevaPassword: password });
+      toast.success("Contraseña actualizada.");
       setPassword("");
       setConfirm("");
       // La API administrativa de cambio invalida la sesión de Auth. El

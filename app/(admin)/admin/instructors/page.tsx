@@ -25,11 +25,13 @@ import { InstructorProfile } from "./InstructorProfile";
 import { InstructorAvatar, InstructorIcon } from "./InstructorVisual";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
 import styles from "./instructors.module.css";
+import { useToast } from "@/components/ui/Toast";
 
 type Action = "desactivar" | "reactivar" | "restablecer-password";
 type Dialog = "closed" | "create" | "detail" | "edit" | "confirm";
 
 export default function InstructorsPage() {
+  const toast = useToast();
   const [searchDraft, setSearchDraft] = useState("");
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("");
@@ -88,6 +90,13 @@ export default function InstructorsPage() {
     setActionError(null);
     try {
       await api.post<InstructorDetail | void>(`/admin/instructores/${selected.id}/${action}`);
+      toast.success(
+        action === "desactivar"
+          ? "Instructor desactivado."
+          : action === "reactivar"
+            ? "Instructor reactivado."
+            : "Contraseña temporal enviada.",
+      );
       if (action === "restablecer-password") {
         setActionSuccess("Se envió una contraseña temporal al correo del instructor.");
       }

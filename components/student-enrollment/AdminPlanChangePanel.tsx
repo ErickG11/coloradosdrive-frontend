@@ -14,6 +14,7 @@ import { ReservationBanner } from "./ReservationBanner";
 import { PlanFields } from "./PlanFields";
 import type { StudentPlanRules, StudentScheduleStartOption } from "@/types/studentSchedule";
 import { dayLabelLong, plural } from "./scheduleFormat";
+import { useToast } from "@/components/ui/Toast";
 const options = () => ({ signal: AbortSignal.timeout(20_000), cache: "no-store" as const });
 const localDate = (iso: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" }).format(new Date(iso));
@@ -33,6 +34,7 @@ interface Props {
 }
 function AdminPlanChangeForm({ enrollmentId, studentId, onChanged }: Props) {
   const root = `/admin/estudiantes/${studentId}/matriculas/${enrollmentId}/cambio`;
+  const toast = useToast();
   const meta = useFetch<PlanChangeState>(root);
   const limits = useFetch<StudentPlanRules>("/admin/manual-enrollments/rules");
   const [input, setInput] = useState<StudentScheduleSelection>({
@@ -249,6 +251,7 @@ function AdminPlanChangeForm({ enrollmentId, studentId, onChanged }: Props) {
         {},
         options(),
       );
+      toast.success("Horario actualizado.");
       setMessage(
         done.advertencia
           ? `Horario actualizado. Se avisó al alumno. ${done.advertencia}`

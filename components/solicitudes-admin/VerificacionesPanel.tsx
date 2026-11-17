@@ -32,6 +32,7 @@ import {
 } from "./catalogo";
 import { horaGuayaquil, type RequestReviewLock } from "./useRequestReview";
 import styles from "./solicitudes.module.css";
+import { useToast } from "@/components/ui/Toast";
 
 const MAX_NOTA = 1000;
 
@@ -73,6 +74,7 @@ function BloqueVerificacion({
   onRegistrada: (verificacion: VerificacionSolicitud) => void;
   children?: ReactNode;
 }) {
+  const toast = useToast();
   const baseId = useId();
   const metodos = metodosParaVerificacion();
   const [metodo, setMetodo] = useState<MetodoVerificacion | "">(""),
@@ -148,6 +150,7 @@ function BloqueVerificacion({
           nota: texto,
         });
       }
+      toast.success("Verificación registrada.");
       onRegistrada(creada);
       setMetodo("");
       setResultado("");

@@ -12,6 +12,7 @@ import { faltantesSolicitud } from "./faltantesSolicitud";
 import { etiquetaNivel, tieneCertificado } from "./nivelesEstudios";
 import formStyles from "../inscripcion.module.css";
 import styles from "./pasos.module.css";
+import { useToast } from "@/components/ui/Toast";
 
 export interface PasoRevisarProps {
   solicitudId: string;
@@ -88,6 +89,7 @@ export function PasoRevisar({
   onVolver,
   irAPaso,
 }: PasoRevisarProps) {
+  const toast = useToast();
   const [intentado, setIntentado] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState("");
   const [ocupado, setOcupado] = useState(false);
@@ -117,6 +119,7 @@ export function PasoRevisar({
     try {
       if (reenvio) await reenviarSolicitud(solicitudId);
       else await enviarSolicitud(solicitudId);
+      toast.success(reenvio ? "Solicitud reenviada." : "Solicitud enviada para revisión.");
       onProgreso(await getProgreso(solicitudId));
       onAvanzar();
     } catch (error) {

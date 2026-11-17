@@ -11,6 +11,7 @@ import { studentPaymentApi, paymentError, paymentMoney } from "@/lib/api/student
 import type { PaymentConfiguration, PaymentQuote } from "@/types/studentPayment";
 import type { useStudentPayment } from "./useStudentPayment";
 import type { useStudentReservation } from "./useStudentReservation";
+import { useToast } from "@/components/ui/Toast";
 const HostedFields = dynamic(
   () => import("./KushkiHostedFields").then((m) => m.KushkiHostedFields),
   { ssr: false },
@@ -22,6 +23,7 @@ interface Props {
   courseLabel?: string;
 }
 export function StudentPaymentStep({ state, reservation, onBack, courseLabel }: Props) {
+  const toast = useToast();
   const [config, setConfig] = useState<PaymentConfiguration | null>(null);
   const [quote, setQuote] = useState<PaymentQuote | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,9 @@ export function StudentPaymentStep({ state, reservation, onBack, courseLabel }: 
     setBusy(true);
     setError(null);
     try {
-      state.accept(await studentPaymentApi.simulate(current.id, result));
+      const payment = await studentPaymentApi.simulate(current.id, result);
+      state.accept(payment);
+      if (payment.estado === "aprobado") toast.success("Pago confirmado.");
       reservation.refetch();
     } catch (e) {
       setError(paymentError(e));
@@ -97,7 +101,9 @@ export function StudentPaymentStep({ state, reservation, onBack, courseLabel }: 
     setSent(true);
     setError(null);
     try {
-      state.accept(await studentPaymentApi.charge(current.id, token));
+      const payment = await studentPaymentApi.charge(current.id, token);
+      state.accept(payment);
+      if (payment.estado === "aprobado") toast.success("Pago confirmado.");
       reservation.refetch();
     } catch (e) {
       setError(paymentError(e));

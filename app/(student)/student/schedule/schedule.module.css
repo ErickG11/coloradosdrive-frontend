@@ -840,17 +840,6 @@
   border-radius: var(--radius-sm);
   font-size: 13px;
 }
-.toast {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 60;
-  max-width: 420px;
-  width: calc(100% - 40px);
-}
-.toast:has([role="status"]:empty) {
-  pointer-events: none;
-}
 .available {
   display: flex;
   flex-direction: column;
@@ -1283,11 +1272,6 @@
     max-height: 90dvh;
     border-radius: 20px 20px 0 0;
     padding-bottom: max(24px, env(safe-area-inset-bottom));
-  }
-  .toast {
-    bottom: 12px;
-    right: 12px;
-    width: calc(100% - 24px);
   }
   .planNotice {
     padding: 6px 8px 6px 12px;

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithToast, toastTexts } from "@/tests/helpers/renderWithToast";
 import { StudentEditForm } from "@/app/(admin)/admin/students/StudentEditForm";
 import {
   StudentDetail,
@@ -119,13 +120,13 @@ describe("StudentEditForm", () => {
       studentTimestamp(student.createdAt),
     );
     panel.unmount();
-    render(<StudentDetail id={student.id} />);
+    renderWithToast(<StudentDetail id={student.id} />);
     fireEvent.click(screen.getByRole("button", { name: "Editar" }));
     const dialog = within(screen.getByRole("dialog", { name: "Editar alumno" }));
     fireEvent.change(dialog.getByLabelText("Nombre completo"), { target: { value: "Corregido" } });
     fireEvent.click(dialog.getByRole("button", { name: "Guardar cambios" }));
     await waitFor(() => expect(refetch).toHaveBeenCalledOnce());
-    expect(screen.getByRole("status")).toHaveTextContent("se guardaron correctamente");
+    expect(toastTexts().join("")).toContain("se guardaron correctamente");
   });
   it("muestra la inscripción de cada matrícula", () => {
     render(

@@ -14,8 +14,8 @@ vi.mock("@/lib/api/reports", async (original) => ({
   downloadReport: mocks.download,
   saveReport: mocks.save,
 }));
-vi.mock("@/components/content-admin/ContentFeedback", () => ({
-  useContentSuccess: () => mocks.notify,
+vi.mock("@/components/ui/Toast", () => ({
+  useToast: () => ({ success: mocks.notify }),
 }));
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({ auth: { getSession: mocks.session } }),

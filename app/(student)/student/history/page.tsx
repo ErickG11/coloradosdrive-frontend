@@ -3,7 +3,7 @@
 import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState";
 import { useCallback, useRef, useState } from "react";
 import { Button, EmptyState } from "@/components/ui";
-import { Toast } from "@/components/inscripcion/Toast";
+import { useToast } from "@/components/ui/Toast";
 import { PracticeRatingModal } from "@/components/practice-ratings/PracticeRatingModal";
 import { useFetch } from "@/hooks/useFetch";
 import { usePendingPracticeRatings } from "@/hooks/usePendingPracticeRatings";
@@ -29,7 +29,7 @@ export default function StudentHistoryPage() {
   const ownSlots = useFetch<StudentPracticeSlot[]>("/practice-slots");
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedRating, setSelectedRating] = useState<PendingPracticeRating | null>(null);
-  const [ratingSuccess, setRatingSuccess] = useState("");
+  const toast = useToast();
   const ratingTrigger = useRef<HTMLElement | null>(null);
   const title = useRef<HTMLHeadingElement | null>(null);
   const enrollment =
@@ -45,7 +45,6 @@ export default function StudentHistoryPage() {
   function rate(practice: PendingPracticeRating, returnTo?: HTMLElement) {
     ratingTrigger.current =
       returnTo ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
-    setRatingSuccess("");
     setSelectedRating(practice);
   }
   function closeRating() {
@@ -90,9 +89,6 @@ export default function StudentHistoryPage() {
           </div>
         ) : null}
       </header>
-      <div className={styles.toast}>
-        <Toast message={ratingSuccess} onDismiss={() => setRatingSuccess("")} />
-      </div>
       {pending.error ? (
         <div className={styles.inlineError} role="alert">
           <p>No pudimos consultar tus encuestas pendientes.</p>
@@ -142,7 +138,7 @@ export default function StudentHistoryPage() {
         onClose={closeRating}
         onSubmitted={() => {
           closeRating();
-          setRatingSuccess("Gracias, tu calificación se envió correctamente.");
+          toast.success("Gracias, tu calificación se envió correctamente.");
           pending.refetch();
         }}
         onStale={pending.refetch}

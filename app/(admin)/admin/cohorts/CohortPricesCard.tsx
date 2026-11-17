@@ -5,6 +5,7 @@ import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import { CohortIcon } from "./CohortVisual";
 import styles from "./cohorts.module.css";
+import { useToast } from "@/components/ui/Toast";
 
 export interface CohortRulesConfig {
   active: boolean;
@@ -14,6 +15,7 @@ export interface CohortRulesConfig {
   capacityActive?: boolean;
 }
 export function CohortPricesCard() {
+  const toast = useToast();
   const config = useFetch<CohortRulesConfig>("/cohorts/configuracion");
   const [selected, setSelected] = useState<"A" | "B" | null>(null);
   const [price, setPrice] = useState("");
@@ -60,6 +62,7 @@ export function CohortPricesCard() {
         motivo: reason.trim(),
       });
       config.refetch();
+      toast.success("Precio actualizado.");
       setSelected(null);
       setReason("");
       setPrice("");

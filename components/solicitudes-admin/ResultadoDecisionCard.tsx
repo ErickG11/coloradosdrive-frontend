@@ -1,4 +1,5 @@
 "use client";
+import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
 import { forwardRef, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -24,6 +25,7 @@ export const ResultadoDecisionCard = forwardRef<HTMLDivElement, { resultado: Res
       [error, setError] = useState(""),
       [ocupado, setOcupado] = useState(false);
     const lock = useRef(false);
+    const toast = useToast();
     const titulo =
       resultado.estado in TITULOS
         ? TITULOS[resultado.estado as keyof typeof TITULOS]
@@ -41,6 +43,7 @@ export const ResultadoDecisionCard = forwardRef<HTMLDivElement, { resultado: Res
       setReenvio("");
       try {
         const respuesta = await reenviarEnlaceAcceso(resultado.studentId);
+        if (respuesta.correoEnviado) toast.success("Enlace de acceso reenviado.");
         setReenvio(respuesta.correoEnviado ? "enviado" : "fallo");
       } catch (e) {
         setError(adminErrorMessage(e));

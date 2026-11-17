@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithToast, toastTexts } from "@/tests/helpers/renderWithToast";
 
 import EditCohortPage from "@/app/(admin)/admin/cohorts/[id]/edit/page";
 import { api } from "@/lib/api/client";
@@ -121,7 +122,7 @@ describe("EditCohortPage", () => {
     const user = userEvent.setup();
     mockApi(cohortDetail());
     mockedPatch.mockResolvedValue({});
-    render(<EditCohortPage />);
+    renderWithToast(<EditCohortPage />);
 
     await screen.findByLabelText("Nombre de la cohorte");
     await saveWithAChange(user);
@@ -130,7 +131,8 @@ describe("EditCohortPage", () => {
     const [path, body] = mockedPatch.mock.calls[0];
     expect(path).toBe("/cohorts/cohort-1");
     expect((body as { updatedAt: unknown }).updatedAt).toBe(VERSION);
-    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
+    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
+    expect(toastTexts()).toEqual(["Cambios guardados correctamente."]);
   });
 
   it.each([
@@ -251,7 +253,7 @@ describe("EditCohortPage", () => {
 
       await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(2));
       expect((mockedPatch.mock.calls[1][1] as { updatedAt: unknown }).updatedAt).toBe(NEW_VERSION);
-      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
+      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
     });
 
     it("el aviso de recarga se oculta en cuanto el usuario edita un campo", async () => {

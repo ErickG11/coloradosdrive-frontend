@@ -2,7 +2,9 @@
 import { useState } from "react";
 import { Button, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
+import { useToast } from "@/components/ui/Toast";
 export function WaitlistRetry() {
+  const toast = useToast();
   const [type, setType] = useState("A"),
     [reason, setReason] = useState(""),
     [busy, setBusy] = useState(false),
@@ -18,6 +20,7 @@ export function WaitlistRetry() {
         tipo: type,
         motivo: reason.trim(),
       });
+      toast.success("Reintento de avisos confirmado.");
       setMessage(
         `${result.retried} avisos vuelven a la cola. La entrega se confirmará por separado.`,
       );

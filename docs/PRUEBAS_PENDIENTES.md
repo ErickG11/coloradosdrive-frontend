@@ -161,3 +161,32 @@ Rama `integracion/cierre-sprint-6`. Antes de probar, el backend de la misma rama
 | 22 | Repetir en 375, 768 y 1440 px | Sin desplazamiento horizontal de la página; el calendario semanal se desplaza dentro de su propio contenedor; objetivos táctiles cómodos |
 | 23 | Usar solo teclado: Tab por la agenda, Enter en un bloque, Escape, Tab hasta los botones de asistencia | El orden de foco es lógico, el foco es visible y Escape cierra el detalle y el diálogo |
 | 24 | Con un lector de pantalla en «Asistencias» | Se anuncia el resultado del guardado y los errores |
+
+## Guía manual — cierre de Sprint 6 (rama `feat/cierre-sprint-6-ajustes`)
+
+Requisito previo: migración 095 aplicada en Supabase y backend desplegado con ella.
+
+| # | Paso | Esperado |
+| --- | --- | --- |
+| 1 | Como administrador, abrir la ficha de un alumno sin identidad confirmada, con su inscripción creada por solicitud, y pulsar «Confirmar identidad manualmente» | Se confirma de inmediato, sin esperar a una práctica; la observación es opcional y aparece un aviso verde «La identidad presencial se confirmó correctamente.» |
+| 2 | Repetir con una observación de 5 caracteres | Mensaje «La observación debe tener entre 10 y 300 caracteres.» y no se confirma |
+| 3 | Pulsar de nuevo en el mismo alumno | No falla ni duplica: sigue confirmada |
+| 4 | Como alumno con la identidad pendiente, abrir «Documentos para llevar» | Los textos hablan de «la escuela»; ningún texto menciona al instructor ni un plazo de 48 horas |
+| 5 | Crear una cohorte | Aparece un aviso verde en la esquina inferior, se cierra solo a los 5 s, se puede cerrar con la X y con Escape, y se detiene al pasar el ratón |
+| 6 | Guardar cambios de una cohorte, cancelar una cohorte y eliminar una cohorte | Cada acción muestra su aviso verde; tras cancelar, el foco queda en el resumen de la lista |
+| 7 | Eliminar un alumno definitivamente | Se vuelve al listado y aparece el aviso «El alumno se eliminó definitivamente.»; la URL no lleva `?aviso=` |
+| 8 | Crear y editar un instructor; restablecer su contraseña | Un aviso verde por acción |
+| 9 | Crear, editar y eliminar una franja de práctica | Un aviso verde por acción |
+| 10 | Aprobar, devolver y rechazar una solicitud de inscripción | Un aviso verde por acción |
+| 11 | Como alumno, confirmar asistencia a un bloque, avisar una falta y tomar un cupo | Un aviso verde por acción |
+| 12 | Provocar un error (por ejemplo, correo ya registrado al crear un instructor) | No aparece aviso verde; el error se ve en rojo junto al formulario |
+| 13 | Con el lector de pantalla o la prueba de «reducir movimiento» activada | El aviso se anuncia con cortesía y sin animación |
+| 14 | Matrícula manual, paso 1, estudiante nuevo: elegir en el calendario una fecha de hace 5 años | El calendario deja elegirla; al pulsar Continuar aparece «La edad mínima para registrar a un estudiante es de 15 años.» junto al campo |
+| 15 | Misma pantalla con una fecha de hace exactamente 15 años (hoy) | Avanza |
+| 16 | Teléfono «abc» | Mensaje junto al campo; con «0991234567» o «+593 99 123 4567» avanza |
+| 17 | Cédula y correo de un alumno ya registrado | Un solo clic en Continuar marca ambos campos y no avanza |
+| 18 | Cédula y correo nuevos con datos válidos | Avanza al paso 2 |
+| 19 | Revisar en un teléfono (360 px) un aviso verde largo | No tapa el botón principal ni desborda la pantalla |
+
+Reset: eliminar los registros de prueba desde la ficha del alumno y desde Instructores.
+

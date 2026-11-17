@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithToast, toastTexts } from "@/tests/helpers/renderWithToast";
 
 import { CohortForm } from "@/app/(admin)/admin/cohorts/CohortForm";
 import { maxCohortDate } from "@/app/(admin)/admin/cohorts/cohortLimits";
@@ -166,7 +167,7 @@ describe("CohortForm", () => {
   it("en modo creación envía POST /cohorts y redirige al listado", async () => {
     const user = userEvent.setup();
     mockedPost.mockResolvedValue({});
-    render(<CohortForm courses={courses} />);
+    renderWithToast(<CohortForm courses={courses} />);
 
     fillRequiredFields();
     await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
@@ -187,7 +188,8 @@ describe("CohortForm", () => {
         numeroAulas: null,
       });
     });
-    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-creada");
+    expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
+    expect(toastTexts()).toEqual(["Cohorte creada correctamente."]);
   });
 
   it("envía los campos de metadata opcional cuando se completan", async () => {
@@ -731,7 +733,7 @@ describe("CohortForm", () => {
       await user.click(screen.getByRole("button", { name: "Crear cohorte" }));
 
       await waitFor(() =>
-        expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-creada"),
+        expect(pushMock).toHaveBeenCalledWith("/admin/cohorts"),
       );
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Precio")).toHaveAttribute("aria-invalid", "false");
@@ -1050,7 +1052,7 @@ describe("CohortForm", () => {
 
       await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
       expect(mockedPatch.mock.calls[0][1]).toMatchObject({ numeroAulas: 0 });
-      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts?aviso=cohorte-guardada");
+      expect(pushMock).toHaveBeenCalledWith("/admin/cohorts");
     });
   });
 

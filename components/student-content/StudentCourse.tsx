@@ -8,7 +8,7 @@ import { friendlyDate, safeProgress } from "@/lib/utils/content";
 import { accessLabel, studentContentError } from "@/lib/utils/studentContent";
 import { Button } from "@/components/ui/Button";
 import { buttonClassName } from "@/components/ui/buttonStyles";
-import { useContentSuccess } from "@/components/content-admin/ContentFeedback";
+import { useToast } from "@/components/ui/Toast";
 import type { OpenMaterial, StudentCourse as Course, StudentItem } from "@/types/studentContent";
 import { StudentError, StudentLoading, StudentProgress } from "./StudentContentUI";
 import {
@@ -327,7 +327,7 @@ function CourseItem({
   now: number;
   refresh: () => Promise<void>;
 }) {
-  const notify = useContentSuccess();
+  const { success: notify } = useToast();
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [optimistic, setOptimistic] = useState<boolean | null>(null);

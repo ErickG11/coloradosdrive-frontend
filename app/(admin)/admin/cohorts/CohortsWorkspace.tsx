@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
-  Suspense,
   useCallback,
   useEffect,
   useRef,
@@ -19,7 +17,7 @@ import { useFetch } from "@/hooks/useFetch";
 import type { Cohort, Course } from "@/types";
 
 import { CohortCreator, CohortEditor } from "./CohortEditor";
-import type { CohortSavedNotice } from "./CohortForm";
+import { useToast } from "@/components/ui/Toast";
 import { CohortMetricValue } from "./CohortMetricValue";
 import { CohortPricesCard } from "./CohortPricesCard";
 import { CohortIcon } from "./CohortVisual";
@@ -33,37 +31,6 @@ function courseLabel(course: Course | undefined): string {
     return "—";
   }
   return `${course.nombre} (Tipo ${course.tipo})`;
-}
-
-// Avisos tras crear o guardar: llegan por ?aviso=... (páginas completas) o
-// desde el panel lateral.
-const NOTICES: Record<CohortSavedNotice, string> = {
-  "cohorte-creada": "Cohorte creada correctamente.",
-  "cohorte-guardada": "Cambios guardados correctamente.",
-};
-
-// Región viva siempre montada: el texto se agrega después del montaje (así se
-// anuncia). Se oculta mientras se abre o completa una eliminación.
-function CohortNotice({ hidden, override }: { hidden: boolean; override: string | null }) {
-  const params = useSearchParams();
-  // Se lee una sola vez: el aviso sigue visible aunque luego se limpie la URL.
-  const [notice, setNotice] = useState("");
-
-  useEffect(() => {
-    const found = NOTICES[(params.get("aviso") ?? "") as CohortSavedNotice];
-    if (!found) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setNotice(found);
-    // Quita ?aviso de la URL (sin navegar) para que recargar o volver con
-    // Atrás/Adelante no repita el aviso.
-    window.history.replaceState(window.history.state, "", window.location.pathname);
-  }, [params]);
-
-  return (
-    <p role="status" className="text-sm text-accent-blue empty:hidden">
-      {hidden ? "" : (override ?? notice)}
-    </p>
-  );
 }
 
 const dateFormat = new Intl.DateTimeFormat("es-EC", {
@@ -149,18 +116,21 @@ export function CohortsWorkspace() {
   const coursesById = new Map((courses ?? []).map((course) => [course.id, course]));
   const [editorSection, setEditorSection] = useState<CohortEditorSection>("general");
   const [toDelete, setToDelete] = useState<Cohort | null>(null);
-  const [deletedMessage, setDeletedMessage] = useState<string | null>(null);
-  const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const toast = useToast();
   // Ids eliminados en esta pantalla: la fila desaparece al instante, sin
   // esperar a que vuelva la lista del servidor.
-  const deletedRef = useRef<HTMLParagraphElement>(null);
+  const summaryRef = useRef<HTMLElement>(null);
+  const focusSummary = useRef(false);
+  // Corre después de que el modal desmontado devuelve el foco a su botón.
+  useEffect(() => {
+    if (toDelete || !focusSummary.current) return;
+    focusSummary.current = false;
+    summaryRef.current?.focus();
+  }, [toDelete]);
   const deleteTrigger = useRef<HTMLButtonElement | null>(null);
   const existing = cohorts ?? [];
 
   // Al cerrar el modal el foco se pierde: pasa al mensaje de éxito.
-  useEffect(() => {
-    if (deletedMessage) deletedRef.current?.focus();
-  }, [deletedMessage]);
 
   // El período depende de la fecha de la escuela; se calcula en el cliente.
   const [today, setToday] = useState("");
@@ -273,22 +243,17 @@ export function CohortsWorkspace() {
       return;
     event.preventDefault();
     trigger.current = event.currentTarget;
-    setDeletedMessage(null);
-    setSavedNotice(null);
     setEditorSection(section);
     setPanel(next);
   }
-  function saved(notice: CohortSavedNotice) {
+  function saved() {
     setPanel(null);
-    setDeletedMessage(null);
-    setSavedNotice(NOTICES[notice]);
     refetchCohorts();
     trigger.current?.focus();
   }
   function askDelete(cohort: Cohort, opener: HTMLButtonElement) {
     deleteTrigger.current = opener;
     setPanel(null);
-    setDeletedMessage(null);
     setToDelete(cohort);
   }
 
@@ -445,23 +410,12 @@ export function CohortsWorkspace() {
             </div>
           </header>
 
-          <Suspense fallback={null}>
-            <CohortNotice
-              hidden={toDelete !== null || deletedMessage !== null}
-              override={savedNotice}
-            />
-          </Suspense>
-          {/* Región viva siempre montada: solo cambia su texto. */}
-          <p
-            ref={deletedRef}
-            role="status"
+          <section
+            ref={summaryRef}
             tabIndex={-1}
-            className="text-sm text-accent-blue outline-none empty:hidden"
+            className={`${styles.summary} outline-none`}
+            aria-label="Resumen de cohortes"
           >
-            {deletedMessage}
-          </p>
-
-          <section className={styles.summary} aria-label="Resumen de cohortes">
             {metrics.map(({ key, label, icon }) => {
               const value =
                 isLoading || !today
@@ -856,7 +810,9 @@ export function CohortsWorkspace() {
           onClose={cancelDelete}
           onCancelled={(message) => {
             setToDelete(null);
-            setDeletedMessage(message);
+            toast.success(message);
+            // La fila cancelada desaparece al recargar: el foco pasa al resumen de la lista.
+            focusSummary.current = true;
             refetchCohorts();
           }}
           onReload={refetchCohorts}

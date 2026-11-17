@@ -15,3 +15,4 @@ export * from "./FilterChips";
 export * from "./EmptyState";
 export * from "./Pagination";
 export * from "./DataTable";
+export * from "./Toast";

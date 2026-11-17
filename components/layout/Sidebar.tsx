@@ -14,7 +14,7 @@ import { LogoutButton } from "./LogoutButton";
 import { NavigationIcon, type NavigationSection } from "./NavigationIcon";
 import { useSolicitudSummary } from "@/components/solicitudes-admin/useSolicitudSummary";
 import { PendingSolicitudesBadge } from "@/components/solicitudes-admin/PendingSolicitudesBadge";
-import { Toast } from "@/components/inscripcion/Toast";
+import { useToast } from "@/components/ui/Toast";
 import styles from "./admin-sidebar.module.css";
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -65,6 +65,15 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
     });
   }
   const summary = useSolicitudSummary(role === "admin");
+  const toast = useToast();
+  const { notice: newRequests, dismiss: dismissNewRequests } = summary;
+  useEffect(() => {
+    if (role !== "admin" || newRequests === 0) return;
+    toast.success("Nueva solicitud de inscripción", {
+      action: { href: "/admin/solicitudes", label: "Ver" },
+    });
+    dismissNewRequests();
+  }, [role, newRequests, dismissNewRequests, toast]);
   const [isOpen, setIsOpen] = useState(false);
   const drawer = useRef<HTMLElement>(null);
   const isInstructorScheduleActive =
@@ -278,15 +287,6 @@ export function Sidebar({ email, role, studentEnrollmentRestricted = false }: Si
   );
   return (
     <>
-      {role === "admin" && summary.notice > 0 ? (
-        <div className="fixed bottom-4 right-4 z-50 max-w-[calc(100vw-2rem)]">
-          <Toast
-            message="Nueva solicitud de inscripción"
-            onDismiss={summary.dismiss}
-            action={{ href: "/admin/solicitudes", label: "Ver" }}
-          />
-        </div>
-      ) : null}
       <header className="flex h-16 min-w-0 shrink-0 items-center justify-between border-b border-border bg-bg-surface px-4 md:hidden">
         <button
           type="button"

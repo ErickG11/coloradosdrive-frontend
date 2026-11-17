@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api/client";
 import { contentErrorMessage } from "@/lib/utils/content";
-import { useContentSuccess } from "./ContentFeedback";
+import { useToast } from "@/components/ui/Toast";
 export function useContentResource<T>(path: string | null) {
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState<{
@@ -38,7 +38,7 @@ export function useContentMutation() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lock = useRef(false);
-  const notify = useContentSuccess();
+  const { success: notify } = useToast();
   async function run<T>(
     task: () => Promise<T>,
     success: string | ((result: T) => string),

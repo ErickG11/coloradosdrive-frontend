@@ -211,7 +211,13 @@ Hay etiquetas `pre-cNN` (por ejemplo `pre-c17`, `pre-c20`, `pre-c25`, `pre-c27`;
 - **Reportes (CD-346)** ya está en `main` del frontend (PR #51, `113a012`): `ReportExport` en el panel del administrador, `lib/api/reports.ts` y `types/report.ts`. Guía: `docs/reportes-exportacion.md`.
 - **CD-364 (agenda semanal y diaria del instructor y asistencias por bloques)** se integra con la rama `integracion/cierre-sprint-6`, que conserva con `merge --no-ff` los commits de Johao. La pantalla `app/(instructor)/instructor/page.tsx` es la versión de Johao; contiene la tolerancia a bloques caídos que `main` ya tenía.
 - **Cambio de requisito (control de cambios, 14/11/2026):** el instructor ya no confirma la cédula original; solo la verifica el administrador. Se retiró el control del instructor y los textos del alumno dicen «la escuela». Decisión registrada en el ADR 026 del backend (`docs/adr/026-identidad-solo-administrador.md`).
-- **Pendiente de decisión:** el botón del administrador «Confirmar identidad manualmente» solo funciona 48 horas después de una práctica (función SQL de la migración 056). Para que el administrador verifique sin esa espera hace falta una migración 095 en el backend, que aún no existe.
+- **Cédula del administrador (resuelto en la rama `feat/cierre-sprint-6-ajustes`):** el botón «Confirmar identidad manualmente» ya no espera 48 horas ni exige motivo; los textos siguen la migración 095 del backend (ADR 027). Hasta aplicar la 095 en Supabase, el botón sigue con la regla de 56.
 - **Orden de fusión:** primero el PR del backend, después este. El frontend consume `cohortName` y `courseType` de `GET /practice-slots`.
 - Las migraciones están en el backend: última la 094; la 093 no consta como aplicada.
 
+### Actualización 16/11/2026 (rama `feat/cierre-sprint-6-ajustes`)
+
+- **Avisos verdes globales (CD-274):** un solo componente, `components/ui/Toast.tsx` (`ToastProvider` en `app/layout.tsx` y el hook `useToast()`). Se retiraron `ContentFeedback`, el `Toast` de inscripción y el patrón `?aviso=` en la URL. Todo crear, guardar o eliminar exitoso llama `toast.success(...)`. En pruebas, `tests/helpers/renderWithToast.tsx` monta el proveedor y `toastTexts()` lee los avisos.
+- **Matrícula manual (CD-278):** el paso 1 valida a la vez fecha de nacimiento (`lib/utils/birthDate.ts`, 15 a 100 años, día de Guayaquil), teléfono y, al pulsar Continuar, consulta `POST /admin/manual-enrollments/duplicates` para avisar si la cédula o el correo ya existen. La cédula sigue validándose con `validStudentCedula`.
+- **Certificación digital (RF-07):** punto de partida técnico en el backend, `docs/rf07-punto-de-partida.md`.
+- **Orden de aplicación:** migración 095 en Supabase, despliegue del backend y después este frontend.

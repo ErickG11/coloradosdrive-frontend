@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Suspense, useRef, useState } from "react";
+import { useToast } from "@/components/ui/Toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Card, Select, StatusBadge, buttonClassName } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
@@ -8,6 +9,7 @@ import { ApiError } from "@/lib/api/errors";
 import {
   deleteStudent,
   studentActionError,
+  STUDENT_DELETED_MESSAGE,
   studentDeletedHref,
   studentDeletionsHref,
 } from "@/lib/api/studentActions";
@@ -21,6 +23,7 @@ const phases: Record<StudentDeletionOperation["phase"], string> = {
   completo: "Completada",
 };
 function StudentDeletionsList() {
+  const toast = useToast();
   const params = useSearchParams(),
     router = useRouter();
   const state = ["pendiente", "fallido"].includes(params.get("estado") ?? "")
@@ -54,6 +57,7 @@ function StudentDeletionsList() {
       const op = await deleteStudent(id);
       if (op.status === "completo") {
         completed = true;
+        toast.success(STUDENT_DELETED_MESSAGE);
         router.replace(studentDeletedHref);
         return;
       }

@@ -386,3 +386,21 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Aviso verde global (components/ui/Toast.tsx): entra suave, sin movimiento si el usuario lo evita. */
+@media (prefers-reduced-motion: no-preference) {
+  .toast-enter {
+    animation: toast-enter 180ms ease-out;
+  }
+  @keyframes toast-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+

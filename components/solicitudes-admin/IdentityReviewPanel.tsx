@@ -5,6 +5,7 @@ import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import type { RequestReviewState } from "@/types/requestReview";
 import type { SolicitudAdminDetalle } from "@/types/inscripcion";
+import { useToast } from "@/components/ui/Toast";
 export function IdentityReviewPanel({
   detail,
   onChanged,
@@ -13,6 +14,7 @@ export function IdentityReviewPanel({
   onChanged: () => void;
 }) {
   const root = `/admin/solicitudes/${detail.id}`;
+  const toast = useToast();
   const review = useFetch<RequestReviewState>(`${root}/revision`);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
@@ -32,6 +34,7 @@ export function IdentityReviewPanel({
           ? "Acceso bloqueado; pago conservado en revisión administrativa. No se ejecutó devolución."
           : "Cuenta desactivada y matrícula anulada. El expediente se conserva.",
       );
+      toast.success("Revocación registrada.");
       setRevokeConfirm(false);
       review.refetch();
       onChanged();
@@ -65,6 +68,7 @@ export function IdentityReviewPanel({
     setBusy(true);
     try {
       await api.post(`${root}/revision/reintentar-correo`, { reason: reason.trim() });
+      toast.success("Correo encolado para reintento.");
       setMessage("Correo encolado para reintento; aún no consta como entregado.");
       review.refetch();
     } catch (e) {

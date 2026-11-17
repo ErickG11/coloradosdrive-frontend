@@ -10,6 +10,7 @@ import {
   type BlockDefinition,
 } from "../_lib/instructorAgenda";
 import type { PracticeSlot } from "@/types";
+import { useToast } from "@/components/ui/Toast";
 
 export const registrable = (s: AgendaSlot, now: number) =>
   s.studentId !== null && s.status === "completado" && slotEnd(s) <= now;
@@ -25,6 +26,7 @@ export type Failure = {
   message: string;
 };
 export function useAttendance(from: string, to: string, valid: boolean) {
+  const toast = useToast();
   const [slots, setSlots] = useState<AgendaSlot[]>([]);
   const [definitions, setDefinitions] = useState<BlockDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,6 +178,8 @@ export function useAttendance(from: string, to: string, valid: boolean) {
     lock.current = false;
     setBusy(false);
     setOutcome({ saved, failed });
+    if (saved > 0)
+      toast.success(`${saved} ${saved === 1 ? "hora guardada" : "horas guardadas"}.`);
     setMessage(
       `${saved} ${saved === 1 ? "hora guardada" : "horas guardadas"}. ${failed ? `${failed} ${failed === 1 ? "hora requiere" : "horas requieren"} revisión.` : "Todo quedó guardado."}`,
     );

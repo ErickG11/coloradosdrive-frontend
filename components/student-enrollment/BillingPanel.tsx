@@ -5,6 +5,7 @@ import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import type { BillingProfile, BillingDocument, BillingState } from "@/types/billing";
 import { paymentMoney } from "@/lib/api/studentPayment";
+import { useToast } from "@/components/ui/Toast";
 const empty: BillingProfile = {
   name: "",
   documentType: "cedula",
@@ -16,6 +17,7 @@ export function BillingPanel({ studentId }: { studentId?: string }) {
   const root = studentId
     ? `/admin/facturacion/alumnos/${studentId}`
     : "/estudiantes/inscripcion/facturacion";
+  const toast = useToast();
   const state = useFetch<BillingState>(root);
   const [draft, setDraft] = useState<BillingProfile | null>(null),
     [busy, setBusy] = useState(false),
@@ -28,6 +30,7 @@ export function BillingPanel({ studentId }: { studentId?: string }) {
       await api.patch(root, { profile });
       setDraft(null);
       state.refetch();
+      toast.success("Datos del pagador guardados.");
       setMessage("Datos del pagador guardados. Los documentos ya autorizados conservan sus datos.");
     } catch (e) {
       setMessage(
@@ -126,6 +129,7 @@ function BillingDocumentView({
   admin: boolean;
   onChanged: () => void;
 }) {
+  const toast = useToast();
   const [action, setAction] = useState<"authorization" | "refund" | null>(null),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
@@ -167,6 +171,13 @@ function BillingDocumentView({
             : "Autorización existente registrada.",
         );
       }
+      toast.success(
+        kind === "refund"
+          ? "Devolución documentada."
+          : kind === "retry"
+            ? "Reintento encolado."
+            : "Autorización registrada.",
+      );
       setAction(null);
       onChanged();
     } catch (e) {

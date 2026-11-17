@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { ToastProvider } from "@/components/ui/Toast";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { useSolicitudSummary } from "@/components/solicitudes-admin/useSolicitudSummary";
@@ -14,11 +15,16 @@ beforeEach(() => {
   vi.mocked(useSolicitudSummary).mockReturnValue({ pending: 100, notice: 1, dismiss: vi.fn() });
 });
 it("el contador y el aviso enlazan al módulo sin alterar otros enlaces", () => {
+  const dismiss = vi.fn();
+  vi.mocked(useSolicitudSummary).mockReturnValue({ pending: 100, notice: 1, dismiss });
   render(
-    <ThemeProvider>
-      <Sidebar email="ficticio@example.invalid" role="admin" />
-    </ThemeProvider>,
+    <ToastProvider>
+      <ThemeProvider>
+        <Sidebar email="ficticio@example.invalid" role="admin" />
+      </ThemeProvider>
+    </ToastProvider>,
   );
+  expect(dismiss).toHaveBeenCalledOnce();
   expect(screen.getByLabelText("100 solicitudes pendientes")).toHaveTextContent("99+");
   expect(screen.getByText("Nueva solicitud de inscripción")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Ver" })).toHaveAttribute("href", "/admin/solicitudes");

@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithToast } from "@/tests/helpers/renderWithToast";
 import { StudentCohortAssignment } from "@/app/(admin)/admin/students/StudentCohortAssignment";
 import { StudentDetail, StudentProfile } from "@/app/(admin)/admin/students/StudentDetail";
 import { api } from "@/lib/api/client";
@@ -254,7 +255,7 @@ describe("integración en ficha", () => {
             ? { active: false, enrollments: [] }
             : profile,
     );
-    render(<StudentDetail id={studentProfile.id} />);
+    renderWithToast(<StudentDetail id={studentProfile.id} />);
     fireEvent.click(await screen.findByRole("button", { name: "Asignar cohorte" }));
     expect(screen.getByRole("button", { name: "Editar" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Desactivar" })).toBeDisabled();

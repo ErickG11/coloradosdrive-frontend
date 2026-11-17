@@ -3,10 +3,12 @@ import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Modal, buttonClassName } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import {
   deleteStudent,
   setStudentAccess,
   studentActionError,
+  STUDENT_DELETED_MESSAGE,
   studentDeletedHref,
   studentDeletionsHref,
 } from "@/lib/api/studentActions";
@@ -29,6 +31,7 @@ export function StudentActions({
   onPending: () => void;
   onReload: () => void;
 }) {
+  const toast = useToast();
   const router = useRouter();
   const [action, setAction] = useState<"desactivar" | "reactivar" | "eliminar" | null>(null);
   const [confirmation, setConfirmation] = useState("");
@@ -72,6 +75,7 @@ export function StudentActions({
         const op = await deleteStudent(student.id, typed);
         if (op.status === "completo") {
           setStarted(true);
+          toast.success(STUDENT_DELETED_MESSAGE);
           router.replace(studentDeletedHref);
           return;
         }

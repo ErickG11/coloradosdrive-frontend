@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Button, FormError, Input, Select, Modal } from "@/components/ui";
 import { api } from "@/lib/api/client";
+import { useToast } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/api/errors";
 import type { CohortStudentCounts, Course } from "@/types";
 
@@ -106,6 +107,11 @@ interface CohortFormProps {
 
 export type CohortSavedNotice = "cohorte-creada" | "cohorte-guardada";
 
+export const COHORT_NOTICES: Record<CohortSavedNotice, string> = {
+  "cohorte-creada": "Cohorte creada correctamente.",
+  "cohorte-guardada": "Cambios guardados correctamente.",
+};
+
 function optionalText(value: string): string | null {
   const trimmed = value.trim();
   return trimmed === "" ? null : trimmed;
@@ -164,6 +170,7 @@ export function CohortForm({
   onSaved,
   onCancel,
 }: CohortFormProps) {
+  const toast = useToast();
   const [section, setSection] = useState<CohortEditorSection>(initialSection);
   const [reasonRequested, setReasonRequested] = useState(false);
   const [savedOffer, setSavedOffer] = useState<{
@@ -177,9 +184,10 @@ export function CohortForm({
   function finishSaved() {
     setSavedOffer(null);
     const notice: CohortSavedNotice = cohortId ? "cohorte-guardada" : "cohorte-creada";
+    toast.success(COHORT_NOTICES[notice]);
     if (onSaved) onSaved(notice);
     else {
-      router.push(`/admin/cohorts?aviso=${notice}`);
+      router.push("/admin/cohorts");
       router.refresh();
     }
   }
@@ -410,13 +418,13 @@ export function CohortForm({
         return;
       }
       const notice: CohortSavedNotice = isEditMode ? "cohorte-guardada" : "cohorte-creada";
+      toast.success(COHORT_NOTICES[notice]);
       if (onSaved) {
         setIsSubmitting(false);
         onSaved(notice);
         return;
       }
-      // El listado muestra el aviso de éxito y limpia el parámetro de la URL.
-      router.push(`/admin/cohorts?aviso=${notice}`);
+      router.push("/admin/cohorts");
       router.refresh();
     } catch (err) {
       if (

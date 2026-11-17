@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { buttonClassName } from "@/components/ui/buttonStyles";
-import { Toast } from "@/components/inscripcion/Toast";
+import { useToast } from "@/components/ui/Toast";
 import { useFetch } from "@/hooks/useFetch";
 import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
@@ -32,7 +32,7 @@ export function DocumentsWorkspace() {
   const { data, isLoading, error, refetch } = useFetch<StudentEnrollmentState>(
     "/estudiantes/estado-inscripcion",
   );
-  const [message, setMessage] = useState("");
+  const { success: notify } = useToast();
   const [highlighted, setHighlighted] = useState<{ type: string; request: number } | null>(null);
   const highlightTimer = useRef<number | null>(null);
   const previous = useRef<{ enrollmentId: string | null; states: Map<string, string> } | null>(
@@ -82,12 +82,12 @@ export function DocumentsWorkspace() {
         ),
       };
       if (received.length)
-        setMessage(
+        notify(
           `${received.length === 1 ? "Documento recibido" : "Documentos recibidos"}: ${received.map(documentName).join(", ")}`,
         );
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [data, isLoading, error]);
+  }, [data, isLoading, error, notify]);
   const deadline = data ? deadlineInfo(data) : null;
   const documents = sortedDocuments(data?.documentosFisicos ?? []);
   const canPrint = Boolean(data && (documents.length > 0 || data.identidadPresencial));
@@ -276,9 +276,6 @@ export function DocumentsWorkspace() {
               </details>
             </div>
           ) : null}
-          <div className={styles.toast}>
-            <Toast message={message} onDismiss={() => setMessage("")} />
-          </div>
         </div>
         {data ? <DocumentsPrint data={data} /> : null}
       </section>

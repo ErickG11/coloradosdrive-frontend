@@ -7,6 +7,7 @@ import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { PracticeSlotWithNames } from "@/types";
+import { useToast } from "@/components/ui/Toast";
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("es-EC", {
@@ -29,6 +30,7 @@ export interface PracticeSlotDetailProps {
 // en el resto de los estados, con el texto que explica por qué, en vez de
 // dejar que el usuario descubra la restricción con un 409.
 export function PracticeSlotDetail({ slot, onEdit, onDeleted }: PracticeSlotDetailProps) {
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const canModify = slot.status === "disponible";
@@ -38,6 +40,7 @@ export function PracticeSlotDetail({ slot, onEdit, onDeleted }: PracticeSlotDeta
     setIsDeleting(true);
     try {
       await api.delete(`/practice-slots/${slot.id}`);
+      toast.success("Franja eliminada.");
       onDeleted();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo eliminar la franja.");

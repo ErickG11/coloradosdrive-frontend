@@ -103,6 +103,7 @@ beforeEach(() => {
         : [],
   );
   post.mockImplementation(async (path) => {
+    if (path === `${BASE}/duplicates`) return { cedula: false, correo: false };
     if (path === `${BASE}/course-preview`)
       return {
         courseId: "course-a",

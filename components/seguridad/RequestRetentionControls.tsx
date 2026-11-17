@@ -4,7 +4,9 @@ import { Button, Input } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import type { RequestRetentionPolicy } from "@/types/requestReview";
+import { useToast } from "@/components/ui/Toast";
 export function RequestRetentionControls() {
+  const toast = useToast();
   const state = useFetch<{ active: boolean; policy?: RequestRetentionPolicy }>(
     "/admin/solicitudes/politica-retencion",
   );
@@ -21,6 +23,7 @@ export function RequestRetentionControls() {
       await api.patch("/admin/solicitudes/politica-retencion", { policy, reason });
       setDraft(null);
       state.refetch();
+      toast.success("Política de retención guardada.");
       setMessage("Política guardada con auditoría.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "No se pudo guardar.");

@@ -10,7 +10,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
-import { useContentSuccess } from "@/components/content-admin/ContentFeedback";
+import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -110,7 +110,7 @@ export function ReportExportMenu({
 }: ReportExportMenuProps) {
   const sessionRole = useSessionRole();
   const role = roleProp === undefined ? sessionRole : roleProp;
-  const notifySuccess = useContentSuccess();
+  const { success: notifySuccess } = useToast();
   const menuId = useId();
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<ReportFormat | null>(null);

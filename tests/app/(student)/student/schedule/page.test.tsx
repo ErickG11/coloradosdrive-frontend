@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithToast } from "@/tests/helpers/renderWithToast";
 
 import StudentSchedulePage from "@/app/(student)/student/schedule/page";
 import { api } from "@/lib/api/client";
@@ -289,7 +290,7 @@ describe("StudentSchedulePage", () => {
     mockedPost.mockResolvedValue({});
     mockFetch([slot]);
 
-    render(<StudentSchedulePage />);
+    renderWithToast(<StudentSchedulePage />);
     await ready();
     await user.click(screen.getByRole("button", { name: "Confirmo que asistiré" }));
 
@@ -351,7 +352,7 @@ describe("StudentSchedulePage", () => {
   describe("avisar que no asistirá (un solo paso)", () => {
     async function openDialog(user: ReturnType<typeof userEvent.setup>) {
       mockFetch([buildSlot({ status: "confirmado", studentId: "student-1" })]);
-      render(<StudentSchedulePage />);
+      renderWithToast(<StudentSchedulePage />);
       await ready();
       const trigger = screen.getAllByRole("button", { name: "No podré asistir" })[0];
       await user.click(trigger);
@@ -460,7 +461,7 @@ describe("StudentSchedulePage", () => {
 
   describe("cupos disponibles", () => {
     async function openAvailable(user: ReturnType<typeof userEvent.setup>) {
-      render(<StudentSchedulePage />);
+      renderWithToast(<StudentSchedulePage />);
       await ready();
       await user.click(screen.getByRole("button", { name: /Cupos disponibles/ }));
     }

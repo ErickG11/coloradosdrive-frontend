@@ -7,8 +7,10 @@ import { Button, Card, Input } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/Toast";
 
 export default function InstructorChangePasswordPage() {
+  const toast = useToast();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,6 +31,7 @@ export default function InstructorChangePasswordPage() {
     setBusy(true);
     try {
       await api.post<void>("/instructores/cambiar-password", { nuevaPassword: password });
+      toast.success("Contraseña actualizada.");
       setPassword("");
       setConfirm("");
       // Primero se cierra la sesión local: así el botón hacia /login no

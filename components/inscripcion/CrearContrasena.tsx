@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ui/Toast";
 import { EnrollmentFlowFrame, FlowStepIcon } from "./EnrollmentFlowFrame";
 import { PasswordGuidance } from "./PasswordGuidance";
 import { EnrollmentIcon } from "./EnrollmentVisual";
@@ -35,6 +36,7 @@ const TITLE_CLASS =
 // enlace y no pulsan botones). El token vive solo en una referencia en
 // memoria: nunca en storage ni en logs.
 export function CrearContrasena() {
+  const toast = useToast();
   const router = useRouter();
   const params = useRef<LinkParams | null>(null);
   const read = useRef(false);
@@ -134,6 +136,7 @@ export function CrearContrasena() {
     setConfirm("");
     setBusy(false);
     setDone(true);
+    toast.success("Contraseña creada.");
   }
 
   return (

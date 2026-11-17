@@ -12,6 +12,7 @@ import {
 } from "@/lib/utils/practiceAttendance";
 import type { PracticeSlot, PracticeSlotWithNames } from "@/types";
 import styles from "../attendance.module.css";
+import { useToast } from "@/components/ui/Toast";
 
 export function SlotAttendance({
   slot,
@@ -26,6 +27,7 @@ export function SlotAttendance({
   compact?: boolean;
   disabled?: boolean;
 }) {
+  const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export function SlotAttendance({
   }, [saved]);
 
   function didSave(updated: PracticeSlot) {
+    toast.success("Asistencia guardada.");
     onSaved(updated);
     setEditing(false);
     setPendingCorrection(null);
