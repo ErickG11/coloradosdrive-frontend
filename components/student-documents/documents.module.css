@@ -836,17 +836,6 @@
   font-size: 13px;
   line-height: 1.6;
 }
-.toast {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: calc(100% - 40px);
-  max-width: 420px;
-  z-index: 60;
-}
-.toast:has([role="status"]:empty) {
-  pointer-events: none;
-}
 .skeleton {
   border-radius: var(--radius-lg);
   background: var(--color-bg-sunken);
@@ -1041,11 +1030,6 @@
   .steps > ol {
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
-  }
-  .toast {
-    bottom: 12px;
-    right: 12px;
-    width: calc(100% - 24px);
   }
 }
 @media (prefers-reduced-motion: reduce) {

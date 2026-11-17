@@ -6,7 +6,7 @@ import Link from "next/link";
 import { MotionConfig } from "framer-motion";
 import { Button, FormError } from "@/components/ui";
 import { XIcon } from "@/components/ui/icons";
-import { Toast } from "@/components/inscripcion/Toast";
+import { useToast } from "@/components/ui/Toast";
 import { useCurrentUserId } from "@/hooks/useCurrentUserId";
 import { useFetch } from "@/hooks/useFetch";
 import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
@@ -78,7 +78,7 @@ export default function StudentSchedulePage() {
   const [noPracticeNotice, setNoPracticeNotice] = useState(false);
   const [dialog, setDialog] = useState<AgendaBlock | null>(null);
   const [take, setTake] = useState<PracticeBlockOption | null>(null);
-  const [successNotice, setSuccessNotice] = useState("");
+  const toast = useToast();
   const [currentTime, setCurrentTime] = useState<number | null>(null);
   const [planReload, setPlanReload] = useState(0);
   const dialogTrigger = useRef<HTMLButtonElement | null>(null);
@@ -285,7 +285,7 @@ export default function StudentSchedulePage() {
     setPendingSlotId(slotId);
     try {
       await api.post(`/practice-slots/blocks/${agenda.enrollmentId}/${agenda.date}/confirm`);
-      setSuccessNotice("Listo, confirmaste tu asistencia. ¡Te esperamos!");
+      toast.success("Listo, confirmaste tu asistencia. ¡Te esperamos!");
     } catch (err) {
       setActionError(friendlyError(err, "No se pudo confirmar tu asistencia. Inténtalo de nuevo."));
     } finally {
@@ -296,7 +296,7 @@ export default function StudentSchedulePage() {
   async function handleDialogDone(result: PracticeBlockResolution) {
     setDialog(null);
     setActionError(null);
-    setSuccessNotice(result.effect);
+    toast.success(result.effect);
     restoreFocus(dialogTrigger.current);
     refreshAll();
   }
@@ -307,7 +307,7 @@ export default function StudentSchedulePage() {
   }
   function handleTaken() {
     setTake(null);
-    setSuccessNotice("Listo, cambiaste tu bloque por el cupo liberado.");
+    toast.success("Listo, cambiaste tu bloque por el cupo liberado.");
     restoreFocus(dialogTrigger.current);
     refreshAll();
     return Promise.resolve();
@@ -407,9 +407,6 @@ export default function StudentSchedulePage() {
           </div>
         ) : null}
         {actionError ? <FormError>{actionError}</FormError> : null}
-        <div className={styles.toast}>
-          <Toast message={successNotice} onDismiss={() => setSuccessNotice("")} />
-        </div>
         {noPracticeNotice ? (
           <div className={styles.planNotice}>
             <ScheduleIcon kind="info" />

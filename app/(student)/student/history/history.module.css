@@ -980,17 +980,6 @@
   border-radius: var(--radius-sm);
   font-size: 13px;
 }
-.toast {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 60;
-  width: calc(100% - 40px);
-  max-width: 420px;
-}
-.toast:has([role="status"]:empty) {
-  pointer-events: none;
-}
 .skeleton {
   border-radius: var(--radius-md);
   background: var(--color-bg-sunken);
@@ -1257,11 +1246,6 @@
     padding: 20px;
     padding-bottom: max(24px, env(safe-area-inset-bottom));
     animation-name: sheetEntry;
-  }
-  .toast {
-    right: 12px;
-    bottom: 12px;
-    width: calc(100% - 24px);
   }
   .heroSkeleton {
     min-height: 430px;
