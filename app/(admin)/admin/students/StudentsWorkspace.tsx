@@ -158,11 +158,6 @@ export function StudentsList({ initialSelected = null }: { initialSelected?: str
           />
           <StudentMetrics version={version} />
           {waitlist.error ? <p role="status">{waitlist.error}</p> : null}
-          {params.get("aviso") === "alumno-eliminado" && (
-            <p role="status" className="text-status-success">
-              El alumno se eliminó definitivamente.
-            </p>
-          )}
           <StudentFilters
             filters={filters}
             waitlistActive={waitlist.data?.active}

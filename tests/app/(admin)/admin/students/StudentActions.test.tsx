@@ -1,5 +1,6 @@
-import { act, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, within, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderWithToast, toastTexts } from "@/tests/helpers/renderWithToast";
 import { StudentActions } from "@/app/(admin)/admin/students/StudentActions";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -12,7 +13,7 @@ const onChanged = vi.fn(),
   onReload = vi.fn(),
   onBusyChange = vi.fn();
 function show(active = true, pending = false) {
-  render(
+  renderWithToast(
     <StudentActions
       student={{ ...studentProfile, activo: active }}
       disabled={false}
@@ -58,7 +59,7 @@ describe("acciones en ficha", () => {
     expect(api.post).not.toHaveBeenCalled();
     expect(nav.replace).not.toHaveBeenCalled();
   });
-  it("envía confirmación una vez, bloquea cierre mientras envía y redirige con aviso sin PII", async () => {
+  it("envía confirmación una vez, bloquea cierre mientras envía y redirige y avisa sin PII", async () => {
     let resolve!: (v: unknown) => void;
     vi.mocked(api.post).mockReturnValue(
       new Promise((r) => {
@@ -78,7 +79,8 @@ describe("acciones en ficha", () => {
       confirmacionCedula: studentProfile.cedula,
     });
     await act(async () => resolve({ status: "completo" }));
-    expect(nav.replace).toHaveBeenCalledWith("/admin/students?aviso=alumno-eliminado");
+    expect(nav.replace).toHaveBeenCalledWith("/admin/students");
+    expect(toastTexts()).toEqual(["El alumno se eliminó definitivamente."]);
     expect(JSON.stringify(nav.replace.mock.calls)).not.toContain(studentProfile.cedula);
   });
   it.each(["UNCONFIRMED", "DELETION_INCOMPLETE", "CD030"])(

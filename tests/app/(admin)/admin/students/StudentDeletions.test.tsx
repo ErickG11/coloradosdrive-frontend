@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
+import { renderWithToast, toastTexts } from "@/tests/helpers/renderWithToast";
 import StudentDeletionsList from "@/app/(admin)/admin/students/deletions/page";
 import StudentsList from "@/app/(admin)/admin/students/page";
 import { useFetch } from "@/hooks/useFetch";
@@ -27,7 +28,7 @@ beforeEach(() => {
   nav.params = new URLSearchParams();
 });
 afterEach(() => vi.unstubAllGlobals());
-function show(state: Record<string, unknown> = {}) {
+function show(state: Record<string, unknown> = {}, withToast = false) {
   vi.mocked(useFetch).mockImplementation(((path: string) =>
     path.includes("/practice-slots/blocks/admin-absences")
       ? { data: [], error: null, isLoading: false, refetch }
@@ -38,7 +39,7 @@ function show(state: Record<string, unknown> = {}) {
           refetch,
           ...state,
         }) as typeof useFetch);
-  render(<StudentDeletionsList />);
+  (withToast ? renderWithToast : render)(<StudentDeletionsList />);
 }
 describe("eliminaciones sin perfil", () => {
   it("consulta GET estático, muestra UUID/fase/estado y permite copiar", async () => {
@@ -72,7 +73,7 @@ describe("eliminaciones sin perfil", () => {
         resolve = r;
       }),
     );
-    show();
+    show({}, true);
     const button = screen.getByRole("button", { name: `Reintentar eliminación ${id}` });
     fireEvent.click(button);
     fireEvent.click(button);
@@ -80,7 +81,8 @@ describe("eliminaciones sin perfil", () => {
     expect(api.post).toHaveBeenCalledWith(`/admin/estudiantes/${id}/eliminar`, {});
     expect(button).toBeDisabled();
     await act(async () => resolve({ status: "completo" }));
-    expect(nav.replace).toHaveBeenCalledWith("/admin/students?aviso=alumno-eliminado");
+    expect(nav.replace).toHaveBeenCalledWith("/admin/students");
+    expect(toastTexts()).toEqual(["El alumno se eliminó definitivamente."]);
   });
   it.each(["DELETION_INCOMPLETE", "UNCONFIRMED", "CD030"])(
     "%s refresca la consulta sin reenvío automático",
@@ -129,7 +131,7 @@ describe("eliminaciones sin perfil", () => {
       expect(refetch).toHaveBeenCalledOnce();
     }
   });
-  it("el listado de alumnos muestra aviso fijo de éxito y entrada a eliminaciones", () => {
+  it("el listado de alumnos ignora el ?aviso heredado y enlaza a eliminaciones", () => {
     nav.params = new URLSearchParams("aviso=alumno-eliminado");
     vi.mocked(useFetch).mockImplementation(((path: string) => ({
       data:
@@ -143,7 +145,7 @@ describe("eliminaciones sin perfil", () => {
       refetch,
     })) as typeof useFetch);
     render(<StudentsList />);
-    expect(screen.getByRole("status")).toHaveTextContent("El alumno se eliminó definitivamente.");
+    expect(screen.queryByText("El alumno se eliminó definitivamente.")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Eliminaciones pendientes" })).toHaveAttribute(
       "href",
       "/admin/students/deletions",

@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Card, Modal, buttonClassName } from "@/components/ui";
 import { StudentIdentityConfirmation } from "./StudentIdentityConfirmation";
-import { Toast } from "@/components/inscripcion/Toast";
+import { useToast } from "@/components/ui/Toast";
 import { StudentEditForm } from "./StudentEditForm";
 import { useFetch } from "@/hooks/useFetch";
 import { readStudentFilters, studentListHref } from "@/lib/api/students";
@@ -338,15 +338,13 @@ export function StudentDetail({
   const [section, setSection] = useState<Section>("information");
   const [editing, setEditing] = useState(false);
   const [confirmingIdentity, setConfirmingIdentity] = useState(false);
-  const [identityNotice, setIdentityNotice] = useState("");
+  const toast = useToast();
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [cohortBusy, setCohortBusy] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const attendanceFocus = useRef<string | null>(null);
   const cohortFocus = useRef<string | null>(null);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [deletionPending, setDeletionPending] = useState(false);
   const [assigning, setAssigning] = useState<StudentEnrollment | null>(null);
   // El panel no se cierra con Escape mientras hay una operación en curso.
@@ -382,7 +380,7 @@ export function StudentDetail({
         onPending={() => setDeletionPending(true)}
         onReload={refetch}
         onChanged={(message) => {
-          setActionNotice(message);
+          toast.success(message);
           refetch();
           onChanged?.();
         }}
@@ -421,14 +419,6 @@ export function StudentDetail({
           Volver a Alumnos
         </Link>
       )}
-      {!assigning && identityNotice && (
-        <Toast message={identityNotice} onDismiss={() => setIdentityNotice("")} />
-      )}
-      {!assigning && success && (
-        <p role="status" className="text-sm text-accent-blue">
-          Los datos del alumno se guardaron correctamente.
-        </p>
-      )}
       {isLoading && !data ? (
         <p role="status" className="text-text-secondary">
           Cargando ficha…
@@ -461,11 +451,6 @@ export function StudentDetail({
               {accountActions}
             </div>
           ) : null}
-          {!assigning && actionNotice && (
-            <p role="status" className="text-sm text-accent-blue">
-              {actionNotice}
-            </p>
-          )}
           {embedded && view === "ficha" && !assigning ? (
             <div
               role="tablist"
@@ -517,7 +502,7 @@ export function StudentDetail({
                 onCancel={() => onClose?.()}
                 onReload={refetch}
                 onSaved={() => {
-                  setSuccess(true);
+                  toast.success("Los datos del alumno se guardaron correctamente.");
                   refetch();
                   onChanged?.();
                 }}
@@ -541,7 +526,7 @@ export function StudentDetail({
                 onAttendanceBusyChange={setAttendanceBusy}
                 onAttendanceChanged={(slotId) => {
                   attendanceFocus.current = slotId;
-                  setActionNotice("La asistencia se guardó correctamente.");
+                  toast.success("La asistencia se guardó correctamente.");
                   refetch();
                   onChanged?.();
                 }}
@@ -558,7 +543,6 @@ export function StudentDetail({
                 onEdit={
                   embedded
                     ? () => {
-                        setSuccess(false);
                         setEditing(true);
                       }
                     : undefined
@@ -591,7 +575,7 @@ export function StudentDetail({
               onClose={() => setAssigning(null)}
               onChanged={() => {
                 setAssigning(null);
-                setActionNotice("La cohorte se cambió correctamente.");
+                toast.success("La cohorte se cambió correctamente.");
                 refetch();
                 onChanged?.();
               }}
@@ -612,7 +596,7 @@ export function StudentDetail({
                 onDeletionPending={() => setDeletionPending(true)}
                 onSaved={() => {
                   setAssigning(null);
-                  setActionNotice("La cohorte se asignó correctamente.");
+                  toast.success("La cohorte se asignó correctamente.");
                   refetch();
                   onChanged?.();
                 }}
@@ -630,7 +614,7 @@ export function StudentDetail({
               }}
               onSaved={() => {
                 setConfirmingIdentity(false);
-                setIdentityNotice("La identidad presencial se confirmó correctamente.");
+                toast.success("La identidad presencial se confirmó correctamente.");
                 refetch();
                 onChanged?.();
               }}
@@ -655,7 +639,7 @@ export function StudentDetail({
                 }}
                 onSaved={() => {
                   setEditing(false);
-                  setSuccess(true);
+                  toast.success("Los datos del alumno se guardaron correctamente.");
                   refetch();
                   onChanged?.();
                 }}

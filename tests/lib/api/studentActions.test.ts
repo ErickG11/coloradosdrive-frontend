@@ -21,7 +21,7 @@ describe("contrato de acciones de alumnos", () => {
       ["/admin/estudiantes/uuid/eliminar", { confirmacionCedula: "0100000009" }],
       ["/admin/estudiantes/uuid/eliminar", {}],
     ]);
-    expect(studentDeletedHref).toBe("/admin/students?aviso=alumno-eliminado");
+    expect(studentDeletedHref).toBe("/admin/students");
   });
   it.each(["CD030", "DELETION_PENDING", "DELETION_INCOMPLETE"])(
     "%s indica eliminación pendiente",
