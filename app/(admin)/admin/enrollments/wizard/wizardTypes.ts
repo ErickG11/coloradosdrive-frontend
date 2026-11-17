@@ -182,3 +182,12 @@ export function practicePayload(form: PracticeFormData) {
     ...(form.manual ? { fechaFin: form.fechaFin } : {}),
   };
 }
+
+// Teléfono opcional del asistente: misma regla que el servidor (utils/phone.ts).
+export function phoneError(value: string): string | null {
+  const text = value.trim();
+  if (text === "") return null;
+  return /^\+?[0-9() -]{7,20}$/.test(text) && text.replace(/\D/g, "").length >= 7
+    ? null
+    : "Ingresa un teléfono válido de 7 a 20 caracteres (solo dígitos, +, espacios, guiones y paréntesis).";
+}

@@ -8,14 +8,17 @@ import { useFetch } from "@/hooks/useFetch";
 import { documentError, documentLabel } from "@/components/inscripcion/documentValidation";
 import { Button, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api/client";
+import { birthDateError } from "@/lib/utils/birthDate";
 import { ApiError } from "@/lib/api/errors";
 
-import { BASE, type StudentData } from "./wizardTypes";
+import { BASE, phoneError, type StudentData } from "./wizardTypes";
 
 interface StepDatosEstudianteProps {
   value: StudentData;
   onNext: (value: StudentData) => void;
 }
+
+type FieldErrors = Partial<Record<"cedula" | "correo" | "telefono" | "fechaNacimiento", string>>;
 
 export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps) {
   const documentConfig = useFetch<{ documentTypes?: string[] }>("/public/inscripcion/config");
@@ -23,6 +26,8 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
   const [values, setValues] = useState<StudentData>(value);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<StudentData[]>([]);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [checking, setChecking] = useState(false);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
   async function search() {
@@ -42,17 +47,74 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
 
   function updateField<K extends keyof StudentData>(field: K, next: StudentData[K]) {
     setValues((current) => ({ ...current, [field]: next }));
+    setErrors((current) =>
+      current[field as keyof FieldErrors] ? { ...current, [field]: undefined } : current,
+    );
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onNext(values);
+    if (values.mode === "existing") {
+      onNext(values);
+      return;
+    }
+    // Se muestran a la vez todos los errores del paso; el calendario no se bloquea.
+    const nextErrors: FieldErrors = {};
+    if (documentError(documentType, values.cedula))
+      nextErrors.cedula = documentError(documentType, values.cedula);
+    if (values.telefono && phoneError(values.telefono))
+      nextErrors.telefono = phoneError(values.telefono) ?? undefined;
+    const birth = values.fechaNacimiento ? birthDateError(values.fechaNacimiento) : null;
+    if (birth) nextErrors.fechaNacimiento = birth;
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+    // Un solo aviso al pulsar Continuar: la cédula o el correo ya existen.
+    setChecking(true);
+    try {
+      const found = await api.post<{ cedula: boolean; correo: boolean }>(`${BASE}/duplicates`, {
+        correo: values.correo.trim(),
+        ...(documentType === "cedula"
+          ? { cedula: values.cedula }
+          : { documentType, documentNumber: values.cedula.trim() }),
+      });
+      if (found.cedula || found.correo) {
+        setErrors({
+          ...(found.cedula && {
+            cedula:
+              "Este documento ya está registrado. Busca y selecciona al estudiante existente.",
+          }),
+          ...(found.correo && {
+            correo: "Este correo ya está registrado. Busca y selecciona al estudiante existente.",
+          }),
+        });
+        return;
+      }
+      setErrors({});
+      onNext(values);
+    } catch (e) {
+      // Sin respuesta no se bloquea: el servidor vuelve a validar al confirmar.
+      if (e instanceof ApiError && e.status >= 400 && e.status < 500) {
+        setErrors({ cedula: e.message });
+        return;
+      }
+      setErrors({});
+      onNext(values);
+    } finally {
+      setChecking(false);
+    }
   }
 
-  const cedulaValida = !documentError(values.documentType ?? "cedula", values.cedula);
+  const documentType = values.documentType ?? "cedula";
+  const cedulaValida = !documentError(documentType, values.cedula);
 
   return (
-    <form onSubmit={handleSubmit} className={styles.studentStep} data-mode={values.mode}>
+    <form
+      onSubmit={(event) => void handleSubmit(event)}
+      className={styles.studentStep}
+      data-mode={values.mode}
+    >
       <div className={styles.segmented} role="group" aria-label="Tipo de estudiante">
         <Button
           type="button"
@@ -157,6 +219,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
                 : "De 3 a 30 letras, números o guion"
             }
             value={values.cedula}
+            error={errors.cedula}
             onChange={(event) => updateField("cedula", event.target.value)}
           />
           <Input
@@ -174,6 +237,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
             type="email"
             required
             value={values.correo}
+            error={errors.correo}
             onChange={(event) => updateField("correo", event.target.value)}
           />
           <Input
@@ -181,6 +245,7 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
             placeholder="Número de contacto"
             name="telefono"
             value={values.telefono}
+            error={errors.telefono}
             onChange={(event) => updateField("telefono", event.target.value)}
           />
           <Input
@@ -188,12 +253,14 @@ export function StepDatosEstudiante({ value, onNext }: StepDatosEstudianteProps)
             name="fechaNacimiento"
             type="date"
             value={values.fechaNacimiento ?? ""}
+            error={errors.fechaNacimiento}
             onChange={(event) => updateField("fechaNacimiento", event.target.value)}
           />
 
           <div className={styles.footer}>
             <Button
               type="submit"
+              isLoading={checking}
               disabled={!cedulaValida || !values.nombreCompleto || !values.correo}
             >
               Continuar
