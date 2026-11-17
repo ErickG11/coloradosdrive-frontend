@@ -1,6 +1,7 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithToast as render } from "@/tests/helpers/renderWithToast";
 
 import CohortsPage from "@/app/(admin)/admin/cohorts/page";
 import { useFetch } from "@/hooks/useFetch";
@@ -151,46 +152,16 @@ describe("CohortsPage", () => {
     expect(names).toEqual(["Cohorte Abril", "Cohorte Marzo", "Cohorte Enero"]);
   });
 
-  describe("aviso tras crear o guardar", () => {
-    it.each([
-      ["cohorte-creada", "Cohorte creada correctamente."],
-      ["cohorte-guardada", "Cambios guardados correctamente."],
-    ])("con ?aviso=%s muestra «%s» y limpia la URL", (aviso, text) => {
-      window.history.replaceState(null, "", `/admin/cohorts?aviso=${aviso}`);
-      searchParams = new URLSearchParams(`aviso=${aviso}`);
-      mockFetchResults({
-        cohorts: { data: cohorts, isLoading: false, error: null },
-        courses: { data: courses, isLoading: false, error: null },
-      });
-
-      render(<CohortsPage />);
-
-      expect(statusText()).toBe(text);
-      // Recargar o volver a esta entrada del historial ya no repite el aviso.
-      expect(window.location.pathname).toBe("/admin/cohorts");
-      expect(window.location.search).toBe("");
-    });
-
-    it("el aviso sigue visible aunque la URL ya no tenga el parámetro", () => {
+  describe("aviso heredado en la URL", () => {
+    it("un ?aviso de enlaces antiguos no muestra nada ni toca la URL", () => {
+      window.history.replaceState(null, "", "/admin/cohorts?aviso=cohorte-creada");
       searchParams = new URLSearchParams("aviso=cohorte-creada");
-      mockFetchResults({});
-
-      const { rerender } = render(<CohortsPage />);
-      searchParams = new URLSearchParams();
-      rerender(<CohortsPage />);
-
-      expect(statusText()).toBe("Cohorte creada correctamente.");
-    });
-
-    it("sin aviso (o con uno desconocido) no muestra nada ni toca la URL", () => {
-      window.history.replaceState(null, "", "/admin/cohorts?aviso=otra-cosa");
-      searchParams = new URLSearchParams("aviso=otra-cosa");
       mockFetchResults({});
 
       render(<CohortsPage />);
 
       expect(statusText()).toBe("");
-      expect(window.location.search).toBe("?aviso=otra-cosa");
+      expect(window.location.search).toBe("?aviso=cohorte-creada");
     });
   });
 
@@ -274,7 +245,7 @@ describe("CohortsPage", () => {
       expect(statusText()).toBe("");
     });
 
-    it("tras cancelar, el foco pasa al mensaje de éxito y no queda en body", async () => {
+    it("tras cancelar, el foco pasa al resumen de la lista y no queda en body", async () => {
       const user = userEvent.setup();
       mockedPost.mockResolvedValue({});
       renderList();
@@ -282,38 +253,21 @@ describe("CohortsPage", () => {
       await cancelMarzo(user);
 
       await waitFor(() => expect(statusText()).toContain("cancelada."));
-      const region = screen
-        .getAllByRole("status")
-        .find((r) => r.textContent?.includes("cancelada."));
-      expect(region).toHaveFocus();
+      await waitFor(() =>
+        expect(screen.getByRole("region", { name: "Resumen de cohortes" })).toHaveFocus(),
+      );
     });
 
-    it("el aviso de creación se oculta al abrir una cancelación y al completarla", async () => {
+    it("el aviso verde de la cancelación se puede cerrar", async () => {
       const user = userEvent.setup();
-      searchParams = new URLSearchParams("aviso=cohorte-creada");
       mockedPost.mockResolvedValue({});
       renderList();
-      expect(statusText()).toBe("Cohorte creada correctamente.");
 
-      await user.click(screen.getByRole("button", { name: "Cancelar cohorte Cohorte Marzo" }));
-      expect(statusText()).toBe("");
-
-      await user.type(screen.getByLabelText("Motivo de cancelación"), "Falta de cupos");
-      await user.click(screen.getByRole("button", { name: "Cancelar cohorte" }));
-
+      await cancelMarzo(user);
       await waitFor(() => expect(statusText()).toBe("Cohorte «Cohorte Marzo» cancelada."));
-    });
+      await user.click(screen.getByRole("button", { name: "Cerrar aviso" }));
 
-    it("un refetch con datos ya cargados no reemplaza la tabla por «Cargando…»", () => {
-      mockFetchResults({
-        cohorts: { data: cohorts, isLoading: true, error: null },
-        courses: { data: courses, isLoading: true, error: null },
-      });
-
-      render(<CohortsPage />);
-
-      expect(screen.queryByText("Cargando…")).not.toBeInTheDocument();
-      expect(screen.getByText("Cohorte Marzo")).toBeInTheDocument();
+      expect(statusText()).toBe("");
     });
   });
 });

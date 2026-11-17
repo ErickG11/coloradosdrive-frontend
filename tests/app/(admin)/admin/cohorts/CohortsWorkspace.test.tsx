@@ -1,6 +1,7 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithToast as render } from "@/tests/helpers/renderWithToast";
 
 import CohortsPage from "@/app/(admin)/admin/cohorts/page";
 import { useFetch } from "@/hooks/useFetch";
