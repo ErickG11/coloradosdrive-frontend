@@ -4,7 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { Button, FormError, Input, Select, Textarea } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { contentErrorMessage, ContentInputError } from "@/lib/utils/content";
-import { useContentSuccess } from "@/components/content-admin/ContentFeedback";
+import { useToast } from "@/components/ui/Toast";
 import { ContentConfirm } from "@/components/content-admin/ContentUI";
 import type {
   Course,
@@ -134,7 +134,7 @@ export function ExamForm({
   const [removed, setRemoved] = useState<number | null>(null);
   const [frozen, setFrozen] = useState(hasAttempts);
   const [reloadRequired, setReloadRequired] = useState(false);
-  const notify = useContentSuccess();
+  const { success: notify } = useToast();
   function field<K extends keyof ExamFormValues>(key: K, value: ExamFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
   }

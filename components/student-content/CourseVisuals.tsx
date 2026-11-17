@@ -3,7 +3,7 @@ import { StudentEmptyState } from "@/components/student-shared/StudentEmptyState
 
 import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useContentSuccess } from "@/components/content-admin/ContentFeedback";
+import { useToast } from "@/components/ui/Toast";
 import { safeProgress } from "@/lib/utils/content";
 import type { CourseProgress } from "@/types/content";
 import styles from "./student-learning.module.css";
@@ -86,7 +86,7 @@ export function ExamScoreMeter({ value }: { value: number | string | null | unde
 
 export function CourseRoad({ progress }: { progress: CourseProgress }) {
   const reduced = useReducedMotion();
-  const notify = useContentSuccess();
+  const { success: notify } = useToast();
   const flags = useRef<HTMLDivElement>(null);
   const previous = useRef<Record<string, boolean> | null>(null);
   const percent = safeProgress(progress.global, progress.completa);

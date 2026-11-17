@@ -20,7 +20,7 @@ import {
 } from "@/lib/utils/studentContent";
 import { Button } from "@/components/ui/Button";
 import { buttonClassName } from "@/components/ui/buttonStyles";
-import { useContentSuccess } from "@/components/content-admin/ContentFeedback";
+import { useToast } from "@/components/ui/Toast";
 import type { AttemptResult, ExamAttempt, SubmitAnswerInput } from "@/types/examAttempt";
 import type { ActiveStudentAttempt } from "@/types/studentContent";
 import { StudentError, StudentLoading } from "./StudentContentUI";
@@ -53,7 +53,7 @@ export function StudentExam({ examId, courseId }: { examId: string; courseId: st
   const [type, setType] = useState<"practica" | "definitivo" | null>(null);
   const [denied, setDenied] = useState(false);
   const lock = useRef(false);
-  const notify = useContentSuccess();
+  const { success: notify } = useToast();
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
@@ -373,7 +373,7 @@ function AttemptForm({
   const title = useRef<HTMLHeadingElement>(null);
   const submitRef = useRef<() => void>(() => undefined);
   const expireRef = useRef<() => void>(() => undefined);
-  const notify = useContentSuccess();
+  const { success: notify } = useToast();
   const getRemaining = useCallback(
     () => remainingTime(attempt.deadlineAt, currentClock.current, performance.now()),
     [attempt.deadlineAt],
