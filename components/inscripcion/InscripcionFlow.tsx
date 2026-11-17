@@ -21,7 +21,7 @@ import { DocumentsStep } from "./DocumentsStep";
 import { DataStep } from "./DataStep";
 import { ConsentStep } from "./ConsentStep";
 import { CodeStep } from "./CodeStep";
-import { Toast } from "./Toast";
+import { useToast } from "@/components/ui/Toast";
 import { ENROLLMENT_STEPS, ProgressSummary } from "./ProgressSummary";
 import styles from "./inscripcion.module.css";
 
@@ -33,11 +33,11 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
   const [recoveryStep, setRecoveryStep] = useState<InscripcionStep>("codigo");
   const [missingDocuments, setMissingDocuments] = useState<DocumentoTipo[]>([]);
   const [progress, setProgress] = useState<SolicitudProgress | null>(null);
+  const { success: notify } = useToast();
   const [session, setSession] = useState<SolicitudSession | null>(null);
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false);
   const [error, setError] = useState(""),
-    [message, setMessage] = useState(""),
     [retry, setRetry] = useState(0);
   const heading = useRef<HTMLSpanElement>(null),
     sending = useRef(false);
@@ -83,7 +83,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
     try {
       await solicitudes.sendCode(correo.trim().toLowerCase(), courseId);
       setStep("codigo");
-      setMessage("Código enviado. Revisa tu correo.");
+      notify("Código enviado. Revisa tu correo.");
     } catch (e) {
       setError(solicitudMessage(e));
     } finally {
@@ -102,7 +102,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
       setProgress(p);
       setCourseId(p.courseId);
       setStep(firstIncompleteStep(p));
-      setMessage("Progreso recuperado.");
+      notify("Progreso recuperado.");
     } catch (e) {
       setError(solicitudMessage(e));
     } finally {
@@ -120,7 +120,6 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
           <span className={styles.eyebrow}>Colorados Drive</span>
           <h1>Solicitar inscripción</h1>
         </header>
-        <Toast message={message} onDismiss={() => setMessage("")} />
         <div className={styles.workspace}>
           <ProgressSummary
             step={
@@ -244,7 +243,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
                     <CodeStep
                       correo={correo}
                       courseId={courseId}
-                      onNotice={setMessage}
+                      onNotice={notify}
                       onBack={() => {
                         setStep("correo");
                         setError("");
@@ -286,7 +285,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
                             : previous,
                         )
                       }
-                      onNotice={setMessage}
+                      onNotice={notify}
                       onFinish={() => {
                         setStep(progress?.enviadaAt ? "estado" : "revision");
                       }}
@@ -306,7 +305,7 @@ export function InscripcionFlow({ initialCourseId = "" }: { initialCourseId?: st
                             : previous,
                         );
                         setStep("enviado");
-                        setMessage("Solicitud enviada para revisión.");
+                        notify("Solicitud enviada para revisión.");
                       }}
                     />
                   ) : step === "enviado" ? (

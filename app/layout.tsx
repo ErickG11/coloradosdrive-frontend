@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ToastProvider } from "@/components/ui/Toast";
 
 // Space Grotesk: títulos, "ColoradosDrive" como wordmark (sin logo por
 // ahora) — geométrica, seria, con carácter, no juguetona.
@@ -60,7 +61,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
