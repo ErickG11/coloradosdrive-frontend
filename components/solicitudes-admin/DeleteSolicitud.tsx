@@ -7,6 +7,7 @@ import { FormError } from "@/components/ui/FormError";
 import { eliminarSolicitud } from "@/lib/api/inscripcion";
 import { adminErrorMessage } from "./adminErrors";
 import styles from "./solicitudes.module.css";
+import { useToast } from "@/components/ui/Toast";
 
 // Eliminación definitiva de una solicitud no aprobada (borra archivo y filas en el servidor).
 // Se confirma tecleando la cédula; si no tiene cédula guardada se confirma con la palabra
@@ -21,6 +22,7 @@ export function DeleteSolicitud({
   onDeleted: () => void;
 }) {
   const clave = cedula ?? "ELIMINAR";
+  const toast = useToast();
   const [confirmando, setConfirmando] = useState(false),
     [escrito, setEscrito] = useState(""),
     [error, setError] = useState(""),
@@ -33,6 +35,7 @@ export function DeleteSolicitud({
     setError("");
     try {
       await eliminarSolicitud(id);
+      toast.success("Solicitud eliminada.");
       onDeleted();
     } catch (e) {
       setError(adminErrorMessage(e));

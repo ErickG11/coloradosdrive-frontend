@@ -16,6 +16,7 @@ import { ETIQUETA_MOTIVO, MOTIVOS_DEVOLVER, MOTIVOS_RECHAZAR, formatearFecha } f
 import type { ResultadoDecision } from "./decisionTipos";
 import { horaGuayaquil, type RequestReviewLock } from "./useRequestReview";
 import styles from "./solicitudes.module.css";
+import { useToast } from "@/components/ui/Toast";
 
 type Accion = "aprobar" | "devolver" | "rechazar";
 
@@ -120,6 +121,7 @@ export function DecisionPanel({
   onDecidida: (resultado: ResultadoDecision) => void;
   onConflicto: () => void;
 }) {
+  const toast = useToast();
   const baseId = useId();
   const [abierto, setAbierto] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
@@ -198,6 +200,13 @@ export function DecisionPanel({
     }
     try {
       const resultado = await decidirSolicitud(detalle.id, input);
+      toast.success(
+        accion === "aprobar"
+          ? "Solicitud aprobada."
+          : accion === "devolver"
+            ? "Solicitud devuelta al aspirante."
+            : "Solicitud rechazada.",
+      );
       onDecidida(resultado);
     } catch (e) {
       setError(adminErrorMessage(e));

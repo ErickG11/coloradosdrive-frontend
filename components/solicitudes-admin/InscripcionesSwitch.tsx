@@ -7,6 +7,7 @@ import { setConfigInscripciones } from "@/lib/api/inscripcion";
 import { adminErrorMessage } from "./adminErrors";
 import { SOLICITUD_CHANGED_EVENT } from "./useSolicitudSummary";
 import styles from "./solicitudes.module.css";
+import { useToast } from "@/components/ui/Toast";
 
 // Interruptor «Inscripciones abiertas». Cambiarlo pide confirmación porque cerrar corta la
 // entrada de nuevas solicitudes y abrir la reactiva para todo el público.
@@ -17,6 +18,7 @@ export function InscripcionesSwitch({
   abiertas: boolean | null;
   onChanged: (abiertas: boolean) => void;
 }) {
+  const toast = useToast();
   const [confirmando, setConfirmando] = useState(false),
     [ocupado, setOcupado] = useState(false),
     [error, setError] = useState(""),
@@ -39,6 +41,9 @@ export function InscripcionesSwitch({
     try {
       const result = await setConfigInscripciones(siguiente);
       onChanged(result.inscripcionesAbiertas);
+      toast.success(
+        result.inscripcionesAbiertas ? "Inscripciones abiertas." : "Inscripciones cerradas.",
+      );
       setAviso(
         result.inscripcionesAbiertas
           ? "Las inscripciones quedaron abiertas."
