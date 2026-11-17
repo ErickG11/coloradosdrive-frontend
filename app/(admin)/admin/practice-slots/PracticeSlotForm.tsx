@@ -12,6 +12,7 @@ import type {
   UpdatePracticeSlotInput,
   UserSummary,
 } from "@/types";
+import { useToast } from "@/components/ui/Toast";
 
 interface PracticeSlotFormValues {
   cohortId: string;
@@ -70,6 +71,7 @@ export function PracticeSlotForm({
   onCancel,
 }: PracticeSlotFormProps) {
   const isEditMode = Boolean(slot);
+  const toast = useToast();
   const [values, setValues] = useState<PracticeSlotFormValues>(() =>
     buildValues(slot, initialScheduledAt),
   );
@@ -103,6 +105,7 @@ export function PracticeSlotForm({
             durationMinutes: Number(values.durationMinutes),
           } satisfies CreatePracticeSlotInput);
 
+      toast.success(slot ? "Franja actualizada." : "Franja creada.");
       onSaved(saved);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo guardar la franja.");

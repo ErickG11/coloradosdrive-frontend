@@ -24,6 +24,7 @@ import {
   type ManualEnrollmentDetails,
   type WizardStep,
 } from "./wizardTypes";
+import { useToast } from "@/components/ui/Toast";
 
 interface Draft {
   student: StudentData;
@@ -43,6 +44,7 @@ interface Operation {
 }
 const STORAGE = "coloradosdrive.manual-enrollment.confirmation";
 export function EnrollmentWizard() {
+  const toast = useToast();
   const [step, setStep] = useState<WizardStep>(1),
     [student, setStudent] = useState(EMPTY_STUDENT);
   const [course, setCourse] = useState<CourseSelection | null>(null),
@@ -204,6 +206,7 @@ export function EnrollmentWizard() {
       setDetailsLoading(true);
       setDetailsError(null);
       setResult(confirmed);
+      toast.success("Matrícula registrada.");
       setUncertain(false);
       sessionStorage.removeItem(STORAGE);
       pending.current = null;
@@ -367,6 +370,7 @@ export function EnrollmentWizard() {
                       { regenerateTemporaryPassword: regenerate },
                     ),
                   );
+                  toast.success("Correo de acceso reenviado.");
                 } catch (e) {
                   setError(
                     e instanceof ApiError

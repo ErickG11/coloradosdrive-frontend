@@ -6,6 +6,7 @@ import { Button, Input } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { InstructorDetail } from "@/types";
+import { useToast } from "@/components/ui/Toast";
 
 interface InstructorFormProps {
   instructor?: InstructorDetail;
@@ -14,6 +15,7 @@ interface InstructorFormProps {
 }
 
 export function InstructorForm({ instructor, onSaved, onCancel }: InstructorFormProps) {
+  const toast = useToast();
   const [cedula, setCedula] = useState("");
   const [nombreCompleto, setNombreCompleto] = useState(instructor?.nombreCompleto ?? "");
   const [telefono, setTelefono] = useState(instructor?.telefono ?? "");
@@ -48,6 +50,7 @@ export function InstructorForm({ instructor, onSaved, onCancel }: InstructorForm
           correo: correo.trim(),
         });
       }
+      toast.success(instructor ? "Instructor actualizado." : "Instructor creado.");
       onSaved();
     } catch (cause) {
       const message = cause instanceof ApiError ? cause.message : "No se pudo guardar el instructor.";

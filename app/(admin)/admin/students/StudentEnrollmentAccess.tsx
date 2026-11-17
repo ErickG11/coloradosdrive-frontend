@@ -4,6 +4,7 @@ import { Button, Input, Select, Textarea } from "@/components/ui";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api/client";
 import type { IndividualEnrollmentAccess } from "@/types/individualEnrollmentAccess";
+import { useToast } from "@/components/ui/Toast";
 
 const longDate = (iso: string) =>
   new Intl.DateTimeFormat("es-EC", {
@@ -30,6 +31,7 @@ export function StudentEnrollmentAccess({
   labels?: Record<string, string>;
   onChanged?: () => void;
 }) {
+  const toast = useToast();
   const state = useFetch<IndividualEnrollmentAccess>(
     `/admin/estudiantes/${encodeURIComponent(studentId)}/matriculas/acceso`,
   );
@@ -68,6 +70,7 @@ export function StudentEnrollmentAccess({
           fin: end,
           motivo: reason.trim(),
         });
+      toast.success(repeat ? "Excepción de repetición registrada." : "Acceso extendido.");
       setMessage(
         repeat
           ? "Excepción registrada; se conserva la matrícula finalizada y se crea la nueva sin cohorte."
